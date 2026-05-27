@@ -5,44 +5,26 @@ import './bootstrap';
 import $ from 'jquery';
 window.$ = window.jQuery = $;
 
-import select2 from 'select2';
-select2($);
-// import 'select2/dist/css/select2.css';
-
 // ============ 2. ПОТОМ BOOTSTRAP И ЗАВИСИМОСТИ ============
 import '../assets/vendor/fonts/iconify-icons.css';
 import '../assets/vendor/libs/node-waves/node-waves.css';
 import '../assets/vendor/libs/pickr/pickr-themes.css';
 import '../assets/vendor/css/core.css';
 import '../assets/css/style.css';
-import  '../assets/vendor/libs/select2/select2.css';
-import 'select2/dist/css/select2.css';
-// import 'select2/dist/css/select2.min.css';
+
 // ============ 3. ПОТОМ JS-ПЛАГИНЫ ============
 import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
 
+import 'select2/dist/css/select2.css';
+
+
+
 // ============ 4. SELECT2 (после jquery) ============
-// import select2 from 'select2';
-// select2($);
+
+import select2 from 'select2';
+select2($);
 // import 'select2';
-// import 'select2/dist/js/select2.full.js';
-
-window.initSelect2 = () => {
-    if ($.fn.select2) {
-        $('.select2').select2({
-            width: '100%'
-        });
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    window.initSelect2();
-});
-document.addEventListener('inertia:finish', () => {
-    window.initSelect2();
-});
-
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -74,30 +56,43 @@ window.initTemplatePlugins = () => {
     }
 };
 
+window.initSelect2 = () => {
+    // Проверяем, что jQuery и select2 загружены
+    if (typeof $ === 'undefined' || !$.fn.select2) {
+        console.warn('Select2 not available yet');
+        return;
+    }
 
-// window.initSelect2 = () => {
-//     const $ = window.$;
+    // Инициализируем все select2
+    $('.select2').each(function () {
+        // Если уже инициализирован - пересоздаем
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
 
-//     if (!$.fn.select2) return;
+        // Инициализируем заново
+        $(this).select2({
+            width: '100%',
+            placeholder: $(this).data('placeholder') || 'Select option',
+            allowClear: $(this).data('allow-clear') || false
+        });
+    });
+};
 
-//     $('.select2').each(function () {
-//         if ($(this).data('select2')) {
-//             $(this).select2('destroy');
-//         }
+// Запускаем после загрузки DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initSelect2);
+} else {
+    window.initSelect2();
+}
 
-//         $(this).select2({
-//             width: '100%'
-//         });
-//     });
-// };
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     window.initSelect2();
-// });
-// document.addEventListener('inertia:finish', () => {
-//     window.initSelect2();
-// });
-
+// Запускаем после каждого перехода Inertia
+document.addEventListener('inertia:finish', () => {
+    // Небольшая задержка для Vue
+    setTimeout(() => {
+        window.initSelect2();
+    }, 50);
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
