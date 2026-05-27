@@ -11,7 +11,7 @@ import '../assets/vendor/libs/node-waves/node-waves.css';
 import '../assets/vendor/libs/pickr/pickr-themes.css';
 import '../assets/vendor/css/core.css';
 import '../assets/css/style.css';
-// import  '../assets/vendor/libs/select2/select2.css';
+import  '../assets/vendor/libs/select2/select2.css';
 import 'select2/dist/css/select2.css';
 // import 'select2/dist/css/select2.min.css';
 // ============ 3. ПОТОМ JS-ПЛАГИНЫ ============
@@ -19,8 +19,11 @@ import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
 
 // ============ 4. SELECT2 (после jquery) ============
-import select2 from 'select2';
-select2($);
+// import select2 from 'select2';
+// select2($);
+import select2 from 'select2/dist/js/select2';
+// Принудительно регистрируем плагин
+select2();
 // import 'select2';
 // import 'select2/dist/js/select2.full.js';
 // ============ 5. Inertia и Vue ============
