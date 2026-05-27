@@ -23,7 +23,7 @@
         "@tabler/icons-vue": "^3.41.1",
         "bootstrap": "^5.3.8",
         "jquery": "^4.0.0",
-        "select2": "^4.1.0-rc.0",
+        "select2": "4.1.0-rc.0",
         "vue-toastification": "^2.0.0-rc.5"
     }
 }

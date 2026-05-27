@@ -5,6 +5,10 @@ import './bootstrap';
 import $ from 'jquery';
 window.$ = window.jQuery = $;
 
+import select2 from 'select2';
+select2($);
+// import 'select2/dist/css/select2.css';
+
 // ============ 2. ПОТОМ BOOTSTRAP И ЗАВИСИМОСТИ ============
 import '../assets/vendor/fonts/iconify-icons.css';
 import '../assets/vendor/libs/node-waves/node-waves.css';
@@ -21,11 +25,24 @@ import '../assets/vendor/js/menu.js';
 // ============ 4. SELECT2 (после jquery) ============
 // import select2 from 'select2';
 // select2($);
-import select2 from 'select2/dist/js/select2';
-// Принудительно регистрируем плагин
-select2();
 // import 'select2';
 // import 'select2/dist/js/select2.full.js';
+
+window.initSelect2 = () => {
+    if ($.fn.select2) {
+        $('.select2').select2({
+            width: '100%'
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.initSelect2();
+});
+document.addEventListener('inertia:finish', () => {
+    window.initSelect2();
+});
+
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -58,28 +75,28 @@ window.initTemplatePlugins = () => {
 };
 
 
-window.initSelect2 = () => {
-    const $ = window.$;
+// window.initSelect2 = () => {
+//     const $ = window.$;
 
-    if (!$.fn.select2) return;
+//     if (!$.fn.select2) return;
 
-    $('.select2').each(function () {
-        if ($(this).data('select2')) {
-            $(this).select2('destroy');
-        }
+//     $('.select2').each(function () {
+//         if ($(this).data('select2')) {
+//             $(this).select2('destroy');
+//         }
 
-        $(this).select2({
-            width: '100%'
-        });
-    });
-};
+//         $(this).select2({
+//             width: '100%'
+//         });
+//     });
+// };
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.initSelect2();
-});
-document.addEventListener('inertia:finish', () => {
-    window.initSelect2();
-});
+// document.addEventListener('DOMContentLoaded', () => {
+//     window.initSelect2();
+// });
+// document.addEventListener('inertia:finish', () => {
+//     window.initSelect2();
+// });
 
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
