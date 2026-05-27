@@ -19,8 +19,9 @@ import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
 
 // ============ 4. SELECT2 (после jquery) ============
-import select2 from 'select2';
-select2($);
+// import select2 from 'select2';
+// select2($);
+import 'select2';
 // import 'select2/dist/js/select2.full.js';
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';
