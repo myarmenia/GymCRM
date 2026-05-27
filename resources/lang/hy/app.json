@@ -1,0 +1,37 @@
+{
+    "sidebar": {
+        "profile": "Իմ հաշիվը",
+        "notifications": "Ծանուցումներ",
+        "gym": "Հյուրանոց"
+
+    },
+    "messages": {
+        "password_updated": "Գաղտնաբառը հաջողությամբ փոփոխվել է։",
+        "no_result": "Արդյունք չի գտնվել"
+    },
+    "status": {
+        "status": "Կարգավիճակ",
+        "active": "Ակտիվ",
+        "inactive": "Ոչ ակտիվ",
+        "blocked": "Արգելափակված",
+        "pending": "Սպասման մեջ",
+        "deleted": "Ջնջված"
+    },
+    "action": {
+        "action": "Գործողություններ",
+        "edit": "Խմբագրել",
+        "delete": "Ջնջել",
+        "toggle_active": "Ակտիվը փոխել",
+        "confirm_delete": "Իշտ՞ է, որ ցանկանում եք ջնջել այս տարրը։"
+    },
+    "roles": {
+        "super_admin": "Գլխավոր ադմին",
+        "admin": "Ադմին",
+        "manager": "Մենեջեր",
+        "staff": "Աշխատակից",
+        "accountant": "Հաշվապահ",
+        "owner": "Սեփականատեր",
+        "cleaner": "Մաքրուհի"
+    }
+
+}

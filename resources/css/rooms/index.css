@@ -1,0 +1,347 @@
+.rooms-page {
+    padding: 24px;
+    background: #f6f7fb;
+    min-height: 100vh;
+}
+
+.rooms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2b2f38;
+}
+
+.page-subtitle {
+    margin: 6px 0 0;
+    color: #8b90a0;
+    font-size: 14px;
+}
+
+.create-btn {
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(80px, 1fr));
+    gap: 30px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 14px;
+    text-align: center;
+    border: 1px solid #ebeef5;
+    box-shadow: 0 2px 12px rgba(24, 39, 75, 0.04);
+}
+
+.stat-number {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #7b8190;
+}
+
+.stat-total .stat-number {
+    color: #2f3542;
+}
+
+.stat-available {
+    background: #f3fbf5;
+    border-color: #cdeed6;
+}
+.stat-available .stat-number {
+    color: #22a559;
+}
+
+.stat-occupied {
+    background: #f3f7ff;
+    border-color: #6e8bd5 !important;
+}
+
+.stat-occupied .stat-number {
+    color: #2f6bff;
+}
+
+.stat-reserved {
+    background: #f8f3f8;
+    border-color: #e093cf;
+}
+.stat-reserved .stat-number {
+    color: #b30bb0;
+}
+
+.stat-cleaning {
+    background: #fff9ef;
+    border-color: #f6dfaa;
+}
+.stat-cleaning .stat-number {
+    color: #d99100;
+}
+
+.stat-repair {
+    background: #fff4f4;
+    border-color: #f3d0d0;
+}
+.stat-repair .stat-number {
+    color: #df3d3d;
+}
+
+.filters-card {
+    background: #fff;
+    border: 1px solid #ebeef5;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px rgba(24, 39, 75, 0.04);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 14px;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9aa1af;
+    font-size: 16px;
+}
+
+.custom-input {
+    padding-left: 40px;
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid #e6e9f0;
+    background: #f9fafc;
+}
+
+.custom-select {
+    height: 46px;
+    border-radius: 12px;
+    border: 1px solid #e6e9f0;
+    background: #f9fafc;
+}
+
+.rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 16px;
+}
+
+.room-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px 14px;
+    border: 2px solid #eceef4;
+    transition: all 0.2s ease;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(24, 39, 75, 0.03);
+}
+
+.room-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(24, 39, 75, 0.08);
+}
+
+.room-card-top {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.room-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(91, 108, 255, 0.08);
+    font-size: 18px;
+}
+
+.room-number {
+    font-size: 28px;
+    font-weight: 800;
+    color: #2d3340;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.room-type {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6f7787;
+    margin-bottom: 6px;
+}
+
+.room-price {
+    font-size: 14px;
+    color: #2d3340;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.room-meta {
+    font-size: 12px;
+    color: #8f97a8;
+    margin-bottom: 12px;
+}
+
+.room-status {
+    margin-top: auto;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.status-available {
+    border-color: #9ddbb0;
+}
+.status-available .room-icon,
+.status-badge.status-available {
+    color: #1e9e52;
+    background: #edf9f0;
+}
+
+.status-reserved {
+    border-color: #d7b3ff;
+}
+.status-reserved .room-icon,
+.status-badge.status-reserved {
+    color: #8a34ff;
+    background: #f5ecff;
+}
+
+.status-cleaning {
+    border-color: #f0d278;
+}
+.status-cleaning .room-icon,
+.status-badge.status-cleaning {
+    color: #b87900;
+    background: #fff7dd;
+}
+
+.status-occupied {
+    border-color: #4465b9;
+}
+.status-occupied .room-icon,
+.status-badge.status-occupied {
+    color: #5576ca;
+    background: #f3f7ff;
+}
+
+.status-repair {
+    border-color: #efb4b4;
+}
+.status-repair .room-icon,
+.status-badge.status-repair {
+    color: #d53c3c;
+    background: #fff0f0;
+}
+
+.status-default {
+    border-color: #d9deea;
+}
+.status-default .room-icon,
+.status-badge.status-default {
+    color: #667085;
+    background: #f3f4f7;
+}
+
+.empty-state {
+    background: #fff;
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    color: #8b90a0;
+    margin-top: 18px;
+    border: 1px solid #ebeef5;
+}
+
+.pagination-wrapper {
+    margin-top: 24px;
+}
+
+.stat-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.stat-card.active {
+    border: 2px solid #02031e;
+    transform: scale(1.03);
+}
+
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .filters-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .rooms-page {
+        padding: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rooms-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+}

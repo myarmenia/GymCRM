@@ -1,0 +1,37 @@
+{
+    "sidebar": {
+        "profile": "Профиль",
+        "notifications": "Уведомления",
+        "gym": "Отель"
+
+    },
+    "messages": {
+        "password_updated": "Пароль успешно обновлён.",
+        "no_result": "Нет результата"
+    },
+    "status": {
+        "status": "Статус",
+        "active": "Активный",
+        "inactive": "Неактивный",
+        "blocked": "Заблокирован",
+        "pending": "В ожидании",
+        "deleted": "Удалён"
+    },
+    "action": {
+        "action": "Действия",
+        "edit": "Редактировать",
+        "delete": "Удалить",
+        "toggle_active": "Сменить активность",
+        "confirm_delete": "Вы уверены, что хотите удалить этот элемент?"
+    },
+    "roles": {
+        "super_admin": "Супер администратор",
+        "admin": "Администратор",
+        "manager": "Менеджер",
+        "staff": "Сотрудник",
+        "accountant": "Бухгалтер",
+        "owner": "Владелец",
+        "cleaner": "Уборщик"
+    }
+
+}

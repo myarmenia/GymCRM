@@ -1,0 +1,244 @@
+.attach-page {
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #2b2f38;
+}
+
+.page-subtitle {
+    margin: 6px 0 0;
+    color: #8b90a0;
+    font-size: 14px;
+}
+
+.back-btn {
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-weight: 600;
+}
+
+.form-card {
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(24, 39, 75, 0.04);
+    background-color: white;
+}
+
+.room-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding: 18px;
+    /* border-radius: 16px; */
+    border-top: 1px solid #9fa5ae;
+}
+
+.info-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7b8190;
+    margin-bottom: 6px;
+}
+
+.room-number {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    color: #2b2f38;
+}
+
+.selected-count {
+    font-size: 14px;
+    font-weight: 700;
+    color: #696cff;
+    padding: 8px 14px;
+    border-radius: 999px;
+}
+
+.cleaners-section {
+    overflow: hidden;
+}
+
+.section-header,
+.cleaner-row {
+    display: grid;
+    grid-template-columns: 1fr 180px 120px;
+    align-items: center;
+    gap: 16px;
+}
+
+.section-header {
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #4b5565;
+}
+
+.cleaner-row-wrapper {
+    border-top: 1px solid #9fa5ae;
+    transition: all 0.2s ease;
+}
+
+.cleaner-row-wrapper:last-child {
+    border-bottom: 0;
+}
+
+.cleaner-row-wrapper.selected {
+}
+
+.cleaner-row {
+    padding: 16px 18px;
+}
+
+.cleaner-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    color: #696cff;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.cleaner-name {
+    font-size: 15px;
+    font-weight: 800;
+    color: #2b2f38;
+}
+
+.cleaner-email {
+    margin-top: 3px;
+    font-size: 13px;
+    color: #8b90a0;
+}
+
+.cleaning-count {
+    display: inline-flex;
+    min-width: 42px;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: #696cff;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: white;
+}
+
+.col-count,
+.col-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cleaner-checkbox {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    accent-color: #696cff;
+}
+
+.description-box {
+    padding: 0 18px 18px 68px;
+}
+
+.description-box label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4b5565;
+}
+
+.custom-textarea {
+    min-height: 90px;
+    resize: vertical;
+    border-radius: 12px;
+    background: white;
+}
+
+.custom-textarea:focus {
+    border-color: #696cff;
+    box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.12);
+}
+
+.empty-state {
+    padding: 30px;
+    text-align: center;
+    color: #8b90a0;
+    font-weight: 600;
+}
+
+.form-actions {
+    margin-top: 28px;
+    padding-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.save-btn {
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .attach-page {
+        padding: 16px;
+    }
+
+    .page-header,
+    .room-info {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .section-header {
+        display: none;
+    }
+
+    .cleaner-row {
+        grid-template-columns: 1fr auto;
+    }
+
+    .col-count {
+        justify-content: flex-start;
+        grid-column: 1 / 2;
+        padding-left: 50px;
+    }
+
+    .col-action {
+        grid-column: 2 / 3;
+        grid-row: 1 / 3;
+    }
+
+    .description-box {
+        padding: 0 18px 18px;
+    }
+}

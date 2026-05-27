@@ -1,0 +1,12 @@
+
+{
+    "roles": {
+        "super_admin": "Super admin",
+        "admin": "Admin",
+        "manager": "Managaer",
+        "staff": "Staff",
+        "accountant": "Accountant",
+        "owner": "Owner",
+        "cleaner": "Cleaner"
+    }
+}
