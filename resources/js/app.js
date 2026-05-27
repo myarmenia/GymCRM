@@ -6,13 +6,14 @@ import $ from 'jquery';
 window.$ = window.jQuery = $;
 
 // ============ 2. ПОТОМ BOOTSTRAP И ЗАВИСИМОСТИ ============
-import 'select2/dist/css/select2.css';
 import '../assets/vendor/fonts/iconify-icons.css';
 import '../assets/vendor/libs/node-waves/node-waves.css';
 import '../assets/vendor/libs/pickr/pickr-themes.css';
 import '../assets/vendor/css/core.css';
 import '../assets/css/style.css';
-
+// import  '../assets/vendor/libs/select2/select2.css';
+import 'select2/dist/css/select2.css';
+// import 'select2/dist/css/select2.min.css';
 // ============ 3. ПОТОМ JS-ПЛАГИНЫ ============
 import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
@@ -20,7 +21,7 @@ import '../assets/vendor/js/menu.js';
 // ============ 4. SELECT2 (после jquery) ============
 import select2 from 'select2';
 select2($);
-
+// import 'select2/dist/js/select2.full.js';
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -52,6 +53,25 @@ window.initTemplatePlugins = () => {
     }
 };
 
+
+window.initSelect2 = () => {
+    const $ = window.$;
+
+    if (!$.fn.select2) return;
+
+    $('.select2').each(function () {
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
+
+        $(this).select2({
+            width: '100%'
+        });
+    });
+};
+document.addEventListener('inertia:finish', () => {
+    window.initSelect2();
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 

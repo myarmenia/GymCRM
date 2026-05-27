@@ -25,15 +25,17 @@ onMounted(async () => {
     const $roles = window.$('#roles');
     const $gyms = window.$('#gyms');
 
-    $roles.select2({
-        width: '100%',
-        placeholder: 'Choose roles'
-    });
+    // $roles.select2({
+    //     width: '100%',
+    //     placeholder: 'Choose roles'
+    // });
 
-    $gyms.select2({
-        width: '100%',
-        placeholder: 'Choose gym'
-    });
+    // $gyms.select2({
+    //     width: '100%',
+    //     placeholder: 'Choose gym'
+    // });
+
+    window.initSelect2();
 
     // roles sync
     $roles.on('change', function () {

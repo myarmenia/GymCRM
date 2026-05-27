@@ -70,17 +70,17 @@ onMounted(async () => {
     const $gyms = window.$('#gyms');
 
     // Настройка Select2 для ролей
-    $roles.select2({
-        width: '100%',
-        placeholder: 'Choose roles'
-    });
+    // $roles.select2({
+    //     width: '100%',
+    //     placeholder: 'Choose roles'
+    // });
 
-    // Настройка Select2 для отеля
-    $gyms.select2({
-        width: '100%',
-        placeholder: 'Choose gym'
-    });
-
+    // // Настройка Select2 для отеля
+    // $gyms.select2({
+    //     width: '100%',
+    //     placeholder: 'Choose gym'
+    // });
+window.initSelect2();
     // Устанавливаем значения для ролей (как в edit)
     if (form.roles.length > 0) {
         $roles.val(form.roles).trigger('change');
