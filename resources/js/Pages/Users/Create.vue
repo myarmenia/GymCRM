@@ -273,3 +273,10 @@ const submit = () => {
 
     </Index>
 </template>
+<style scoped>
+
+.select2-container {
+    width: 100% !important;
+}
+
+</style>
