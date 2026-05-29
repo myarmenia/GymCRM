@@ -16,19 +16,9 @@ import '../assets/css/style.css';
 import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
 
-// import 'select2/dist/css/select2.css';
 
 
 
-// ============ 4. SELECT2 (после jquery) ============
-
-// import select2 from 'select2';
-// select2($);
-// import 'select2';
-// import select2 from 'select2';
-// select2($);
-
-// import 'select2/dist/css/select2.css';
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -60,47 +50,6 @@ window.initTemplatePlugins = () => {
     }
 };
 
-// window.initSelect2 = () => {
-//     if (!window.$ || !window.$.fn.select2) {
-//         console.warn('Select2 not ready');
-//         return;
-//     }
-
-//     window.$('.select2').each(function () {
-//         const $el = window.$(this);
-
-//         if ($el.hasClass("select2-hidden-accessible")) {
-//             $el.select2('destroy');
-//         }
-
-//         $el.select2({
-//             width: '100%',
-//             placeholder: $el.data('placeholder') || 'Select option',
-//             allowClear: Boolean($el.data('allow-clear')),
-//         });
-//     });
-// };
-
-
-// document.addEventListener('inertia:finish', () => {
-//     setTimeout(window.initSelect2, 100);
-// });
-
-
-// // Запускаем после загрузки DOM
-// if (document.readyState === 'loading') {
-//     document.addEventListener('DOMContentLoaded', window.initSelect2);
-// } else {
-//     window.initSelect2();
-// }
-
-// // Запускаем после каждого перехода Inertia
-// document.addEventListener('inertia:finish', () => {
-//     // Небольшая задержка для Vue
-//     setTimeout(() => {
-//         window.initSelect2();
-//     }, 50);
-// });
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
