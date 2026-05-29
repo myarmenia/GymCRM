@@ -18,12 +18,16 @@ class EntryCode extends Model
         return $this->belongsTo(Gym::class,'gym_id');
     }
 
+    public function users()
+    {
+        return $this->morphMany(EntryPermition::class, 'relation')
+            ->where('relation_type', User::class);
+    }
+
     // public function people(){
     //     return $this->belongsTo(Person::class,'people_id');
     // }
-    // public function person_permission(): HasMany{
-    //     return $this->hasMany(PersonPermission::class);
-    // }
+
     // public function active_person(): HasOne{
     //     return $this->hasOne(PersonPermission::class)->where('status',1);
     // }

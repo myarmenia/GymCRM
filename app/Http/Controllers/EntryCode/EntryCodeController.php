@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Http\Requests\EntryCode\StoreEntryCodeRequest;
 use App\Http\Requests\EntryCode\UpdateEntryCodeRequest;
+use App\Models\EntryCode;
 use App\Models\Gym;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 
 class EntryCodeController extends Controller
 {
@@ -20,8 +22,13 @@ class EntryCodeController extends Controller
     }
     
 
-  
 
+    public function getByGym($locale, $gymId, Request $request)
+    {
+        $currentId = $request->query('current_id');
+        $entryCodes = $this->entryCodeService->getByGymId($gymId, $currentId);
+        return response()->json($entryCodes);
+    }
 
     public function create()
     {
@@ -34,14 +41,14 @@ class EntryCodeController extends Controller
             $defaultGymId = $user->gym_id ?? null;
             
             // Եթե user-ը gym_id-ն վերցվում է staff-ից
-            if (!$defaultGymId && $user->staff) {
-                $defaultGymId = $user->staff->gym_id ?? null;
-            }
+            // if (!$defaultGymId && $user->staff) {
+            //     $defaultGymId = $user->staff->gym_id ?? null;
+            // }
             
-            // Կամ եթե user-ը client_admin է
-            if (!$defaultGymId && $user->client) {
-                $defaultGymId = $user->client->gym_id ?? null;
-            }
+            // // Կամ եթե user-ը client_admin է
+            // if (!$defaultGymId && $user->client) {
+            //     $defaultGymId = $user->client->gym_id ?? null;
+            // }
         }
 
         return Inertia::render('EntryCode/Create', [

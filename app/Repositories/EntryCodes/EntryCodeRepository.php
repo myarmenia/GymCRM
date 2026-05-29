@@ -72,4 +72,22 @@ class EntryCodeRepository implements EntryCodeInterface
 
         return null;
     }
+
+    public function getByGymId(int $gymId, ?int $currentId = null)
+    {
+        return EntryCode::where('gym_id', $gymId)
+            ->where(function ($query) use ($currentId) {
+                $query->where('activation', 0);
+                if ($currentId) {
+                    $query->orWhere('id', $currentId);
+                }
+            })
+            ->with('gym:id,name')
+            ->get(['id', 'token', 'gym_id']);
+    }
+
+    public function activate(int $entryCodeId, bool $active = true): void
+    {
+        EntryCode::where('id', $entryCodeId)->update(['activation' => $active ? 1 : 0]);
+    }
 }

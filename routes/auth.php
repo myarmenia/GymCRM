@@ -107,6 +107,7 @@ Route::prefix('{locale}')
                 Route::get('/list', [EntryCodeController::class, 'list'])->name('list');
                 Route::get('/create', [EntryCodeController::class, 'create'])->name('create');
                 Route::post('/store', [EntryCodeController::class, 'store'])->name('store');
+                Route::get('/by-gym/{gymId}', [EntryCodeController::class, 'getByGym'])->name('by-gym');
 
                 Route::middleware('check.gym:EntryCode,id')->group(function () {
                     Route::get('/edit/{id}', [EntryCodeController::class, 'edit'])->name('edit');

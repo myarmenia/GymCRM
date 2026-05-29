@@ -59,5 +59,24 @@ class User extends Authenticatable
         ];
     }
 
+    public function entryCode()
+    {
+        return $this->belongsTo(EntryCode::class, 'id', 'relation_id')
+            ->where('relation_type', User::class);
+    }
     
+    public function entryPermitions()
+    {
+        return $this->morphMany(EntryPermition::class, 'relation');
+    }
+
+    // Օժանդակ մեթոդ՝ ստուգելու, արդյոք user-ն ունի կոնկրետ entry code
+    public function hasEntryCode(EntryCode $entryCode): bool
+    {
+        return $this->entryPermitions()
+            ->where('entry_code_id', $entryCode->id)
+            ->where('status', 1)
+            ->exists();
+    }
+
 }

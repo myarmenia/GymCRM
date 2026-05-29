@@ -44,6 +44,7 @@ class UpdateUserRequest extends FormRequest
             'roles' => ['required', 'array'],
             'gym_id' => ['nullable', 'exists:gyms,id'],
             'active' => ['boolean'],
+            'entry_code_id' => 'nullable|exists:entry_codes,id',
         ];
     }
 

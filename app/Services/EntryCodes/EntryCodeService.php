@@ -56,4 +56,14 @@ class EntryCodeService
 
         return collect();
     }
+
+    public function getByGymId(int $gymId, ?int $currentId = null)
+    {
+        return $this->entryCodeRepository->getByGymId($gymId, $currentId);
+    }
+
+    public function activateEntryCode(int $entryCodeId, bool $active = true): void
+    {
+        $this->entryCodeRepository->activate($entryCodeId, $active);
+    }
 }
