@@ -111,7 +111,7 @@ class CompanySeeder extends Seeder
             // EN (основной)
             CompanyTranslation::create([
                 'company_id' => $company->id,
-                'locale' => 'en',
+                'locale' => 'hy',
                 'name' => $name,
                 'address' => $address,
                 'city' => $city,

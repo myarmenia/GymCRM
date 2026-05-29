@@ -17,7 +17,7 @@ class MyGuest
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::check()) {
-            $locale = $request->route('locale') ?? 'en'; // Получаем локаль из маршрута
+            $locale = $request->route('locale') ?? 'hy'; // Получаем локаль из маршрута
             $user = Auth::user(); // Получаем текущего пользователя
 
             return $user->hasVerifiedEmail()
