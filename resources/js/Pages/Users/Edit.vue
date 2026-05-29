@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, nextTick } from 'vue';
+import { computed } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -8,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useTrans } from '/resources/js/trans';
 import DocumentsUploader from '@/Components/DocumentsUploader.vue';
+import MultiSelect from '@/Components/MultiSelect.vue';
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -34,73 +35,37 @@ const form = useForm({
     gym_id: ''
 });
 
+
+if (props.user) {
+    form.name = props.user.name || '';
+    form.surname = props.user.surname || '';
+    form.phone = props.user.phone || '';
+    form.email = props.user.email || '';
+    form.passport_number = props.user.passport_number || '';
+    form.passport_expire_at = props.user.passport_expire_at || '';
+    form.birth_date = props.user.birth_date || '';
+    form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
+    form.active =  Boolean(props.user.active);
+    form.gym_id = props.user.gym_id || '';
+}
+
 const roleOptions = computed(() => {
     return props.roles.map(role => ({
+        label: useTrans(`page.roles.${role.name}`),
         value: role.name,
     }));
 });
 
+
+
 const gymOptions = computed(() => {
     return props.gyms.map(gym => ({
         value: gym.id,
-        text: gym.name
+        label: gym.name
     }));
 });
 
-// Инициализация Select2 как в create компоненте
-onMounted(async () => {
-    await nextTick();
 
-    // Заполняем форму данными пользователя
-    if (props.user) {
-        form.name = props.user.name || '';
-        form.surname = props.user.surname || '';
-        form.phone = props.user.phone || '';
-        form.email = props.user.email || '';
-        form.passport_number = props.user.passport_number || '';
-        form.passport_expire_at = props.user.passport_expire_at || '';
-        form.birth_date = props.user.birth_date || '';
-        form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
-        form.active = props.user.active ?? true;
-        form.gym_id = props.user.gym_id || '';
-    }
-
-    // Инициализация Select2 как в create
-    const $roles = window.$('#roles');
-    const $gyms = window.$('#gyms');
-
-    // Настройка Select2 для ролей
-    // $roles.select2({
-    //     width: '100%',
-    //     placeholder: 'Choose roles'
-    // });
-
-    // // Настройка Select2 для отеля
-    // $gyms.select2({
-    //     width: '100%',
-    //     placeholder: 'Choose gym'
-    // });
-window.initSelect2();
-    // Устанавливаем значения для ролей (как в edit)
-    if (form.roles.length > 0) {
-        $roles.val(form.roles).trigger('change');
-    }
-
-    // Устанавливаем значения для отеля
-    if (form.gym_id) {
-        $gyms.val(form.gym_id).trigger('change');
-    }
-
-    // Синхронизация roles с формой
-    $roles.on('change', function () {
-        form.roles = window.$(this).val();
-    });
-
-    // Синхронизация gym с формой
-    $gyms.on('change', function () {
-        form.gym_id = window.$(this).val();
-    });
-});
 
 const submit = () => {
     form.patch(route('user.update', { id: props.user.id, locale: currentLocale }), {
@@ -128,14 +93,15 @@ const submit = () => {
                 <div class="row g-6">
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
                         <InputLabel for="gyms" class="form-label" value="Gyms" />
-                        <select id="gyms" class="select2 form-select">
-                            <option disabled>Choose gym</option>
+                        <select v-model="form.gym_id" class="form-select">
+                            <option disabled value="">Choose gym</option>
+
                             <option
                                 v-for="(gym, index) in gymOptions"
                                 :key="index"
                                 :value="gym.value"
                             >
-                                {{ gym.text }}
+                                {{ gym.label }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.gym_id" />
@@ -240,15 +206,12 @@ const submit = () => {
 
                     <div class="col-md-6 select2-primary">
                         <InputLabel for="roles" class="form-label" value="Roles" />
-                        <select id="roles" class="select2 form-select" multiple tabindex="7">
-                            <option
-                                v-for="(role, index) in roleOptions"
-                                :key="index"
-                                :value="role.value"
-                            >
-                                {{ useTrans(`page.roles.${role.value}`) }}
-                            </option>
-                        </select>
+
+                        <MultiSelect
+                            v-model="form.roles"
+                            :options="roleOptions"
+                            placeholder="Choose roles"
+                        />
                         <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
 
@@ -260,7 +223,7 @@ const submit = () => {
                                 type="checkbox"
                                 id="flexSwitchCheckChecked"
                                 v-model="form.active"
-                                :checked="form.active"
+
                             >
                         </div>
                     </div>
