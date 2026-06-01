@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class EntryPermition extends Model
+class EntryPermission extends Model
 {
     //
     protected $guarded=[];
-    protected $table = "entry_permitions";
+    protected $table = "entry_permissions";
 
     public function entryCode()
     {

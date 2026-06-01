@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -74,30 +74,7 @@ const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
 };
 
-onMounted(async () => {
-    await nextTick();
 
-    const $roles = window.$('#roles');
-    const $gyms = window.$('#gyms');
-
-    if ($gyms.length && props.canSelectGym) {
-        $gyms.select2({
-            width: '100%',
-            placeholder: 'Choose gym'
-        });
-        $gyms.on('change', onGymChange);
-    }
-
-    if ($roles.length) {
-        $roles.select2({
-            width: '100%',
-            placeholder: 'Choose roles'
-        });
-        $roles.on('change', function () {
-            form.roles = window.$(this).val();
-        });
-    }
-});
 
 
 
