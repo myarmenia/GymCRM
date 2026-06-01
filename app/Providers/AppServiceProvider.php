@@ -5,7 +5,7 @@ namespace App\Providers;
 
 use App\Interfaces\CardTypes\CardTypeInterface;
 use App\Interfaces\Documents\DocumentInterface;
-
+use App\Interfaces\EntryCodes\EntryCodeInterface;
 use App\Interfaces\Gyms\GymInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
@@ -14,7 +14,7 @@ use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Documents\DocumentRepository;
-
+use App\Repositories\EntryCodes\EntryCodeRepository;
 use App\Repositories\Gyms\GymRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
@@ -47,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CardTypeInterface::class, CardTypeRepository::class);
         $this->app->bind(PartnerInterface::class, PartnerRepository::class);
         $this->app->bind(WarehouseInterface::class, WarehouseRepository::class);
+        $this->app->bind(EntryCodeInterface::class, EntryCodeRepository::class);
+
     }
 
     /**

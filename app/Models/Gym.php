@@ -32,4 +32,9 @@ class Gym extends Model
     {
         return $this->hasMany(Partner::class);
     }
+
+    public function entryCodes()
+    {
+        return $this->hasMany(EntryCode::class, 'gym_id');
+    }
 }

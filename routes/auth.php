@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Documents\DocumentController;
+use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\Partners\PartnerController;
@@ -98,6 +99,23 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [GymController::class, 'update'])->name('update');
                     Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
 
+                });
+            });
+
+            // ====== Entry Code ================
+            Route::prefix('entry-code')->name('entry-code.')->group(function () {
+                Route::get('/list', [EntryCodeController::class, 'list'])->name('list');
+                Route::get('/create', [EntryCodeController::class, 'create'])->name('create');
+                Route::post('/store', [EntryCodeController::class, 'store'])->name('store');
+                Route::get('/by-gym/{gymId}', [EntryCodeController::class, 'getByGym'])->name('by-gym');
+
+                Route::middleware('check.gym:EntryCode,id')->group(function () {
+                    Route::get('/edit/{id}', [EntryCodeController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [EntryCodeController::class, 'update'])->name('update');
+                    Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+
+                    // Եթե ունեք active/inactive toggle (ըստ անհրաժեշտության)
+                    Route::patch('{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
                 });
             });
 
