@@ -59,11 +59,11 @@ class User extends Authenticatable
         ];
     }
 
-    public function entryCode()
-    {
-        return $this->belongsTo(EntryCode::class, 'id', 'relation_id')
-            ->where('relation_type', User::class);
-    }
+    // public function entryCode()
+    // {
+    //     return $this->belongsTo(EntryCode::class, 'id', 'relation_id')
+    //         ->where('relation_type', User::class);
+    // }
     
     public function entryPermitions()
     {
