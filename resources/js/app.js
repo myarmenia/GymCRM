@@ -6,7 +6,6 @@ import $ from 'jquery';
 window.$ = window.jQuery = $;
 
 // ============ 2. ПОТОМ BOOTSTRAP И ЗАВИСИМОСТИ ============
-import 'select2/dist/css/select2.css';
 import '../assets/vendor/fonts/iconify-icons.css';
 import '../assets/vendor/libs/node-waves/node-waves.css';
 import '../assets/vendor/libs/pickr/pickr-themes.css';
@@ -17,9 +16,8 @@ import '../assets/css/style.css';
 import '../assets/vendor/js/bootstrap.js';
 import '../assets/vendor/js/menu.js';
 
-// ============ 4. SELECT2 (после jquery) ============
-import select2 from 'select2';
-select2($);
+
+
 
 // ============ 5. Inertia и Vue ============
 import { createInertiaApp } from '@inertiajs/vue3';

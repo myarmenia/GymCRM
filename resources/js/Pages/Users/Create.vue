@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, nextTick, ref, watch } from 'vue';
+import { computed } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -8,6 +8,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { useTrans } from '/resources/js/trans';
 import axios from 'axios';
+import MultiSelect from '@/Components/MultiSelect.vue';
+
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -18,8 +20,10 @@ const props = defineProps({
   canSelectGym: Boolean
 });
 
+
 const selectedGymId = ref(null);
 const entryCodes = ref([]);
+
 
 const form = useForm({
     name: '',
@@ -95,18 +99,24 @@ onMounted(async () => {
     }
 });
 
+
+
 const roleOptions = computed(() => {
     return props.roles.map(role => ({
+        label: useTrans(`page.roles.${role.name}`),
         value: role.name,
     }));
 });
 
 const gymOptions = computed(() => {
     return props.gyms.map(gym => ({
+        label: gym.name,
         value: gym.id,
-        text: gym.name
     }));
 });
+
+
+
 
 const submit = () => {
     form.post(route('user.store', { locale: currentLocale }), {
@@ -135,14 +145,17 @@ const submit = () => {
                     <!-- Gym selection (only for owner) -->
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
                         <InputLabel for="gyms" class="form-label" value="Gyms" />
-                        <select id="gyms" class="select2 form-select">
-                            <option disabled selected>Choose gym</option>
+
+                        <select v-model="form.gym_id" class="form-select">
+                            <option value="" disabled>Choose gym</option>
+
+
                             <option
                                 v-for="gym in gymOptions"
                                 :key="gym.value"
                                 :value="gym.value"
                             >
-                                {{ gym.text }}
+                                {{ gym.label }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.gym_id" />
@@ -203,17 +216,31 @@ const submit = () => {
                     </div>
                     <div class="col-md-6 select2-primary">
                         <InputLabel for="roles" class="form-label" value="Roles" />
-                        <select id="roles" class="select2 form-select" multiple tabindex="7">
-                            <option v-for="role in roleOptions" :key="role.value" :value="role.value">
+                        <!-- <select id="roles" class="select2 form-select" multiple tabindex="7">
+                            <option
+                                v-for="(role, index) in roleOptions"
+                                :key="index"
+                                :value="role.value"
+                            >
                                 {{ useTrans(`page.roles.${role.value}`) }}
                             </option>
-                        </select>
-                        <InputError :message="form.errors.roles" />
+                        </select> -->
+                        <MultiSelect
+                            v-model="form.roles"
+                            :options="roleOptions"
+                            placeholder="Choose roles"
+                        />
+                        <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Active</label>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" v-model="form.active" :checked="form.active">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="flexSwitchCheckChecked"
+                                v-model="form.active"
+                            >
                         </div>
                     </div>
                 </div>
@@ -248,3 +275,10 @@ const submit = () => {
         </div>
     </Index>
 </template>
+<style scoped>
+
+.select2-container {
+    width: 100% !important;
+}
+
+</style>

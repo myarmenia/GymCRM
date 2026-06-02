@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, nextTick, ref, watch } from 'vue';
+import { computed } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -9,6 +9,8 @@ import TextInput from '@/Components/TextInput.vue';
 import { useTrans } from '/resources/js/trans';
 import DocumentsUploader from '@/Components/DocumentsUploader.vue';
 import axios from 'axios';
+import MultiSelect from '@/Components/MultiSelect.vue';
+
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -77,70 +79,38 @@ const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
 };
 
-onMounted(async () => {
-    await nextTick();
 
-    // Fill form with user data
-    if (props.user) {
-        form.name = props.user.name || '';
-        form.surname = props.user.surname || '';
-        form.phone = props.user.phone || '';
-        form.email = props.user.email || '';
-        form.passport_number = props.user.passport_number || '';
-        form.passport_expire_at = props.user.passport_expire_at || '';
-        form.birth_date = props.user.birth_date || '';
-        form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
-        form.active = props.user.active ?? true;
-        form.gym_id = props.user.gym_id || '';
-        form.entry_code_id = props.selectedEntryCodeId ?? null;
-    }
 
-    // Set selectedGymId for watch
-    selectedGymId.value = form.gym_id || null;
-
-    // Initialize Select2
-    const $roles = window.$('#roles');
-    const $gyms = window.$('#gyms');
-
-    if ($roles.length) {
-        $roles.select2({ width: '100%', placeholder: 'Choose roles' });
-        $roles.val(form.roles).trigger('change');
-        $roles.on('change', function () {
-            form.roles = window.$(this).val();
-        });
-    }
-
-    if ($gyms.length && props.canSelectGym) {
-        $gyms.select2({ width: '100%', placeholder: 'Choose gym' });
-        if (form.gym_id) {
-            $gyms.val(form.gym_id).trigger('change');
-        }
-        $gyms.on('change', onGymChange);
-    }
-
-    // Load entry codes for initial gym (if any)
-    if (selectedGymId.value) {
-        try {
-            const response = await axios.get(route('entry-code.by-gym', {
-                locale: currentLocale,
-                gymId: selectedGymId.value,
-                current_id: props.selectedEntryCodeId || undefined
-
-            }));
-            entryCodes.value = response.data;
-        } catch (error) {
-            console.error('Failed to load entry codes', error);
-        }
-    }
-});
+if (props.user) {
+    form.name = props.user.name || '';
+    form.surname = props.user.surname || '';
+    form.phone = props.user.phone || '';
+    form.email = props.user.email || '';
+    form.passport_number = props.user.passport_number || '';
+    form.passport_expire_at = props.user.passport_expire_at || '';
+    form.birth_date = props.user.birth_date || '';
+    form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
+    form.active =  Boolean(props.user.active);
+    form.gym_id = props.user.gym_id || '';
+}
 
 const roleOptions = computed(() => {
-    return props.roles.map(role => ({ value: role.name }));
+    return props.roles.map(role => ({
+        label: useTrans(`page.roles.${role.name}`),
+        value: role.name,
+    }));
 });
 
+
+
 const gymOptions = computed(() => {
-    return props.gyms.map(gym => ({ value: gym.id, text: gym.name }));
+    return props.gyms.map(gym => ({
+        value: gym.id,
+        label: gym.name
+    }));
 });
+
+
 
 const submit = () => {
     form.patch(route('user.update', { id: props.user.id, locale: currentLocale }), {
@@ -168,10 +138,15 @@ const submit = () => {
                     <!-- Gym selection (only for owner) -->
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
                         <InputLabel for="gyms" class="form-label" value="Gyms" />
-                        <select id="gyms" class="select2 form-select">
-                            <option disabled>Choose gym</option>
-                            <option v-for="gym in gymOptions" :key="gym.value" :value="gym.value">
-                                {{ gym.text }}
+                        <select v-model="form.gym_id" class="form-select">
+                            <option disabled value="">Choose gym</option>
+
+                            <option
+                                v-for="(gym, index) in gymOptions"
+                                :key="index"
+                                :value="gym.value"
+                            >
+                                {{ gym.label }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.gym_id" />
@@ -232,17 +207,24 @@ const submit = () => {
                     </div>
                     <div class="col-md-6 select2-primary">
                         <InputLabel for="roles" class="form-label" value="Roles" />
-                        <select id="roles" class="select2 form-select" multiple tabindex="7">
-                            <option v-for="role in roleOptions" :key="role.value" :value="role.value">
-                                {{ useTrans(`page.roles.${role.value}`) }}
-                            </option>
-                        </select>
-                        <InputError :message="form.errors.roles" />
+
+                        <MultiSelect
+                            v-model="form.roles"
+                            :options="roleOptions"
+                            placeholder="Choose roles"
+                        />
+                        <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Active</label>
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" v-model="form.active" :checked="form.active">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="flexSwitchCheckChecked"
+                                v-model="form.active"
+
+                            >
                         </div>
                     </div>
                 </div>
