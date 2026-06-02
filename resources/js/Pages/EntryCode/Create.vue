@@ -31,19 +31,19 @@ console.log('Gyms:', props.gyms);
 console.log('Form:', form);
 console.log('page.props.auth.user', page.props.auth.user);
 
-onMounted(async () => {
-    await nextTick();
-    const $gyms = window.$('#gyms');
-    if ($gyms.length && isOwner.value) {
-        $gyms.select2({ width: '100%', placeholder: 'Ընտրել մարզասրահը' });
-        $gyms.on('change', function () {
-            form.gym_id = window.$(this).val();
-        });
-        if (form.gym_id) {
-            $gyms.val(form.gym_id).trigger('change');
-        }
-    }
-});
+// onMounted(async () => {
+//     await nextTick();
+//     const $gyms = window.$('#gyms');
+//     if ($gyms.length && isOwner.value) {
+//         $gyms.select2({ width: '100%', placeholder: 'Ընտրել մարզասրահը' });
+//         $gyms.on('change', function () {
+//             form.gym_id = window.$(this).val();
+//         });
+//         if (form.gym_id) {
+//             $gyms.val(form.gym_id).trigger('change');
+//         }
+//     }
+// });
 
 const submit = () => {
     form.post(route('entry-code.store', { locale: currentLocale }));
@@ -63,9 +63,21 @@ const submit = () => {
                 <div class="row mb-3" v-if="isOwner">
                     <label class="col-sm-3 col-form-label">Մարզասրահ</label>
                     <div class="col-sm-9 select2-primary">
-                        <select id="gyms" class="select2 form-select">
+                        <!-- <select id="gyms" class="select2 form-select">
                             <option disabled selected>Ընտրել մարզասրահը</option>
                             <option v-for="gym in gyms" :key="gym.id" :value="gym.id">
+                                {{ gym.name }}
+                            </option>
+                        </select> -->
+                        <select v-model="form.gym_id" class="form-select">
+                            <option value="" disabled>Ընտրել մարզասրահը</option>
+
+
+                            <option
+                                v-for="gym in gyms"
+                                :key="gym.id"
+                                :value="gym.id"
+                            >
                                 {{ gym.name }}
                             </option>
                         </select>
@@ -94,7 +106,7 @@ const submit = () => {
                     </div>
                 </div>
 
-         
+
 
                 <div class="row mb-3">
                     <div class="col-sm-9 offset-sm-3">

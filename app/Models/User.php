@@ -60,10 +60,13 @@ class User extends Authenticatable
     }
 
 
+
     public function entryPermissions()
     {
         return $this->morphMany(EntryPermission::class, 'relation');
+
     }
+
 
     // Օժանդակ մեթոդ՝ ստուգելու, արդյոք user-ն ունի կոնկրետ entry code
     public function hasEntryCode(EntryCode $entryCode): bool
