@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Gym;
 use Illuminate\Database\Seeder;
 use App\Models\Company;
 use App\Models\CompanyTranslation;
-use App\Models\Gym;
 
 class CompanySeeder extends Seeder
 {
@@ -111,7 +111,7 @@ class CompanySeeder extends Seeder
             // EN (основной)
             CompanyTranslation::create([
                 'company_id' => $company->id,
-                'locale' => 'hy',
+                'locale' => 'en',
                 'name' => $name,
                 'address' => $address,
                 'city' => $city,

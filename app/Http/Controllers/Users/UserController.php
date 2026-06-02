@@ -20,7 +20,7 @@ class UserController extends Controller
             protected UserService $userService,
             protected RoleService $roleService,
             protected GymService $gymService,
-            protected EntryCodeService $entryCodeService   
+            protected EntryCodeService $entryCodeService
 
     )
     {
@@ -53,7 +53,7 @@ class UserController extends Controller
 
 
     // ========== store =====================
-   
+
     public function store(StoreUserRequest $request)
     {
         $user = $this->userService->store(UserDTO::fromArray($request->all()));
@@ -112,7 +112,7 @@ class UserController extends Controller
 
         if ($oldEntryCodeId) {
             $this->entryCodeService->activateEntryCode($oldEntryCodeId, false);
-        } 
+        }
 
         // Remove all existing entry_permitions for this user
         $user->entryPermitions()->delete();

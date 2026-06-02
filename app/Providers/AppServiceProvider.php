@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 
+use App\Interfaces\AttendanceSheets\AttendanceSheetInterface;
 use App\Interfaces\CardTypes\CardTypeInterface;
 use App\Interfaces\Documents\DocumentInterface;
 use App\Interfaces\EntryCodes\EntryCodeInterface;
@@ -10,8 +11,11 @@ use App\Interfaces\Gyms\GymInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\Roles\RoleInterface;
+use App\Interfaces\Turnstile\CheckEntryCodeInterface;
+use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
+use App\Repositories\AttendanceSheets\AttendanceSheetsRepository;
 use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Documents\DocumentRepository;
 use App\Repositories\EntryCodes\EntryCodeRepository;
@@ -19,6 +23,7 @@ use App\Repositories\Gyms\GymRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\Roles\RoleRepository;
+use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
 use Illuminate\Support\Facades\Session;
@@ -48,6 +53,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PartnerInterface::class, PartnerRepository::class);
         $this->app->bind(WarehouseInterface::class, WarehouseRepository::class);
         $this->app->bind(EntryCodeInterface::class, EntryCodeRepository::class);
+        $this->app->bind(AttendanceSheetInterface::class, AttendanceSheetsRepository::class);
+        $this->app->bind(ClientIdFromTurnstileInterface::class, TurnstileRepository::class);
+        $this->app->bind(CheckEntryCodeInterface::class, TurnstileRepository::class);
 
     }
 

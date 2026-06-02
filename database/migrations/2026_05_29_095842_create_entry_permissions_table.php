@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('entry_permitions', function (Blueprint $table) {
+        Schema::create('entry_permissions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('entry_code_id')->constrained()->onDelete('cascade');
             $table->morphs('relation');

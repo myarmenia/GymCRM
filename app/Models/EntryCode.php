@@ -9,27 +9,36 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class EntryCode extends Model
 {
     use HasFactory, SoftDeletes;
-    protected $guarded=[];
-     public $timestamps = true;
+    protected $guarded = [];
+    public $timestamps = true;
     protected $table = "entry_codes";
 
     public function gym()
     {
-        return $this->belongsTo(Gym::class,'gym_id');
+        return $this->belongsTo(Gym::class, 'gym_id');
     }
 
-    public function users()
+
+    public function entryPermissions()
     {
-        return $this->morphMany(EntryPermition::class, 'relation')
-            ->where('relation_type', User::class);
+        return $this->hasMany(EntryPermission::class);
     }
 
-    // public function people(){
-    //     return $this->belongsTo(Person::class,'people_id');
-    // }
+    public function getUsersAttribute()
+    {
+        return $this->entryPermissions()
+            ->with('relation')
+            ->get()
+            ->pluck('relation')
+            ->filter(fn($item) => $item instanceof User);
+    }
 
-    // public function active_person(): HasOne{
-    //     return $this->hasOne(PersonPermission::class)->where('status',1);
-    // }
-
+    public function getPeopleAttribute()
+    {
+        return $this->entryPermissions()
+            ->with('relation')
+            ->get()
+            ->pluck('relation')
+            ->filter(fn($item) => $item instanceof Person);
+    }
 }

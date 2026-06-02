@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -21,7 +21,7 @@ const props = defineProps({
 });
 
 
-const selectedGymId = ref(null);
+// const selectedGymId = ref(null);
 const entryCodes = ref([]);
 
 
@@ -42,15 +42,35 @@ const form = useForm({
 });
 
 // Watch for gym change to load entry codes dynamically
-watch(selectedGymId, async (newGymId) => {
+// watch(selectedGymId, async (newGymId) => {
+//     if (newGymId) {
+//         try {
+//             const response = await axios.get(route('entry-code.by-gym', {
+//                 locale: currentLocale,
+//                 gymId: newGymId
+//             }));
+//             entryCodes.value = response.data;
+//             // Reset entry_code_id when gym changes
+//             form.entry_code_id = null;
+//         } catch (error) {
+//             console.error('Failed to load entry codes', error);
+//             entryCodes.value = [];
+//         }
+//     } else {
+//         entryCodes.value = [];
+//         form.entry_code_id = null;
+//     }
+// });
+
+watch(() => form.gym_id, async (newGymId) => {
     if (newGymId) {
         try {
             const response = await axios.get(route('entry-code.by-gym', {
                 locale: currentLocale,
                 gymId: newGymId
             }));
+
             entryCodes.value = response.data;
-            // Reset entry_code_id when gym changes
             form.entry_code_id = null;
         } catch (error) {
             console.error('Failed to load entry codes', error);
@@ -63,9 +83,16 @@ watch(selectedGymId, async (newGymId) => {
 });
 
 // Handle gym selection change
+// const onGymChange = (event) => {
+//     const gymId = event.target.value;
+//     selectedGymId.value = gymId;
+//     form.gym_id = gymId;
+// };
+
 const onGymChange = (event) => {
-    const gymId = event.target.value;
-    selectedGymId.value = gymId;
+    const gymId = Number(event.target.value) || null;
+
+    // selectedGymId.value = gymId;
     form.gym_id = gymId;
 };
 
@@ -74,31 +101,31 @@ const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
 };
 
-onMounted(async () => {
-    await nextTick();
 
-    const $roles = window.$('#roles');
-    const $gyms = window.$('#gyms');
+// onMounted(async () => {
+//     await nextTick();
 
-    if ($gyms.length && props.canSelectGym) {
-        $gyms.select2({
-            width: '100%',
-            placeholder: 'Choose gym'
-        });
-        $gyms.on('change', onGymChange);
-    }
+//     const $roles = window.$('#roles');
+//     const $gyms = window.$('#gyms');
 
-    if ($roles.length) {
-        $roles.select2({
-            width: '100%',
-            placeholder: 'Choose roles'
-        });
-        $roles.on('change', function () {
-            form.roles = window.$(this).val();
-        });
-    }
-});
+//     if ($gyms.length && props.canSelectGym) {
+//         $gyms.select2({
+//             width: '100%',
+//             placeholder: 'Choose gym'
+//         });
+//         $gyms.on('change', onGymChange);
+//     }
 
+//     if ($roles.length) {
+//         $roles.select2({
+//             width: '100%',
+//             placeholder: 'Choose roles'
+//         });
+//         $roles.on('change', function () {
+//             form.roles = window.$(this).val();
+//         });
+//     }
+// });
 
 
 const roleOptions = computed(() => {
@@ -146,7 +173,7 @@ const submit = () => {
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
                         <InputLabel for="gyms" class="form-label" value="Gyms" />
 
-                        <select v-model="form.gym_id" class="form-select">
+                        <select class="form-select" v-model="form.gym_id" @change="onGymChange">
                             <option value="" disabled>Choose gym</option>
 
 
@@ -158,6 +185,17 @@ const submit = () => {
                                 {{ gym.label }}
                             </option>
                         </select>
+
+                        <!-- <select id="gyms" class="select2 form-select">
+                            <option disabled selected>Choose gym</option>
+                            <option
+                                v-for="gym in gymOptions"
+                                :key="gym.value"
+                                :value="gym.value"
+                            >
+                                {{ gym.text }}
+                            </option>
+                        </select> -->
                         <InputError class="mt-2" :message="form.errors.gym_id" />
                     </div>
 
