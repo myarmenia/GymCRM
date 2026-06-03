@@ -7,6 +7,7 @@ use App\Interfaces\CardTypes\CardTypeInterface;
 use App\Interfaces\Documents\DocumentInterface;
 
 use App\Interfaces\Gyms\GymInterface;
+use App\Interfaces\Memberships\MembershipPlanInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\Roles\RoleInterface;
@@ -16,6 +17,7 @@ use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Documents\DocumentRepository;
 
 use App\Repositories\Gyms\GymRepository;
+use App\Repositories\Memberships\MembershipPlanRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\Roles\RoleRepository;
@@ -47,6 +49,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CardTypeInterface::class, CardTypeRepository::class);
         $this->app->bind(PartnerInterface::class, PartnerRepository::class);
         $this->app->bind(WarehouseInterface::class, WarehouseRepository::class);
+
+        $this->app->bind(MembershipPlanInterface::class, MembershipPlanRepository::class);
+
     }
 
     /**

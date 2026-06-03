@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('langs', function (Blueprint $table) {
+        Schema::create('membership_categories', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->default('hy');
-            $table->string('name');
+            $table->foreignId('gym_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->boolean('active')->default(true);
+            $table->string('slug')->unique();
+            $table->softDeletes();
             $table->timestamps();
         });
     }
@@ -24,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('langs');
+        Schema::dropIfExists('membership_categories');
     }
 };

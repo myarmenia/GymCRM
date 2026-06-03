@@ -130,6 +130,18 @@ Route::prefix('{locale}')
                 });
             });
 
+            // ====== users ================
+            Route::prefix('membership')->name('membership.')->group(function () {
+                Route::get('/list', [MembershipController::class, 'list'])->name('list');
+                Route::get('/create', [MembershipController::class, 'create'])->name('create');
+                Route::post('/store', [MembershipController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:MembershipPlan,id')->group(function () {
+                    Route::get('/edit/{id}', [MembershipController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [MembershipController::class, 'update'])->name('update');
+                });
+            });
+
         });
     });
 

@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('langs', function (Blueprint $table) {
+        Schema::create('membership_plan_translations', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->default('hy');
+            $table->foreignId('membership_plan_id')->constrained()->cascadeOnDelete();
+
+            $table->string('locale', 5);
             $table->string('name');
+            $table->text('description')->nullable();
+            $table->unique([
+                'membership_plan_id',
+                'locale'
+            ]);
             $table->timestamps();
         });
     }
@@ -24,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('langs');
+        Schema::dropIfExists('membership_plan_translations');
     }
 };
