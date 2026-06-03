@@ -390,7 +390,7 @@ export default function initTemplateCustomizer() {
                                 throw new Error("window.Helpers required.");
                             if (this.settings = {},
                                 this.settings.displayCustomizer = void 0 === o || o,
-                                this.settings.lang = i || "en",
+                                this.settings.lang = i || "hy",
                                 n ? (this.settings.defaultPrimaryColor = n,
                                     z = !0) : (this.settings.defaultPrimaryColor = O.getPropertyValue("--bs-primary").trim(),
                                         z = !1),

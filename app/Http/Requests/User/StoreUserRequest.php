@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Models\EntryCode;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -42,6 +43,18 @@ class StoreUserRequest extends FormRequest
                 'nullable',
                 'exists:gyms,id'
             ],
+            'entry_code_id' => [
+                'nullable',
+                'exists:entry_codes,id',
+                function ($attribute, $value, $fail) {
+                    $gymId = request()->input('gym_id') ?? auth()->user()->gym_id;
+                    $entryCode = EntryCode::find($value);
+                    if ($entryCode && $gymId && $entryCode->gym_id != $gymId) {
+                        $fail('Ընտրված entry code-ը չի պատկանում այս մարզասրահին:');
+                    }
+                },
+            ],
+
         ];
     }
 

@@ -8,7 +8,7 @@ class MembershipPlanTranslation extends Model
 {
     protected $guarded = [];
 
-    public function plan()
+    public function MembershipPlan()
     {
         return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
     }

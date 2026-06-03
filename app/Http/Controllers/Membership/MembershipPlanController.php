@@ -3,14 +3,21 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Services\Memberships\MembershipPlanService;
+use App\Services\Memberships\MembershipCategoryService;
+
+use Illuminate\Support\Facades\Auth;
+
+use Inertia\Inertia;
 
 class MembershipPlanController extends Controller
 {
     public function __construct(
-        protected UserService $userService,
-        protected RoleService $roleService,
-        protected GymService $gymService
+        protected MembershipPlanService $membershipPlanService,
+        protected MembershipCategoryService $membershipCategoryService,
+
+        // protected RoleService $roleService,
+        // protected GymService $gymService
 
     ) {
 
@@ -21,24 +28,25 @@ class MembershipPlanController extends Controller
     public function list()
     {
 
-        $users = $this->userService->getAllPaginated();
+        $membershipPlans = $this->membershipPlanService->getAllPaginated();
 
-        return Inertia::render('Users/List', ['users' => $users]);
+        return Inertia::render('MembershipPlans/List', ['membershipPlans' => $membershipPlans]);
     }
+
 
 
     // ========== create =====================
     public function create()
     {
         $user = Auth::user();
-        $roles = $this->roleService->getAvailableRoles($user);
-        $gyms = $this->gymService->getAll();
-        $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
+        $membershipCategories = $this->membershipCategoryService->getActiveCategories();
+        // $roles = $this->roleService->getAvailableRoles($user);
+        // $gyms = $this->gymService->getAll();
+        // $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
 
-        return Inertia::render('Users/Create', [
-            'roles' => $roles,
-            'gyms' => $gyms,
-            'canSelectGym' => $user->hasRole('owner'),
+        return Inertia::render('MembershipPlans/Create', [
+            'membershipCategories' => $membershipCategories,
+            // 'canSelectGym' => $user->hasRole('owner'),
         ]);
     }
 

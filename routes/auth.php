@@ -10,6 +10,8 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Documents\DocumentController;
+use App\Http\Controllers\EntryCode\EntryCodeController;
+use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\Partners\PartnerController;
@@ -101,6 +103,23 @@ Route::prefix('{locale}')
                 });
             });
 
+            // ====== Entry Code ================
+            Route::prefix('entry-code')->name('entry-code.')->group(function () {
+                Route::get('/list', [EntryCodeController::class, 'list'])->name('list');
+                Route::get('/create', [EntryCodeController::class, 'create'])->name('create');
+                Route::post('/store', [EntryCodeController::class, 'store'])->name('store');
+                Route::get('/by-gym/{gymId}', [EntryCodeController::class, 'getByGym'])->name('by-gym');
+
+                Route::middleware('check.gym:EntryCode,id')->group(function () {
+                    Route::get('/edit/{id}', [EntryCodeController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [EntryCodeController::class, 'update'])->name('update');
+                    Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+
+                    // Եթե ունեք active/inactive toggle (ըստ անհրաժեշտության)
+                    Route::patch('{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
+                });
+            });
+
             Route::prefix('partner')->name('partner.')->group(function () {
                 Route::get('/list', [PartnerController::class, 'list'])->name('list');
                 Route::get('/create', [PartnerController::class, 'create'])->name('create');
@@ -131,14 +150,14 @@ Route::prefix('{locale}')
             });
 
             // ====== users ================
-            Route::prefix('membership')->name('membership.')->group(function () {
-                Route::get('/list', [MembershipController::class, 'list'])->name('list');
-                Route::get('/create', [MembershipController::class, 'create'])->name('create');
-                Route::post('/store', [MembershipController::class, 'store'])->name('store');
+            Route::prefix('membership-plan')->name('membership_plan.')->group(function () {
+                Route::get('/list', [MembershipPlanController::class, 'list'])->name('list');
+                Route::get('/create', [MembershipPlanController::class, 'create'])->name('create');
+                Route::post('/store', [MembershipPlanController::class, 'store'])->name('store');
 
                 Route::middleware('check.gym:MembershipPlan,id')->group(function () {
-                    Route::get('/edit/{id}', [MembershipController::class, 'edit'])->name('edit');
-                    Route::patch('/update/{id}', [MembershipController::class, 'update'])->name('update');
+                    Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
                 });
             });
 

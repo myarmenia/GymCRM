@@ -8,7 +8,7 @@ class MembershipCategoryTranslation extends Model
 {
     protected $guarded = [];
 
-    public function category()
+    public function MembershipCategory()
     {
         return $this->belongsTo(MembershipCategory::class, 'membership_category_id');
     }

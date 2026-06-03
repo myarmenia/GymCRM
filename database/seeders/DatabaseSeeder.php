@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             PaymentMethodSeeder::class,
             CardTypeSeeder::class,
             CardTypePaymentMethodSeeder::class,
+            MembershipCategorySeeder::class,
 
         ]);
     }

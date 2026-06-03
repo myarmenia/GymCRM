@@ -13,7 +13,7 @@ const props = defineProps({
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "en";
+const currentLocale = page.props.locale ?? "hy";
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);

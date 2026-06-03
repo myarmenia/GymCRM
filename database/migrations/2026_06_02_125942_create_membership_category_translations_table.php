@@ -21,10 +21,10 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->unique([
-                'membership_category_id',
-                'locale'
-            ]);
+            $table->unique(
+                ['membership_category_id', 'locale'],
+                'mct_cat_locale_unique'
+            );
         });
     }
 

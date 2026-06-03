@@ -41,7 +41,6 @@ return new class extends Migration
             $table->timestamp('activated_at')->nullable();
             $table->timestamp('expired_at')->nullable();
 
-            $table->timestamps();
             $table->softDeletes();
             $table->timestamps();
         });

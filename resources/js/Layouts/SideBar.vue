@@ -69,7 +69,7 @@ const { hasRole } = useAuth();
         <ul class="menu-inner py-1">
             <!-- ======== users ========== -->
             <li
-                
+
                 :class="[
                     'menu-item',
                     route().current('user.list') ? 'active' : '',
@@ -101,7 +101,43 @@ const { hasRole } = useAuth();
                     <div data-i18n="Service Types">Gym</div>
                 </Link>
             </li>
+            <!-- ======== entry codes ========== -->
+            <li
+                :class="[
+                    'menu-item',
+                    route().current('entry-code.list') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('entry-code.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-qrcode"></i>
+                    <!-- or use any icon you prefer, e.g. ti tabler-ticket -->
+                    <div data-i18n="Entry Codes">
+                        Entry Codes
+                    </div>
+                </Link>
+            </li>
 
+            <!-- ======== users ========== -->
+            <li
+
+                :class="[
+                    'menu-item',
+                    route().current('membership_plan.list') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('membership_plan.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-users"></i>
+                    <div data-i18n="Service Types">
+                        Աբոնեմենտներ
+                    </div>
+                </Link>
+            </li>
         </ul>
     </aside>
 
