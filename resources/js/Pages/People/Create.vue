@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, onMounted } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -12,48 +12,38 @@ const page = usePage();
 const currentLocale = page.props.locale ?? "en";
 
 const props = defineProps({
-  gyms: Array,
-  canSelectGym: Boolean,
+    initialGymId: Number,  // gym ID-ն entry codes-ը բեռնելու համար
 });
 
 const entryCodes = ref([]);
 
 const form = useForm({
-    gym_id: null,
     name: '',
     surname: '',
     email: '',
+    password: '',
     phone: '',
-    type: 'visitor',   // 'visitor' or 'employee'
+    type: 'visitor',
     entry_code_id: null,
 });
 
-// When gym changes, load entry codes for that gym
-watch(() => form.gym_id, async (newGymId) => {
-    if (newGymId) {
-        try {
-            const response = await axios.get(route('entry-code.by-gym', {
-                locale: currentLocale,
-                gymId: newGymId,
-            }));
-            entryCodes.value = response.data;
-            form.entry_code_id = null;
-        } catch (error) {
-            console.error('Failed to load entry codes', error);
-            entryCodes.value = [];
-        }
-    } else {
-        entryCodes.value = [];
-        form.entry_code_id = null;
+onMounted(() => {
+    if (props.initialGymId) {
+        loadEntryCodes(props.initialGymId);
     }
 });
 
-const onGymChange = (event) => {
-    form.gym_id = Number(event.target.value) || null;
-};
-
-const onEntryCodeChange = (event) => {
-    form.entry_code_id = event.target.value;
+const loadEntryCodes = async (gymId) => {
+    try {
+        const response = await axios.get(route('entry-code.by-gym', {
+            locale: currentLocale,
+            gymId: gymId,
+        }));
+        entryCodes.value = response.data;
+    } catch (error) {
+        console.error('Failed to load entry codes', error);
+        entryCodes.value = [];
+    }
 };
 
 const submit = () => {
@@ -63,7 +53,6 @@ const submit = () => {
 
 <template>
     <Head title="Add New Person" />
-
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">People / Add New Person</h2>
@@ -74,26 +63,10 @@ const submit = () => {
             <form @submit.prevent="submit" class="card-body">
                 <h6>General Information</h6>
                 <div class="row g-6">
-                    <!-- Gym selection (only for owner) -->
-                    <div v-if="canSelectGym" class="col-md-12 select2-primary">
-                        <InputLabel for="gyms" class="form-label" value="Gym" />
-                        <select class="form-select" v-model="form.gym_id" @change="onGymChange">
-                            <option value="" disabled>Choose gym</option>
-                            <option
-                                v-for="gym in gyms"
-                                :key="gym.id"
-                                :value="gym.id"
-                            >
-                                {{ gym.name }}
-                            </option>
-                        </select>
-                        <InputError class="mt-2" :message="form.errors.gym_id" />
-                    </div>
-
-                    <!-- Entry Code dropdown -->
-                    <div v-if="entryCodes.length" class="col-md-12 select2-primary">
+                    <!-- Entry Code dropdown (appears only if entry codes exist for the given gym) -->
+                    <div v-if="entryCodes.length" class="col-md-12">
                         <InputLabel for="entry_codes" class="form-label" value="Entry Code" />
-                        <select id="entry_codes" class="form-select" @change="onEntryCodeChange">
+                        <select id="entry_codes" class="form-select" v-model="form.entry_code_id">
                             <option :value="null">None</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
                                 {{ code.token }} ({{ code.gym?.name || 'No gym' }})
@@ -105,35 +78,42 @@ const submit = () => {
                     <!-- Name -->
                     <div class="col-md-6">
                         <InputLabel for="name" class="form-label" value="Name" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Enter name" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus placeholder="Enter name" required />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
                     <!-- Surname -->
                     <div class="col-md-6">
                         <InputLabel for="surname" class="form-label" value="Surname" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Enter surname" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" placeholder="Enter surname" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
 
                     <!-- Email -->
                     <div class="col-md-6">
                         <InputLabel for="email" class="form-label" value="Email" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="3" placeholder="Enter email" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Enter email" required />
                         <InputError :message="form.errors.email" />
+                    </div>
+
+                    <!-- Password -->
+                    <div class="col-md-6">
+                        <InputLabel for="password" class="form-label" value="Password" />
+                        <TextInput id="password" type="password" class="form-control" v-model="form.password" placeholder="Enter password (optional)" required />
+                        <InputError :message="form.errors.password" />
                     </div>
 
                     <!-- Phone -->
                     <div class="col-md-6">
                         <InputLabel for="phone" class="form-label" value="Phone number" />
-                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" tabindex="4" placeholder="+374 58 79 98 94" />
+                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" required />
                         <InputError :message="form.errors.phone" />
                     </div>
 
-                    <!-- Type (visitor/employee) -->
+                    <!-- Type -->
                     <div class="col-md-6">
                         <InputLabel for="type" class="form-label" value="Type" />
-                        <select id="type" class="form-select" v-model="form.type" tabindex="5">
+                        <select id="type" class="form-select" v-model="form.type">
                             <option value="visitor">Visitor</option>
                             <option value="employee">Employee</option>
                         </select>
@@ -151,9 +131,3 @@ const submit = () => {
         </div>
     </Index>
 </template>
-
-<style scoped>
-.select2-container {
-    width: 100% !important;
-}
-</style>

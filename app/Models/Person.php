@@ -44,6 +44,11 @@ class Person extends Model
         return $this->morphMany(Document::class, 'owner');
     }
 
+    public function gyms() 
+    {
+        return $this->belongsToMany(Gym::class, 'gym_person');
+    }
+
     // public function activated_code_connected_person(): HasOne{
     //     return $this->hasOne(EntryPermission::class)->where('status',1);
     // }

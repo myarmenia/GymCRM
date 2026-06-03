@@ -7,6 +7,7 @@ use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\EntryCodes\EntryCodeService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class PersonService
 {
@@ -22,13 +23,16 @@ class PersonService
 
     public function getById($id)
     {
-        return $this->personRepository->findOrFail($id, ['gym']);
+        return $this->personRepository->findOrFail((int) $id, ['gyms']);
     }
 
     public function store($data)
     {
         $dataStore = $this->dataToArray($data);
         $person = $this->personRepository->create($dataStore);
+
+        // Attach gyms based on current user's role (sales_manager auto-assign)
+        $this->syncGyms($person);
 
         // Entry code association
         if (!empty($data->entry_code_id)) {
@@ -46,8 +50,13 @@ class PersonService
 
     public function update($id, $data)
     {
+        $person = $this->personRepository->findOrFail((int) $id, ['gyms']);
+
         $dataUpdate = $this->dataToArray($data);
-        $person = $this->personRepository->update($id, $dataUpdate);
+        $person = $this->personRepository->update((int) $id, $dataUpdate);
+
+        // Sync gyms (sales_manager forces his own gym)
+        $this->syncGyms($person);
 
         // Handle entry code changes
         $oldEntryCodeId = $person->entryPermissions()->first()?->entry_code_id;
@@ -74,16 +83,32 @@ class PersonService
 
     protected function dataToArray($data)
     {
-        $authUser = Auth::user();
+        $array = $data->toArray();
 
-        if ($authUser->hasRole('owner')) {
-            if (empty($data->gym_id)) {
-                throw new \Exception('Gym is required for owner');
-            }
+        // Hash password if present
+        if (!empty($array['password'])) {
+            $array['password'] = Hash::make($array['password']);
         } else {
-            $data->gym_id = $authUser->gym_id;
+            unset($array['password']);
         }
 
-        return $data->toArray();
+        return $array;
+    }
+
+    /**
+     * Automatically assign gym(s) based on the authenticated user's role.
+     * - sales_manager: force person to belong to his own gym (user->gym_id)
+     * - other roles: do nothing (leave current gyms unchanged)
+     */
+    protected function syncGyms($person)
+    {
+        $user = Auth::user();
+
+        if ($user->hasRole('sales_manager') && $user->gym_id) {
+            // Attach only the sales_manager's own gym (many-to-many)
+            $person->gyms()->sync([(int) $user->gym_id]);
+        }
+        // For other roles (admin/owner) we do not modify gym assignments automatically.
+        // If you want them to be able to assign gyms, you would need to send gym_ids from frontend.
     }
 }

@@ -86,7 +86,7 @@ const { hasRole } = useAuth();
                 </Link>
             </li>
              <!-- 🟢 PEOPLE (նոր ավելացված) -->
-            <li v-if="hasRole('owner')" :class="['menu-item', route().current('person.list') ? 'active' : '']">
+            <li v-if="hasRole('sales_manager')" :class="['menu-item', route().current('person.list') ? 'active' : '']">
                 <Link :href="route('person.list', { locale: currentLocale })" class="menu-link">
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
                     <div data-i18n="People">People</div>

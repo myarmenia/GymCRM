@@ -61,7 +61,7 @@ const pagination = ref(props.people);
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Type</th>
-                                <th>Gym</th>
+                                <th>Gym(s)</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -80,7 +80,12 @@ const pagination = ref(props.people);
                                         {{ useTrans(`page.people.type.${person.type}`) || person.type }}
                                     </span>
                                 </td>
-                                <td>{{ person.gym?.name || '-' }}</td>
+                                <td>
+                                    <span v-if="person.gyms && person.gyms.length">
+                                        {{ person.gyms.map(g => g.name).join(', ') }}
+                                    </span>
+                                    <span v-else>-</span>
+                                </td>
                                 <td>
                                     <div class="dropdown">
                                         <button
