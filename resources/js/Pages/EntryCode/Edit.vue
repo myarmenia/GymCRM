@@ -88,14 +88,16 @@ const submit = () => {
                 <div class="row mb-3" v-if="$page.props.auth.user.roles.some(r => r.name === 'owner')">
                     <label class="col-sm-3 col-form-label">Մարզասրահ</label>
                     <div class="col-sm-9 select2-primary">
-                        <select id="gyms" class="select2 form-select">
-                            <option disabled>Ընտրել մարզասրահը</option>
+                        <select v-model="form.gym_id" class="form-select">
+                            <option value="" disabled>Ընտրել մարզասրահը</option>
+
+
                             <option
-                                v-for="gym in gymOptions"
-                                :key="gym.value"
-                                :value="gym.value"
+                                v-for="gym in gyms"
+                                :key="gym.id"
+                                :value="gym.id"
                             >
-                                {{ gym.text }}
+                                {{ gym.name }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.gym_id" />
