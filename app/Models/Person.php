@@ -40,6 +40,7 @@ class Person extends Model
     }
 
 
+
     public function memberships()
     {
         return $this->hasMany(PersonMembership::class);
@@ -49,6 +50,17 @@ class Person extends Model
     {
         return $this->hasMany(PersonMembership::class)
             ->where('status', 'active');
+    }
+
+    public function documents()
+    {
+        return $this->morphMany(Document::class, 'owner');
+    }
+
+    public function gyms()
+    {
+        return $this->belongsToMany(Gym::class, 'gym_person');
+
     }
 
     // public function activated_code_connected_person(): HasOne{

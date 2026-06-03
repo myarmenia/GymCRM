@@ -22,7 +22,8 @@ class UserDTO
         public ?bool $active,
         public ?string $password,
 
-        public ?int $gym_id
+        public ?int $gym_id,
+        public ?int $entry_code_id
     ) {}
 
     public static function fromArray(array $data): self
@@ -40,8 +41,8 @@ class UserDTO
 
             $data['active'] ?? null,
             $data['password'] ?? null,
-            $data['gym_id'] ?? null
-
+            $data['gym_id'] ?? null,
+            $data['entry_code_id'] ?? null
 
         );
     }

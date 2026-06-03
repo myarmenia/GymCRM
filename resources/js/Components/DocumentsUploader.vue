@@ -8,6 +8,7 @@ const props = defineProps({
     ownerId: Number
 });
 
+console.log(props.ownerType, props.ownerId, '=========');
 const documentForm = useForm({
     documents: [],
     type: ''

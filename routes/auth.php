@@ -15,6 +15,7 @@ use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\Partners\PartnerController;
+use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
 use App\Http\Controllers\Warehouses\WarehouseController;
@@ -86,6 +87,18 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [UserController::class, 'update'])->name('update');
                 });
+            });
+            
+            // ====== people ================
+            Route::prefix('person')->name('person.')->group(function () {
+                Route::get('/list', [PersonController::class, 'list'])->name('list');
+                Route::get('/create', [PersonController::class, 'create'])->name('create');
+                Route::post('/store', [PersonController::class, 'store'])->name('store');
+
+                // Route::middleware('check.gym:Person,id')->group(function () {
+                    Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
+                // });
             });
 
 

@@ -12,6 +12,7 @@ use App\Interfaces\Memberships\MembershipCategoryInterface;
 use App\Interfaces\Memberships\MembershipPlanInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
+use App\Interfaces\People\PersonInterface;
 use App\Interfaces\Roles\RoleInterface;
 use App\Interfaces\Turnstile\CheckEntryCodeInterface;
 use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
@@ -26,6 +27,7 @@ use App\Repositories\Memberships\MembershipCategoryRepository;
 use App\Repositories\Memberships\MembershipPlanRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
+use App\Repositories\People\PersonRepository;
 use App\Repositories\Roles\RoleRepository;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
@@ -61,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(AttendanceSheetInterface::class, AttendanceSheetsRepository::class);
         $this->app->bind(ClientIdFromTurnstileInterface::class, TurnstileRepository::class);
         $this->app->bind(CheckEntryCodeInterface::class, TurnstileRepository::class);
+        $this->app->bind(PersonInterface::class, PersonRepository::class);
 
         $this->app->bind(MembershipPlanInterface::class, MembershipPlanRepository::class);
         $this->app->bind(MembershipCategoryInterface::class, MembershipCategoryRepository::class);
