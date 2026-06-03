@@ -21,6 +21,9 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->enum('type', ['visitor', 'employee'])->default('visitor');
+
+            $table->softDeletes();
+
             $table->timestamps();
         });
     }

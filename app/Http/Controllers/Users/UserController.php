@@ -59,17 +59,7 @@ class UserController extends Controller
         $user = $this->userService->store(UserDTO::fromArray($request->all()));
 
         // Save entry code association if provided
-        if ($request->filled('entry_code_id')) {
-            \App\Models\EntryPermition::create([
-                'entry_code_id' => $request->entry_code_id,
-                'relation_type' => \App\Models\User::class,
-                'relation_id'   => $user->id,
-                'status'        => 1,
-            ]);
 
-            $this->entryCodeService->activateEntryCode($request->entry_code_id, true);
-
-        }
 
         return redirect()
             ->route('user.edit', [
@@ -90,8 +80,8 @@ class UserController extends Controller
         $roles = $this->roleService->getAvailableRoles($authUser);
         $gyms = $authUser->hasRole('owner') ? $this->gymService->getAll() : [];
 
-        // Get the existing entry code id from user's entry_permition (if any)
-        $selectedEntryCodeId = $user->entryPermitions()->first()?->entry_code_id ?? null;
+        // Get the existing entry code id from user's entry_permissions (if any)
+        $selectedEntryCodeId = $user->entryPermissions()->first()?->entry_code_id ?? null;
 
         return Inertia::render('Users/Edit', [
             'user' => $user,
@@ -107,29 +97,6 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request)
     {
         $user = $this->userService->update($request->id, UserDTO::fromArray($request->all()));
-
-        $oldEntryCodeId = $user->entryPermitions()->first()?->entry_code_id;
-
-        if ($oldEntryCodeId) {
-            $this->entryCodeService->activateEntryCode($oldEntryCodeId, false);
-        }
-
-        // Remove all existing entry_permitions for this user
-        $user->entryPermitions()->delete();
-
-
-
-        // Create new association if entry_code_id is provided
-        if ($request->filled('entry_code_id')) {
-            \App\Models\EntryPermition::create([
-                'entry_code_id' => $request->entry_code_id,
-                'relation_type' => \App\Models\User::class,
-                'relation_id'   => $user->id,
-                'status'        => 1,
-            ]);
-
-            $this->entryCodeService->activateEntryCode($request->entry_code_id, true);
-        }
 
         return redirect()->back()->with('success', 'Updated');
     }

@@ -39,6 +39,11 @@ class Person extends Model
         return $this->morphMany(AttendanceSheet::class, 'relation');
     }
 
+    public function documents()
+    {
+        return $this->morphMany(Document::class, 'owner');
+    }
+
     // public function activated_code_connected_person(): HasOne{
     //     return $this->hasOne(EntryPermission::class)->where('status',1);
     // }

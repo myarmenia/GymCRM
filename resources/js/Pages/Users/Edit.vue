@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -82,6 +82,7 @@ const onEntryCodeChange = (event) => {
 
 
 if (props.user) {
+    console.log('Editing user:', props.user);
     form.name = props.user.name || '';
     form.surname = props.user.surname || '';
     form.phone = props.user.phone || '';
@@ -92,7 +93,36 @@ if (props.user) {
     form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
     form.active =  Boolean(props.user.active);
     form.gym_id = props.user.gym_id || '';
+
 }
+// API-ից ստացված id-ն կարող է number լինել, իսկ form.entry_code_id-ը՝ string
+if (props.selectedEntryCodeId) {
+    form.entry_code_id = props.selectedEntryCodeId;
+}
+if (props.user?.gym_id) {
+    selectedGymId.value = props.user.gym_id;
+}
+
+// Component-ի մոնտաժման ժամանակ բեռնել entry codes-ը
+onMounted(() => {
+    if (selectedGymId.value) {
+        // Ձեռքով կանչել watch-ի տրամաբանությունը
+        const newGymId = selectedGymId.value;
+        axios.get(route('entry-code.by-gym', {
+            locale: currentLocale,
+            gymId: newGymId,
+            current_id: form.entry_code_id || props.selectedEntryCodeId || undefined
+        })).then(response => {
+            entryCodes.value = response.data;
+            if (form.entry_code_id && !entryCodes.value.some(c => c.id == form.entry_code_id)) {
+                form.entry_code_id = null;
+            }
+        }).catch(error => {
+            console.error('Failed to load entry codes', error);
+            entryCodes.value = [];
+        });
+    }
+});
 
 const roleOptions = computed(() => {
     return props.roles.map(role => ({
@@ -155,9 +185,9 @@ const submit = () => {
                     <!-- Entry Code dropdown (appears if entry codes exist) -->
                     <div v-if="entryCodes.length" class="col-md-12 select2-primary">
                         <InputLabel for="entry_codes" class="form-label" value="Entry Code" />
-                        <select id="entry_codes" class="form-select" @change="onEntryCodeChange">
+                        <select id="entry_codes" class="form-select" v-model="form.entry_code_id">
                             <option :value="null">None</option>
-                            <option v-for="code in entryCodes" :key="code.id" :value="code.id" :selected="code.id === form.entry_code_id">
+                            <option v-for="code in entryCodes" :key="code.id" :value="code.id">
                                 {{ code.token }} ({{ code.gym?.name || 'No gym' }})
                             </option>
                         </select>
