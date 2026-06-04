@@ -248,4 +248,94 @@ abstract class BaseRepository
 
         return $cleaning;
     }
+
+    public function findCategoryBy(string $column, mixed $value, array $relations = []): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->with($relations)
+            ->where($column, $value)
+            ->first();
+    }
+
+    public function createCategory(array $data): Model
+    {
+        return $this->query()->create($data);
+    }
+
+    public function wherePaginateCategory(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->query()
+            ->with($with)
+            ->where($conditions)
+            ->whereNull('parent_id')
+            ->orderBy('id', 'asc')
+            ->paginate($perPage);
+    }
+
+    public function getParentCategories(string $locale): \Illuminate\Support\Collection
+    {
+        return $this->query()
+            ->where('gym_id', auth()->user()->gym_id)
+            ->whereNull('parent_id')
+            ->with([
+                'translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+            ])
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => data_get(
+                        $category->translations->first(),
+                        'name',
+                        ''
+                    ),
+                ];
+            });
+    }
+
+    public function getProductsByFilter(array $filters = [], array $with = [], int $perPage = 10): LengthAwarePaginator
+    {
+        $query = $this->query()->with($with);
+
+        if (!empty($filters['gym_id'])) {
+            $query->where('gym_id', $filters['gym_id']);
+        }
+
+        if (!empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
+        }
+
+        if (!empty($filters['sub_category_id'])) {
+            $query->where('sub_category_id', $filters['sub_category_id']);
+        }
+
+        if (!empty($filters['name'])) {
+            $query->whereHas('translations', function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters['name'] . '%');
+            });
+        }
+
+        return $query
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+
+    public function getProductForConsumption(array $ids): Collection
+    {
+        return $this->model
+            ->with([
+                'translations',
+                'warehouseStocks',
+                'measurementUnit',
+                'category.translations',
+                'subCategory.translations',
+            ])
+            ->whereIn('id', $ids)
+            ->get();
+    }
 }

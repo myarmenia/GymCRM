@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class ScheduleName extends Model
+{
+    protected $table = 'schedule_names';
+    protected $fillable = [
+        'name',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+    public function schedule_details()
+    {
+        return $this->hasMany(ScheduleDetail::class, 'schedule_name_id');
+    }
+
+    //
+}

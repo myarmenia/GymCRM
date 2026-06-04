@@ -9,9 +9,10 @@ class CheckGymAccess
     public function handle($request, Closure $next, $modelClass, $paramName = 'id')
     {
 
-
+    //dd($modelClass, $paramName);
         $user = auth()->user();
         // Admin mozhet vse
+        //dd($user);
         if ($user->hasRole('owner')) {
             return $next($request);
         }

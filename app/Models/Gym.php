@@ -4,7 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+
 class Gym extends Model
 {
     use SoftDeletes;
@@ -33,6 +36,10 @@ class Gym extends Model
         return $this->hasMany(Partner::class);
     }
 
+    public function client_working_day_times(): HasMany
+    {
+        return $this->hasMany(GymWorkingDayTime::class);
+    }
     public function entryCodes()
     {
         return $this->hasMany(EntryCode::class, 'gym_id');
