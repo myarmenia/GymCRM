@@ -102,7 +102,7 @@ class ProductsService
                 ]);
             }
 
-            $product->translations()->createMany($translations);
+            //$product->translations()->createMany($translations);
 
             $this->warehouseStockRepository->create([
                 'gym_id' => $hotelId,

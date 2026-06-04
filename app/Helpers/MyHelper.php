@@ -18,7 +18,7 @@ class MyHelper
         // dd($decimal);
         return $decimal;
     }
-    public static function week_days($binaryString)
+    public static function week_days()
     {
 
         // $weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday','Friday','Saturday','Sunday'];
@@ -31,9 +31,9 @@ class MyHelper
             'Saturday' => 'Շաբաթ',
             'Sunday' => 'Կիրակի'
         ];
-        $substring = substr($binaryString, 9, 16); // Индексы начинаются с 0, поэтому берем с 9 символа и длиной 16
-        $decimal = bindec($substring);
-        return $decimal;
+        //$substring = substr($binaryString, 9, 16); // Индексы начинаются с 0, поэтому берем с 9 символа и длиной 16
+        //$decimal = bindec($substring);
+        return $weekdays;
     }
 
 
