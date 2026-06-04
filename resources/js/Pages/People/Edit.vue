@@ -14,8 +14,9 @@ const currentLocale = page.props.locale ?? "en";
 
 const props = defineProps({
     person: Object,
-    initialGymId: Number,        // gym ID-ն entry codes-ը բեռնելու համար
+    initialGymId: Number,
     selectedEntryCodeId: Number,
+    entryCodes: Array,
 });
 
 const entryCodes = ref([]);
@@ -28,9 +29,11 @@ const form = useForm({
     phone: '',
     type: 'visitor',
     entry_code_id: null,
+    birth_date: '',
+    gender: '',
+   
 });
 
-// Populate form from person data
 if (props.person) {
     form.name = props.person.name || '';
     form.surname = props.person.surname || '';
@@ -38,28 +41,13 @@ if (props.person) {
     form.phone = props.person.phone || '';
     form.type = props.person.type || 'visitor';
     form.entry_code_id = props.selectedEntryCodeId ?? null;
+    form.birth_date = props.person.birth_date || ''; 
+    form.gender = props.person.gender || ''; 
 }
 
-// Load entry codes on mount
 onMounted(() => {
-    if (props.initialGymId) {
-        loadEntryCodes(props.initialGymId);
-    }
+    entryCodes.value = props.entryCodes || [];
 });
-
-const loadEntryCodes = async (gymId) => {
-    try {
-        const response = await axios.get(route('entry-code.by-gym', {
-            locale: currentLocale,
-            gymId: gymId,
-            current_id: form.entry_code_id || props.selectedEntryCodeId || undefined,
-        }));
-        entryCodes.value = response.data;
-    } catch (error) {
-        console.error('Failed to load entry codes', error);
-        entryCodes.value = [];
-    }
-};
 
 const submit = () => {
     form.patch(route('person.update', { 
@@ -70,23 +58,23 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Edit Person" />
+    <Head title="Խմբագրել անձը" />
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">People / Edit Person</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">Անձինք / Խմբագրել անձը</h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Edit Person</h5>
+            <h5 class="card-header">Խմբագրել անձը</h5>
             <form @submit.prevent="submit" class="card-body">
                 <div class="row g-6">
                     <!-- Entry Code dropdown -->
                     <div v-if="entryCodes.length" class="col-md-12">
-                        <InputLabel for="entry_codes" class="form-label" value="Entry Code" />
+                        <InputLabel for="entry_codes" class="form-label" value="Մուտքի կոդ" />
                         <select id="entry_codes" class="form-select" v-model="form.entry_code_id">
-                            <option :value="null">None</option>
+                            <option :value="null">Ոչինչ</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
-                                {{ code.token }} ({{ code.gym?.name || 'No gym' }})
+                                {{ code.token }} ({{ code.gym?.name || 'Առանց մարզադահլիճի' }}) {{ code.type }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
@@ -94,55 +82,73 @@ const submit = () => {
 
                     <!-- Name -->
                     <div class="col-md-6">
-                        <InputLabel for="name" class="form-label" value="Name" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus placeholder="Enter name" />
+                        <InputLabel for="name" class="form-label" value="Անուն" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus placeholder="Մուտքագրել անունը" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
                     <!-- Surname -->
                     <div class="col-md-6">
-                        <InputLabel for="surname" class="form-label" value="Surname" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" placeholder="Enter surname" />
+                        <InputLabel for="surname" class="form-label" value="Ազգանուն" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" placeholder="Մուտքագրել ազգանունը" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
 
                     <!-- Email -->
                     <div class="col-md-6">
-                        <InputLabel for="email" class="form-label" value="Email" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Enter email" />
+                        <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Մուտքագրել էլ. հասցեն" />
                         <InputError :message="form.errors.email" />
                     </div>
 
                     <!-- Password -->
                     <div class="col-md-6">
-                        <InputLabel for="password" class="form-label" value="Password" />
-                        <TextInput id="password" type="password" class="form-control" v-model="form.password" placeholder="Leave blank to keep current password" />
+                        <InputLabel for="password" class="form-label" value="Գաղտնաբառ" />
+                        <TextInput id="password" type="password" class="form-control" v-model="form.password" placeholder="Թողնել դատարկ, եթե չեք ցանկանում փոխել" />
                         <InputError :message="form.errors.password" />
                     </div>
 
                     <!-- Phone -->
                     <div class="col-md-6">
-                        <InputLabel for="phone" class="form-label" value="Phone number" />
+                        <InputLabel for="phone" class="form-label" value="Հեռախոսահամար" />
                         <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" />
                         <InputError :message="form.errors.phone" />
                     </div>
 
                     <!-- Type -->
                     <div class="col-md-6">
-                        <InputLabel for="type" class="form-label" value="Type" />
+                        <InputLabel for="type" class="form-label" value="Տեսակ" />
                         <select id="type" class="form-select" v-model="form.type">
-                            <option value="visitor">Visitor</option>
-                            <option value="employee">Employee</option>
+                            <option value="visitor">Այցելու</option>
+                            <option value="guest">Հյուր</option>
                         </select>
                         <InputError :message="form.errors.type" />
                     </div>
+
+                    <!-- 🔹 Birth Date -->
+                    <div class="col-md-6">
+                        <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
+                        <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" />
+                        <InputError :message="form.errors.birth_date" />
+                    </div>
+
+                    <!-- 🔹 Gender -->
+                    <div class="col-md-6">
+                        <InputLabel for="gender" class="form-label" value="Սեռ" />
+                        <select id="gender" class="form-select" v-model="form.gender">
+                            <option value="" disabled>Ընտրել</option>
+                            <option value="male">Արական</option>
+                            <option value="female">Իգական</option>
+                        </select>
+                        <InputError :message="form.errors.gender" />
+                    </div>
                 </div>
 
-                <div class="pt-6">
+                <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                        Update
+                        Թարմացնել
                     </PrimaryButton>
-                    <button type="reset" class="btn btn-label-secondary waves-effect">Cancel</button>
+                    <button type="reset" class="btn btn-label-secondary waves-effect">Չեղարկել</button>
                 </div>
             </form>
         </div>

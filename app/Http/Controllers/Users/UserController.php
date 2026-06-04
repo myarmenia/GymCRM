@@ -45,10 +45,13 @@ class UserController extends Controller
         $gyms = $this->gymService->getAll();
         $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
 
+        $entryCodes =$user->hasRole('super_admin') ? $this->entryCodeService->getByGymId($user->gym_id ?? null) : [];
+        
         return Inertia::render('Users/Create', [
                 'roles' => $roles,
                 'gyms' => $gyms,
                 'canSelectGym' => $user->hasRole('owner'),
+                'entryCodes' => $entryCodes,
             ]);
     }
 
@@ -99,7 +102,27 @@ class UserController extends Controller
     {
         $user = $this->userService->update($request->id, UserDTO::fromArray($request->all()));
 
-        return redirect()->back()->with('success', 'Updated');
+        return redirect()->route('user.list', ['locale' => app()->getLocale()])
+                        ->with('success', 'User updated successfully');
     }
 
+
+    public function show($locale, $userId)
+    {
+        $user = $this->userService->getById($userId);
+        $authUser = Auth::user();
+
+        // Կարող եք ավելացնել աութորիզացիա (օրինակ՝ միայն owner կամ sales_manager)
+        // if ($authUser->cannot('view', $user)) abort(403);
+
+        $roles = $user->roles->pluck('name')->toArray(); // միայն դերերի անուններ
+        $selectedEntryCodeId = $user->entryPermissions()->first()?->entry_code_id ?? null;
+
+        return Inertia::render('Users/Show', [
+            'user' => $user,
+            'roles' => $roles,
+            'selectedEntryCodeId' => $selectedEntryCodeId,
+            'canSelectGym' => $authUser->hasRole('owner'), // եթե անհրաժեշտ է, կարող եք նաև gym-երի ցուցակը
+        ]);
+    }
 }

@@ -91,6 +91,8 @@ Route::prefix('{locale}')
                 Route::middleware('check.gym:User,id')->group(function () {
                     Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [UserController::class, 'update'])->name('update');
+                    Route::get('/show/{id}', [UserController::class, 'show'])->name('show');
+
                 });
             });
             

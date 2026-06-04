@@ -23,6 +23,10 @@ class StorePersonRequest extends FormRequest
             'phone' => 'required|string|max:50',
             'type' => 'required|in:visitor,employee',
             'entry_code_id' => 'nullable|exists:entry_codes,id',
+            'birth_date' => 'required|date',
+            'gender' => 'nullable|string|in:male,female,other',
+            'mobile_deleted' => 'sometimes|boolean',
+            'fcm_token' => 'nullable|string|max:255',
         ];
     }
 }

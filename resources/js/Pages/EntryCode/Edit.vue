@@ -152,7 +152,7 @@ const submit = () => {
 
 
                 <!-- Submit buttons -->
-                <div class="pt-6">
+                <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"

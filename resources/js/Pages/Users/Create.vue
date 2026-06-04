@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -17,7 +17,8 @@ const currentLocale = page.props.locale ?? "en";
 const props = defineProps({
   roles: Array,
   gyms: Array,
-  canSelectGym: Boolean
+  canSelectGym: Boolean,
+  entryCodes: Array,
 });
 
 
@@ -81,6 +82,16 @@ watch(() => form.gym_id, async (newGymId) => {
         form.entry_code_id = null;
     }
 });
+
+onMounted(async () => {
+    // If user can select gym and there's an initial gym, load entry codes for that gym
+    console.log(props.entryCodes, 'initial entry codes');
+    if (props.entryCodes.length) {
+        entryCodes.value = props.entryCodes;
+    } else {
+        entryCodes.value = [];
+    }
+})
 
 // Handle gym selection change
 // const onGymChange = (event) => {
@@ -157,24 +168,24 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Add New Employee" />
+    <Head title="Ավելացնել նոր աշխատակից" />
 
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">User / Add New employee</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">Օգտատեր / Ավելացնել նոր աշխատակից</h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Add New Employee </h5>
+            <h5 class="card-header">Ավելացնել նոր աշխատակից</h5>
             <form @submit.prevent="submit" class="card-body">
-                <h6>1. Account Details</h6>
+                <h6>1. Հաշվի տվյալներ</h6>
                 <div class="row g-6">
                     <!-- Gym selection (only for owner) -->
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
-                        <InputLabel for="gyms" class="form-label" value="Gyms" />
+                        <InputLabel for="gyms" class="form-label" value="Մարզադահլիճ" />
 
                         <select class="form-select" v-model="form.gym_id" @change="onGymChange">
-                            <option value="" disabled>Choose gym</option>
+                            <option value="" disabled>Ընտրել մարզադահլիճ</option>
 
 
                             <option
@@ -201,11 +212,11 @@ const submit = () => {
 
                     <!-- Entry Code dropdown (appears after gym is selected) -->
                     <div v-if="entryCodes.length" class="col-md-12 select2-primary">
-                        <InputLabel for="entry_codes" class="form-label" value="Entry Code" />
+                        <InputLabel for="entry_codes" class="form-label" value="Մուտքի կոդ" />
                         <select id="entry_codes" class="form-select" @change="onEntryCodeChange">
-                            <option :value="null">None</option>
+                            <option :value="null">Ոչինչ</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
-                                {{ code.token }} ({{ code.gym?.name || 'No gym' }})
+                                {{ code.token }} ({{ code.gym?.name || 'Առանց մարզադահլիճի' }}) {{ code.type }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
@@ -213,18 +224,18 @@ const submit = () => {
 
                     <!-- Rest of the fields (name, surname, password, etc.) remain unchanged -->
                     <div class="col-md-6">
-                        <InputLabel for="name" class="form-label" value="Name" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Enter name" />
+                        <InputLabel for="name" class="form-label" value="Անուն" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Մուտքագրել անունը" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="surname" class="form-label" value="Surname" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Enter surname" />
+                        <InputLabel for="surname" class="form-label" value="Ազգանուն" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Մուտքագրել ազգանունը" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Password</label>
+                            <label class="form-label">Գաղտնաբառ</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password" tabindex="3" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -233,13 +244,13 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="email" class="form-label" value="Email" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" placeholder="Enter email" />
+                        <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" placeholder="Մուտքագրել էլ. հասցեն" />
                         <InputError :message="form.errors.email" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Confirm Password</label>
+                            <label class="form-label">Հաստատել գաղտնաբառը</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password_confirmation" tabindex="4" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -248,12 +259,12 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="phone" class="form-label" value="Phone number" />
+                        <InputLabel for="phone" class="form-label" value="Հեռախոսահամար" />
                         <TextInput id="phone" type="text" class="form-control" v-model="form.phone" tabindex="6" placeholder="+374 58 79 98 94" />
                         <InputError :message="form.errors.phone" />
                     </div>
                     <div class="col-md-6 select2-primary">
-                        <InputLabel for="roles" class="form-label" value="Roles" />
+                        <InputLabel for="roles" class="form-label" value="Դերեր" />
                         <!-- <select id="roles" class="select2 form-select" multiple tabindex="7">
                             <option
                                 v-for="(role, index) in roleOptions"
@@ -266,12 +277,12 @@ const submit = () => {
                         <MultiSelect
                             v-model="form.roles"
                             :options="roleOptions"
-                            placeholder="Choose roles"
+                            placeholder="Ընտրել դերերը"
                         />
                         <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Active</label>
+                        <label class="form-label">Ակտիվ</label>
                         <div class="form-check form-switch">
                             <input
                                 class="form-check-input"
@@ -284,30 +295,30 @@ const submit = () => {
                 </div>
 
                 <hr class="my-6 mx-n6">
-                <h6>2. Personal Info</h6>
+                <h6>2. Անձնական տվյալներ</h6>
                 <div class="row g-6">
                     <div class="col-md-6">
-                        <InputLabel for="passport_number" class="form-label" value="Passport number / ID" />
+                        <InputLabel for="passport_number" class="form-label" value="Անձնագրի համար / ID" />
                         <TextInput id="passport_number" type="text" class="form-control" v-model="form.passport_number" tabindex="9" placeholder="AB547896 / 005423587" />
                         <InputError :message="form.errors.passport_number" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="passport_expire_at" class="form-label" value="Passport expire at" />
+                        <InputLabel for="passport_expire_at" class="form-label" value="Անձնագրի ժամկետը (մինչև)" />
                         <TextInput id="passport_expire_at" type="date" class="form-control" v-model="form.passport_expire_at" tabindex="10" />
                         <InputError :message="form.errors.passport_expire_at" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="birth_date" class="form-label" value="Birth date" />
+                        <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" tabindex="12" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
                 </div>
 
-                <div class="pt-6">
+                <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                        Submit
+                        Պահպանել
                     </PrimaryButton>
-                    <button type="reset" class="btn btn-label-secondary waves-effect">Cancel</button>
+                    <button type="reset" class="btn btn-label-secondary waves-effect">Չեղարկել</button>
                 </div>
             </form>
         </div>

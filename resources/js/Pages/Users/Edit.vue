@@ -11,7 +11,6 @@ import DocumentsUploader from '@/Components/DocumentsUploader.vue';
 import axios from 'axios';
 import MultiSelect from '@/Components/MultiSelect.vue';
 
-
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
 
@@ -20,7 +19,8 @@ const props = defineProps({
   user: Object,
   gyms: Array,
   canSelectGym: Boolean,
-  selectedEntryCodeId: Number, // passed from controller
+  selectedEntryCodeId: Number,
+  
 });
 
 const selectedGymId = ref(null);
@@ -42,7 +42,6 @@ const form = useForm({
     entry_code_id: null,
 });
 
-// Watch for gym change to load entry codes dynamically
 watch(selectedGymId, async (newGymId) => {
     if (newGymId) {
         try {
@@ -50,11 +49,8 @@ watch(selectedGymId, async (newGymId) => {
                 locale: currentLocale,
                 gymId: newGymId,
                 current_id: form.entry_code_id || props.selectedEntryCodeId || undefined
-
             }));
-            console.log('Entry codes loaded for gym', newGymId, response.data);
             entryCodes.value = response.data;
-            // Only reset if current entry_code_id doesn't belong to new gym
             if (form.entry_code_id && !entryCodes.value.some(c => c.id === form.entry_code_id)) {
                 form.entry_code_id = null;
             }
@@ -68,21 +64,16 @@ watch(selectedGymId, async (newGymId) => {
     }
 });
 
-// Handle gym selection change (for owner)
 const onGymChange = (event) => {
     selectedGymId.value = event.target.value;
     form.gym_id = selectedGymId.value;
 };
 
-// Handle entry code selection
 const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
 };
 
-
-
 if (props.user) {
-    console.log('Editing user:', props.user);
     form.name = props.user.name || '';
     form.surname = props.user.surname || '';
     form.phone = props.user.phone || '';
@@ -91,11 +82,9 @@ if (props.user) {
     form.passport_expire_at = props.user.passport_expire_at || '';
     form.birth_date = props.user.birth_date || '';
     form.roles = props.user.roles ? props.user.roles.map(r => r.name) : [];
-    form.active =  Boolean(props.user.active);
+    form.active = Boolean(props.user.active);
     form.gym_id = props.user.gym_id || '';
-
 }
-// API-ից ստացված id-ն կարող է number լինել, իսկ form.entry_code_id-ը՝ string
 if (props.selectedEntryCodeId) {
     form.entry_code_id = props.selectedEntryCodeId;
 }
@@ -103,10 +92,8 @@ if (props.user?.gym_id) {
     selectedGymId.value = props.user.gym_id;
 }
 
-// Component-ի մոնտաժման ժամանակ բեռնել entry codes-ը
 onMounted(() => {
     if (selectedGymId.value) {
-        // Ձեռքով կանչել watch-ի տրամաբանությունը
         const newGymId = selectedGymId.value;
         axios.get(route('entry-code.by-gym', {
             locale: currentLocale,
@@ -131,16 +118,12 @@ const roleOptions = computed(() => {
     }));
 });
 
-
-
 const gymOptions = computed(() => {
     return props.gyms.map(gym => ({
         value: gym.id,
         label: gym.name
     }));
 });
-
-
 
 const submit = () => {
     form.patch(route('user.update', { id: props.user.id, locale: currentLocale }), {
@@ -154,23 +137,22 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Edit Employee" />
+    <Head title="Խմբագրել աշխատակցին" />
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">User / Edit employee</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">Օգտատեր / Խմբագրել աշխատակցին</h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Edit Employee</h5>
+            <h5 class="card-header">Խմբագրել աշխատակցին</h5>
             <form @submit.prevent="submit" class="card-body">
-                <h6>1. Account Details</h6>
+                <h6>1. Հաշվի տվյալներ</h6>
                 <div class="row g-6">
                     <!-- Gym selection (only for owner) -->
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
-                        <InputLabel for="gyms" class="form-label" value="Gyms" />
+                        <InputLabel for="gyms" class="form-label" value="Մարզադահլիճ" />
                         <select v-model="form.gym_id" class="form-select">
-                            <option disabled value="">Choose gym</option>
-
+                            <option disabled value="">Ընտրել մարզադահլիճ</option>
                             <option
                                 v-for="(gym, index) in gymOptions"
                                 :key="index"
@@ -182,32 +164,32 @@ const submit = () => {
                         <InputError class="mt-2" :message="form.errors.gym_id" />
                     </div>
 
-                    <!-- Entry Code dropdown (appears if entry codes exist) -->
+                    <!-- Entry Code dropdown -->
                     <div v-if="entryCodes.length" class="col-md-12 select2-primary">
-                        <InputLabel for="entry_codes" class="form-label" value="Entry Code" />
+                        <InputLabel for="entry_codes" class="form-label" value="Մուտքի կոդ" />
                         <select id="entry_codes" class="form-select" v-model="form.entry_code_id">
-                            <option :value="null">None</option>
+                            <option :value="null">Ոչինչ</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
-                                {{ code.token }} ({{ code.gym?.name || 'No gym' }})
+                                {{ code.token }} ({{ code.gym?.name || 'Առանց մարզադահլիճի' }}) {{ code.type }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
                     </div>
 
-                    <!-- Name, Surname, etc. (existing fields) -->
+                    <!-- Name -->
                     <div class="col-md-6">
-                        <InputLabel for="name" class="form-label" value="Name" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Enter name" />
+                        <InputLabel for="name" class="form-label" value="Անուն" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Մուտքագրել անունը" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="surname" class="form-label" value="Surname" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Enter surname" />
+                        <InputLabel for="surname" class="form-label" value="Ազգանուն" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Մուտքագրել ազգանունը" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Password</label>
+                            <label class="form-label">Գաղտնաբառ</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password" tabindex="3" id="multicol-password" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -216,13 +198,13 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="email" class="form-label" value="Email" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" placeholder="Enter email" />
+                        <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" placeholder="Մուտքագրել էլ. հասցեն" />
                         <InputError :message="form.errors.email" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Confirm Password</label>
+                            <label class="form-label">Հաստատել գաղտնաբառը</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password_confirmation" tabindex="4" id="multicol-confirm-password" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -231,59 +213,58 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="phone" class="form-label" value="Phone number" />
+                        <InputLabel for="phone" class="form-label" value="Հեռախոսահամար" />
                         <TextInput id="phone" type="text" class="form-control" v-model="form.phone" tabindex="6" placeholder="+374 58 79 98 94" />
                         <InputError :message="form.errors.phone" />
                     </div>
                     <div class="col-md-6 select2-primary">
-                        <InputLabel for="roles" class="form-label" value="Roles" />
-
+                        <InputLabel for="roles" class="form-label" value="Դերեր" />
                         <MultiSelect
                             v-model="form.roles"
                             :options="roleOptions"
-                            placeholder="Choose roles"
+                            placeholder="Ընտրել դերերը"
                         />
                         <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Active</label>
+                        <label class="form-label">Ակտիվ</label>
                         <div class="form-check form-switch">
                             <input
                                 class="form-check-input"
                                 type="checkbox"
                                 id="flexSwitchCheckChecked"
                                 v-model="form.active"
-
                             >
                         </div>
                     </div>
                 </div>
 
                 <hr class="my-6 mx-n6" />
-                <h6>2. Personal Info</h6>
+                <h6>2. Անձնական տվյալներ</h6>
                 <div class="row g-6">
                     <div class="col-md-6">
-                        <InputLabel for="passport_number" class="form-label" value="Passport number / ID" />
+                        <InputLabel for="passport_number" class="form-label" value="Անձնագրի համար / ID" />
                         <TextInput id="passport_number" type="text" class="form-control" v-model="form.passport_number" tabindex="9" placeholder="AB547896 / 005423587" />
                         <InputError :message="form.errors.passport_number" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="passport_expire_at" class="form-label" value="Passport expire at" />
+                        <InputLabel for="passport_expire_at" class="form-label" value="Անձնագրի ժամկետը (մինչև)" />
                         <TextInput id="passport_expire_at" type="date" class="form-control" v-model="form.passport_expire_at" tabindex="10" />
                         <InputError :message="form.errors.passport_expire_at" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="birth_date" class="form-label" value="Birth date" />
+                        <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" tabindex="12" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
                 </div>
 
-                <div class="pt-6">
+                <!-- Buttons aligned to the right -->
+                <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                        Update
+                        Թարմացնել
                     </PrimaryButton>
-                    <button type="reset" class="btn btn-label-secondary waves-effect">Cancel</button>
+                    <button type="reset" class="btn btn-label-secondary waves-effect">Չեղարկել</button>
                 </div>
             </form>
         </div>

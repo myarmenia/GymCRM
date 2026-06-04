@@ -31,17 +31,12 @@ class PersonController extends Controller
     public function create()
     {
         $user = Auth::user();
-        $initialGymId = null;
-
-        if ($user->hasRole('sales_manager')) {
-            $initialGymId = $user->gym_id; // վերցնում ենք sales_manager-ի սեփական gym-ը
-        } else {
-            // admin/owner-ի դեպքում կարող ես վերցնել առաջին gym-ը կամ null
-            $initialGymId = $this->gymService->getAll()->first()?->id;
-        }
+       
+        $entryCodes =$this->entryCodeService->getByGymId($user->gym_id ?? null);
 
         return Inertia::render('People/Create', [
-            'initialGymId' => $initialGymId,
+            'initialGymId' => $user->gym_id,
+            'entryCodes' => $entryCodes,
         ]);
     }
 
@@ -61,11 +56,10 @@ class PersonController extends Controller
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
 
-        Log::info('Editing person with ID: ' . $person );
-
         // Authorization: sales_manager can only edit people belonging to his gym
-        if ($authUser->hasRole('sales_manager')) {
+        if ($authUser->hasRole('sales_manager') || $authUser->hasRole('super_admin')) {
             $personGymIds = $person->gyms->pluck('id')->toArray();
+            
             if (!in_array($authUser->gym_id, $personGymIds)) {
                 abort(403, 'You are not allowed to edit this person.');
             }
@@ -73,42 +67,41 @@ class PersonController extends Controller
 
 
         $gymId = null;
-        if ($authUser->hasRole('sales_manager')) {
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
             $gymId = $authUser->gym_id;
         } else {
-            // edit-ում entry codes-ը կբեռնվեն person-ի առաջին gym-ից (կամ ընտրված)
             $gymId = $person->gyms->first()?->id;
         }
 
         $selectedEntryCodeId = $person->entryPermissions()->first()?->entry_code_id ?? null;
+        $entryCodes =$this->entryCodeService->getByGymId($gymId , currentId: $selectedEntryCodeId);
 
         return Inertia::render('People/Edit', [
             'person' => $person,
             'initialGymId' => $gymId,
             'selectedEntryCodeId' => $selectedEntryCodeId,
+            'entryCodes' => $entryCodes,
         ]);
     }
 
-// Ավելացրու $locale պարամետրը առաջին տեղում
-public function update(UpdatePersonRequest $request, $locale, $id)
-{
-    $person = $this->personService->getById($id);
-    $authUser = Auth::user();
+    // Ավելացրու $locale պարամետրը առաջին տեղում
+    public function update(UpdatePersonRequest $request, $locale, $id)
+    {
+        $person = $this->personService->getById($id);
+        $authUser = Auth::user();
 
-    if ($authUser->hasRole('sales_manager')) {
-        $personGymIds = $person->gyms->pluck('id')->toArray();
-        
-        // Զգուշացում. dd()-ն կանգնեցնում է ծրագիրը և նույնպես կարող է 404-ի տպավորություն թողնել API հարցումների ժամանակ
-        // dd($personGymIds, $authUser->gym_id); 
-
-        if (!in_array($authUser->gym_id, $personGymIds)) {
-            abort(403);
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
+            $personGymIds = $person->gyms->pluck('id')->toArray();
+            
+            if (!in_array($authUser->gym_id, $personGymIds)) {
+                abort(403);
+            }
         }
-    }
 
-    $person = $this->personService->update($id, PersonDTO::fromArray($request->all()));
-    return redirect()->back()->with('success', 'Person updated successfully');
-}
+        $person = $this->personService->update($id, PersonDTO::fromArray($request->all()));
+        return redirect()->route('person.list', ['locale' => app()->getLocale()])
+                        ->with('success', 'Person updated successfully');
+    }
 
     // public function destroy($locale, $id)
     // {
