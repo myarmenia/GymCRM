@@ -5,6 +5,8 @@ namespace App\Interfaces;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
+
 
 interface BaseInterface
 {
@@ -53,4 +55,16 @@ interface BaseInterface
     public function updateRoomStatus(int $id, string $key, mixed $value);
 
     public function updateCleaningStatus(int $id, string $key, mixed $value);
+
+    public function createCategory(array $data): Model;
+
+    public function findCategoryBy(string $column, mixed $value, array $relations = []): ?Model;
+
+    public function wherePaginateCategory(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator;
+
+    public function getParentCategories(string $locale): SupportCollection;
+
+    public function getProductsByFilter(array $filters = [], array $with = [], int $perPage = 10): LengthAwarePaginator;
+
+    public function getProductForConsumption(array $ids): Collection;
 }

@@ -14,7 +14,7 @@ const emit = defineEmits(['deleted']);
 const { confirm } = useConfirm();
 
 const destroy = async () => {
-    const ok = await confirm('Delete this item?');
+    const ok = await confirm('Ջնջել այս տարրը?');
 
     if (!ok) return;
 
@@ -34,6 +34,6 @@ const destroy = async () => {
 <template>
     <button  @click="destroy">
         <i class="icon-base ti tabler-trash me-1"></i>
-        Delete
+        Ջնջել
     </button>
 </template>

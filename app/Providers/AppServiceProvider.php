@@ -4,23 +4,51 @@ namespace App\Providers;
 
 
 use App\Interfaces\CardTypes\CardTypeInterface;
+use App\Interfaces\Category\CategoryInterface;
+use App\Interfaces\CategoryTranslations\CategoryTranslationInterface;
 use App\Interfaces\Documents\DocumentInterface;
 
 use App\Interfaces\Gyms\GymInterface;
+use App\Interfaces\GymSchedule\GymScheduleInterface;
+use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
+use App\Interfaces\ProductConsumption\ProductConsumptionInterface;
+use App\Interfaces\Products\ProductsInterface;
+use App\Interfaces\ProductTranslations\ProductTranslationInterface;
 use App\Interfaces\Roles\RoleInterface;
+use App\Interfaces\Schedule\ScheduleInterface;
+use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
+use App\Interfaces\ScheduleName\ScheduleNameInterface;
+use App\Interfaces\ScheduleSmoke\ScheduleSmokeInterface;
+use App\Interfaces\SubCategory\SubCategoryInterface;
+use App\Interfaces\SubCategoryTranslations\SubCategoryTranslationInterface;
 use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
+use App\Interfaces\WarehouseStock\WarehouseStockInterface;
 use App\Repositories\CardTypes\CardTypeRepository;
+use App\Repositories\Category\CategoryRepository;
+use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Repositories\Documents\DocumentRepository;
 
 use App\Repositories\Gyms\GymRepository;
+use App\Repositories\GymSchedule\GymScheduleRepository;
+use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
+use App\Repositories\ProductConsumption\ProductConsumptionRepository;
+use App\Repositories\Products\ProductsRepository;
+use App\Repositories\ProductTranslations\ProductTranslationRepository;
 use App\Repositories\Roles\RoleRepository;
+use App\Repositories\Schedule\ScheduleRepository;
+use App\Repositories\ScheduleDetails\ScheduleDetailsRepository;
+use App\Repositories\ScheduleName\ScheduleNameRepository;
+use App\Repositories\ScheduleSmoke\ScheduleSmokeRepository;
+use App\Repositories\SubCategory\SubCategoryRepository;
+use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
+use App\Repositories\WarehouseStock\WarehouseStockRepository;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -47,6 +75,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CardTypeInterface::class, CardTypeRepository::class);
         $this->app->bind(PartnerInterface::class, PartnerRepository::class);
         $this->app->bind(WarehouseInterface::class, WarehouseRepository::class);
+        $this->app->bind(CategoryInterface::class, CategoryRepository::class);
+        $this->app->bind(SubCategoryInterface::class, SubCategoryRepository::class);
+        $this->app->bind(SubCategoryTranslationInterface::class, SubCategoryTranslationsRepository::class);
+        $this->app->bind(CategoryTranslationInterface::class, CategoryTranslationsRepository::class);
+        $this->app->bind(ProductsInterface::class, ProductsRepository::class);
+        $this->app->bind(ProductTranslationInterface::class, ProductTranslationRepository::class);
+        $this->app->bind(WarehouseStockInterface::class, WarehouseStockRepository::class);
+        $this->app->bind(MeasurementUnitInterface::class, MeasurementUnitRepository::class);
+        $this->app->bind(ProductConsumptionInterface::class, ProductConsumptionRepository::class);
+        $this->app->bind(ScheduleInterface::class, ScheduleRepository::class);
+        $this->app->bind(GymScheduleInterface::class, GymScheduleRepository::class);
+        $this->app->bind(ScheduleNameInterface::class, ScheduleNameRepository::class);
+        $this->app->bind(ScheduleDetailsInterface::class, ScheduleDetailsRepository::class);
+        $this->app->bind(ScheduleSmokeInterface::class, ScheduleSmokeRepository::class);
     }
 
     /**
