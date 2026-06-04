@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
+use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
@@ -176,6 +177,20 @@ Route::prefix('{locale}')
                 });
             });
 
+
+            // ====== users ================
+            Route::prefix('membership-plan')->name('membership_plan.')->group(function () {
+                Route::get('/list', [MembershipPlanController::class, 'list'])->name('list');
+                Route::get('/create', [MembershipPlanController::class, 'create'])->name('create');
+                Route::post('/store', [MembershipPlanController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:MembershipPlan,id')->group(function () {
+                    Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
+                });
+            });
+
+
             Route::prefix('products')->name('products.')->group(function () {
                 Route::get('/', [ProductsController::class, 'index'])->name('index');
                 Route::get('/create', [ProductsController::class, 'create'])->name('create');
@@ -212,6 +227,7 @@ Route::prefix('{locale}')
                     Route::delete('/{id}', [ProductConsumptionController::class, 'destroy'])->name('destroy');
                 });
             });
+
         });
     });
 

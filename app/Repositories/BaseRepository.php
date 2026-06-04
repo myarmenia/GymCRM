@@ -103,29 +103,6 @@ abstract class BaseRepository
         return $model;
     }
 
-    public function updateTaskStatus(int $id, string $key, mixed $value): Model
-    {
-
-        $model = $this->findOrFail($id);
-
-        $model->update([
-            $key => $value,
-        ]);
-
-        return $model->fresh();
-    }
-
-    public function updateRoomStatus(int $id, string $key, mixed $value): Model
-    {
-
-        $model = $this->findOrFail($id);
-
-        $model->update([
-            $key => $value,
-        ]);
-
-        return $model->fresh();
-    }
 
     /**
      * Delete
@@ -157,49 +134,7 @@ abstract class BaseRepository
             ->get();
     }
 
-    public function whereNull(string $column, array $conditions = [], array $with = []): Collection
-    {
-        return $this->query()
-            ->with($with)
-            ->where('status', '!=', 'done')
-            ->where($conditions)
-            ->whereNull($column)
-            ->get();
-    }
-
-    public function wherePaginate(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->where($conditions)
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    public function getAllCleanings(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->where($conditions)
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    public function getAllTasksByUser(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->whereNotNull('room_id')
-            ->where($conditions)
-            ->where('status', '!=', 'done')
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    /**
-     * Where IN
-     */
-    public function whereIn(string $column, array $values, array $with = []): Collection
+       public function whereIn(string $column, array $values, array $with = []): Collection
     {
         return $this->query()
             ->with($with)
@@ -207,135 +142,16 @@ abstract class BaseRepository
             ->get();
     }
 
-    public function createTranslation(int $id, array $data): Model
+    public function gymQuery(): mixed
     {
-        $model = $this->findOrFail($id);
-        return $model->translations()->create($data);
-    }
+        $query = $this->query();
 
-    public function updateTranslation(array $conditions, array $data): ?Model
-    {
-        $translation = $this->query()
-            ->where($conditions)
-            ->first();
-
-        if (!$translation) {
-            return null;
+        if (method_exists($this->model, 'scopeCurrentGym')) {
+            $query->currentGym();
         }
 
-        $translation->update($data);
-
-        return $translation;
-    }
-
-    public function createAmenities(array $data): ?Model
-    {
-        return $this->query()->create($data);
-    }
-
-    public function upsert(array $values, array $uniqueBy, array $update)
-    {
-        return $this->model->upsert($values, $uniqueBy, $update);
-    }
-
-    public function updateCleaningStatus(int $id, string $key, mixed $value)
-    {
-        $cleaning = $this->query()->findOrFail($id);
-
-        $cleaning->update([
-            $key => $value,
-        ]);
-
-        return $cleaning;
-    }
-
-    public function findCategoryBy(string $column, mixed $value, array $relations = []): ?Model
-    {
-        return $this->model
-            ->newQuery()
-            ->with($relations)
-            ->where($column, $value)
-            ->first();
-    }
-
-    public function createCategory(array $data): Model
-    {
-        return $this->query()->create($data);
-    }
-
-    public function wherePaginateCategory(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->where($conditions)
-            ->whereNull('parent_id')
-            ->orderBy('id', 'asc')
-            ->paginate($perPage);
-    }
-
-    public function getParentCategories(string $locale): \Illuminate\Support\Collection
-    {
-        return $this->query()
-            ->where('gym_id', auth()->user()->gym_id)
-            ->whereNull('parent_id')
-            ->with([
-                'translations' => function ($query) use ($locale) {
-                    $query->where('locale', $locale);
-                },
-            ])
-            ->get()
-            ->map(function ($category) {
-                return [
-                    'id' => $category->id,
-                    'name' => data_get(
-                        $category->translations->first(),
-                        'name',
-                        ''
-                    ),
-                ];
-            });
-    }
-
-    public function getProductsByFilter(array $filters = [], array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        $query = $this->query()->with($with);
-
-        if (!empty($filters['gym_id'])) {
-            $query->where('gym_id', $filters['gym_id']);
-        }
-
-        if (!empty($filters['category_id'])) {
-            $query->where('category_id', $filters['category_id']);
-        }
-
-        if (!empty($filters['sub_category_id'])) {
-            $query->where('sub_category_id', $filters['sub_category_id']);
-        }
-
-        if (!empty($filters['name'])) {
-            $query->whereHas('translations', function ($q) use ($filters) {
-                $q->where('name', 'like', '%' . $filters['name'] . '%');
-            });
-        }
-
-        return $query
-            ->orderByDesc('id')
-            ->paginate($perPage)
-            ->withQueryString();
+        return $query;
     }
 
 
-    public function getProductForConsumption(array $ids): Collection
-    {
-        return $this->model
-            ->with([
-                'translations',
-                'warehouseStocks',
-                'measurementUnit',
-                'category.translations',
-                'subCategory.translations',
-            ])
-            ->whereIn('id', $ids)
-            ->get();
-    }
 }

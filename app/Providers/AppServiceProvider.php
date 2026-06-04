@@ -10,6 +10,8 @@ use App\Interfaces\CategoryTranslations\CategoryTranslationInterface;
 use App\Interfaces\Documents\DocumentInterface;
 use App\Interfaces\EntryCodes\EntryCodeInterface;
 use App\Interfaces\Gyms\GymInterface;
+use App\Interfaces\Memberships\MembershipCategoryInterface;
+use App\Interfaces\Memberships\MembershipPlanInterface;
 use App\Interfaces\GymSchedule\GymScheduleInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
 use App\Interfaces\Partners\PartnerInterface;
@@ -37,6 +39,8 @@ use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Repositories\Documents\DocumentRepository;
 use App\Repositories\EntryCodes\EntryCodeRepository;
 use App\Repositories\Gyms\GymRepository;
+use App\Repositories\Memberships\MembershipCategoryRepository;
+use App\Repositories\Memberships\MembershipPlanRepository;
 use App\Repositories\GymSchedule\GymScheduleRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
 use App\Repositories\Partners\PartnerRepository;
@@ -55,7 +59,11 @@ use App\Repositories\People\PersonRepository;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
+
+use Illuminate\Support\Facades\Request;
+
 use App\Repositories\WarehouseStock\WarehouseStockRepository;
+
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -82,6 +90,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CardTypeInterface::class, CardTypeRepository::class);
         $this->app->bind(PartnerInterface::class, PartnerRepository::class);
         $this->app->bind(WarehouseInterface::class, WarehouseRepository::class);
+
         $this->app->bind(CategoryInterface::class, CategoryRepository::class);
         $this->app->bind(SubCategoryInterface::class, SubCategoryRepository::class);
         $this->app->bind(SubCategoryTranslationInterface::class, SubCategoryTranslationsRepository::class);
@@ -95,11 +104,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GymScheduleInterface::class, GymScheduleRepository::class);
         $this->app->bind(ScheduleNameInterface::class, ScheduleNameRepository::class);
         $this->app->bind(ScheduleDetailsInterface::class, ScheduleDetailsRepository::class);
+
         $this->app->bind(EntryCodeInterface::class, EntryCodeRepository::class);
         $this->app->bind(AttendanceSheetInterface::class, AttendanceSheetsRepository::class);
         $this->app->bind(ClientIdFromTurnstileInterface::class, TurnstileRepository::class);
         $this->app->bind(CheckEntryCodeInterface::class, TurnstileRepository::class);
         $this->app->bind(PersonInterface::class, PersonRepository::class);
+
+        $this->app->bind(MembershipPlanInterface::class, MembershipPlanRepository::class);
+        $this->app->bind(MembershipCategoryInterface::class, MembershipCategoryRepository::class);
+
+
 
     }
 
@@ -113,5 +128,12 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share([
             'locale' => fn() => Session::get('locale', config('app.locale')),
         ]);
+
+
+        if (is_dir(base_path('lang'))) {
+            $this->app->useLangPath(base_path('lang'));
+        }
     }
+
+
 }

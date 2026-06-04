@@ -39,14 +39,28 @@ class Person extends Model
         return $this->morphMany(AttendanceSheet::class, 'relation');
     }
 
+
+
+    public function memberships()
+    {
+        return $this->hasMany(PersonMembership::class);
+    }
+
+    public function activeMemberships()
+    {
+        return $this->hasMany(PersonMembership::class)
+            ->where('status', 'active');
+    }
+
     public function documents()
     {
         return $this->morphMany(Document::class, 'owner');
     }
 
-    public function gyms() 
+    public function gyms()
     {
         return $this->belongsToMany(Gym::class, 'gym_person');
+
     }
 
     // public function activated_code_connected_person(): HasOne{

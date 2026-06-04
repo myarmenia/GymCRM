@@ -37,19 +37,45 @@ class HandleInertiaRequests extends Middleware
         //         'user' => $request->user(),
         //     ],
         // ];
-
-        $lang = in_array(request()->segment(1), ['hy', 'ru', 'en']) ? request()->segment(1) : 'hy';
-        $langs = ['en', 'ru', 'hy'];
-        $name = request()->route()->getName();
-        $group = explode('.', $name)[0]; // user
-
-        $file = lang_path($lang . '/' . $group . ".json");
-
-        $formFile = lang_path($lang . "/form.json");
-        $navbarFile = lang_path($lang . "/navbar.json");
-        // $modal = lang_path($lang . "/modal.json");
-        $app = lang_path($lang . "/app.json");
         $user = Auth::user();
+
+        // $lang = in_array(request()->segment(1), ['hy', 'ru', 'en']) ? request()->segment(1) : 'hy';
+        // $langs = ['en', 'ru', 'hy'];
+
+        $gym = $user?->gym;
+
+        $gymLangs = $gym
+            ? $gym->languages()->wherePivot('active', true)->get()
+            : collect();
+
+        $langs = $gymLangs->pluck('code')->values()->toArray();
+
+        if (empty($langs)) {
+            $langs = ['hy'];
+        }
+
+
+        $langFromUrl = request()->segment(1);
+
+        $lang = in_array($langFromUrl, $langs)
+            ? $langFromUrl
+            : $langs[0];
+
+
+        $name = request()->route()?->getName();
+        $group = $name ? explode('.', $name)[0] : 'app';
+
+        // $file = lang_path($lang . '/' . $group . ".json");
+        // $formFile = lang_path($lang . "/form.json");
+        // $navbarFile = lang_path($lang . "/navbar.json");
+        // $app = lang_path($lang . "/app.json");
+
+        // ✅ ФРОНТЕНД: JSON из resources/lang/
+        $basePath = resource_path("lang/{$lang}");
+        $file = "{$basePath}/{$group}.json";
+        $formFile = "{$basePath}/form.json";
+        $navbarFile = "{$basePath}/navbar.json";
+        $app = "{$basePath}/app.json";
 
         return [
             ...parent::share($request),
