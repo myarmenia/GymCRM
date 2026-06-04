@@ -7,7 +7,7 @@ const page = usePage();
 
 const currentLocale = page.props.locale;
 
-const { hasRole } = useAuth();
+const { hasRole, hasAnyRole } = useAuth();
 </script>
 
 <template>
@@ -76,6 +76,7 @@ const { hasRole } = useAuth();
                 ]"
             >
                 <Link
+                    v-if="hasAnyRole([ 'owner', 'admin', 'super_admin'])"
                     :href="route('user.list', { locale: currentLocale })"
                     class="menu-link"
                 >
@@ -86,7 +87,7 @@ const { hasRole } = useAuth();
                 </Link>
             </li>
              <!-- 🟢 PEOPLE (նոր ավելացված) -->
-            <li v-if="hasRole('sales_manager')" :class="['menu-item', route().current('person.list') ? 'active' : '']">
+            <li v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])" :class="['menu-item', route().current('person.list') ? 'active' : '']">
                 <Link :href="route('person.list', { locale: currentLocale })" class="menu-link">
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
                     <div data-i18n="People">People</div>

@@ -29,14 +29,12 @@ const loadDocuments = async () => {
     const res = await axios.get(
         `/documents/${props.ownerType}/${props.ownerId}`
     );
-
     uploaded.value = res.data;
 };
 
 onMounted(() => {
     loadDocuments();
 });
-
 
 const handleUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -56,10 +54,9 @@ const removePreview = (index) => {
 };
 
 const submitDocuments = async () => {
-    if (!documentForm.type) return alert('Select type');
+    if (!documentForm.type) return alert('Ընտրեք տեսակը');
 
     const formData = new FormData();
-
     formData.append('type', documentForm.type);
     documentForm.documents.forEach(file => formData.append('documents[]', file));
 
@@ -67,17 +64,15 @@ const submitDocuments = async () => {
         headers: { 'Content-Type': 'multipart/form-data' }
     });
 
-
     uploaded.value = [...uploaded.value, ...res.data];
     documentForm.documents = [];
     previews.value = [];
 };
 
-// Удаление загруженного файла
+// Ջնջել վերբեռնված ֆայլը
 const removeUploaded = async (index) => {
     const doc = uploaded.value[index];
-
-    console.log(index,doc.id, '=========' )
+    console.log(index, doc.id, '=========');
     await axios.delete(`/documents/${doc.id}`);
     uploaded.value.splice(index, 1);
 };
@@ -85,46 +80,46 @@ const removeUploaded = async (index) => {
 
 <template>
 <div class="card mb-6">
-    <h5 class="card-header">Documents</h5>
+    <h5 class="card-header">Փաստաթղթեր</h5>
     <div class="card-body">
 
-        <!-- UPLOAD -->
+        <!-- ՎԵՐԲԵՌՆՈՒՄ -->
         <div class="mb-3">
-            <label class="form-label">Type</label>
+            <label class="form-label">Տեսակ</label>
             <select v-model="documentForm.type" class="form-select">
-                <option value="" disabled>Select type</option>
-                <option value="passport">Passport</option>
-                <option value="id_card">ID Card</option>
-                <option value="contract">Contract</option>
+                <option value="" disabled>Ընտրել տեսակը</option>
+                <option value="passport">Անձնագիր</option>
+                <option value="id_card">Նույնականացման քարտ</option>
+                <option value="contract">Պայմանագիր</option>
             </select>
         </div>
 
         <div class="mb-3">
             <label class="btn btn-primary">
-                Upload files
+                Վերբեռնել ֆայլեր
                 <input type="file" hidden multiple @change="handleUpload" />
             </label>
         </div>
 
-        <!-- PREVIEWS -->
+        <!-- ՆԱԽԱԴԻՏՈՒՄ -->
         <div v-if="previews.length" class="row g-3 mb-3">
             <div v-for="(item, index) in previews" :key="index" class="col-md-3">
                 <div class="card p-2 text-center">
                     <img v-if="item.file.type.startsWith('image/')" :src="item.url" class="rounded mb-2" style="width: 100%; height: 120px; object-fit: cover;">
                     <div v-else>📄 PDF</div>
                     <small class="d-block text-truncate">{{ item.file.name }}</small>
-                    <button class="btn btn-danger btn-sm mt-2" @click="removePreview(index)">Remove</button>
+                    <button class="btn btn-danger btn-sm mt-2" @click="removePreview(index)">Հեռացնել</button>
                 </div>
             </div>
         </div>
 
         <button v-if="previews.length" class="btn btn-success" @click="submitDocuments">
-            Upload {{ previews.length }} file(s)
+            Վերբեռնել {{ previews.length }} ֆայլ(եր)
         </button>
 
-        <!-- UPLOADED FILES -->
+        <!-- ՎԵՐԲԵՌՆՎԱԾ ՖԱՅԼԵՐ -->
         <div v-if="uploaded.length" class="mt-4">
-            <h6>Uploaded</h6>
+            <h6>Վերբեռնվածներ</h6>
 
             <div class="row g-3">
                 <div
@@ -134,7 +129,7 @@ const removeUploaded = async (index) => {
                 >
                     <div class="card p-2 text-center">
 
-                        <!-- IMAGE -->
+                        <!-- ՆԿԱՐ -->
                         <div v-if="isImage(doc.file_url)">
                             <img
                                 :src="doc.file_url"
@@ -144,31 +139,27 @@ const removeUploaded = async (index) => {
 
                             <div class="d-flex gap-2 justify-content-center">
                                 <a :href="doc.file_url" target="_blank" class="btn btn-sm btn-primary">
-                                    View
+                                    Դիտել
                                 </a>
                                 <a :href="doc.file_url" download class="btn btn-sm btn-success">
-                                    Download
+                                    Ներբեռնել
                                 </a>
                             </div>
                         </div>
 
-                        <!-- PDF / FILE -->
+                        <!-- PDF / ՖԱՅԼ -->
                         <div v-else class="mb-2">
                             📄
                             <a :href="doc.file_url" target="_blank">
-                                Open file
+                                Բացել ֆայլը
                             </a>
                         </div>
-
-                        <!-- <small class="d-block text-truncate">
-                            {{ getFileName(doc.file_url) }}
-                        </small> -->
 
                         <button
                             class="btn btn-danger btn-sm mt-2"
                             @click="removeUploaded(index)"
                         >
-                            Delete
+                            Ջնջել
                         </button>
 
                     </div>

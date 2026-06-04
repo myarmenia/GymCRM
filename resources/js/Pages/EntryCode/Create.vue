@@ -85,7 +85,7 @@ const submit = () => {
 
 
                 <div class="row mb-3">
-                    <div class="col-sm-9 offset-sm-3">
+                    <div class="pt-6 d-flex justify-content-end gap-2">
                         <PrimaryButton :disabled="form.processing">Ստեղծել</PrimaryButton>
                     </div>
                 </div>

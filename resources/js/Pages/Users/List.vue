@@ -7,6 +7,7 @@ import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     users: Object,
@@ -17,15 +18,18 @@ const currentLocale = page.props.locale ?? "hy";
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);
+const {  hasAnyRole } = useAuth();
+
+
 </script>
 
 <template>
-    <Head title="Users List" />
+    <Head title="Օգտատերերի ցուցակ" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Users List
+                Օգտատերերի ցուցակ
             </h2>
         </template>
 
@@ -33,8 +37,9 @@ const pagination = ref(props.users);
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Users List</h5>
+                <h5 class="mb-0">Օգտատերերի ցուցակ</h5>
                 <Link
+                    v-if="hasAnyRole([ 'owner', 'super_admin'])"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     aria-controls="DataTables_Table_0"
@@ -45,26 +50,26 @@ const pagination = ref(props.users);
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Add New Employee</span
+                                >Ավելացնել նոր աշխատակից</span
                             >
                         </span>
                     </span>
                 </Link>
             </div>
-            <h5 class="card-header">Bordered Table</h5>
+            <h5 class="card-header">Օգտատերերի աղյուսակ</h5>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
-                                <th>Surname</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Roles</th>
-                                <th>Active</th>
-                                <th>Actions</th>
+                                <th>Անուն</th>
+                                <th>Ազգանուն</th>
+                                <th>Հեռախոս</th>
+                                <th>Էլ. հասցե</th>
+                                <th>Դերեր</th>
+                                <th>Կարգավիճակ</th>
+                                <th>Գործողություններ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -134,6 +139,7 @@ const pagination = ref(props.users);
                                                 />
                                             </a>
                                             <Link
+                                                v-if="hasAnyRole([ 'owner', 'super_admin'])"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('user.edit', {
@@ -145,8 +151,19 @@ const pagination = ref(props.users);
                                                 <i
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
-                                                Edit
+                                                Խմբագրել
                                             </Link>
+                                            <Link
+                                                v-if="hasAnyRole([  'admin'])"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('user.show', { locale: currentLocale, id: user.id })"
+                                            >
+                                                <i
+                                                    class="icon-base ti tabler-eye me-1"
+                                                ></i>
+                                                Դիտել
+                                            </Link>
+                                           
                                             <a
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"

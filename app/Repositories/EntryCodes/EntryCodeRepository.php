@@ -83,7 +83,7 @@ class EntryCodeRepository implements EntryCodeInterface
                 }
             })
             ->with('gym:id,name')
-            ->get(['id', 'token', 'gym_id']);
+            ->get(['id', 'token', 'gym_id', 'type']);
     }
 
     public function activate(int $entryCodeId, bool $active = true): void

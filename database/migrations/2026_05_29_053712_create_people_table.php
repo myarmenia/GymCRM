@@ -17,7 +17,12 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone');
-            $table->enum('type', ['visitor', 'employee'])->default('visitor');
+            $table->enum('type', ['visitor', 'guest'])->default('visitor');
+
+            $table->date('birth_date')->nullable();
+            $table->enum('gender', ['male', 'female'])->nullable();
+            $table->boolean('mobile_deleted')->default(false);
+            $table->string('fcm_token')->nullable();
 
             $table->softDeletes();
             $table->timestamps();

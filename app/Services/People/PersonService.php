@@ -104,7 +104,7 @@ class PersonService
     {
         $user = Auth::user();
 
-        if ($user->hasRole('sales_manager') && $user->gym_id) {
+        if ($user->hasAnyRole(['sales_manager', 'super_admin']) && $user->gym_id) {
             // Attach only the sales_manager's own gym (many-to-many)
             $person->gyms()->sync([(int) $user->gym_id]);
         }

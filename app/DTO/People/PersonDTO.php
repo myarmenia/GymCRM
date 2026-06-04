@@ -5,14 +5,18 @@ namespace App\DTO\People;
 class PersonDTO
 {
     public function __construct(
-        public string $name,            // required
-        public ?string $surname,       // nullable
-        public ?string $image,         // nullable
-        public string $email,          // required
-        public string $password,       // required
-        public string $phone,          // required
-        public string $type,           // required (default 'visitor')
+        public string $name,
+        public ?string $surname,
+        public ?string $image,
+        public string $email,
+        public string $password,
+        public string $phone,
+        public string $type,
+        public string $birth_date,
         public ?int $entry_code_id = null,
+        public ?string $gender = null,
+        public bool $mobile_deleted = false,
+        public ?string $fcm_token = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -25,7 +29,11 @@ class PersonDTO
             password: $data['password'] ?? '',
             phone: $data['phone'] ?? '',
             type: $data['type'] ?? 'visitor',
+            birth_date: $data['birth_date'] ?? '',
             entry_code_id: $data['entry_code_id'] ?? null,
+            gender: $data['gender'] ?? null,
+            mobile_deleted: (bool) ($data['mobile_deleted'] ?? false),
+            fcm_token: $data['fcm_token'] ?? null,
         );
     }
 
@@ -39,6 +47,10 @@ class PersonDTO
             'password' => $this->password,
             'phone' => $this->phone,
             'type' => $this->type,
+            'birth_date' => $this->birth_date,
+            'gender' => $this->gender,
+            'mobile_deleted' => $this->mobile_deleted,
+            'fcm_token' => $this->fcm_token,
         ];
     }
 }

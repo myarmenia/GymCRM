@@ -19,12 +19,12 @@ const pagination = ref(props.people);
 </script>
 
 <template>
-    <Head title="People List" />
+    <Head title="Անձինք" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                People List
+                Անձինք
             </h2>
         </template>
 
@@ -32,7 +32,7 @@ const pagination = ref(props.people);
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">People List</h5>
+                <h5 class="mb-0">Անձինք</h5>
                 <Link
                     class="btn create-new btn-primary"
                     tabindex="0"
@@ -44,7 +44,7 @@ const pagination = ref(props.people);
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Add New Person</span
+                                >Ավելացնել նոր անձ</span
                             >
                         </span>
                     </span>
@@ -56,13 +56,13 @@ const pagination = ref(props.people);
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
-                                <th>Surname</th>
-                                <th>Email</th>
-                                <th>Phone</th>
-                                <th>Type</th>
-                                <th>Gym(s)</th>
-                                <th>Actions</th>
+                                <th>Անուն</th>
+                                <th>Ազգանուն</th>
+                                <th>Էլ. հասցե</th>
+                                <th>Հեռախոս</th>
+                                <th>Տեսակ</th>
+                                <th>Մարզադահլիճ(ներ)</th>
+                                <th>Գործողություններ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -77,7 +77,7 @@ const pagination = ref(props.people);
                                         class="badge"
                                         :class="person.type === 'employee' ? 'bg-label-primary' : 'bg-label-secondary'"
                                     >
-                                        {{ useTrans(`page.people.type.${person.type}`) || person.type }}
+                                        {{ useTrans(`page.people.type.${person.type}`) || person.type === 'employee' ? 'Աշխատակից' : 'Այցելու' }}
                                     </span>
                                 </td>
                                 <td>
@@ -106,7 +106,7 @@ const pagination = ref(props.people);
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Edit
+                                                Խմբագրել
                                             </Link>
                                             <a
                                                 class="dropdown-item waves-effect"
