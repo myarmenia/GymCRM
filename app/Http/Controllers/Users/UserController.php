@@ -39,6 +39,7 @@ class UserController extends Controller
     // ========== create =====================
     public function create()
     {
+      
         $user = Auth::user();
         $roles = $this->roleService->getAvailableRoles($user);
         $gyms = $this->gymService->getAll();

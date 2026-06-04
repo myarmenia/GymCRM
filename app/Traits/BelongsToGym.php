@@ -31,4 +31,9 @@ trait BelongsToGym
     {
         return $this->gym_id === auth()->user()?->gym_id;
     }
+
+    public function scopeCurrentGym($query)
+    {
+        return $query->where('gym_id', auth()->user()?->gym_id);
+    }
 }

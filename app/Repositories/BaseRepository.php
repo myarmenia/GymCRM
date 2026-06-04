@@ -103,29 +103,6 @@ abstract class BaseRepository
         return $model;
     }
 
-    public function updateTaskStatus(int $id, string $key, mixed $value): Model
-    {
-
-        $model = $this->findOrFail($id);
-
-        $model->update([
-            $key => $value,
-        ]);
-
-        return $model->fresh();
-    }
-
-    public function updateRoomStatus(int $id, string $key, mixed $value): Model
-    {
-
-        $model = $this->findOrFail($id);
-
-        $model->update([
-            $key => $value,
-        ]);
-
-        return $model->fresh();
-    }
 
     /**
      * Delete
@@ -157,49 +134,7 @@ abstract class BaseRepository
             ->get();
     }
 
-    public function whereNull(string $column, array $conditions = [], array $with = []): Collection
-    {
-        return $this->query()
-            ->with($with)
-            ->where('status', '!=', 'done')
-            ->where($conditions)
-            ->whereNull($column)
-            ->get();
-    }
-
-    public function wherePaginate(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->where($conditions)
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    public function getAllCleanings(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->where($conditions)
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    public function getAllTasksByUser(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator
-    {
-        return $this->query()
-            ->with($with)
-            ->whereNotNull('room_id')
-            ->where($conditions)
-            ->where('status', '!=', 'done')
-            ->orderBy('id', 'asc') // 👈 սա ավելացրու
-            ->paginate($perPage);
-    }
-
-    /**
-     * Where IN
-     */
-    public function whereIn(string $column, array $values, array $with = []): Collection
+       public function whereIn(string $column, array $values, array $with = []): Collection
     {
         return $this->query()
             ->with($with)
@@ -207,45 +142,16 @@ abstract class BaseRepository
             ->get();
     }
 
-    public function createTranslation(int $id, array $data): Model
+    public function gymQuery(): mixed
     {
-        $model = $this->findOrFail($id);
-        return $model->translations()->create($data);
-    }
+        $query = $this->query();
 
-    public function updateTranslation(array $conditions, array $data): ?Model
-    {
-        $translation = $this->query()
-            ->where($conditions)
-            ->first();
-
-        if (!$translation) {
-            return null;
+        if (method_exists($this->model, 'scopeCurrentGym')) {
+            $query->currentGym();
         }
 
-        $translation->update($data);
-
-        return $translation;
+        return $query;
     }
 
-    public function createAmenities(array $data): ?Model
-    {
-        return $this->query()->create($data);
-    }
 
-    public function upsert(array $values, array $uniqueBy, array $update)
-    {
-        return $this->model->upsert($values, $uniqueBy, $update);
-    }
-
-    public function updateCleaningStatus(int $id, string $key, mixed $value)
-    {
-        $cleaning = $this->query()->findOrFail($id);
-
-        $cleaning->update([
-            $key => $value,
-        ]);
-
-        return $cleaning;
-    }
 }

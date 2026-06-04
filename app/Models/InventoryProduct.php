@@ -9,6 +9,7 @@ class InventoryProduct extends Model
     protected $fillable = [
         'gym_id',
         'category_id',
+        'sub_category_id',
         'measurement_unit_id',
         'sku',
         'barcode',
@@ -48,5 +49,20 @@ class InventoryProduct extends Model
             MeasurementUnit::class,
             'measurement_unit_id'
         );
+    }
+
+    public function subCategory()
+    {
+        return $this->belongsTo(InventoryCategory::class, 'sub_category_id');
+    }
+
+    public function warehouseStocks()
+    {
+        return $this->hasMany(WarehouseStock::class, 'inventory_product_id');
+    }
+
+    public function consumptions()
+    {
+        return $this->hasMany(ProductConsumption::class, 'product_id');
     }
 }

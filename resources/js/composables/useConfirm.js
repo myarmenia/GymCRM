@@ -3,9 +3,9 @@ import { ref } from 'vue';
 const isOpen = ref(false);
 const modalData = ref({
     message: '',
-    title: 'Confirm action',
-    confirmText: 'Confirm',
-    cancelText: 'Cancel',
+    title: 'Հաստատեք գործողությունը',
+    confirmText: 'Հաստատել',
+    cancelText: 'Չեղարկել',
     confirmClass: 'btn-danger'
 });
 let resolver = null;
@@ -14,9 +14,9 @@ export function useConfirm() {
     const confirm = (msg, options = {}) => {
         modalData.value = {
             message: msg,
-            title: options.title || 'Confirm action',
-            confirmText: options.confirmText || 'Confirm',
-            cancelText: options.cancelText || 'Cancel',
+            title: options.title || 'Հաստատեք գործողությունը',
+            confirmText: options.confirmText || 'Հաստատել',
+            cancelText: options.cancelText || 'Չեղարկել',
             confirmClass: options.confirmClass || 'btn-danger'
         };
         isOpen.value = true;
