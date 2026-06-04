@@ -9,12 +9,17 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
+use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
+use App\Http\Controllers\Products\ProductsController;
+use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
@@ -112,7 +117,6 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [GymController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [GymController::class, 'update'])->name('update');
                     Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
-
                 });
             });
 
@@ -158,9 +162,21 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [WarehouseController::class, 'update'])->name('update');
                     Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
                     Route::patch('{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
-
                 });
             });
+
+            Route::prefix('categories')->name('categories.')->group(function () {
+                Route::get('/', [CategoryController::class, 'index'])->name('index');
+                Route::get('/create', [CategoryController::class, 'create'])->name('create');
+                Route::post('/', [CategoryController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:InventoryCategory,id')->group(function () {
+                    Route::get('/edit/{id}', [CategoryController::class, 'edit'])->name('edit');
+                    Route::put('/{id}', [CategoryController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [CategoryController::class, 'destroy'])->name('destroy');
+                });
+            });
+
 
             // ====== users ================
             Route::prefix('membership-plan')->name('membership_plan.')->group(function () {
@@ -171,6 +187,44 @@ Route::prefix('{locale}')
                 Route::middleware('check.gym:MembershipPlan,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
+                });
+            });
+
+
+            Route::prefix('products')->name('products.')->group(function () {
+                Route::get('/', [ProductsController::class, 'index'])->name('index');
+                Route::get('/create', [ProductsController::class, 'create'])->name('create');
+                Route::post('/', [ProductsController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:InventoryProduct,id')->group(function () {
+                    Route::get('/edit/{id}', [ProductsController::class, 'edit'])->name('edit');
+                    Route::put('/{id}', [ProductsController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [ProductsController::class, 'destroy'])->name('destroy');
+                });
+            });
+
+            Route::prefix('schedule')->name('schedule.')->group(function () {
+                Route::get('/', [ScheduleController::class, 'index'])->name('index');
+                Route::get('/create', [ScheduleController::class, 'create'])->name('create');
+                Route::post('/', [ScheduleController::class, 'store'])->name('store');
+
+                //Route::middleware('check.gym:ScheduleName,id')->group(function () {
+                    Route::get('/edit/{id}', [ScheduleController::class, 'edit'])->name('edit');
+                    Route::put('/{id}', [ScheduleController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [ScheduleController::class, 'destroy'])->name('destroy');
+                //});
+            });
+
+            Route::prefix('product-consumptions')->name('product-consumptions.')->group(function () {
+                Route::get('/', [ProductConsumptionController::class, 'index'])->name('index');
+                Route::get('/create', [ProductConsumptionController::class, 'create'])
+                    ->name('create');
+                Route::post('/', [ProductConsumptionController::class, 'store'])
+                    ->name('store');
+                Route::middleware('check.gym:InventoryProduct,id')->group(function () {
+                    Route::get('/edit/{id}', [ProductConsumptionController::class, 'edit'])->name('edit');
+                    Route::put('/{id}', [ProductConsumptionController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [ProductConsumptionController::class, 'destroy'])->name('destroy');
                 });
             });
 

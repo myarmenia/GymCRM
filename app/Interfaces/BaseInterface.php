@@ -5,6 +5,8 @@ namespace App\Interfaces;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection as SupportCollection;
+
 
 interface BaseInterface
 {

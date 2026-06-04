@@ -1,0 +1,47 @@
+.table-light tr th {
+    border: 1px solid #e5e7eb;
+}
+
+.dropdown-menu {
+    padding: 12px 12px;
+}
+
+.product-action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    padding-bottom: 8px;
+    padding-top: 3px;
+    margin-right: 0;
+    font-size: 15px;
+    font-weight: 2;
+    color: rgb(71, 62, 62);
+    text-decoration: none;
+}
+
+.add-product-btn {
+    padding: 6px 12px;
+    gap: 6px;
+}
+
+.product-action-item i {
+    font-size: 20px;
+    color: rgb(83, 74, 74);
+}
+
+.edit-span {
+    color: rgb(71, 62, 62);
+}
+
+.low-stock-row td {
+    background-color: #f8d7da !important;
+}
+
+.out-of-stock-row td {
+    background-color: #f1f1f1 !important;
+    color: #999;
+}
+
+.out-of-stock-row input[type="checkbox"] {
+    cursor: not-allowed;
+}

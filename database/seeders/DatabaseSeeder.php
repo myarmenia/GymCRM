@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
             CardTypeSeeder::class,
             CardTypePaymentMethodSeeder::class,
             MembershipCategorySeeder::class,
+            MeasurementUnitSeeder::class
 
         ]);
     }

@@ -26,9 +26,9 @@ const warehousesList = ref(props.warehouses.data);
 
         <div class="card mb-6">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Warehouses List</h5>
+                <h5 class="mb-0">Պահեստների ցուցակ</h5>
                 <button @click="router.get(route('warehouse.create', { locale: currentLocale }))" class="btn btn-primary">
-                    + Add New Warehouse
+                    + Ավելացնել նոր պահեստ
                 </button>
             </div>
             <div class="table-responsive text-nowrap">
@@ -36,12 +36,12 @@ const warehousesList = ref(props.warehouses.data);
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Name</th>
-                            <th>Gym</th>
-                            <th>Type</th>
-                            <th>Phone</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th>Անուն</th>
+                            <th>Մարզասրահ</th>
+                            <th>Տիպ</th>
+                            <th>Հեռախոս</th>
+                            <th>Կարգավիճակ</th>
+                            <th>Գործողություններ</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,7 +53,7 @@ const warehousesList = ref(props.warehouses.data);
                             <td>{{ warehouse.phone ?? '-' }}</td>
                             <td>
                                 <span :class="warehouse.status ? 'badge bg-label-success' : 'badge bg-label-danger'">
-                                    {{ warehouse.status ? 'Active' : 'Inactive' }}
+                                    {{ warehouse.status ? 'Ակտիվ' : 'Պասիվ' }}
                                 </span>
                             </td>
                             <td>
@@ -74,7 +74,7 @@ const warehousesList = ref(props.warehouses.data);
                                                 :column="'status'"
                                                 :locale="currentLocale"
                                                 :active="warehouse.status"
-                                                :label="'Status'"
+                                                :label="'Կարգավիճակ'"
                                                 @update="warehouse.status = $event"
                                             />
 
@@ -85,7 +85,7 @@ const warehousesList = ref(props.warehouses.data);
                                             :href="route('warehouse.edit', { locale: currentLocale, id: warehouse.id })"
                                         >
                                             <i class="icon-base ti tabler-pencil me-1"></i>
-                                            Edit
+                                            Խմբագրել
                                         </Link>
 
                                         <a
