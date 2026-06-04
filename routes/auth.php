@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Documents\DocumentController;
+use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Schedule\ScheduleController;
+use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
 use App\Http\Controllers\Warehouses\WarehouseController;
@@ -90,6 +92,18 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [UserController::class, 'update'])->name('update');
                 });
             });
+            
+            // ====== people ================
+            Route::prefix('person')->name('person.')->group(function () {
+                Route::get('/list', [PersonController::class, 'list'])->name('list');
+                Route::get('/create', [PersonController::class, 'create'])->name('create');
+                Route::post('/store', [PersonController::class, 'store'])->name('store');
+
+                // Route::middleware('check.gym:Person,id')->group(function () {
+                    Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
+                // });
+            });
 
 
             // ====== gym ================
@@ -102,6 +116,23 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [GymController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [GymController::class, 'update'])->name('update');
                     Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+                });
+            });
+
+            // ====== Entry Code ================
+            Route::prefix('entry-code')->name('entry-code.')->group(function () {
+                Route::get('/list', [EntryCodeController::class, 'list'])->name('list');
+                Route::get('/create', [EntryCodeController::class, 'create'])->name('create');
+                Route::post('/store', [EntryCodeController::class, 'store'])->name('store');
+                Route::get('/by-gym/{gymId}', [EntryCodeController::class, 'getByGym'])->name('by-gym');
+
+                Route::middleware('check.gym:EntryCode,id')->group(function () {
+                    Route::get('/edit/{id}', [EntryCodeController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [EntryCodeController::class, 'update'])->name('update');
+                    Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+
+                    // Եթե ունեք active/inactive toggle (ըստ անհրաժեշտության)
+                    Route::patch('{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
                 });
             });
 

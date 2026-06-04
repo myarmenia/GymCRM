@@ -40,4 +40,13 @@ class Gym extends Model
     {
         return $this->hasMany(GymWorkingDayTime::class);
     }
+    public function entryCodes()
+    {
+        return $this->hasMany(EntryCode::class, 'gym_id');
+    }
+
+    public function people() 
+    {
+        return $this->belongsToMany(Person::class, 'gym_person');
+    }
 }

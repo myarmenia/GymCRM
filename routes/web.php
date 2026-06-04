@@ -15,7 +15,7 @@ use Inertia\Inertia;
 // });
 
 Route::get('/', function () {
-    return redirect('/en/login');
+    return redirect('/hy/login');
 });
 
 

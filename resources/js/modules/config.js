@@ -68,7 +68,7 @@ export function initConfig() {
         try {
             window.templateCustomizer = new TemplateCustomizer({
                 displayCustomizer: false, // Отключаем для Vue/Inertia
-                lang: localStorage.getItem(`templateCustomizer-${window.templateName}--Lang`) || "en",
+                lang: localStorage.getItem(`templateCustomizer-${window.templateName}--Lang`) || "hy",
                 controls: ["color", "theme", "skins", "semiDark", "layoutCollapsed", "layoutNavbarOptions", "headerType", "contentLayout", "rtl"]
             });
         } catch (e) {

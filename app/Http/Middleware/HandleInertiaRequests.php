@@ -38,7 +38,7 @@ class HandleInertiaRequests extends Middleware
         //     ],
         // ];
 
-        $lang = in_array(request()->segment(1), ['hy', 'ru', 'en']) ? request()->segment(1) : 'en';
+        $lang = in_array(request()->segment(1), ['hy', 'ru', 'en']) ? request()->segment(1) : 'hy';
         $langs = ['en', 'ru', 'hy'];
         $name = request()->route()->getName();
         $group = explode('.', $name)[0]; // user

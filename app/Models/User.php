@@ -59,5 +59,55 @@ class User extends Authenticatable
         ];
     }
 
-    
+
+
+    public function entryPermissions()
+    {
+        return $this->morphMany(EntryPermission::class, 'relation');
+
+    }
+
+
+    // Օժանդակ մեթոդ՝ ստուգելու, արդյոք user-ն ունի կոնկրետ entry code
+    public function hasEntryCode(EntryCode $entryCode): bool
+    {
+        return $this->entryPermissions()
+            ->where('entry_code_id', $entryCode->id)
+            ->where('status', 1)
+            ->exists();
+    }
+
+    public function faceId()
+    {
+        return $this->entryPermissions()
+            ->whereHas('entryCode', function ($q) {
+                $q->where('type', 'face_id');
+            });
+    }
+
+
+    public function rfIds()
+    {
+        return $this->entryPermissions()
+            ->whereHas('entryCode', function ($q) {
+                $q->where('type', 'rfid');
+            });
+    }
+
+    public function attendanceSheets()
+    {
+        return $this->morphMany(AttendanceSheet::class, 'relation');
+    }
+
+
+    public function getEntryCodesAttribute()
+    {
+        return $this->entryPermissions()
+            ->where('status', 1)
+            ->with('entryCode')
+            ->get()
+            ->pluck('entryCode')
+            ->filter();
+    }
+
 }

@@ -86,6 +86,14 @@ const { hasRole } = useAuth();
                     </div>
                 </Link>
             </li>
+             <!-- 🟢 PEOPLE (նոր ավելացված) -->
+            <li v-if="hasRole('sales_manager')" :class="['menu-item', route().current('person.list') ? 'active' : '']">
+                <Link :href="route('person.list', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-address-book"></i>
+                    <div data-i18n="People">People</div>
+                </Link>
+            </li>
+
             <!-- ======== Gym ====== -->
             <li
                 v-if="hasRole('owner')"
@@ -196,6 +204,25 @@ const { hasRole } = useAuth();
                         class="schedule"
                     >
                         Ժամային գրաֆիկ
+                    </div>
+                </Link>
+            </li>
+
+            <!-- ======== entry codes ========== -->
+            <li
+                :class="[
+                    'menu-item',
+                    route().current('entry-code.list') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('entry-code.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-qrcode"></i>
+                    <!-- or use any icon you prefer, e.g. ti tabler-ticket -->
+                    <div data-i18n="Entry Codes">
+                        Entry Codes
                     </div>
                 </Link>
             </li>

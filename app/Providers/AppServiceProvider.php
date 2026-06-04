@@ -3,11 +3,12 @@
 namespace App\Providers;
 
 
+use App\Interfaces\AttendanceSheets\AttendanceSheetInterface;
 use App\Interfaces\CardTypes\CardTypeInterface;
 use App\Interfaces\Category\CategoryInterface;
 use App\Interfaces\CategoryTranslations\CategoryTranslationInterface;
 use App\Interfaces\Documents\DocumentInterface;
-
+use App\Interfaces\EntryCodes\EntryCodeInterface;
 use App\Interfaces\Gyms\GymInterface;
 use App\Interfaces\GymSchedule\GymScheduleInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
@@ -26,11 +27,15 @@ use App\Interfaces\SubCategoryTranslations\SubCategoryTranslationInterface;
 use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
+use App\Interfaces\People\PersonInterface;
+use App\Interfaces\Turnstile\CheckEntryCodeInterface;
+use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
+use App\Repositories\AttendanceSheets\AttendanceSheetsRepository;
 use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Category\CategoryRepository;
 use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Repositories\Documents\DocumentRepository;
-
+use App\Repositories\EntryCodes\EntryCodeRepository;
 use App\Repositories\Gyms\GymRepository;
 use App\Repositories\GymSchedule\GymScheduleRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
@@ -46,6 +51,8 @@ use App\Repositories\ScheduleName\ScheduleNameRepository;
 use App\Repositories\ScheduleSmoke\ScheduleSmokeRepository;
 use App\Repositories\SubCategory\SubCategoryRepository;
 use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
+use App\Repositories\People\PersonRepository;
+use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
 use App\Repositories\WarehouseStock\WarehouseStockRepository;
@@ -88,7 +95,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GymScheduleInterface::class, GymScheduleRepository::class);
         $this->app->bind(ScheduleNameInterface::class, ScheduleNameRepository::class);
         $this->app->bind(ScheduleDetailsInterface::class, ScheduleDetailsRepository::class);
-        $this->app->bind(ScheduleSmokeInterface::class, ScheduleSmokeRepository::class);
+        $this->app->bind(EntryCodeInterface::class, EntryCodeRepository::class);
+        $this->app->bind(AttendanceSheetInterface::class, AttendanceSheetsRepository::class);
+        $this->app->bind(ClientIdFromTurnstileInterface::class, TurnstileRepository::class);
+        $this->app->bind(CheckEntryCodeInterface::class, TurnstileRepository::class);
+        $this->app->bind(PersonInterface::class, PersonRepository::class);
+
     }
 
     /**
