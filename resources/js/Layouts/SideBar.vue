@@ -128,7 +128,7 @@ const { hasRole } = useAuth();
                 </Link>
             </li>
 
-            <!-- ======== users ========== -->
+            <!-- ======== membership plans ========== -->
             <li
 
                 :class="[

@@ -15,7 +15,7 @@ const props = defineProps({
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
 const membershipPlansList = ref(props.membershipPlans.data);
-const pagination = ref(props.membershipPlans);
+// const pagination = ref(props.membershipPlans);
 
 </script>
 
@@ -169,7 +169,7 @@ const pagination = ref(props.membershipPlans);
             </div>
 
             <div class="card-footer">
-                <Pagination :links="pagination.links" />
+                <!-- <Pagination :links="pagination.links" /> -->
             </div>
         </div>
     </Index>

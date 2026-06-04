@@ -27,6 +27,8 @@ return new class extends Migration
             $table->integer('visits_limit')->nullable();
             $table->integer('guest_limit')->default(0);
             $table->integer('freeze_limit')->default(0);
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
             $table->boolean('active')->default(true);
 
             $table->softDeletes();

@@ -3,7 +3,7 @@
 namespace App\Services\Memberships;
 
 use App\Interfaces\Memberships\MembershipPlanInterface;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MembershipPlanService
 {
@@ -30,16 +30,38 @@ class MembershipPlanService
         return $this->membershipPlanRepository->findOrFail($id, ['isLocked']);
     }
 
-    // public function store($data)
-    // {
+    public function store($dto)
+    {
+        DB::beginTransaction();
 
-    //     // $dataStore = $this->dataToArray($data);
+        try {
 
-    //     $user = $this->membershipPlanRepository->create($dataStore);
-    //     $user->assignRole($data->roles);
+            $dto->prepare();
 
-    //     return $user;
-    // }
+            $membershipPlan = $this->membershipPlanRepository->create(
+                $dto->toArray()
+            );
+
+            foreach ($dto->translations as $locale => $translation) {
+
+                $membershipPlan->translations()->create([
+                    'locale' => $locale,
+                    'name' => $translation['name'],
+                    'description' => $translation['description'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return $membershipPlan;
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            throw $e;
+        }
+    }
 
     // public function update($id, $data)
     // {

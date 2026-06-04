@@ -32,6 +32,7 @@ use App\Repositories\Roles\RoleRepository;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -82,5 +83,12 @@ class AppServiceProvider extends ServiceProvider
         Inertia::share([
             'locale' => fn() => Session::get('locale', config('app.locale')),
         ]);
+
+
+        if (is_dir(base_path('lang'))) {
+            $this->app->useLangPath(base_path('lang'));
+        }
     }
+
+
 }

@@ -165,7 +165,7 @@ const submit = () => {
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Add New Employee</h5>
+            <h5 class="card-header">Add New Employee </h5>
             <form @submit.prevent="submit" class="card-body">
                 <h6>1. Account Details</h6>
                 <div class="row g-6">

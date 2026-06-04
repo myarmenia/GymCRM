@@ -59,7 +59,10 @@ class User extends Authenticatable
         ];
     }
 
-
+    public function gym()
+    {
+        return $this->belongsTo(Gym::class, 'gym_id');
+    }
 
     public function entryPermissions()
     {
