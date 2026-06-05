@@ -16,6 +16,7 @@ use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
+use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
@@ -164,6 +165,20 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [WarehouseController::class, 'update'])->name('update');
                     Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
                     Route::patch('{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
+                });
+            });
+
+
+            // ====== Membership Category ================
+            Route::prefix('membership-category')->name('membership-category.')->group(function () {
+                Route::get('/', [MembershipCategoryController::class, 'list'])->name('list');
+                Route::get('/create', [MembershipCategoryController::class, 'create'])->name('create');
+                Route::post('/', [MembershipCategoryController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:MembershipCategory,id')->group(function () {
+                    Route::get('/{id}/edit', [MembershipCategoryController::class, 'edit'])->name('edit');
+                    Route::patch('/{id}', [MembershipCategoryController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [MembershipCategoryController::class, 'destroy'])->name('destroy');
                 });
             });
 
