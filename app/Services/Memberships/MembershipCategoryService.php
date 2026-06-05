@@ -42,11 +42,22 @@ class MembershipCategoryService
      */
     public function store(MembershipCategoryDTO $dto)
     {
+        $user = Auth::user();
+
+        $gymId = $user->hasRole('owner')
+            ? $dto->gym_id
+            : ($dto->gym_id ?? $user->gym_id);
+
+        if (!$gymId && !$user->hasRole('owner')) {
+            throw new \Exception('Gym is required');
+        }
+
         $data = [
-            'gym_id' => $dto->gym_id,
+            'gym_id' => $gymId,
             'active' => $dto->active,
             'slug'   => $dto->slug,
         ];
+
         return $this->membershipCategoryRepository->createWithTranslations($data, $dto->translations);
     }
 
