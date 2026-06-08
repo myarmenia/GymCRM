@@ -1,22 +1,99 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+import TableFilter from "@/Components/TableFilter.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     entryCodes: Object,
+    gyms: {
+        type: Array,
+        default: () => [],
+    },
 });
-console.log('EntryCodes props:', props.entryCodes);
+
 const page = usePage();
-const currentLocale = page.props.locale ?? "hy";
+const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
+const { hasRole } = useAuth();
 
 const entryCodesList = ref(props.entryCodes.data);
 const pagination = ref(props.entryCodes);
+const filters = ref(Object.fromEntries(new URLSearchParams(window.location.search)));
+
+const entryCodeFilterSelectFields = computed(() => {
+    const fields = [
+        {
+            name: "type",
+            label: "Type",
+            placeholder: "All types",
+            options: [
+                { value: "rfId", label: "RF ID" },
+                { value: "FaceId", label: "Face ID" },
+            ],
+        },
+    ];
+
+    if (hasRole("owner")) {
+        fields.push({
+            name: "gym_id",
+            label: "Gym",
+            placeholder: "All gyms",
+            options: props.gyms,
+        });
+    }
+
+    fields.push({
+        name: "status",
+        label: "Status",
+        placeholder: "All statuses",
+        options: [
+            { value: "1", label: useTrans("app.status.active") },
+            { value: "0", label: useTrans("app.status.inactive") },
+        ],
+    });
+
+    return fields;
+});
+
+watch(
+    () => props.entryCodes,
+    (entryCodes) => {
+        entryCodesList.value = entryCodes.data;
+        pagination.value = entryCodes;
+    },
+);
+
+const applyFilters = (payload) => {
+    router.get(
+        route("entry-code.list", { locale: currentLocale.value }),
+        payload,
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const resetFilters = () => {
+    filters.value = {};
+
+    router.get(
+        route("entry-code.list", { locale: currentLocale.value }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
 </script>
 
 <template>
@@ -28,6 +105,16 @@ const pagination = ref(props.entryCodes);
                 Մուտքի կոդեր
             </h2>
         </template>
+
+        <TableFilter
+            v-model="filters"
+            :text-fields="[]"
+            :select-fields="entryCodeFilterSelectFields"
+            :date-fields="[]"
+            default-date-field=""
+            @filter="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="card">
             <div

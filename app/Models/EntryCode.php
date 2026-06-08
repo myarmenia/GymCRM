@@ -2,16 +2,30 @@
 
 namespace App\Models;
 
+use App\Traits\FilterTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EntryCode extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, FilterTrait;
+
     protected $guarded = [];
     public $timestamps = true;
     protected $table = "entry_codes";
+
+    protected array $filterConfig = [
+        'type' => [
+            'method' => 'where',
+        ],
+        'gym_id' => [
+            'method' => 'where',
+        ],
+        'status' => [
+            'method' => 'where',
+        ],
+    ];
 
     public function gym()
     {

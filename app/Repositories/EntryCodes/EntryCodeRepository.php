@@ -15,25 +15,35 @@ class EntryCodeRepository implements EntryCodeInterface
         return EntryCode::orderBy('id', 'desc')->get();
     }
 
-    public function paginate(int $perPage = 10, ?int $gymId = null)
+    public function paginate(int $perPage = 10, array $filters = [])
     {
         $user = auth()->user();
         $query = EntryCode::orderBy('id', 'desc');
 
-        // ֆիլտրացիա (եթե կա gymId, կամ ըստ դերի)
-        if ($gymId !== null) {
-            $query->where('gym_id', $gymId);
-        } elseif (!$user->hasRole('owner')) {
+        if (!$user->hasRole('owner')) {
             $userGymId = $user->gym_id ?? null;
             if ($userGymId) {
                 $query->where('gym_id', $userGymId);
             }
         }
 
-        // ԿԱՐԵՎՈՐ է սա՝ միանգամից բերել gym-ը
         $query->with('gym');
 
-        return $query->paginate($perPage);
+        return $query
+            ->filter($this->normalizeFilters($filters))
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    protected function normalizeFilters(array $filters): array
+    {
+        unset($filters['page'], $filters['per_page']);
+
+        return array_intersect_key($filters, array_flip([
+            'type',
+            'gym_id',
+            'status',
+        ]));
     }
 
     public function find(int $id)

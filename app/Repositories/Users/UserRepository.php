@@ -19,8 +19,8 @@ class UserRepository extends BaseRepository implements UserInterface
     {
         return $this->query()
             ->with('roles')
-            ->when(!$user->hasRole('owner'), function ($q) use ($user) {
-                $q->where('gym_id', $user->gym_id);
+            ->when(!$user->hasRole('owner'), function ($q) {
+                $q->currentGym();
             })
             ->filter($this->normalizeFilters($filters))
             ->paginate($perPage)

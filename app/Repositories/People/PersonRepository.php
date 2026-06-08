@@ -15,20 +15,18 @@ class PersonRepository extends BaseRepository implements PersonInterface
 
     /**
      * Paginate people based on authenticated user's permissions.
-     * - sales_manager: sees only people belonging to his own gym (user->gym_id)
-     * - admin/owner: sees all people
+     * - owner: sees all people
+     * - other roles: see only people belonging to their own gym (user->gym_id)
      */
     public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
         $query = $this->query()->with('gyms');
 
-        if ($user->hasRole('sales_manager')) {
-            // sales_manager: show only people that belong to his gym
+        if (!$user->hasRole('owner')) {
             $query->whereHas('gyms', function ($q) use ($user) {
                 $q->where('gyms.id', $user->gym_id);
             });
         }
-        // other roles (admin, owner) see all - no additional filter
 
         return $query
             ->filter($this->normalizeFilters($filters))
