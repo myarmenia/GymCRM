@@ -27,9 +27,7 @@ class MembershipPlanController extends Controller
     // ========== list =====================
     public function list()
     {
-        // $membershipPlans = $this->membershipPlanService->getAllPaginated();
-        $membershipPlans = [];
-
+        $membershipPlans = $this->membershipPlanService->getAllPaginated();
 
         return Inertia::render('MembershipPlans/List', ['membershipPlans' => $membershipPlans]);
     }
@@ -50,10 +48,35 @@ class MembershipPlanController extends Controller
     // ========== store =====================
     public function store(MembershipPlanStoreRequest $request)
     {
-        $membershipPlan = $this->membershipPlanService->store(MembershipPlanDTO::fromArray($request->validated()));
+        $this->membershipPlanService->store(MembershipPlanDTO::fromArray($request->validated()));
 
         return redirect()
-            ->route('membership_plan.list')
+            ->route('membership_plan.list', app()->getLocale())
             ->with('success', 'Membership plan created successfully');
+    }
+
+
+    // ========== edit =====================
+    public function edit($locale, $membershipPlanId)
+    {
+        $membershipPlan = $this->membershipPlanService->getById($membershipPlanId);
+        $membershipCategories = $this->membershipCategoryService->getActiveCategories();
+
+
+        return Inertia::render('MembershipPlans/Edit', [
+            'membershipPlan' => $membershipPlan,
+            'membershipCategories' => $membershipCategories
+        ]);
+
+    }
+
+
+    // ========== update =====================
+    public function update(MembershipPlanStoreRequest $request)
+    {
+        $this->membershipPlanService->update($request->id, MembershipPlanDTO::fromArray($request->all()));
+
+        return redirect()->route('membership_plan.list', ['locale' => app()->getLocale()])
+            ->with('success', 'Membership plan updated successfully');
     }
 }
