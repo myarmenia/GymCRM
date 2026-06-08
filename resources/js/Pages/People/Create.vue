@@ -66,7 +66,7 @@ const submit = () => {
                     <!-- Name -->
                     <div class="col-md-6">
                         <InputLabel for="name" class="form-label" value="Անուն" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus placeholder="Մուտքագրել անունը" required />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus placeholder="Մուտքագրել անունը"  />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
@@ -80,21 +80,21 @@ const submit = () => {
                     <!-- Email -->
                     <div class="col-md-6">
                         <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Մուտքագրել էլ. հասցեն" required />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Մուտքագրել էլ. հասցեն"  />
                         <InputError :message="form.errors.email" />
                     </div>
 
                     <!-- Password -->
                     <div class="col-md-6">
                         <InputLabel for="password" class="form-label" value="Գաղտնաբառ" />
-                        <TextInput id="password" type="password" class="form-control" v-model="form.password" placeholder="Մուտքագրել գաղտնաբառը" required />
+                        <TextInput id="password" type="password" class="form-control" v-model="form.password" placeholder="Մուտքագրել գաղտնաբառը"  />
                         <InputError :message="form.errors.password" />
                     </div>
 
                     <!-- Phone -->
                     <div class="col-md-6">
                         <InputLabel for="phone" class="form-label" value="Հեռախոսահամար" />
-                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" required />
+                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94"  />
                         <InputError :message="form.errors.phone" />
                     </div>
 
@@ -111,7 +111,7 @@ const submit = () => {
                     <!-- 🔹 Birth Date -->
                     <div class="col-md-6">
                         <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
-                        <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" required />
+                        <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date"  />
                         <InputError :message="form.errors.birth_date" />
                     </div>
 
