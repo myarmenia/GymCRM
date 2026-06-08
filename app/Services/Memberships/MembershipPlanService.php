@@ -17,17 +17,13 @@ class MembershipPlanService
     {
         $user = auth()->user();
 
-        return $this->membershipPlanRepository->paginate(
-            10,
-            ['gym_id' => $user->gym_id],
-            ['isLocked']
-        );
+        return $this->membershipPlanRepository->paginate( 10, ['gym_id' => $user->gym_id], ['translations', 'MembershipCategory']);
     }
 
 
     public function getById($id)
     {
-        return $this->membershipPlanRepository->findOrFail($id, ['isLocked']);
+        return $this->membershipPlanRepository->findOrFail($id, ['translations']);
     }
 
     public function store($dto)
@@ -63,39 +59,38 @@ class MembershipPlanService
         }
     }
 
-    // public function update($id, $data)
-    // {
+    public function update($id, $dto)
+    {
+        DB::beginTransaction();
+        try {
 
-    //     $dataUpdate = $this->dataToArray($data);
+            $dto->prepare();
 
-    //     if (empty($dataUpdate['password'])) {
-    //         unset($dataUpdate['password']);
-    //     }
+            $membershipPlan = $this->membershipPlanRepository->update($id, $dto->toArray());
 
-    //     $user = $this->userRepository->update($id, $dataUpdate);
+            foreach ($dto->translations as $locale => $translation) {
 
-    //     $user->syncRoles($data->roles);
+                $membershipPlan->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    [
+                        'name' => $translation['name'],
+                        'description' => $translation['description'] ?? null,
+                    ]
+                );
+            }
 
-    //     return $user;
-    // }
+            DB::commit();
 
+            return $membershipPlan;
 
-    // protected function dataToArray($data)
-    // {
+        } catch (\Throwable $e) {
 
-    //     $authUser = Auth::user();
+            DB::rollBack();
 
-    //     if ($authUser->hasRole('owner')) {
-    //         if (empty($data->gym_id)) {
-    //             throw new \Exception('Gym is required');
-    //         }
-    //     } else {
-    //         $data->gym_id = $authUser->gym_id;
-    //     }
+            throw $e;
+        }
 
-    //     return $data->toArray();
-
-    // }
+    }
 
 
 }

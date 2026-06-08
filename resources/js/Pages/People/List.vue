@@ -1,21 +1,78 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { useTrans } from "/resources/js/trans";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+import TableFilter from "@/Components/TableFilter.vue";
 
 const props = defineProps({
     people: Object,
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "hy";
+const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 
 const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
+const filters = ref({
+    date_field: "created_at",
+    ...Object.fromEntries(new URLSearchParams(window.location.search)),
+});
+const peopleTypes = [
+    { value: "visitor", label: "Visitor" },
+    { value: "guest", label: "Guest" },
+];
+const peopleFilterSelectFields = computed(() => [
+    {
+        name: "type",
+        label: "Type",
+        placeholder: "All types",
+        options: peopleTypes,
+    },
+]);
+const peopleFilterDateFields = [
+    { value: "birth_date", label: "Birth date" },
+    { value: "created_at", label: "Created at" },
+];
+
+watch(
+    () => props.people,
+    (people) => {
+        peopleList.value = people.data;
+        pagination.value = people;
+    },
+);
+
+const applyFilters = (payload) => {
+    router.get(
+        route("person.list", { locale: currentLocale.value }),
+        payload,
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const resetFilters = () => {
+    filters.value = {
+        date_field: "created_at",
+    };
+
+    router.get(
+        route("person.list", { locale: currentLocale.value }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
 </script>
 
 <template>
@@ -27,6 +84,15 @@ const pagination = ref(props.people);
                 Անձինք
             </h2>
         </template>
+
+        <TableFilter
+            v-model="filters"
+            name-mode="separate"
+            :select-fields="peopleFilterSelectFields"
+            :date-fields="peopleFilterDateFields"
+            @filter="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="card">
             <div

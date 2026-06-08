@@ -264,6 +264,22 @@ const { hasRole, hasAnyRole } = useAuth();
                     <div data-i18n="Service Types">Աբոնեմենտներ</div>
                 </Link>
             </li>
+            
+            <!-- ======== membership categories (NEW) ========== -->
+            <li
+                v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
+                :class="[
+                    'menu-item',
+                    route().current('membership-category.list') ? 'active' : '',
+                ]"
+            >
+                <Link :href="route('membership-category.list', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-category"></i>
+                    <div data-i18n="Membership Categories">
+                        Կատեգորիաներ
+                    </div>
+                </Link>
+            </li>
         </ul>
     </aside>
 

@@ -11,12 +11,24 @@ import Pagination from "@/Components/Pagination.vue";
 const props = defineProps({
     membershipPlans: Object,
 });
-
+console.log(props.membershipPlans, 555);
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
 const membershipPlansList = ref(props.membershipPlans.data);
-// const pagination = ref(props.membershipPlans);
+const pagination = ref(props.membershipPlans);
+const durationTypes = [
+    { value: 'day', label: 'Օր' },
+    { value: 'month', label: 'Ամիս' },
+    { value: 'year', label: 'Տարի' },
+    { value: 'visit', label: 'Անգամյա' },
+    { value: 'period', label: 'Ժամանակահատված' },
+]
 
+
+function findingDurationType(value) {
+    const type = durationTypes.find(type => type.value === value);
+    return type ? type.label : value;
+}
 </script>
 
 <template>
@@ -58,10 +70,10 @@ const membershipPlansList = ref(props.membershipPlans.data);
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
+                                <th>Անուն</th>
+                                <th>Կատեգորիա</th>
+                                <th>Արժեք</th>
+                                <th>Տևողություն</th>
                                 <th>has person</th>
                                 <th>Active</th>
                                 <th>Actions</th>
@@ -71,11 +83,24 @@ const membershipPlansList = ref(props.membershipPlans.data);
                             <tr v-for="membershipPlan in membershipPlansList" :key="membershipPlan.id">
                                 <td>{{ membershipPlan.id }}</td>
                                 <td>{{ membershipPlan.name }}</td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
+                                <td>{{ membershipPlan.membership_category?.name }}</td>
+                                <td>{{ membershipPlan.price }}</td>
+                                <td>{{ membershipPlan.duration_value }} {{ findingDurationType(membershipPlan.duration_type) }}</td>
                                 <td>
-
+                                    <span
+                                        class="badge me-1"
+                                        :class="
+                                            membershipPlan.is_locked
+                                                ? 'bg-label-success'
+                                                : 'bg-label-danger'
+                                        "
+                                    >
+                                        {{
+                                            membershipPlan.is_locked
+                                                ? 'yes'
+                                                : 'no'
+                                        }}
+                                    </span>
                                 </td>
 
                                 <td>
@@ -113,7 +138,7 @@ const membershipPlansList = ref(props.membershipPlans.data);
                                                 href="javascript:void(0);"
                                             >
                                                 <ToggleStatus
-                                                    :model="'users'"
+                                                    :model="'membership_plans'"
                                                     :model-id="membershipPlan.id"
                                                     :active="membershipPlan.active"
                                                     :prefix="'tables'"
@@ -127,12 +152,12 @@ const membershipPlansList = ref(props.membershipPlans.data);
                                                     "
                                                 />
                                             </a>
-                                            <!-- <Link
+                                            <Link v-if="!membershipPlansList.is_locked"
                                                 class="dropdown-item waves-effect"
                                                 :href="
-                                                    route('user.edit', {
+                                                    route('membership_plan.edit', {
                                                         locale: currentLocale,
-                                                        id: user.id,
+                                                        id: membershipPlan.id,
                                                     })
                                                 "
                                             >
@@ -140,7 +165,7 @@ const membershipPlansList = ref(props.membershipPlans.data);
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
                                                 Edit
-                                            </Link> -->
+                                            </Link>
                                             <a
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
@@ -169,7 +194,7 @@ const membershipPlansList = ref(props.membershipPlans.data);
             </div>
 
             <div class="card-footer">
-                <!-- <Pagination :links="pagination.links" /> -->
+                <Pagination :links="pagination.links" />
             </div>
         </div>
     </Index>

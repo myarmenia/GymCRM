@@ -20,10 +20,10 @@ class UserService
     }
 
 
-    public function getAllPaginated()
+    public function getAllPaginated(array $filters = [])
     {
         return $this->userRepository
-            ->paginateForUser(auth()->user(), 10);
+            ->paginateForUser(auth()->user(), 10, $filters);
     }
 
 
