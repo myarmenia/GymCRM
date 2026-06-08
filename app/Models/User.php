@@ -113,4 +113,10 @@ class User extends Authenticatable
             ->filter();
     }
 
+    public function trainerSchedule()
+    {
+       
+        return $this->hasOne(TrainerSchedule::class, 'user_id');
+
+    }
 }

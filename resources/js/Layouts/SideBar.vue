@@ -69,14 +69,13 @@ const { hasRole, hasAnyRole } = useAuth();
         <ul class="menu-inner py-1">
             <!-- ======== users ========== -->
             <li
-
                 :class="[
                     'menu-item',
                     route().current('user.list') ? 'active' : '',
                 ]"
             >
                 <Link
-                    v-if="hasAnyRole([ 'owner', 'admin', 'super_admin'])"
+                    v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
                     :href="route('user.list', { locale: currentLocale })"
                     class="menu-link"
                 >
@@ -86,9 +85,35 @@ const { hasRole, hasAnyRole } = useAuth();
                     </div>
                 </Link>
             </li>
-             <!-- 🟢 PEOPLE (նոր ավելացված) -->
-            <li v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])" :class="['menu-item', route().current('person.list') ? 'active' : '']">
-                <Link :href="route('person.list', { locale: currentLocale })" class="menu-link">
+            <li
+                :class="[
+                    'menu-item',
+                    route().current('trainer.index') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
+                    :href="route('trainer.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-users"></i>
+                    <div data-i18n="Trainers">
+                         Մարզիչներ 
+                    </div>
+                </Link>
+            </li>
+            <!-- 🟢 PEOPLE (նոր ավելացված) -->
+            <li
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
+                :class="[
+                    'menu-item',
+                    route().current('person.list') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('person.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
                     <div data-i18n="People">People</div>
                 </Link>
@@ -199,10 +224,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="icon-base ti tabler-calendar-time"></i>
-                    <div
-                        data-i18n="product-consumption"
-                        class="schedule"
-                    >
+                    <div data-i18n="product-consumption" class="schedule">
                         Ժամային գրաֆիկ
                     </div>
                 </Link>
@@ -221,28 +243,25 @@ const { hasRole, hasAnyRole } = useAuth();
                 >
                     <i class="menu-icon icon-base ti tabler-qrcode"></i>
                     <!-- or use any icon you prefer, e.g. ti tabler-ticket -->
-                    <div data-i18n="Entry Codes">
-                        Entry Codes
-                    </div>
+                    <div data-i18n="Entry Codes">Entry Codes</div>
                 </Link>
             </li>
 
             <!-- ======== membership plans ========== -->
             <li
-
                 :class="[
                     'menu-item',
                     route().current('membership_plan.list') ? 'active' : '',
                 ]"
             >
                 <Link
-                    :href="route('membership_plan.list', { locale: currentLocale })"
+                    :href="
+                        route('membership_plan.list', { locale: currentLocale })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div data-i18n="Service Types">
-                        Աբոնեմենտներ
-                    </div>
+                    <div data-i18n="Service Types">Աբոնեմենտներ</div>
                 </Link>
             </li>
         </ul>

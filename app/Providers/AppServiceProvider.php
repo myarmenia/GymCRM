@@ -30,6 +30,10 @@ use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
 use App\Interfaces\People\PersonInterface;
+use App\Interfaces\Trainer\TrainerInterface;
+use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
+use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface as TrainerSessionDurationTrainerSessionDurationInterface;
+use App\Interfaces\TrainerSessionDurationSlot\TrainerSessionDurationSlotInterface;
 use App\Interfaces\Turnstile\CheckEntryCodeInterface;
 use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Repositories\AttendanceSheets\AttendanceSheetsRepository;
@@ -56,6 +60,11 @@ use App\Repositories\ScheduleSmoke\ScheduleSmokeRepository;
 use App\Repositories\SubCategory\SubCategoryRepository;
 use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
 use App\Repositories\People\PersonRepository;
+use App\Repositories\Trainer\TrainerRepository;
+use App\Repositories\TrainerSchedule\TrainerScheduleRepository;
+use App\Repositories\TrainerSessionDuration\TrainerSessionDurationInterface;
+use App\Repositories\TrainerSessionDuration\TrainerSessionDurationRepository;
+use App\Repositories\TrainerSessionDurationSlot\TrainerSessionDurationSlotRepository;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
 use App\Repositories\Warehouses\WarehouseRepository;
@@ -104,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(GymScheduleInterface::class, GymScheduleRepository::class);
         $this->app->bind(ScheduleNameInterface::class, ScheduleNameRepository::class);
         $this->app->bind(ScheduleDetailsInterface::class, ScheduleDetailsRepository::class);
-
+        $this->app->bind(TrainerScheduleInterface::class, TrainerScheduleRepository::class);
         $this->app->bind(EntryCodeInterface::class, EntryCodeRepository::class);
         $this->app->bind(AttendanceSheetInterface::class, AttendanceSheetsRepository::class);
         $this->app->bind(ClientIdFromTurnstileInterface::class, TurnstileRepository::class);
@@ -113,9 +122,11 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(MembershipPlanInterface::class, MembershipPlanRepository::class);
         $this->app->bind(MembershipCategoryInterface::class, MembershipCategoryRepository::class);
+        $this->app->bind(TrainerInterface::class, TrainerRepository::class);
 
+        $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class,TrainerSessionDurationRepository::class);
 
-
+        $this->app->bind(TrainerSessionDurationSlotInterface::class,TrainerSessionDurationSlotRepository::class);
     }
 
     /**
@@ -134,6 +145,4 @@ class AppServiceProvider extends ServiceProvider
             $this->app->useLangPath(base_path('lang'));
         }
     }
-
-
 }
