@@ -15,10 +15,21 @@ class EntryCodeController extends Controller
 {
     public function __construct(protected EntryCodeService $entryCodeService) {}
 
-    public function list()
+    public function list(Request $request)
     {
-        $entryCodes = $this->entryCodeService->getAllPaginated(10);
-        return Inertia::render('EntryCode/List', ['entryCodes' => $entryCodes]);
+        $entryCodes = $this->entryCodeService->getAllPaginated(10, $request->query());
+        $gyms = $this->entryCodeService
+            ->getGymsForCurrentUser()
+            ->map(fn (Gym $gym) => [
+                'value' => $gym->id,
+                'label' => $gym->name,
+            ])
+            ->values();
+
+        return Inertia::render('EntryCode/List', [
+            'entryCodes' => $entryCodes,
+            'gyms' => $gyms,
+        ]);
     }
     
 

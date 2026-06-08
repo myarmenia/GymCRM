@@ -10,9 +10,9 @@ class EntryCodeService
 {
     public function __construct(protected EntryCodeInterface $entryCodeRepository) {}
 
-    public function getAllPaginated(int $perPage = 10)
+    public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
-        return $this->entryCodeRepository->paginate($perPage);
+        return $this->entryCodeRepository->paginate($perPage, $filters);
     }
 
     

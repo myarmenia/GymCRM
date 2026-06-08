@@ -9,6 +9,7 @@ use App\Http\Requests\People\UpdatePersonRequest;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
 use App\Services\People\PersonService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Laravel\Reverb\Loggers\Log;
@@ -21,10 +22,13 @@ class PersonController extends Controller
         protected EntryCodeService $entryCodeService
     ) {}
 
-    public function list()
+    public function list(Request $request)
     {
-        $people = $this->personService->getAllPaginated();
-        return Inertia::render('People/List', ['people' => $people]);
+        $people = $this->personService->getAllPaginated($request->query());
+
+        return Inertia::render('People/List', [
+            'people' => $people,
+        ]);
     }
 
 

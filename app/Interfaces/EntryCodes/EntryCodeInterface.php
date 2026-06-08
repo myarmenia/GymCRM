@@ -5,7 +5,7 @@ namespace App\Interfaces\EntryCodes;
 interface EntryCodeInterface
 {
     public function getAll();
-    public function paginate(int $perPage = 10);
+    public function paginate(int $perPage = 10, array $filters = []);
     public function find(int $id);
     public function create(array $data);
     public function update(int $id, array $data);

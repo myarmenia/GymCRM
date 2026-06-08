@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Traits\FilterTrait;
 use Dom\Attr;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,16 +15,73 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Person extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, FilterTrait;
+
     protected $guarded =[];
     protected $table = 'people';
 
-    public function gym(): BelongsTo
+    protected array $filterConfig = [
+        'name' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'surname' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'full_name' => [
+            'callback' => 'filterFullName',
+        ],
+        'phone' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'email' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'type' => [
+            'method' => 'where',
+        ],
+        'birth_date_from' => [
+            'column' => 'birth_date',
+            'method' => 'whereDate',
+            'operator' => '>=',
+        ],
+        'birth_date_to' => [
+            'column' => 'birth_date',
+            'method' => 'whereDate',
+            'operator' => '<=',
+        ],
+        'created_at_from' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '>=',
+        ],
+        'created_at_to' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '<=',
+        ],
+    ];
+
+    protected function filterFullName(Builder $query, mixed $value): void
     {
-        return $this->belongsTo(Gym::class, 'gym_id');
+        $terms = preg_split('/\s+/', trim((string) $value)) ?: [];
+
+        $query->where(function (Builder $q) use ($value, $terms) {
+            $q->where('name', 'like', "%{$value}%")
+                ->orWhere('surname', 'like', "%{$value}%");
+
+            foreach ($terms as $term) {
+                $q->orWhere('name', 'like', "%{$term}%")
+                    ->orWhere('surname', 'like', "%{$term}%");
+            }
+        });
     }
 
 
+    
     public function entryPermissions()
     {
         return $this->morphMany(EntryPermission::class, 'relation');

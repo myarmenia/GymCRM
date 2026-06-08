@@ -28,11 +28,21 @@ class UserController extends Controller
     }
 
     // ========== list =====================
-    public function list(){
+    public function list(Request $request){
 
-        $users = $this->userService->getAllPaginated();
+        $users = $this->userService->getAllPaginated($request->query());
+        $roles = $this->roleService
+            ->getAvailableRoles(Auth::user())
+            ->map(fn ($role) => [
+                'value' => $role->name,
+                'label' => $role->name,
+            ])
+            ->values();
 
-        return Inertia::render('Users/List', ['users' => $users]);
+        return Inertia::render('Users/List', [
+            'users' => $users,
+            'roles' => $roles,
+        ]);
     }
 
 
