@@ -10,7 +10,7 @@ class MembershipPlan extends Model
 {
     use  BelongsToGym, ModelTranslationTrait;
     protected $guarded = [];
-
+    protected $appends = ['is_locked', 'name'];
     public function MembershipCategory()
     {
         return $this->belongsTo(MembershipCategory::class, 'membership_category_id');
@@ -33,10 +33,14 @@ class MembershipPlan extends Model
     }
 
 
-
     // проверка "план уже используется"
     public function isLocked(): bool
     {
         return $this->PersonMemberships()->exists();
+    }
+
+    public function getIsLockedAttribute(): bool
+    {
+        return $this->isLocked();
     }
 }

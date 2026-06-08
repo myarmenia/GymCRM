@@ -122,6 +122,7 @@ const submit = () => {
         </template>
 
         <div class="card">
+            <h5 class="card-header">Ավելացնել նոր աբոնեմենտ</h5>
             <form
                 class="card-body"
                 @submit.prevent="submit"
@@ -338,7 +339,7 @@ const submit = () => {
                     </label>
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4 d-flex justify-content-end">
                     <PrimaryButton
                         :disabled="form.processing"
                     >

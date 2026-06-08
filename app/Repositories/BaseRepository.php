@@ -134,7 +134,7 @@ abstract class BaseRepository
             ->get();
     }
 
-       public function whereIn(string $column, array $values, array $with = []): Collection
+    public function whereIn(string $column, array $values, array $with = []): Collection
     {
         return $this->query()
             ->with($with)
