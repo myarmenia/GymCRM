@@ -1,24 +1,81 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import { useAuth } from "@/composables/useAuth";
+import TableFilter from "@/Components/TableFilter.vue";
 
 const props = defineProps({
     users: Object,
+    roles: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "hy";
+const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);
 const {  hasAnyRole } = useAuth();
+const filters = ref({
+    date_field: "created_at",
+    ...Object.fromEntries(new URLSearchParams(window.location.search)),
+});
+const userFilterSelectFields = computed(() => [
+    {
+        name: "role",
+        label: "Role",
+        placeholder: "All roles",
+        options: props.roles,
+    },
+    
+]);
+const userFilterDateFields = [
+    { value: "created_at", label: "Created at" },
+];
+
+watch(
+    () => props.users,
+    (users) => {
+        usersList.value = users.data;
+        pagination.value = users;
+    },
+);
+
+const applyFilters = (payload) => {
+    router.get(
+        route("user.list", { locale: currentLocale.value }),
+        payload,
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const resetFilters = () => {
+    filters.value = {
+        date_field: "created_at",
+    };
+
+    router.get(
+        route("user.list", { locale: currentLocale.value }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
 
 
 </script>
@@ -32,6 +89,15 @@ const {  hasAnyRole } = useAuth();
                 Օգտատերերի ցուցակ
             </h2>
         </template>
+
+        <TableFilter
+            v-model="filters"
+            name-mode="separate"
+            :select-fields="userFilterSelectFields"
+            :date-fields="userFilterDateFields"
+            @filter="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="card">
             <div

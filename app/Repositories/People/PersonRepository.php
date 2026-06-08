@@ -18,7 +18,7 @@ class PersonRepository extends BaseRepository implements PersonInterface
      * - sales_manager: sees only people belonging to his own gym (user->gym_id)
      * - admin/owner: sees all people
      */
-    public function paginateForUser($user, int $perPage = 10)
+    public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
         $query = $this->query()->with('gyms');
 
@@ -30,7 +30,33 @@ class PersonRepository extends BaseRepository implements PersonInterface
         }
         // other roles (admin, owner) see all - no additional filter
 
-        return $query->paginate($perPage);
+        return $query
+            ->filter($this->normalizeFilters($filters))
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    protected function normalizeFilters(array $filters): array
+    {
+        unset($filters['page'], $filters['per_page']);
+
+        $dateField = $filters['date_field'] ?? 'created_at';
+
+        if (!in_array($dateField, ['birth_date', 'created_at'], true)) {
+            $dateField = 'created_at';
+        }
+
+        if (!empty($filters['date_from'])) {
+            $filters["{$dateField}_from"] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $filters["{$dateField}_to"] = $filters['date_to'];
+        }
+
+        unset($filters['date_field'], $filters['date_from'], $filters['date_to']);
+
+        return $filters;
     }
 
     /**

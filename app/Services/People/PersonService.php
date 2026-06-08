@@ -16,9 +16,9 @@ class PersonService
         protected EntryCodeService $entryCodeService
     ) {}
 
-    public function getAllPaginated()
+    public function getAllPaginated(array $filters = [])
     {
-        return $this->personRepository->paginateForUser(auth()->user(), 10);
+        return $this->personRepository->paginateForUser(auth()->user(), 10, $filters);
     }
 
     public function getById($id)

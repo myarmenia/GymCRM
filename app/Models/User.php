@@ -5,7 +5,9 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Traits\BelongsToGym;
+use App\Traits\FilterTrait;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -15,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes, BelongsToGym;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes, BelongsToGym, FilterTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +31,45 @@ class User extends Authenticatable
     // ];
 
     protected $guarded = [];
+
+    protected array $filterConfig = [
+        'name' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'surname' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'phone' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'email' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'role' => [
+            'callback' => 'filterRole',
+        ],
+        'created_at_from' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '>=',
+        ],
+        'created_at_to' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '<=',
+        ],
+    ];
+
+    protected function filterRole(Builder $query, mixed $value): void
+    {
+        $query->whereHas('roles', function (Builder $q) use ($value) {
+            $q->where('name', $value);
+        });
+    }
 
 
     public function documents()
