@@ -54,14 +54,6 @@ class MeasurementUnitSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'code' => 'pack',
-                'name' => 'Փաթեթով',
-                'type' => 'package',
-                'status' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
                 'code' => 'btl',
                 'name' => 'Շշով',
                 'type' => 'package',

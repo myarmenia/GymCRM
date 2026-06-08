@@ -24,6 +24,7 @@ use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
+use App\Http\Controllers\Trainer\TrainerController;
 use App\Http\Controllers\Warehouses\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -93,10 +94,9 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [UserController::class, 'update'])->name('update');
                     Route::get('/show/{id}', [UserController::class, 'show'])->name('show');
-
                 });
             });
-            
+
             // ====== people ================
             Route::prefix('person')->name('person.')->group(function () {
                 Route::get('/list', [PersonController::class, 'list'])->name('list');
@@ -104,8 +104,8 @@ Route::prefix('{locale}')
                 Route::post('/store', [PersonController::class, 'store'])->name('store');
 
                 // Route::middleware('check.gym:Person,id')->group(function () {
-                    Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
-                    Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
+                Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
+                Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
                 // });
             });
 
@@ -226,9 +226,9 @@ Route::prefix('{locale}')
                 Route::post('/', [ScheduleController::class, 'store'])->name('store');
 
                 //Route::middleware('check.gym:ScheduleName,id')->group(function () {
-                    Route::get('/edit/{id}', [ScheduleController::class, 'edit'])->name('edit');
-                    Route::put('/{id}', [ScheduleController::class, 'update'])->name('update');
-                    Route::delete('/{id}', [ScheduleController::class, 'destroy'])->name('destroy');
+                Route::get('/edit/{id}', [ScheduleController::class, 'edit'])->name('edit');
+                Route::put('/{id}', [ScheduleController::class, 'update'])->name('update');
+                Route::delete('/{id}', [ScheduleController::class, 'destroy'])->name('destroy');
                 //});
             });
 
@@ -245,6 +245,24 @@ Route::prefix('{locale}')
                 });
             });
 
+            Route::prefix('products')->name('products.')->group(function () {
+                Route::get('/', [ProductsController::class, 'index'])->name('index');
+                Route::get('/create', [ProductsController::class, 'create'])->name('create');
+                Route::post('/', [ProductsController::class, 'store'])->name('store');
+
+                Route::middleware('check.gym:InventoryProduct,id')->group(function () {
+                    Route::get('/edit/{id}', [ProductsController::class, 'edit'])->name('edit');
+                    Route::put('/{id}', [ProductsController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [ProductsController::class, 'destroy'])->name('destroy');
+                });
+            });
+
+            Route::prefix('trainer')->name('trainer.')->group(function () {
+                Route::get('/', [TrainerController::class, 'index'])->name('index');
+                Route::get('/{id}/edit', [TrainerController::class, 'edit'])->name('edit');
+                Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
+                Route::put('/{id}', [TrainerController::class, 'update'])->name('update');
+            });
         });
     });
 

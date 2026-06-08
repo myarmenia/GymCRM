@@ -94,4 +94,9 @@ class ScheduleService
             }
         });
     }
+
+    public function getAllScheduleNamesForGym($gymId)
+    {
+        return $this->gymScheduleRepository->getAllScheduleNamesForGym($gymId);
+    }
 }
