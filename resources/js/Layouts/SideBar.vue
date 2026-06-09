@@ -288,7 +288,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 ]"
             >
                 <Link :href="route('discount.list', { locale: currentLocale })" class="menu-link">
-                    <i class="menu-icon icon-base ti tabler-discount-2"></i>
+                    <i class="menu-icon icon-base ti tabler-percentage"></i>
                     <div data-i18n="Զեղչեր">
                         Զեղչեր
                     </div>
