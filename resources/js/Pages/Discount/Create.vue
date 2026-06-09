@@ -47,6 +47,10 @@ watch(currentLocale, () => {
     form.errors = {}
 })
 
+watch(() => form.type, () => {
+    form.value = null
+})
+
 const planName = plan => {
     return plan.translations?.find(item => item.locale === currentLocale.value)?.name
         ?? plan.name

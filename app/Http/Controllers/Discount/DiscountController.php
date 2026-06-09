@@ -41,7 +41,7 @@ class DiscountController extends Controller
         $discount = $this->service->store(DiscountDTO::fromArray($request->validated()));
 
         return redirect()
-            ->route('discount.edit', ['locale' => app()->getLocale(), 'id' => $discount->id])
+            ->route('discount.list', ['locale' => app()->getLocale()])
             ->with('success', 'Discount created');
     }
 
