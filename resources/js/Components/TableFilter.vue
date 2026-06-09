@@ -24,8 +24,8 @@ const props = defineProps({
     dateFields: {
         type: Array,
         default: () => [
-            { value: 'birth_date', label: 'Birth date' },
-            { value: 'created_at', label: 'Created at' },
+            { value: 'birth_date', label: 'Ծննդյան ամսաթիվ' },
+            { value: 'created_at', label: 'Ստեղծման ամսաթիվ' },
         ],
     },
     defaultDateField: {
@@ -34,11 +34,11 @@ const props = defineProps({
     },
     submitLabel: {
         type: String,
-        default: 'Filter',
+        default: 'Ֆիլտրել',
     },
     resetLabel: {
         type: String,
-        default: 'Reset',
+        default: 'Վերականգնել',
     },
 })
 
@@ -48,16 +48,16 @@ const form = reactive({})
 
 const defaultTextFields = computed(() => {
     const nameFields = props.nameMode === 'full'
-        ? [{ name: 'full_name', label: 'Full name', col: 'col-md-4' }]
+        ? [{ name: 'full_name', label: 'Ամբողջական անուն', col: 'col-md-4' }]
         : [
-            { name: 'name', label: 'Name', col: 'col-md-3' },
-            { name: 'surname', label: 'Surname', col: 'col-md-3' },
+            { name: 'name', label: 'Անուն', col: 'col-md-3' },
+            { name: 'surname', label: 'Ազգանուն', col: 'col-md-3' },
         ]
 
     return [
         ...nameFields,
-        { name: 'phone', label: 'Phone', col: 'col-md-3' },
-        { name: 'email', label: 'Email', type: 'email', col: 'col-md-3' },
+        { name: 'phone', label: 'Հեռախոս', col: 'col-md-3' },
+        { name: 'email', label: 'Էլ. հասցե', type: 'email', col: 'col-md-3' },
     ]
 })
 
@@ -168,7 +168,7 @@ watch(
                         @change="updateModel"
                     >
                         <option value="">
-                            {{ field.placeholder ?? 'All' }}
+                            {{ field.placeholder ?? 'Բոլորը' }}
                         </option>
                         <option
                             v-for="option in field.options ?? []"
@@ -185,7 +185,7 @@ watch(
                     class="col-md-3"
                 >
                     <InputLabel
-                        value="Date field"
+                        value="Ամսաթվի դաշտ"
                         class="form-label"
                     />
                     <select
@@ -208,7 +208,7 @@ watch(
                     class="col-md-3"
                 >
                     <InputLabel
-                        :value="`${selectedDateField?.label ?? 'Date'} from`"
+                        :value="`${selectedDateField?.label ?? 'Ամսաթիվ'} սկսած`"
                         class="form-label"
                     />
                     <input
@@ -224,7 +224,7 @@ watch(
                     class="col-md-3"
                 >
                     <InputLabel
-                        :value="`${selectedDateField?.label ?? 'Date'} to`"
+                        :value="`${selectedDateField?.label ?? 'Ամսաթիվ'} մինչև`"
                         class="form-label"
                     />
                     <input

@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Category\CategoryController;
+use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\Membership\MembershipPlanController;
@@ -180,6 +181,20 @@ Route::prefix('{locale}')
                     Route::patch('/{id}', [MembershipCategoryController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipCategoryController::class, 'destroy'])->name('destroy');
                 });
+            });
+
+            // ====== Discounts ================
+            Route::prefix('discount')->name('discount.')->group(function () {
+                Route::get('/', [DiscountController::class, 'list'])->name('list');
+                Route::get('/create', [DiscountController::class, 'create'])->name('create');
+                Route::post('/', [DiscountController::class, 'store'])->name('store');
+                
+                // Route::middleware('check.gym:Discount,id')->group(function () {
+                    Route::get('/{id}/edit', [DiscountController::class, 'edit'])->name('edit');
+                    Route::patch('/{id}', [DiscountController::class, 'update'])->name('update');
+                    Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+                    Route::patch('/{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
+                // });
             });
 
             Route::prefix('categories')->name('categories.')->group(function () {

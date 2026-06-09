@@ -34,6 +34,12 @@ class MembershipPlan extends Model
 
 
     // проверка "план уже используется"
+    public function discounts()
+    {
+        return $this->belongsToMany(Discount::class, 'discount_membership_plan')
+            ->withTimestamps();
+    }
+
     public function isLocked(): bool
     {
         return $this->PersonMemberships()->exists();
