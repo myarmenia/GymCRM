@@ -93,6 +93,14 @@ const removeBreakTime = (index) => {
     form.week_days[index].break_end_time = "";
 };
 
+const removeWeekDay = (index) => {
+    form.week_days[index].day_start_time = "";
+    form.week_days[index].day_end_time = "";
+    form.week_days[index].break_start_time = "";
+    form.week_days[index].break_end_time = "";
+    form.week_days[index].show_break = false;
+};
+
 const openCopyModal = () => {
     showCopyModal.value = true;
 };
@@ -264,6 +272,19 @@ const submit = () => {
                                                         ></i>
                                                         {{ day.name }}
                                                     </h6>
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        @click="
+                                                            removeWeekDay(index)
+                                                        "
+                                                    >
+                                                        <i
+                                                            class="bi bi-trash me-1"
+                                                        ></i>
+                                                        Ջնջել օրը
+                                                    </button>
                                                 </div>
 
                                                 <input

@@ -70,13 +70,13 @@ const submit = () => {
                         <table class="table table-bordered align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Product</th>
-                                    <th>Measurement</th>
-                                    <th>Available Quantity</th>
-                                    <th>Consumption Quantity</th>
-                                    <th>Description</th>
-                                    <th>Purchase Price</th>
-                                    <th>Sale Price</th>
+                                    <th>Ապրանք</th>
+                                    <th>Չափման միավոր</th>
+                                    <th>Հասանելի քանակ</th>
+                                    <th>Սպառմամ քանակ</th>
+                                    <th>Նկարագրություն</th>
+                                    <th>Գնման գնով</th>
+                                    <th>Վաճառքի գնով</th>
                                 </tr>
                             </thead>
 
@@ -113,8 +113,8 @@ const submit = () => {
                                             "
                                             class="text-danger mt-1 small"
                                         >
-                                            Quantity cannot be greater than
-                                            stock
+                                            Քանակը չի կարող լինել ավելի մեծ, քան
+                                            պաշարը
                                         </div>
 
                                         <div
@@ -124,7 +124,7 @@ const submit = () => {
                                             "
                                             class="text-danger mt-1 small"
                                         >
-                                            Quantity must be greater than 0
+                                            Քանակը պետք է մեծ լինի 0-ից
                                         </div>
 
                                         <div class="text-danger mt-1 small">
@@ -154,9 +154,7 @@ const submit = () => {
                                     </td>
 
                                     <td>
-                                        {{
-                                            product.purchase_price ?? 0
-                                        }}
+                                        {{ product.purchase_price ?? 0 }}
                                     </td>
 
                                     <td>
@@ -166,7 +164,7 @@ const submit = () => {
 
                                 <tr v-if="!form.products.length">
                                     <td colspan="5" class="text-center">
-                                        No selected products
+                                        Ընտրված ապրանքներ չկան
                                     </td>
                                 </tr>
                             </tbody>
@@ -182,7 +180,7 @@ const submit = () => {
                         class="btn btn-primary mt-3"
                         :disabled="form.processing || hasInvalidProducts()"
                     >
-                        Save Consumption
+                        Պահպանել սպառումը
                     </button>
                 </form>
             </div>

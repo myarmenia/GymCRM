@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\ProductConsumption;
 
+use App\Helpers\MyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductConsumption\ProductConsumptionStoreRequest;
 use App\Models\ProductConsumption;
@@ -19,13 +20,38 @@ class ProductConsumptionController extends Controller
     public function index(Request $request, string $locale)
     {
         $search = $request->get('search');
-        
+
+        //$consumptions = ProductConsumption::query()
+        //    ->with([
+        //        'product.translations' => function ($query) use ($locale) {
+        //            $query->where('locale', $locale);
+        //        },
+        //    ])
+        //    ->when($search, function ($query) use ($search, $locale) {
+        //        $query->where(function ($q) use ($search, $locale) {
+        //            $q->where('description', 'like', "%{$search}%")
+        //                ->orWhereHas('product.translations', function ($translationQuery) use ($search, $locale) {
+        //                    $translationQuery
+        //                        ->where('locale', $locale)
+        //                        ->where('name', 'like', "%{$search}%");
+        //                });
+        //        });
+        //    })
+        //    ->latest()
+        //    ->paginate(10)
+        //    ->withQueryString();
+        $gymId = MyHelper::find_auth_user_client();
         $consumptions = ProductConsumption::query()
             ->with([
                 'product.translations' => function ($query) use ($locale) {
                     $query->where('locale', $locale);
                 },
             ])
+
+            ->whereHas('product', function ($query) use ($gymId) {
+                $query->where('gym_id', $gymId);
+            })
+
             ->when($search, function ($query) use ($search, $locale) {
                 $query->where(function ($q) use ($search, $locale) {
                     $q->where('description', 'like', "%{$search}%")
