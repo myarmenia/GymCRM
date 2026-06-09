@@ -280,6 +280,20 @@ const { hasRole, hasAnyRole } = useAuth();
                     </div>
                 </Link>
             </li>
+            <li
+                v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
+                :class="[
+                    'menu-item',
+                    route().current('discount.list') ? 'active' : '',
+                ]"
+            >
+                <Link :href="route('discount.list', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-percentage"></i>
+                    <div data-i18n="Զեղչեր">
+                        Զեղչեր
+                    </div>
+                </Link>
+            </li>
         </ul>
     </aside>
 
