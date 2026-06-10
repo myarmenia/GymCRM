@@ -32,6 +32,14 @@ class MembershipPlan extends Model
         return $this->hasMany(MembershipSale::class);
     }
 
+    public function trainers()
+    {
+        return $this->hasMany(User::class, 'gym_id', 'gym_id')
+            ->whereHas('roles', function ($query) {
+                $query->where('roles.id', 7);
+            });
+    }
+
     public function translations()
     {
         return $this->hasMany(MembershipPlanTranslation::class);

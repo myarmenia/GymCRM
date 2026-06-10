@@ -12,7 +12,6 @@ use App\Interfaces\MembershipSaleDiscounts\MembershipSaleDiscountInterface;
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
-use App\Models\Discount;
 use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
@@ -44,6 +43,7 @@ class MembershipSaleService
                 'person',
                 'gym',
                 'membershipPlan.translations',
+                'membershipPlan.trainers',
                 'personMemberships.trainer',
                 'discounts.discount.translations',
                 'payments.paymentMethod.translations',
@@ -68,7 +68,8 @@ class MembershipSaleService
                 'person',
                 'gym',
                 'membershipPlan.translations',
-                'membershipPlan.discounts.translations',
+                'membershipPlan.discounts' => fn ($query) => $this->activeDiscountQuery($query)->with('translations'),
+                'membershipPlan.trainers',
                 'personMemberships.trainer',
                 'discounts.discount.translations',
                 'payments.paymentMethod.cardTypes',
@@ -86,7 +87,11 @@ class MembershipSaleService
         $user = Auth::user();
 
         $membershipPlans = MembershipPlan::query()
-            ->with(['translations', 'discounts.translations'])
+            ->with([
+                'translations',
+                'discounts' => fn ($query) => $this->activeDiscountQuery($query)->with('translations'),
+                'trainers',
+            ])
             ->where('active', true)
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
@@ -120,7 +125,9 @@ class MembershipSaleService
             ->orderBy('id')
             ->get();
 
-        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods');
+        $discountTypes = $this->discountTypes();
+
+        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes');
     }
 
     public function store(array $data)
@@ -134,13 +141,13 @@ class MembershipSaleService
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
-            $endDate = $this->resolveEndDate($membershipPlan, $startDate, $data['end_date'] ?? null);
+            $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
 
-            $discount = $this->getDiscount($data['discount_id'] ?? null, $membershipPlan);
+            $discounts = $this->getMembershipAttachedDiscounts($membershipPlan, $data['membership_discount_ids'] ?? []);
             $totalPrice = (float) $membershipPlan->price;
-            $discountData = $this->calculateDiscount($discount, $totalPrice);
+            $discountData = $this->calculateDiscount($discounts, $totalPrice, $data);
             $finalPrice = max($totalPrice - $discountData['amount'], 0);
-            $paymentAmount = (float) ($data['payment_amount'] ?? $data['amount'] ?? 0);
+            $paymentAmount = $this->resolvePaymentAmount($data, $finalPrice);
 
             $membershipSale = $this->membershipSaleRepository->create(
                 $this->saleDtoData([
@@ -149,14 +156,14 @@ class MembershipSaleService
                     'gym_id' => $gymId,
                     'membership_plan_id' => $membershipPlan->id,
                     'total_price' => $totalPrice,
-                    'discount_type' => $discountData['type'],
-                    'discount_value' => $discountData['value'],
+                    'discount_type' => $discountData['sale_type'],
+                    'discount_value' => $discountData['sale_value'],
                     'discount_amount' => $discountData['amount'],
                     'final_price' => $finalPrice,
                     'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                     'notes' => $data['notes'] ?? null,
                     'is_hdm' => $data['is_hdm'] ?? false,
-                    'discount_membership_amount' => $discountData['amount'],
+                    'discount_membership_amount' => $discountData['membership_amount'],
                     'sold_at' => now()->toDateTimeString(),
                 ])
             );
@@ -182,14 +189,14 @@ class MembershipSaleService
                 ])
             );
 
-            if ($discount) {
+            foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
                 $this->membershipSaleDiscountRepository->create(
                     $this->saleDiscountDtoData([
                         'membership_sale_id' => $membershipSale->id,
-                        'discount_id' => $discount->id,
-                        'discount_type' => $discountData['type'],
-                        'discount_value' => $discountData['value'],
-                        'discount_amount' => $discountData['amount'],
+                        'discount_id' => $membershipDiscountData['discount_id'],
+                        'discount_type' => $membershipDiscountData['type'],
+                        'discount_value' => $membershipDiscountData['value'],
+                        'discount_amount' => $membershipDiscountData['amount'],
                     ])
                 );
             }
@@ -202,14 +209,14 @@ class MembershipSaleService
                     'amount' => $paymentAmount,
                     'payment_method_id' => $paymentMethodId,
                     'card_type_id' => $data['card_type_id'] ?? null,
-                    'status' => $paymentAmount > 0 ? 'paid' : 'unpaid',
+                    'status' => $this->paymentRecordStatus([], $paymentAmount),
                     'type' => 'payment',
                     'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
                 ])
             );
 
             if (!empty($data['trainer_id'])) {
-                $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId);
+                $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
 
                 $this->trainerCommissionRepository->create(
@@ -253,12 +260,12 @@ class MembershipSaleService
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
-            $endDate = $this->resolveEndDate($membershipPlan, $startDate, $data['end_date'] ?? null);
-            $discount = $this->getDiscount($data['discount_id'] ?? null, $membershipPlan);
+            $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
+            $discounts = $this->getMembershipAttachedDiscounts($membershipPlan, $data['membership_discount_ids'] ?? []);
             $totalPrice = (float) $membershipPlan->price;
-            $discountData = $this->calculateDiscount($discount, $totalPrice);
+            $discountData = $this->calculateDiscount($discounts, $totalPrice, $data);
             $finalPrice = max($totalPrice - $discountData['amount'], 0);
-            $paymentAmount = (float) ($data['payment_amount'] ?? $data['amount'] ?? 0);
+            $paymentAmount = $this->resolvePaymentAmount($data, $finalPrice);
 
             $membershipSale->update($this->saleDtoData([
                 'user_id' => $user->id,
@@ -266,14 +273,14 @@ class MembershipSaleService
                 'gym_id' => $gymId,
                 'membership_plan_id' => $membershipPlan->id,
                 'total_price' => $totalPrice,
-                'discount_type' => $discountData['type'],
-                'discount_value' => $discountData['value'],
+                'discount_type' => $discountData['sale_type'],
+                'discount_value' => $discountData['sale_value'],
                 'discount_amount' => $discountData['amount'],
                 'final_price' => $finalPrice,
                 'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                 'notes' => $data['notes'] ?? null,
                 'is_hdm' => $data['is_hdm'] ?? false,
-                'discount_membership_amount' => $discountData['amount'],
+                'discount_membership_amount' => $discountData['membership_amount'],
                 'sold_at' => $membershipSale->sold_at?->toDateTimeString() ?? now()->toDateTimeString(),
             ]));
 
@@ -304,13 +311,13 @@ class MembershipSaleService
             }
 
             $membershipSale->discounts()->delete();
-            if ($discount) {
+            foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
                 $this->membershipSaleDiscountRepository->create($this->saleDiscountDtoData([
                     'membership_sale_id' => $membershipSale->id,
-                    'discount_id' => $discount->id,
-                    'discount_type' => $discountData['type'],
-                    'discount_value' => $discountData['value'],
-                    'discount_amount' => $discountData['amount'],
+                    'discount_id' => $membershipDiscountData['discount_id'],
+                    'discount_type' => $membershipDiscountData['type'],
+                    'discount_value' => $membershipDiscountData['value'],
+                    'discount_amount' => $membershipDiscountData['amount'],
                 ]));
             }
 
@@ -321,14 +328,14 @@ class MembershipSaleService
                 'amount' => $paymentAmount,
                 'payment_method_id' => $paymentMethodId,
                 'card_type_id' => $data['card_type_id'] ?? null,
-                'status' => $paymentAmount > 0 ? 'paid' : 'unpaid',
-                'type' => 'payment',
+                'status' => $this->paymentRecordStatus($data, $paymentAmount),
+                'type' => $data['payment_type'] ?? 'payment',
                 'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
             ]));
 
             $membershipSale->trainerCommissions()->delete();
             if (!empty($data['trainer_id'])) {
-                $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId);
+                $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
 
                 $this->trainerCommissionRepository->create($this->trainerCommissionDtoData([
@@ -423,13 +430,30 @@ class MembershipSaleService
         };
     }
 
-    protected function getDiscount(?int $discountId, MembershipPlan $membershipPlan): ?Discount
+    protected function getMembershipAttachedDiscounts(MembershipPlan $membershipPlan, array $discountIds)
     {
-        if (!$discountId) {
-            return null;
+        $discountIds = array_values(array_unique(array_filter($discountIds)));
+
+        if (empty($discountIds)) {
+            return collect();
         }
 
-        $discount = Discount::query()
+        $discounts = $this->activeDiscountQuery($membershipPlan->discounts())
+            ->whereIn('discounts.id', $discountIds)
+            ->get();
+
+        if ($discounts->count() !== count($discountIds)) {
+            throw ValidationException::withMessages([
+                'membership_discount_ids' => __('One or more selected discounts are not available for this membership plan.'),
+            ]);
+        }
+
+        return $discounts;
+    }
+
+    protected function activeDiscountQuery($query)
+    {
+        return $query
             ->where('status', true)
             ->where(function ($query) {
                 $query->whereNull('start_date')->orWhere('start_date', '<=', now());
@@ -437,40 +461,62 @@ class MembershipSaleService
             ->where(function ($query) {
                 $query->whereNull('end_date')->orWhere('end_date', '>=', now());
             })
-            ->whereHas('membershipPlans', function ($query) use ($membershipPlan) {
-                $query->where('membership_plans.id', $membershipPlan->id);
-            })
-            ->find($discountId);
-
-        if (!$discount) {
-            throw ValidationException::withMessages([
-                'discount_id' => __('Selected discount is not available for this membership plan.'),
-            ]);
-        }
-
-        return $discount;
+            ->orderBy('discounts.id');
     }
 
-    protected function calculateDiscount(?Discount $discount, float $totalPrice): array
+    protected function calculateDiscount($discounts, float $totalPrice, array $data = []): array
     {
-        if (!$discount) {
-            return [
-                'type' => null,
-                'value' => null,
-                'amount' => 0,
+        $membershipDiscounts = [];
+        $membershipAmount = 0;
+        $priceAfterMembershipDiscount = $totalPrice;
+
+        foreach ($discounts as $discount) {
+            $amount = $this->calculateDiscountAmount($discount->type, (float) $discount->value, $priceAfterMembershipDiscount);
+            $membershipAmount += $amount;
+            $priceAfterMembershipDiscount = max($priceAfterMembershipDiscount - $amount, 0);
+            $membershipDiscounts[] = [
+                'discount_id' => $discount->id,
+                'type' => $discount->type,
+                'value' => (float) $discount->value,
+                'amount' => $amount,
             ];
         }
 
-        $value = (float) $discount->value;
-        $amount = $discount->type === 'percent'
-            ? $totalPrice * $value / 100
-            : $value;
+        $manualType = null;
+        $manualValue = null;
+        $manualAmount = 0;
+
+        if (!empty($data['apply_discount']) && !empty($data['discount_type'])) {
+            $manualType = $data['discount_type'];
+            $manualValue = (float) ($data['discount_value'] ?? 0);
+            $manualAmount = $this->calculateDiscountAmount($manualType, $manualValue, $priceAfterMembershipDiscount);
+        }
+
+        $amount = min($membershipAmount + $manualAmount, $totalPrice);
 
         return [
-            'type' => $discount->type,
-            'value' => $value,
-            'amount' => min($amount, $totalPrice),
+            'sale_type' => $manualType ?? ($membershipDiscounts[0]['type'] ?? null),
+            'sale_value' => $manualValue ?? ($membershipDiscounts[0]['value'] ?? null),
+            'amount' => $amount,
+            'membership_amount' => $membershipAmount,
+            'membership_discounts' => $membershipDiscounts,
+            'manual_type' => $manualType,
+            'manual_value' => $manualValue,
+            'manual_amount' => $manualAmount,
         ];
+    }
+
+    protected function calculateDiscountAmount(?string $type, float $value, float $basePrice): float
+    {
+        if (!$type || $basePrice <= 0 || $value <= 0) {
+            return 0;
+        }
+
+        $amount = $type === 'percent'
+            ? $basePrice * $value / 100
+            : $value;
+
+        return min($amount, $basePrice);
     }
 
     protected function paymentStatus(float $paymentAmount, float $finalPrice): string
@@ -484,6 +530,25 @@ class MembershipSaleService
         }
 
         return 'unpaid';
+    }
+
+    protected function resolvePaymentAmount(array $data, float $finalPrice): float
+    {
+        if (!empty($data['is_full_payment'])) {
+            return $finalPrice;
+        }
+
+        if (empty($data['is_partial_payment']) && empty($data['amount']) && empty($data['payment_amount'])) {
+            return 0;
+        }
+
+        return min((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), $finalPrice);
+    }
+
+    protected function paymentRecordStatus(array $data, float $paymentAmount): string
+    {
+        return $data['payment_record_status']
+            ?? ($paymentAmount > 0 ? 'paid' : 'unpaid');
     }
 
     protected function resolvePaymentMethodId(?int $paymentMethodId): int
@@ -503,13 +568,17 @@ class MembershipSaleService
         return (int) $paymentMethod->id;
     }
 
-    protected function getTrainer(int $trainerId, User $user, int $gymId): User
+    protected function getTrainer(int $trainerId, User $user, int $gymId, MembershipPlan $membershipPlan): User
     {
         $query = User::query()
             ->where('id', $trainerId)
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             });
+
+        if ($membershipPlan->gym_id) {
+            $query->where('gym_id', $membershipPlan->gym_id);
+        }
 
         if (!$user->hasRole('owner')) {
             $query->where('gym_id', $gymId);
@@ -522,7 +591,6 @@ class MembershipSaleService
     {
         $type = $trainer->getAttribute('salary_type')
             ?? $trainer->getAttribute('commission_type')
-            ?? $data['price_type']
             ?? 'fixed';
 
         $value = (float) (
@@ -565,5 +633,20 @@ class MembershipSaleService
     protected function trainerCommissionDtoData(array $data): array
     {
         return TrainerCommissionDTO::fromArray($data)->toArray();
+    }
+
+    protected function discountTypes(): array
+    {
+        $migration = file_get_contents(
+            base_path('database/migrations/2026_06_08_000004_create_membership_sales_table.php')
+        );
+
+        if (!preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
+            return [];
+        }
+
+        preg_match_all("/'([^']+)'/", $matches[1], $values);
+
+        return $values[1] ?? [];
     }
 }
