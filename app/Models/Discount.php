@@ -61,4 +61,9 @@ class Discount extends Model
         return $this->belongsToMany(MembershipPlan::class, 'discount_membership_plan')
             ->withTimestamps();
     }
+
+    public function saleDiscounts()
+    {
+        return $this->hasMany(MembershipSaleDiscount::class);
+    }
 }

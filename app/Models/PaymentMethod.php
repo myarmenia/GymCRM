@@ -27,6 +27,11 @@ class PaymentMethod extends Model
         return $this->belongsToMany(CardType::class);
     }
 
+    public function membershipPlanPayments()
+    {
+        return $this->hasMany(MembershipPlanPayment::class);
+    }
+
     public function getNameAttribute()
     {
         return $this->translations

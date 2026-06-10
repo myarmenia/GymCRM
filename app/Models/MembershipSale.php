@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class PersonMembership extends Model
+class MembershipSale extends Model
 {
     use SoftDeletes;
 
@@ -14,16 +14,14 @@ class PersonMembership extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
-            'activated_at' => 'datetime',
-            'expired_at' => 'datetime',
+            'total_price' => 'decimal:2',
+            'discount_value' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'final_price' => 'decimal:2',
+            'is_hdm' => 'boolean',
+            'discount_membership_amount' => 'decimal:2',
+            'sold_at' => 'datetime',
         ];
-    }
-
-    public function membershipSale()
-    {
-        return $this->belongsTo(MembershipSale::class);
     }
 
     public function user()
@@ -46,19 +44,19 @@ class PersonMembership extends Model
         return $this->belongsTo(MembershipPlan::class);
     }
 
-    public function trainer()
+    public function personMemberships()
     {
-        return $this->belongsTo(User::class, 'trainer_id');
+        return $this->hasMany(PersonMembership::class);
     }
 
-    public function nextMembership()
+    public function discounts()
     {
-        return $this->belongsTo(self::class, 'next_membership_id');
+        return $this->hasMany(MembershipSaleDiscount::class);
     }
 
-    public function previousMemberships()
+    public function payments()
     {
-        return $this->hasMany(self::class, 'next_membership_id');
+        return $this->hasMany(MembershipPlanPayment::class);
     }
 
     public function trainerCommissions()

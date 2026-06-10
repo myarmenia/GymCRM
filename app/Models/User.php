@@ -143,6 +143,26 @@ class User extends Authenticatable
         return $this->morphMany(AttendanceSheet::class, 'relation');
     }
 
+    public function membershipSales()
+    {
+        return $this->hasMany(MembershipSale::class);
+    }
+
+    public function soldPersonMemberships()
+    {
+        return $this->hasMany(PersonMembership::class);
+    }
+
+    public function trainedPersonMemberships()
+    {
+        return $this->hasMany(PersonMembership::class, 'trainer_id');
+    }
+
+    public function trainerCommissions()
+    {
+        return $this->hasMany(TrainerCommission::class, 'trainer_id');
+    }
+
 
     public function getEntryCodesAttribute()
     {
