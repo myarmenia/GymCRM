@@ -393,37 +393,36 @@ const submit = () => {
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <InputLabel value="Զեղչ" />
-                        <div v-if="membershipDiscounts.length">
+                        <div
+                            v-if="membershipDiscounts.length"
+                            class="discount-grid mb-3"
+                        >
                             <div
                                 v-for="discount in membershipDiscounts"
                                 :key="discount.id"
-                                class="alert mb-3"
-                                :class="form.membership_discount_ids.map(id => Number(id)).includes(Number(discount.id)) ? 'alert-info' : 'alert-light'"
+                                class="discount-card"
+                                :class="{ selected: form.membership_discount_ids.map(id => Number(id)).includes(Number(discount.id)) }"
+                                @click="toggleMembershipDiscount(discount.id)"
                             >
-                                <label class="form-check mb-2">
-                                    <input
-                                        type="checkbox"
-                                        class="form-check-input"
-                                        :checked="form.membership_discount_ids.map(id => Number(id)).includes(Number(discount.id))"
-                                        @change="toggleMembershipDiscount(discount.id)"
-                                    />
-                                    <span class="form-check-label fw-bold">
-                                        {{ discountName(discount) }}
-                                    </span>
-                                </label>
-                                <div class="d-flex justify-content-between mb-2">
+                                <i class="ti tabler-discount fs-2 mb-2 text-primary"></i>
+                                <div class="fw-bold text-center mb-2">
+                                    {{ discountName(discount) }}
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 w-100">
                                     <span>Տեսակ</span>
                                     <span>{{ discountTypeLabel(discount.type) }}</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
+                                <div class="d-flex justify-content-between mb-2 w-100">
                                     <span>Արժեք</span>
                                     <span>{{ discount.value }}</span>
                                 </div>
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between w-100">
                                     <span>Հաշվարկված զեղչ</span>
                                     <strong>{{ membershipDiscountRowAmount(discount).toFixed(2) }}</strong>
                                 </div>
                             </div>
+                        </div>
+                        <div v-if="membershipDiscounts.length">
                             <div class="alert alert-info mb-3">
                                 <div class="d-flex justify-content-between mb-2">
                                     <span>Ընտրված աբոնեմենտի զեղչեր</span>
@@ -649,7 +648,7 @@ const submit = () => {
                                         type="checkbox"
                                         class="form-check-input"
                                     />
-                                    <span class="form-check-label">Partial payment</span>
+                                    <span class="form-check-label">Մասնակի վճարում</span>
                                 </label>
                                 <label class="form-check">
                                     <input
@@ -657,7 +656,7 @@ const submit = () => {
                                         type="checkbox"
                                         class="form-check-input"
                                     />
-                                    <span class="form-check-label">Full payment</span>
+                                    <span class="form-check-label">Ամբողջական վճարում</span>
                                 </label>
                             </div>
                             <InputError :message="form.errors.is_partial_payment" />
@@ -792,6 +791,36 @@ const submit = () => {
 }
 
 .trainer-card.selected {
+    border: 2px solid #0d9394;
+    background: rgba(13, 147, 148, 0.08);
+}
+
+.discount-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.discount-card {
+    cursor: pointer;
+    border-radius: 12px;
+    transition: 0.2s;
+    border: 1px solid #e6e9ef;
+    min-height: 150px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+}
+
+.discount-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.discount-card.selected {
     border: 2px solid #0d9394;
     background: rgba(13, 147, 148, 0.08);
 }

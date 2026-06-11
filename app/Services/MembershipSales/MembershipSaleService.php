@@ -456,10 +456,10 @@ class MembershipSaleService
         return $query
             ->where('status', true)
             ->where(function ($query) {
-                $query->whereNull('start_date')->orWhere('start_date', '<=', now());
+                $query->whereNull('start_date')->orWhereDate('start_date', '<=', today());
             })
             ->where(function ($query) {
-                $query->whereNull('end_date')->orWhere('end_date', '>=', now());
+                $query->whereNull('end_date')->orWhereDate('end_date', '>=', today());
             })
             ->orderBy('discounts.id');
     }
