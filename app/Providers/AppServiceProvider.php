@@ -18,6 +18,8 @@ use App\Interfaces\MembershipSaleDiscounts\MembershipSaleDiscountInterface;
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Interfaces\GymSchedule\GymScheduleInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
+use App\Interfaces\MembershipPlanSchedule\MembershipPlanScheduleInterface;
+use App\Interfaces\MembershipPlanTrainer\MembershipPlanTrainerInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
@@ -57,6 +59,8 @@ use App\Repositories\MembershipSaleDiscounts\MembershipSaleDiscountRepository;
 use App\Repositories\MembershipSales\MembershipSaleRepository;
 use App\Repositories\GymSchedule\GymScheduleRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
+use App\Repositories\MembershipPlanSchedule\MembershipPlanScheduleRepository;
+use App\Repositories\MembershipPlanTrainer\MembershipPlanTrainerRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\PersonMemberships\PersonMembershipRepository;
@@ -145,6 +149,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class,TrainerSessionDurationRepository::class);
 
         $this->app->bind(TrainerSessionDurationSlotInterface::class,TrainerSessionDurationSlotRepository::class);
+
+            $this->app->bind(MembershipPlanTrainerInterface::class, MembershipPlanTrainerRepository::class);
+    $this->app->bind(MembershipPlanScheduleInterface::class, MembershipPlanScheduleRepository::class);
     }
 
     /**

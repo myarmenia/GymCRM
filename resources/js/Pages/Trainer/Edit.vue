@@ -151,6 +151,20 @@ const modal = {
         bootstrapModal.show();
     },
 };
+
+const weekDayLabels = {
+    monday: "Երկուշաբթի",
+    tuesday: "Երեքշաբթի",
+    wednesday: "Չորեքշաբթի",
+    thursday: "Հինգշաբթի",
+    friday: "Ուրբաթ",
+    saturday: "Շաբաթ",
+    sunday: "Կիրակի",
+};
+
+const getWeekDayLabel = (weekDay) => {
+    return weekDayLabels[String(weekDay).toLowerCase()] ?? weekDay;
+};
 const validateSlot = (slot, detail) => {
     if (!slotInsideSchedule(slot, detail)) {
         modal.show("Ընտրված ժամը պետք է լինի գրաֆիկի աշխատանքային ժամերի մեջ։");
@@ -614,7 +628,7 @@ const submit = () => {
                             class="d-flex justify-content-between align-items-center mb-2"
                         >
                             <strong>
-                                {{ detail.week_day }}
+                                {{ getWeekDayLabel(detail.week_day) }}
                                 {{ normalizeTime(detail.day_start_time) }}
                                 -
                                 {{ normalizeTime(detail.day_end_time) }}

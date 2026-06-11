@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Memberships\MembershipPlanStoreRequest;
 use App\Services\Memberships\MembershipPlanService;
 use App\Services\Memberships\MembershipCategoryService;
-
+use App\Services\Users\UserService;
 use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Support\Facades\Lang;
@@ -18,65 +18,104 @@ class MembershipPlanController extends Controller
     public function __construct(
         protected MembershipPlanService $membershipPlanService,
         protected MembershipCategoryService $membershipCategoryService,
-
-    ) {
-
-    }
+        protected UserService $userService
+    ) {}
 
 
     // ========== list =====================
     public function list()
     {
         $membershipPlans = $this->membershipPlanService->getAllPaginated();
-
+    
         return Inertia::render('MembershipPlans/List', ['membershipPlans' => $membershipPlans]);
     }
-
-
-
-    // ========== create =====================
+    //
+    //
+    //
+    //// ========== create =====================
+    //public function create()
+    //{
+    //    $membershipCategories = $this->membershipCategoryService->getActiveCategories();
+    //    $trainers = $this->userService->getTrainers();
+    //    dd($trainers);
+    //    return Inertia::render('MembershipPlans/Create', [
+    //        'membershipCategories' => $membershipCategories,
+    //        'trainers' => $trainers
+    //    ]);
+    //}
+    //
+    //
+    //// ========== store =====================
+    //public function store(MembershipPlanStoreRequest $request)
+    //{
+    //    $this->membershipPlanService->store(MembershipPlanDTO::fromArray($request->validated()));
+    //
+    //    return redirect()
+    //        ->route('membership_plan.list', app()->getLocale())
+    //        ->with('success', 'Membership plan created successfully');
+    //}
+    //
+    //
+    //// ========== edit =====================
+    //public function edit($locale, $membershipPlanId)
+    //{
+    //    $membershipPlan = $this->membershipPlanService->getById($membershipPlanId);
+    //    $membershipCategories = $this->membershipCategoryService->getActiveCategories();
+    //
+    //
+    //    return Inertia::render('MembershipPlans/Edit', [
+    //        'membershipPlan' => $membershipPlan,
+    //        'membershipCategories' => $membershipCategories
+    //    ]);
+    //
+    //}
+    //
+    //
+    //// ========== update =====================
+    //public function update(MembershipPlanStoreRequest $request)
+    //{
+    //    $this->membershipPlanService->update($request->id, MembershipPlanDTO::fromArray($request->all()));
+    //
+    //    return redirect()->route('membership_plan.list', ['locale' => app()->getLocale()])
+    //        ->with('success', 'Membership plan updated successfully');
+    //}
     public function create()
     {
-        $membershipCategories = $this->membershipCategoryService->getActiveCategories();
-
-        return Inertia::render('MembershipPlans/Create', [
-            'membershipCategories' => $membershipCategories,
+        $data = $this->membershipPlanService->getCreateData();
+        
+        return inertia('MembershipPlans/Create', [
+            ...$data,
+            'langs' => ['hy', 'en', 'ru'],
         ]);
     }
 
-
-    // ========== store =====================
     public function store(MembershipPlanStoreRequest $request)
     {
-        $this->membershipPlanService->store(MembershipPlanDTO::fromArray($request->validated()));
+        //dd($request->all());
+        $this->membershipPlanService->store($request->all());
 
         return redirect()
             ->route('membership_plan.list', app()->getLocale())
-            ->with('success', 'Membership plan created successfully');
+            ->with('success', 'Աբոնեմենտը հաջողությամբ ստեղծվեց։');
     }
 
-
-    // ========== edit =====================
-    public function edit($locale, $membershipPlanId)
+    public function edit(string $locale,int $id)
     {
-        $membershipPlan = $this->membershipPlanService->getById($membershipPlanId);
-        $membershipCategories = $this->membershipCategoryService->getActiveCategories();
-
-
-        return Inertia::render('MembershipPlans/Edit', [
-            'membershipPlan' => $membershipPlan,
-            'membershipCategories' => $membershipCategories
+        $data = $this->membershipPlanService->edit($locale, $id);
+//dd($data);
+        return inertia('MembershipPlans/Edit', [
+            ...$data,
+            'langs' => ['hy', 'en', 'ru'],
         ]);
-
     }
 
-
-    // ========== update =====================
-    public function update(MembershipPlanStoreRequest $request)
+    public function update(MembershipPlanStoreRequest $request, string $locale, int $id)
     {
-        $this->membershipPlanService->update($request->id, MembershipPlanDTO::fromArray($request->all()));
+        //dd($request->validated());
+        $this->membershipPlanService->update($id, $request->validated());
 
-        return redirect()->route('membership_plan.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Membership plan updated successfully');
+        return redirect()
+            ->route('membership_plan.list', ['locale' => $locale])
+            ->with('success', 'Աբոնեմենտը հաջողությամբ թարմացվեց։');
     }
 }

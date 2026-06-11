@@ -1,14 +1,26 @@
 <script setup>
-import { computed } from 'vue';
-import Index from '@/Layouts/Index.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
+import { computed } from "vue";
+import Index from "@/Layouts/Index.vue";
+import { Head, useForm, usePage } from "@inertiajs/vue3";
+import InputError from "@/Components/InputError.vue";
+import InputLabel from "@/Components/InputLabel.vue";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
 
 const page = usePage();
-const currentLocale = page.props.locale ?? 'en';
+const currentLocale = page.props.locale ?? "en";
+const weekDayLabels = {
+    monday: "Երկուշաբթի",
+    tuesday: "Երեքշաբթի",
+    wednesday: "Չորեքշաբթի",
+    thursday: "Հինգշաբթի",
+    friday: "Ուրբաթ",
+    saturday: "Շաբաթ",
+    sunday: "Կիրակի",
+};
 
+const getWeekDayLabel = (weekDay) => {
+    return weekDayLabels[String(weekDay).toLowerCase()] ?? weekDay;
+};
 const props = defineProps({
     scheduleNames: {
         type: Array,
@@ -22,8 +34,8 @@ const form = useForm({
 });
 
 const selectedScheduleNames = computed(() => {
-    return props.scheduleNames.filter(schedule =>
-        form.schedule_names.includes(schedule.id)
+    return props.scheduleNames.filter((schedule) =>
+        form.schedule_names.includes(schedule.id),
     );
 });
 
@@ -36,7 +48,7 @@ const removeScheduleName = (index) => {
 
     form.schedule_names.splice(index, 1);
 
-    form.session_durations = form.session_durations.filter(item => {
+    form.session_durations = form.session_durations.filter((item) => {
         return item.schedule_name_id !== scheduleId;
     });
 };
@@ -44,9 +56,9 @@ const removeScheduleName = (index) => {
 const addSessionDuration = () => {
     form.session_durations.push({
         schedule_name_id: null,
-        title: '',
+        title: "",
         minutes: 60,
-        type: 'individual',
+        type: "individual",
         price: null,
         slots: [],
     });
@@ -57,11 +69,15 @@ const removeSessionDuration = (index) => {
 };
 
 const getScheduleDetails = (scheduleNameId) => {
-    const schedule = props.scheduleNames.find(item => item.id === scheduleNameId);
+    const schedule = props.scheduleNames.find(
+        (item) => item.id === scheduleNameId,
+    );
 
-    return schedule?.schedule_details
-        ?? schedule?.schedule_name?.schedule_details
-        ?? [];
+    return (
+        schedule?.schedule_details ??
+        schedule?.schedule_name?.schedule_details ??
+        []
+    );
 };
 
 const addSlot = (durationIndex, detail) => {
@@ -80,16 +96,19 @@ const removeSlot = (durationIndex, slotIndex) => {
 };
 
 const addMinutes = (time, minutes) => {
-    if (!time || !minutes) return '';
+    if (!time || !minutes) return "";
 
-    const [h, m] = time.split(':').map(Number);
+    const [h, m] = time.split(":").map(Number);
 
     const date = new Date();
     date.setHours(h);
     date.setMinutes(m + minutes);
 
-    return String(date.getHours()).padStart(2, '0') + ':' +
-        String(date.getMinutes()).padStart(2, '0');
+    return (
+        String(date.getHours()).padStart(2, "0") +
+        ":" +
+        String(date.getMinutes()).padStart(2, "0")
+    );
 };
 
 const updateSlotEndTime = (durationIndex, slotIndex) => {
@@ -100,7 +119,7 @@ const updateSlotEndTime = (durationIndex, slotIndex) => {
 };
 
 const submit = () => {
-    form.post(route('trainer-schedule.store', { locale: currentLocale }));
+    form.post(route("trainer-schedule.store", { locale: currentLocale }));
 };
 </script>
 
@@ -138,15 +157,23 @@ const submit = () => {
                     <div class="col-md-10">
                         <InputLabel class="form-label" value="Ժամային գրաֆիկ" />
 
-                        <select class="form-select" v-model="form.schedule_names[index]">
-                            <option :value="null" disabled>Ընտրել գրաֆիկ</option>
+                        <select
+                            class="form-select"
+                            v-model="form.schedule_names[index]"
+                        >
+                            <option :value="null" disabled>
+                                Ընտրել գրաֆիկ
+                            </option>
 
                             <option
                                 v-for="schedule in scheduleNames"
                                 :key="schedule.id"
                                 :value="schedule.id"
                             >
-                                {{ schedule.name ?? schedule.schedule_name?.name }}
+                                {{
+                                    schedule.name ??
+                                    schedule.schedule_name?.name
+                                }}
                             </option>
                         </select>
 
@@ -167,11 +194,16 @@ const submit = () => {
                     </div>
                 </div>
 
-                <InputError class="mt-2" :message="form.errors.schedule_names" />
+                <InputError
+                    class="mt-2"
+                    :message="form.errors.schedule_names"
+                />
 
-                <hr class="my-6 mx-n6">
+                <hr class="my-6 mx-n6" />
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div
+                    class="d-flex justify-content-between align-items-center mb-3"
+                >
                     <h6 class="mb-0">2. Պարապունքի տեսակներ</h6>
 
                     <button
@@ -188,8 +220,12 @@ const submit = () => {
                     :key="durationIndex"
                     class="border rounded p-3 mb-4"
                 >
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <strong>Պարապունքի տեսակ #{{ durationIndex + 1 }}</strong>
+                    <div
+                        class="d-flex justify-content-between align-items-center mb-3"
+                    >
+                        <strong
+                            >Պարապունքի տեսակ #{{ durationIndex + 1 }}</strong
+                        >
 
                         <button
                             type="button"
@@ -202,23 +238,38 @@ const submit = () => {
 
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <InputLabel class="form-label" value="Որ գրաֆիկին է կպնում" />
+                            <InputLabel
+                                class="form-label"
+                                value="Որ գրաֆիկին է կպնում"
+                            />
 
-                            <select class="form-select" v-model="duration.schedule_name_id">
-                                <option :value="null" disabled>Ընտրել գրաֆիկ</option>
+                            <select
+                                class="form-select"
+                                v-model="duration.schedule_name_id"
+                            >
+                                <option :value="null" disabled>
+                                    Ընտրել գրաֆիկ
+                                </option>
 
                                 <option
                                     v-for="schedule in selectedScheduleNames"
                                     :key="schedule.id"
                                     :value="schedule.id"
                                 >
-                                    {{ schedule.name ?? schedule.schedule_name?.name }}
+                                    {{
+                                        schedule.name ??
+                                        schedule.schedule_name?.name
+                                    }}
                                 </option>
                             </select>
 
                             <InputError
                                 class="mt-2"
-                                :message="form.errors[`session_durations.${durationIndex}.schedule_name_id`]"
+                                :message="
+                                    form.errors[
+                                        `session_durations.${durationIndex}.schedule_name_id`
+                                    ]
+                                "
                             />
                         </div>
 
@@ -234,7 +285,11 @@ const submit = () => {
 
                             <InputError
                                 class="mt-2"
-                                :message="form.errors[`session_durations.${durationIndex}.title`]"
+                                :message="
+                                    form.errors[
+                                        `session_durations.${durationIndex}.title`
+                                    ]
+                                "
                             />
                         </div>
 
@@ -250,7 +305,11 @@ const submit = () => {
 
                             <InputError
                                 class="mt-2"
-                                :message="form.errors[`session_durations.${durationIndex}.minutes`]"
+                                :message="
+                                    form.errors[
+                                        `session_durations.${durationIndex}.minutes`
+                                    ]
+                                "
                             />
                         </div>
 
@@ -264,7 +323,11 @@ const submit = () => {
 
                             <InputError
                                 class="mt-2"
-                                :message="form.errors[`session_durations.${durationIndex}.type`]"
+                                :message="
+                                    form.errors[
+                                        `session_durations.${durationIndex}.type`
+                                    ]
+                                "
                             />
                         </div>
 
@@ -280,23 +343,32 @@ const submit = () => {
                         </div>
                     </div>
 
-                    <hr>
+                    <hr />
 
                     <h6>Ժամեր</h6>
 
-                    <div v-if="!duration.schedule_name_id" class="alert alert-warning">
-                        Նախ ընտրիր, թե այս պարապունքի տեսակը որ գրաֆիկին է կպնում։
+                    <div
+                        v-if="!duration.schedule_name_id"
+                        class="alert alert-warning"
+                    >
+                        Նախ ընտրիր, թե այս պարապունքի տեսակը որ գրաֆիկին է
+                        կպնում։
                     </div>
 
                     <div
-                        v-for="detail in getScheduleDetails(duration.schedule_name_id)"
+                        v-for="detail in getScheduleDetails(
+                            duration.schedule_name_id,
+                        )"
                         :key="detail.id"
                         class="mb-4"
                     >
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div
+                            class="d-flex justify-content-between align-items-center mb-2"
+                        >
                             <strong>
-                                {{ detail.week_day }}
-                                {{ detail.day_start_time }} - {{ detail.day_end_time }}
+                                {{ getWeekDayLabel(detail.week_day) }}
+                                {{ detail.day_start_time }} -
+                                {{ detail.day_end_time }}
                             </strong>
 
                             <button
@@ -309,7 +381,9 @@ const submit = () => {
                         </div>
 
                         <div
-                            v-for="slot in duration.slots.filter(s => s.week_day === detail.week_day)"
+                            v-for="slot in duration.slots.filter(
+                                (s) => s.week_day === detail.week_day,
+                            )"
                             :key="duration.slots.indexOf(slot)"
                             class="row g-2 mb-2 align-items-end"
                         >
@@ -322,7 +396,12 @@ const submit = () => {
                                     v-model="slot.start_time"
                                     :min="detail.day_start_time"
                                     :max="detail.day_end_time"
-                                    @change="updateSlotEndTime(durationIndex, duration.slots.indexOf(slot))"
+                                    @change="
+                                        updateSlotEndTime(
+                                            durationIndex,
+                                            duration.slots.indexOf(slot),
+                                        )
+                                    "
                                 />
                             </div>
 
@@ -341,7 +420,12 @@ const submit = () => {
                                 <button
                                     type="button"
                                     class="btn btn-danger"
-                                    @click="removeSlot(durationIndex, duration.slots.indexOf(slot))"
+                                    @click="
+                                        removeSlot(
+                                            durationIndex,
+                                            duration.slots.indexOf(slot),
+                                        )
+                                    "
                                 >
                                     Ջնջել
                                 </button>
@@ -350,7 +434,10 @@ const submit = () => {
                     </div>
                 </div>
 
-                <InputError class="mt-2" :message="form.errors.session_durations" />
+                <InputError
+                    class="mt-2"
+                    :message="form.errors.session_durations"
+                />
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton
@@ -360,7 +447,10 @@ const submit = () => {
                         Պահպանել
                     </PrimaryButton>
 
-                    <button type="reset" class="btn btn-label-secondary waves-effect">
+                    <button
+                        type="reset"
+                        class="btn btn-label-secondary waves-effect"
+                    >
                         Չեղարկել
                     </button>
                 </div>

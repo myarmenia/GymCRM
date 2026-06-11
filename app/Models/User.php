@@ -108,7 +108,6 @@ class User extends Authenticatable
     public function entryPermissions()
     {
         return $this->morphMany(EntryPermission::class, 'relation');
-
     }
 
 
@@ -174,10 +173,25 @@ class User extends Authenticatable
             ->filter();
     }
 
-    public function trainerSchedule()
-    {
-       
-        return $this->hasOne(TrainerSchedule::class, 'user_id');
+    //public function trainerSchedule()
+    //{
+    //   
+    //    return $this->hasOne(TrainerSchedule::class, 'user_id');
+    //
+    //}
 
+    public function trainerSchedules()
+    {
+        return $this->hasMany(TrainerSchedule::class, 'user_id');
+    }
+
+    public function scheduleNames()
+    {
+        return $this->belongsToMany(
+            ScheduleName::class,
+            'trainer_schedules',
+            'user_id',
+            'schedule_name_id'
+        );
     }
 }
