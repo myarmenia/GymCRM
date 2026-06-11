@@ -87,6 +87,11 @@ class MembershipPlanStoreRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+            'trainers' => [
+                'nullable',
+                'array',
+                'min:1',
+            ],
         ];
     }
 

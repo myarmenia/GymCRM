@@ -30,7 +30,7 @@ class TrainerService
     public function getAllPaginated()
     {
         $users = $this->trainerRepository
-            ->paginateForUser(auth()->user(), 10);
+            ->paginateForUser(auth()->user(), 1000);
         return $users;
     }
 

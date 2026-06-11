@@ -32,7 +32,7 @@ function findingDurationType(value) {
 </script>
 
 <template>
-    <Head title="Users List" />
+    <Head title="Աբոնեմենտներ" />
 
     <Index>
         <template #header>
@@ -63,7 +63,7 @@ function findingDurationType(value) {
                     </span>
                 </Link>
             </div>
-            <h5 class="card-header">Bordered Table</h5>
+            <h5 class="card-header">Աղյուսակ</h5>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered">
@@ -75,8 +75,8 @@ function findingDurationType(value) {
                                 <th>Արժեք</th>
                                 <th>Տևողություն</th>
                                 <th>has person</th>
-                                <th>Active</th>
-                                <th>Actions</th>
+                                <th>Կարգավիճակ</th>
+                                <th>Գործողություններ</th>
                             </tr>
                         </thead>
                         <tbody>

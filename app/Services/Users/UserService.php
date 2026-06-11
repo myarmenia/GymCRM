@@ -107,5 +107,10 @@ class UserService
 
     }
 
+    public function getTrainers()
+    {
+        return $this->userRepository->getTrainersWithSchedulesByGymId();
+    }
+
 
 }

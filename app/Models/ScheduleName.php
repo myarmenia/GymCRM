@@ -21,9 +21,28 @@ class ScheduleName extends Model
         return $this->hasMany(ScheduleDetail::class, 'schedule_name_id');
     }
 
+    //public function trainers()
+    //{
+    //    return $this->hasMany(TrainerSchedule::class, 'schedule_name_id');
+    //}
+
     public function trainers()
     {
-        return $this->hasMany(TrainerSchedule::class, 'schedule_name_id');
+        return $this->belongsToMany(
+            User::class,
+            'trainer_schedules',
+            'schedule_name_id',
+            'user_id'
+        );
+    }
+
+    public function gymSchedules()
+    {
+        return $this->hasMany(
+            GymSchedule::class,
+            'schedule_name_id',
+            'id'
+        );
     }
 
     //

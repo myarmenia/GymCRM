@@ -218,7 +218,7 @@ Route::prefix('{locale}')
 
                 Route::middleware('check.gym:MembershipPlan,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('edit');
-                    Route::patch('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
+                    Route::put('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
                 });
             });
 

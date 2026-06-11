@@ -14,6 +14,11 @@ class MembershipCategoryRepository extends BaseRepository implements MembershipC
         parent::__construct($model);
     }
 
+    public function getAllForSelectByGymId()
+    {
+        return $this->gymQuery()->get(['id', 'slug','active']);
+    }
+
     // Ձեր արդեն գոյություն ունեցող մեթոդը
     public function allActive()
     {
