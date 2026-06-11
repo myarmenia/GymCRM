@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -56,24 +56,9 @@ const statusClass = status => ({
 
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
-const destroy = sale => {
-    if (!window.confirm('Ջնջե՞լ այս վաճառքը։')) {
-        return
-    }
-
-    router.delete(
-        route('membership_sale.destroy', {
-            locale: currentLocale.value,
-            id: sale.id,
-        }),
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                salesList.value = salesList.value.filter(item => item.id !== sale.id)
-            },
-        },
-    )
-}
+const paidAmount = sale => (sale.payments ?? []).reduce((total, payment) => total + Number(payment.amount || 0), 0)
+const debtAmount = sale => Math.max(Number(sale.final_price || 0) - paidAmount(sale), 0)
+const formattedAmount = value => Number(value || 0).toFixed(2)
 </script>
 
 <template>
@@ -92,17 +77,6 @@ const destroy = sale => {
                     Վաճառքների ցանկ
                 </h5>
 
-                <Link
-                    class="btn create-new btn-primary"
-                    :href="route('membership_sale.create', { locale: currentLocale })"
-                >
-                    <span class="d-flex align-items-center gap-2">
-                        <i class="icon-base ti tabler-plus icon-sm"></i>
-                        <span class="d-none d-sm-inline-block">
-                            Նոր վաճառք
-                        </span>
-                    </span>
-                </Link>
             </div>
 
             <div class="card-body">
@@ -112,12 +86,12 @@ const destroy = sale => {
                             <tr>
                                 <th>Հաճախորդ</th>
                                 <th>Աբոնեմենտ</th>
-                                <th>Մարզասրահ</th>
                                 <th>Մարզիչ</th>
                                 <th>Գին</th>
                                 <th>Զեղչ</th>
                                 <th>Վերջնական գին</th>
                                 <th>Վճարում</th>
+                                <th>Պարտք</th>
                                 <th>Վաճառքի օր</th>
                                 <th>Գործողություններ</th>
                             </tr>
@@ -130,7 +104,6 @@ const destroy = sale => {
                             >
                                 <td>{{ personName(sale) }}</td>
                                 <td>{{ planName(sale.membership_plan) }}</td>
-                                <td>{{ sale.gym?.name ?? '-' }}</td>
                                 <td>{{ trainerName(sale) }}</td>
                                 <td>{{ sale.total_price }}</td>
                                 <td>{{ sale.discount_amount }}</td>
@@ -142,6 +115,15 @@ const destroy = sale => {
                                     >
                                         {{ paymentStatusLabel(sale.payment_status) }}
                                     </span>
+                                </td>
+                                <td>
+                                    <span
+                                        v-if="debtAmount(sale) > 0"
+                                        class="text-danger fw-semibold"
+                                    >
+                                        {{ formattedAmount(debtAmount(sale)) }}
+                                    </span>
+                                    <span v-else>0</span>
                                 </td>
                                 <td>{{ formatDate(sale.sold_at) }}</td>
                                 <td>
@@ -162,15 +144,6 @@ const destroy = sale => {
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
                                                 Խմբագրել
                                             </Link>
-
-                                            <button
-                                                type="button"
-                                                class="dropdown-item waves-effect"
-                                                @click="destroy(sale)"
-                                            >
-                                                <i class="icon-base ti tabler-trash me-1"></i>
-                                                Ջնջել
-                                            </button>
                                         </div>
                                     </div>
                                 </td>

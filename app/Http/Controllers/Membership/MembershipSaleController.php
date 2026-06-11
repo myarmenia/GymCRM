@@ -21,12 +21,12 @@ class MembershipSaleController extends Controller
         ]);
     }
 
-    public function create()
+    public function create($locale, $person)
     {
-        return Inertia::render('MembershipSales/Create', $this->membershipSaleService->formOptions());
+        return Inertia::render('MembershipSales/Create', $this->membershipSaleService->formOptions((int) $person));
     }
 
-    public function store(StoreMembershipSaleRequest $request)
+    public function store(StoreMembershipSaleRequest $request, $locale, $person)
     {
         $sale = $this->membershipSaleService->store($request->validated());
 

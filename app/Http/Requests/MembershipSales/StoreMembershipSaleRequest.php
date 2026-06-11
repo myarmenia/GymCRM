@@ -14,6 +14,12 @@ class StoreMembershipSaleRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->route('person')) {
+            $this->merge([
+                'person_id' => $this->route('person'),
+            ]);
+        }
+
         $nullableFields = [
             'end_date',
             'trainer_id',

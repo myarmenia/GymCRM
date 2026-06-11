@@ -225,8 +225,8 @@ Route::prefix('{locale}')
 
             Route::prefix('membership-sale')->name('membership_sale.')->group(function () {
                 Route::get('/list', [MembershipSaleController::class, 'list'])->name('list');
-                Route::get('/create', [MembershipSaleController::class, 'create'])->name('create');
-                Route::post('/store', [MembershipSaleController::class, 'store'])->name('store');
+                Route::get('/create/{person}', [MembershipSaleController::class, 'create'])->name('create');
+                Route::post('/store/{person}', [MembershipSaleController::class, 'store'])->name('store');
                 Route::middleware('check.gym:MembershipSale,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');

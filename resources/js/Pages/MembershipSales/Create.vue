@@ -18,6 +18,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    selectedPerson: {
+        type: Object,
+        default: null,
+    },
     trainers: {
         type: Array,
         default: () => [],
@@ -35,7 +39,7 @@ const props = defineProps({
 const today = new Date().toISOString().slice(0, 10)
 
 const form = useForm({
-    person_id: '',
+    person_id: props.selectedPerson?.id ?? '',
     membership_plan_id: '',
     membership_discount_ids: [],
     start_date: today,
@@ -291,7 +295,10 @@ watch(() => form.amount, (value) => {
 })
 
 const submit = () => {
-    form.post(route('membership_sale.store', { locale: currentLocale.value }))
+    form.post(route('membership_sale.store', {
+        locale: currentLocale.value,
+        person: props.selectedPerson?.id,
+    }))
 }
 </script>
 
@@ -313,21 +320,11 @@ const submit = () => {
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <InputLabel value="Հաճախորդ" />
-                        <select
-                            v-model="form.person_id"
-                            class="form-select"
-                        >
-                            <option value="" disabled>
-                                Ընտրել հաճախորդ
-                            </option>
-                            <option
-                                v-for="person in people"
-                                :key="person.id"
-                                :value="person.id"
-                            >
-                                {{ formatPerson(person) }}
-                            </option>
-                        </select>
+                        <input
+                            class="form-control"
+                            :value="props.selectedPerson ? formatPerson(props.selectedPerson) : ''"
+                            readonly
+                        />
                         <InputError :message="form.errors.person_id" />
                     </div>
 
