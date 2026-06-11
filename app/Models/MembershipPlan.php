@@ -43,4 +43,33 @@ class MembershipPlan extends Model
     {
         return $this->isLocked();
     }
+
+    public function trainers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'membership_plan_trainers',
+            'membership_plan_id',
+            'trainer_id'
+        )->withPivot([
+            'price_type',
+            'price_value',
+            'total_price',
+        ]);
+    }
+
+    public function schedules()
+    {
+        return $this->belongsToMany(
+            ScheduleName::class,
+            'membership_plan_schedules',
+            'membership_plan_id',
+            'schedule_id'
+        );
+    }
+
+    public function membershipPlanTrainers()
+    {
+        return $this->hasMany(MembershipPlanTrainer::class, 'membership_plan_id');
+    }
 }
