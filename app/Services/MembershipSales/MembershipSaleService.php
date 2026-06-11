@@ -158,7 +158,7 @@ class MembershipSaleService
                     'total_price' => $totalPrice,
                     'discount_type' => $discountData['sale_type'],
                     'discount_value' => $discountData['sale_value'],
-                    'discount_amount' => $discountData['amount'],
+                    'discount_amount' => $discountData['manual_amount'],
                     'final_price' => $finalPrice,
                     'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                     'notes' => $data['notes'] ?? null,
@@ -181,8 +181,8 @@ class MembershipSaleService
                     'end_date' => $endDate?->toDateString(),
                     'visits_used' => 0,
                     'visits_left' => $membershipPlan->visits_limit,
-                    'freeze_used' => 0,
-                    'guest_used' => 0,
+                    'freeze_used' => $membershipPlan->freeze_limit ?? 0,
+                    'guest_used' => $membershipPlan->guest_limit ?? 0,
                     'next_membership_id' => null,
                     'activated_at' => null,
                     'expired_at' => null,
@@ -229,7 +229,7 @@ class MembershipSaleService
                         'salary_amount' => $commissionData['amount'],
                         'status' => 'pending',
                         'paid_at' => null,
-                        'is_kept' => false,
+                        'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),
                     ])
                 );
             }
@@ -275,7 +275,7 @@ class MembershipSaleService
                 'total_price' => $totalPrice,
                 'discount_type' => $discountData['sale_type'],
                 'discount_value' => $discountData['sale_value'],
-                'discount_amount' => $discountData['amount'],
+                'discount_amount' => $discountData['manual_amount'],
                 'final_price' => $finalPrice,
                 'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                 'notes' => $data['notes'] ?? null,
@@ -297,8 +297,8 @@ class MembershipSaleService
                 'end_date' => $endDate?->toDateString(),
                 'visits_used' => $personMembership?->visits_used ?? 0,
                 'visits_left' => $membershipPlan->visits_limit,
-                'freeze_used' => $personMembership?->freeze_used ?? 0,
-                'guest_used' => $personMembership?->guest_used ?? 0,
+                'freeze_used' => $membershipPlan->freeze_limit ?? 0,
+                'guest_used' => $membershipPlan->guest_limit ?? 0,
                 'next_membership_id' => $personMembership?->next_membership_id,
                 'activated_at' => $personMembership?->activated_at?->toDateTimeString(),
                 'expired_at' => $personMembership?->expired_at?->toDateTimeString(),
@@ -347,7 +347,7 @@ class MembershipSaleService
                     'salary_amount' => $commissionData['amount'],
                     'status' => 'pending',
                     'paid_at' => null,
-                    'is_kept' => false,
+                    'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),
                 ]));
             }
 
@@ -495,8 +495,8 @@ class MembershipSaleService
         $amount = min($membershipAmount + $manualAmount, $totalPrice);
 
         return [
-            'sale_type' => $manualType ?? ($membershipDiscounts[0]['type'] ?? null),
-            'sale_value' => $manualValue ?? ($membershipDiscounts[0]['value'] ?? null),
+            'sale_type' => $manualType,
+            'sale_value' => $manualValue,
             'amount' => $amount,
             'membership_amount' => $membershipAmount,
             'membership_discounts' => $membershipDiscounts,
@@ -570,18 +570,19 @@ class MembershipSaleService
 
     protected function getTrainer(int $trainerId, User $user, int $gymId, MembershipPlan $membershipPlan): User
     {
-        $query = User::query()
-            ->where('id', $trainerId)
+        $query = $membershipPlan
+            ->trainers()
+            ->where('users.id', $trainerId)
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             });
 
         if ($membershipPlan->gym_id) {
-            $query->where('gym_id', $membershipPlan->gym_id);
+            $query->where('users.gym_id', $membershipPlan->gym_id);
         }
 
         if (!$user->hasRole('owner')) {
-            $query->where('gym_id', $gymId);
+            $query->where('users.gym_id', $gymId);
         }
 
         return $query->firstOrFail();
@@ -589,25 +590,26 @@ class MembershipSaleService
 
     protected function calculateTrainerCommission(User $trainer, float $finalPrice, array $data): array
     {
-        $type = $trainer->getAttribute('salary_type')
-            ?? $trainer->getAttribute('commission_type')
-            ?? 'fixed';
-
-        $value = (float) (
-            $trainer->getAttribute('salary_value')
-            ?? $trainer->getAttribute('commission_value')
-            ?? 0
-        );
-
-        $amount = $type === 'percent'
-            ? $finalPrice * $value / 100
-            : $value;
+        $type = $trainer->pivot?->price_type ?? 'fixed';
+        $value = (float) ($trainer->pivot?->price_value ?? 0);
+        $amount = (float) ($trainer->pivot?->total_price ?? 0);
 
         return [
             'type' => $type === 'percent' ? 'percent' : 'fixed',
             'value' => $value,
             'amount' => $amount,
         ];
+    }
+
+    protected function shouldKeepTrainerCommission(float $paymentAmount, float $finalPrice, int $paymentMethodId): bool
+    {
+        if ($finalPrice <= 0 || $paymentAmount < $finalPrice) {
+            return false;
+        }
+
+        $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
+
+        return $paymentMethod?->slug !== 'cash';
     }
 
     protected function saleDtoData(array $data): array
