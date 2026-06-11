@@ -8,6 +8,7 @@ use App\Interfaces\CardTypes\CardTypeInterface;
 use App\Interfaces\Category\CategoryInterface;
 use App\Interfaces\CategoryTranslations\CategoryTranslationInterface;
 use App\Interfaces\Documents\DocumentInterface;
+use App\Interfaces\Discounts\DiscountInterface;
 use App\Interfaces\EntryCodes\EntryCodeInterface;
 use App\Interfaces\Gyms\GymInterface;
 use App\Interfaces\Memberships\MembershipCategoryInterface;
@@ -43,6 +44,7 @@ use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Category\CategoryRepository;
 use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Repositories\Documents\DocumentRepository;
+use App\Repositories\Discounts\DiscountRepository;
 use App\Repositories\EntryCodes\EntryCodeRepository;
 use App\Repositories\Gyms\GymRepository;
 use App\Repositories\Memberships\MembershipCategoryRepository;
@@ -98,6 +100,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(UserInterface::class, UserRepository::class);
         $this->app->bind(RoleInterface::class, RoleRepository::class);
         $this->app->bind(DocumentInterface::class, DocumentRepository::class);
+        $this->app->bind(DiscountInterface::class, DiscountRepository::class);
 
         $this->app->bind(PaymentMethodInterface::class, PaymentMethodRepository::class);
         $this->app->bind(CardTypeInterface::class, CardTypeRepository::class);

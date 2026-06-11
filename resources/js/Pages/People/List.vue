@@ -7,6 +7,7 @@ import { useTrans } from "/resources/js/trans";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     people: Object,
@@ -14,6 +15,7 @@ const props = defineProps({
 
 const page = usePage();
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
+const { hasRole } = useAuth();
 
 const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
@@ -109,9 +111,9 @@ const resetFilters = () => {
                     <span>
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
-                            <span class="d-none d-sm-inline-block"
-                                >Ավելացնել նոր անձ</span
-                            >
+                            <span class="d-none d-sm-inline-block">
+                                Ավելացնել նոր անձ
+                            </span>
                         </span>
                     </span>
                 </Link>
@@ -126,8 +128,11 @@ const resetFilters = () => {
                                 <th>Ազգանուն</th>
                                 <th>Էլ. հասցե</th>
                                 <th>Հեռախոս</th>
+                                <th>Ծննդյան ամսաթիվ</th>
                                 <th>Տեսակ</th>
-                                <th>Մարզադահլիճ(ներ)</th>
+                                <th v-if="hasRole('owner')">
+                                    Մարզասրահ(ներ)
+                                </th>
                                 <th>Գործողություններ</th>
                             </tr>
                         </thead>
@@ -138,6 +143,7 @@ const resetFilters = () => {
                                 <td>{{ person.surname || '-' }}</td>
                                 <td>{{ person.email || '-' }}</td>
                                 <td>{{ person.phone || '-' }}</td>
+                                <td>{{ person.birth_date || '-' }}</td>
                                 <td>
                                     <span
                                         class="badge"
@@ -146,7 +152,7 @@ const resetFilters = () => {
                                         {{ useTrans(`page.people.type.${person.type}`) || person.type === 'employee' ? 'Աշխատակից' : 'Այցելու' }}
                                     </span>
                                 </td>
-                                <td>
+                                <td v-if="hasRole('owner')">
                                     <span v-if="person.gyms && person.gyms.length">
                                         {{ person.gyms.map(g => g.name).join(', ') }}
                                     </span>
