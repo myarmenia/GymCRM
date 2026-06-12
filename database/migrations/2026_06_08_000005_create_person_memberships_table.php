@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('person_memberships', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('membership_sale_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('person_id')->constrained('people')->cascadeOnDelete();
+            $table->foreignId('gym_id')->constrained()->cascadeOnDelete();
             $table->foreignId('membership_plan_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('trainer_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->enum('status', [
                 'waiting',

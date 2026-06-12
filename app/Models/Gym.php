@@ -37,6 +37,16 @@ class Gym extends Model
         return $this->belongsToMany(Person::class, 'gym_person');
     }
 
+    public function membershipSales()
+    {
+        return $this->hasMany(MembershipSale::class);
+    }
+
+    public function personMemberships()
+    {
+        return $this->hasMany(PersonMembership::class);
+    }
+
     public function languages()
     {
         return $this->belongsToMany(Lang::class, 'gym_languages')

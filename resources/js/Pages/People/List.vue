@@ -171,6 +171,18 @@ const resetFilters = () => {
                                             <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="
+                                                    route('membership_sale.create', {
+                                                        locale: currentLocale,
+                                                        person: person.id,
+                                                    })
+                                                "
+                                            >
+                                                <i class="icon-base ti tabler-credit-card-pay me-1"></i>
+                                                Վաճառել աբոնեմենտ
+                                            </Link>
+                                            <Link
+                                                class="dropdown-item waves-effect"
+                                                :href="
                                                     route('person.edit', {
                                                         locale: currentLocale,
                                                         id: person.id,
