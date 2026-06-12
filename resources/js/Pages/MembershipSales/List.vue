@@ -289,6 +289,14 @@ const resetFilters = () => {
                                         <div class="dropdown-menu">
                                             <Link
                                                 class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.payments', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-cash me-1"></i>
+                                                Վճարումներ
+                                            </Link>
+
+                                            <Link
+                                                class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.edit', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>

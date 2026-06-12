@@ -110,6 +110,7 @@ class MembershipSaleService
                 'membershipPlan.trainers',
                 'personMemberships.trainer',
                 'discounts.discount.translations',
+                'payments.paymentMethod.translations',
                 'payments.paymentMethod.cardTypes',
                 'payments.cardType',
                 'trainerCommissions.trainer',
@@ -118,6 +119,72 @@ class MembershipSaleService
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
+    }
+
+    public function paymentPageData(int $id): array
+    {
+        $membershipSale = $this->getById($id);
+        $paymentMethods = PaymentMethod::query()
+            ->with(['translations', 'cardTypes'])
+            ->orderBy('id')
+            ->get();
+
+        return [
+            'membershipSale' => $membershipSale,
+            'paymentMethods' => $paymentMethods,
+            'paidAmount' => $this->paidAmount($membershipSale),
+            'debtAmount' => $this->debtAmount($membershipSale),
+        ];
+    }
+
+    public function storePayment(int $id, array $data): MembershipSale
+    {
+        DB::beginTransaction();
+
+        try {
+            $membershipSale = $this->getById($id);
+            $debtAmount = $this->debtAmount($membershipSale);
+            $paymentAmount = $this->resolveAdditionalPaymentAmount($data, $debtAmount);
+
+            if ($paymentAmount <= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => __('Payment amount must be greater than zero.'),
+                ]);
+            }
+
+            $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $paymentAmount);
+            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
+
+            $this->membershipPlanPaymentRepository->create(
+                $this->paymentDtoData([
+                    'membership_sale_id' => $membershipSale->id,
+                    'amount' => $paymentAmount,
+                    'payment_method_id' => $paymentMethod->id,
+                    'card_type_id' => $cardTypeId,
+                    'status' => 'paid',
+                    'type' => 'payment',
+                    'notes' => $data['payment_notes'] ?? null,
+                ])
+            );
+
+            $newPaidAmount = $this->paidAmount($membershipSale->fresh());
+            $updateData = [
+                'payment_status' => $this->paymentStatus($newPaidAmount, (float) $membershipSale->final_price),
+            ];
+
+            if (array_key_exists('is_hdm', $data)) {
+                $updateData['is_hdm'] = (bool) $data['is_hdm'];
+            }
+
+            $membershipSale->update($updateData);
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     public function formOptions(?int $personId = null): array
@@ -568,6 +635,20 @@ class MembershipSaleService
         return 'unpaid';
     }
 
+    protected function paidAmount(MembershipSale $membershipSale): float
+    {
+        return (float) $membershipSale
+            ->payments()
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->sum('amount');
+    }
+
+    protected function debtAmount(MembershipSale $membershipSale): float
+    {
+        return max((float) $membershipSale->final_price - $this->paidAmount($membershipSale), 0);
+    }
+
     protected function resolvePaymentAmount(array $data, float $finalPrice): float
     {
         if (!empty($data['is_full_payment'])) {
@@ -579,6 +660,29 @@ class MembershipSaleService
         }
 
         return min((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), $finalPrice);
+    }
+
+    protected function resolveAdditionalPaymentAmount(array $data, float $debtAmount): float
+    {
+        if ($debtAmount <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => __('This membership sale has no remaining debt.'),
+            ]);
+        }
+
+        if (!empty($data['is_full_payment'])) {
+            return $debtAmount;
+        }
+
+        $paymentAmount = (float) ($data['payment_amount'] ?? $data['amount'] ?? 0);
+
+        if ($paymentAmount > $debtAmount) {
+            throw ValidationException::withMessages([
+                'amount' => __('Payment amount cannot be greater than remaining debt.'),
+            ]);
+        }
+
+        return $paymentAmount;
     }
 
     protected function paymentRecordStatus(array $data, float $paymentAmount): string
