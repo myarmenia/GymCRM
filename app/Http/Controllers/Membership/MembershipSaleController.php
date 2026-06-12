@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class MembershipSaleController extends Controller
@@ -14,10 +15,11 @@ class MembershipSaleController extends Controller
     {
     }
 
-    public function list()
+    public function list(Request $request)
     {
         return Inertia::render('MembershipSales/List', [
-            'membershipSales' => $this->membershipSaleService->getAllPaginated(),
+            'membershipSales' => $this->membershipSaleService->getAllPaginated(filters: $request->query()),
+            ...$this->membershipSaleService->filterOptions(),
         ]);
     }
 

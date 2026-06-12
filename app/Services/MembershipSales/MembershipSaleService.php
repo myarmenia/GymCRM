@@ -12,6 +12,7 @@ use App\Interfaces\MembershipSaleDiscounts\MembershipSaleDiscountInterface;
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
+use App\Models\Discount;
 use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
@@ -33,7 +34,7 @@ class MembershipSaleService
     ) {
     }
 
-    public function getAllPaginated(int $perPage = 10)
+    public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
         $user = Auth::user();
 
@@ -52,10 +53,47 @@ class MembershipSaleService
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
+            ->filter($this->normalizeFilters($filters))
             ->orderBy('sold_at', 'desc')
             ->orderBy('id', 'desc')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    public function filterOptions(): array
+    {
+        $user = Auth::user();
+
+        $membershipPlans = MembershipPlan::query()
+            ->with('translations')
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $trainers = User::query()
+            ->with('roles')
+            ->whereHas('roles', function ($query) {
+                $query->where('roles.id', 7);
+            })
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->orderBy('name')
+            ->get();
+
+        $discounts = Discount::query()
+            ->with('translations')
+            ->whereHas('membershipPlans', function ($query) use ($user) {
+                if (!$user->hasRole('owner')) {
+                    $query->where('membership_plans.gym_id', $user->gym_id);
+                }
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return compact('membershipPlans', 'trainers', 'discounts');
     }
 
     public function getById(int $id): MembershipSale
@@ -202,19 +240,23 @@ class MembershipSaleService
                 );
             }
 
-            $paymentMethodId = $this->resolvePaymentMethodId($data['payment_method_id'] ?? null);
+            $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $paymentAmount);
+            $paymentMethodId = $paymentMethod?->id;
+            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
-            $this->membershipPlanPaymentRepository->create(
-                $this->paymentDtoData([
-                    'membership_sale_id' => $membershipSale->id,
-                    'amount' => $paymentAmount,
-                    'payment_method_id' => $paymentMethodId,
-                    'card_type_id' => $data['card_type_id'] ?? null,
-                    'status' => $this->paymentRecordStatus([], $paymentAmount),
-                    'type' => 'payment',
-                    'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
-                ])
-            );
+            if ($paymentMethodId) {
+                $this->membershipPlanPaymentRepository->create(
+                    $this->paymentDtoData([
+                        'membership_sale_id' => $membershipSale->id,
+                        'amount' => $paymentAmount,
+                        'payment_method_id' => $paymentMethodId,
+                        'card_type_id' => $cardTypeId,
+                        'status' => $this->paymentRecordStatus([], $paymentAmount),
+                        'type' => 'payment',
+                        'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
+                    ])
+                );
+            }
 
             if (!empty($data['trainer_id'])) {
                 $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
@@ -330,6 +372,31 @@ class MembershipSaleService
         }
 
         return $query->findOrFail($id);
+    }
+
+    protected function normalizeFilters(array $filters): array
+    {
+        unset($filters['page'], $filters['per_page']);
+
+        if (!empty($filters['date_from'])) {
+            $filters['sold_at_from'] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $filters['sold_at_to'] = $filters['date_to'];
+        }
+
+        unset($filters['date_field'], $filters['date_from'], $filters['date_to']);
+
+        return array_intersect_key($filters, array_flip([
+            'trainer_id',
+            'membership_plan_id',
+            'membership_discount_ids',
+            'manual_discount',
+            'payment_status',
+            'sold_at_from',
+            'sold_at_to',
+        ]));
     }
 
     protected function getPerson(int $id, User $user, MembershipPlan $membershipPlan): Person
@@ -520,21 +587,54 @@ class MembershipSaleService
             ?? ($paymentAmount > 0 ? 'paid' : 'unpaid');
     }
 
-    protected function resolvePaymentMethodId(?int $paymentMethodId): int
+    protected function resolvePaymentMethod(?int $paymentMethodId, float $paymentAmount): ?PaymentMethod
     {
-        if ($paymentMethodId) {
-            return $paymentMethodId;
+        if (!$paymentMethodId) {
+            if ($paymentAmount > 0) {
+                throw ValidationException::withMessages([
+                    'payment_method_id' => __('Payment method is required when payment amount is greater than zero.'),
+                ]);
+            }
+
+            return null;
         }
 
-        $paymentMethod = PaymentMethod::query()->first();
+        $paymentMethod = PaymentMethod::query()
+            ->with('cardTypes')
+            ->find($paymentMethodId);
 
         if (!$paymentMethod) {
             throw ValidationException::withMessages([
-                'payment_method_id' => __('Payment method is required.'),
+                'payment_method_id' => __('Selected payment method is invalid.'),
             ]);
         }
 
-        return (int) $paymentMethod->id;
+        return $paymentMethod;
+    }
+
+    protected function resolveCardTypeId(?PaymentMethod $paymentMethod, mixed $cardTypeId): ?int
+    {
+        if (!$paymentMethod) {
+            return null;
+        }
+
+        if (!$paymentMethod->cardTypes->count()) {
+            return null;
+        }
+
+        if (!$cardTypeId) {
+            throw ValidationException::withMessages([
+                'card_type_id' => __('Card type is required for this payment method.'),
+            ]);
+        }
+
+        if (!$paymentMethod->cardTypes->contains('id', (int) $cardTypeId)) {
+            throw ValidationException::withMessages([
+                'card_type_id' => __('Selected card type does not belong to the selected payment method.'),
+            ]);
+        }
+
+        return (int) $cardTypeId;
     }
 
     protected function getTrainer(int $trainerId, User $user, int $gymId, MembershipPlan $membershipPlan): User
@@ -570,9 +670,9 @@ class MembershipSaleService
         ];
     }
 
-    protected function shouldKeepTrainerCommission(float $paymentAmount, float $finalPrice, int $paymentMethodId): bool
+    protected function shouldKeepTrainerCommission(float $paymentAmount, float $finalPrice, ?int $paymentMethodId): bool
     {
-        if ($finalPrice <= 0 || $paymentAmount < $finalPrice) {
+        if (!$paymentMethodId || $finalPrice <= 0 || $paymentAmount < $finalPrice) {
             return false;
         }
 

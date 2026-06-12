@@ -75,7 +75,7 @@ const syncFromModelValue = value => {
     })
 
     props.selectFields.forEach(field => {
-        form[field.name] = value[field.name] ?? field.default ?? ''
+        form[field.name] = value[field.name] ?? field.default ?? (field.multiple ? [] : '')
     })
 
     form.date_field = value.date_field ?? props.defaultDateField
@@ -99,7 +99,13 @@ const cleanPayload = () => {
     })
 
     return Object.fromEntries(
-        Object.entries(payload).filter(([, value]) => value !== null && value !== '' && value !== undefined)
+        Object.entries(payload).filter(([, value]) => {
+            if (Array.isArray(value)) {
+                return value.length > 0
+            }
+
+            return value !== null && value !== '' && value !== undefined
+        })
     )
 }
 
@@ -165,9 +171,13 @@ watch(
                     <select
                         v-model="form[field.name]"
                         class="form-select"
+                        :multiple="Boolean(field.multiple)"
                         @change="updateModel"
                     >
-                        <option value="">
+                        <option
+                            v-if="!field.multiple"
+                            value=""
+                        >
                             {{ field.placeholder ?? 'Բոլորը' }}
                         </option>
                         <option
