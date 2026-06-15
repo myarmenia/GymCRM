@@ -97,9 +97,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div data-i18n="Trainers">
-                         Մարզիչներ 
-                    </div>
+                    <div data-i18n="Trainers">Մարզիչներ</div>
                 </Link>
             </li>
             <!-- 🟢 PEOPLE (նոր ավելացված) -->
@@ -264,7 +262,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     <div data-i18n="Service Types">Աբոնեմենտներ</div>
                 </Link>
             </li>
-            
+
             <!-- ======== membership categories (NEW) ========== -->
             <li
                 v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
@@ -273,11 +271,16 @@ const { hasRole, hasAnyRole } = useAuth();
                     route().current('membership-category.list') ? 'active' : '',
                 ]"
             >
-                <Link :href="route('membership-category.list', { locale: currentLocale })" class="menu-link">
+                <Link
+                    :href="
+                        route('membership-category.list', {
+                            locale: currentLocale,
+                        })
+                    "
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div data-i18n="Membership Categories">
-                        Կատեգորիաներ
-                    </div>
+                    <div data-i18n="Membership Categories">Կատեգորիաներ</div>
                 </Link>
             </li>
             <li
@@ -287,11 +290,12 @@ const { hasRole, hasAnyRole } = useAuth();
                     route().current('discount.list') ? 'active' : '',
                 ]"
             >
-                <Link :href="route('discount.list', { locale: currentLocale })" class="menu-link">
+                <Link
+                    :href="route('discount.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-percentage"></i>
-                    <div data-i18n="Զեղչեր">
-                        Զեղչեր
-                    </div>
+                    <div data-i18n="Զեղչեր">Զեղչեր</div>
                 </Link>
             </li>
         </ul>

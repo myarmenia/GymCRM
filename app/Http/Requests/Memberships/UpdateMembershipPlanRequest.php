@@ -3,6 +3,8 @@
 namespace App\Http\Requests\MembershipPlans;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
 
 class UpdateMembershipPlanRequest extends FormRequest
 {
@@ -17,6 +19,8 @@ class UpdateMembershipPlanRequest extends FormRequest
             'membership_category_id' => ['required', 'exists:membership_categories,id'],
 
             'price' => ['required', 'numeric', 'min:0'],
+            'price_type' => ['required', Rule::in(['fixed', 'percent'])],
+            'price_value' => ['required', 'numeric', 'min:0'],
 
             'duration_type' => ['required', 'in:day,month,year,visit,period'],
             'duration_value' => ['nullable', 'integer', 'min:1'],

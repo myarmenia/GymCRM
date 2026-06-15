@@ -18,7 +18,8 @@ const form = useForm({
     membership_category_id: "",
 
     price: 0,
-
+    price_type: "fixed",
+    price_value: 0,
     duration_type: "month",
     duration_value: null,
     visits_limit: null,
@@ -146,6 +147,13 @@ watch(
 );
 
 watch(
+    () => form.price_type,
+    () => {
+        form.price_value = 0;
+    },
+);
+
+watch(
     () => form.duration_value,
     (value) => {
         if (form.duration_type === "day") {
@@ -268,6 +276,41 @@ const submit = () => {
                     />
 
                     <InputError :message="form.errors.price" />
+                </div>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <InputLabel value="Աշխատավարձ" />
+
+                        <select v-model="form.price_type" class="form-select">
+                            <option value="fixed">Ֆիքսված գումար</option>
+
+                            <option value="percent">Տոկոս</option>
+                        </select>
+
+                        <InputError :message="form.errors.price_type" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <InputLabel
+                            :value="
+                                form.price_type === 'percent'
+                                    ? 'Տոկոս (%)'
+                                    : 'Գումար'
+                            "
+                        />
+
+                        <input
+                            v-model.number="form.price_value"
+                            type="number"
+                            min="0"
+                            :max="form.price_type === 'percent' ? 100 : null"
+                            step="0.01"
+                            class="form-control"
+                            @wheel.prevent
+                        />
+
+                        <InputError :message="form.errors.price_value" />
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -459,7 +502,7 @@ const submit = () => {
 
                                         <span
                                             v-if="isTrainerSelected(trainer.id)"
-                                            class="badge "
+                                            class="badge"
                                         >
                                             Ընտրված է
                                         </span>

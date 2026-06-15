@@ -48,6 +48,8 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             $plan = $this->model::create([
                 'membership_category_id' => $data['membership_category_id'],
                 'price' => $data['price'],
+                'price_type' => $data['price_type'],
+                'price_value' => $data['price_value'],
                 'duration_type' => $data['duration_type'],
                 'duration_value' => $data['duration_value'] ?? null,
                 'visits_limit' => $data['visits_limit'] ?? null,
@@ -174,6 +176,8 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             'id' => $membershipPlan->id,
             'membership_category_id' => $membershipPlan->membership_category_id,
             'price' => $membershipPlan->price,
+            'price_type' => $membershipPlan->price_type,
+            'price_value' => $membershipPlan->price_value,
             'duration_type' => $membershipPlan->duration_type,
             'duration_value' => $membershipPlan->duration_value,
             'visits_limit' => $membershipPlan->visits_limit,

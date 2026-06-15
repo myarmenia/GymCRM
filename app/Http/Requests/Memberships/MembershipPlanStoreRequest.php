@@ -25,6 +25,8 @@ class MembershipPlanStoreRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+            'price_type' => ['nullable', Rule::in(['fixed', 'percent'])],
+            'price_value' => ['nullable', 'numeric', 'min:0'],
 
             'duration_type' => [
                 'required',
