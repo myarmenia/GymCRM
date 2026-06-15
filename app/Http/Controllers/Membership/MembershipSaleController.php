@@ -35,7 +35,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.edit', ['locale' => app()->getLocale(), 'id' => $sale->id])
-            ->with('success', 'Membership sale created successfully');
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ստեղծվեց։');
     }
 
     public function edit($locale, $id)
@@ -57,7 +57,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Payment created successfully');
+            ->with('success', 'Վճարումը հաջողությամբ պահպանվեց։');
     }
 
     public function update(UpdateMembershipSaleRequest $request, $locale, $id)
@@ -66,7 +66,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Membership sale updated successfully');
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ թարմացվեց։');
     }
 
     public function destroy($locale, $id)
@@ -75,6 +75,6 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Membership sale deleted successfully');
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ջնջվեց։');
     }
 }

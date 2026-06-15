@@ -63,15 +63,15 @@ class StoreMembershipSalePaymentRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->boolean('is_partial_payment') && $this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', __('Choose either partial payment or full payment.'));
+                $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
             }
 
             if (!$this->boolean('is_partial_payment') && !$this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', __('Choose payment type.'));
+                $validator->errors()->add('is_full_payment', 'Ընտրեք վճարման տեսակը։');
             }
 
             if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
-                $validator->errors()->add('payment_method_id', __('Payment method is required when payment amount is greater than zero.'));
+                $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
             }
 
             $paymentMethod = $this->filled('payment_method_id')
@@ -83,13 +83,37 @@ class StoreMembershipSalePaymentRequest extends FormRequest
             }
 
             if ($paymentMethod->cardTypes->count() && !$this->filled('card_type_id')) {
-                $validator->errors()->add('card_type_id', __('Card type is required for this payment method.'));
+                $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
             }
 
             if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
-                $validator->errors()->add('card_type_id', __('Selected card type does not belong to the selected payment method.'));
+                $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
             }
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
+            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
+            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'amount' => 'վճարվող գումար',
+            'payment_amount' => 'վճարվող գումար',
+            'payment_method_id' => 'վճարման եղանակ',
+            'card_type_id' => 'քարտի տեսակ',
+            'payment_notes' => 'վճարման նշումներ',
+            'is_hdm' => 'ՀԴՄ',
+        ];
     }
 
     protected function submittedPaymentAmount(): float

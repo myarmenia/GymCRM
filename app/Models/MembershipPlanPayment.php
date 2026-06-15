@@ -15,6 +15,7 @@ class MembershipPlanPayment extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'is_hdm' => 'boolean',
         ];
     }
 

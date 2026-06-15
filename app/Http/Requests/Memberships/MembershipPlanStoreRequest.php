@@ -152,4 +152,43 @@ class MembershipPlanStoreRequest extends FormRequest
             }
         });
     }
+
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute դաշտը պարտադիր է։',
+            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
+            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
+            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'min.integer' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
+            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
+            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
+            'after_or_equal' => ':attribute-ը պետք է լինի :date-ից ոչ շուտ։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'max.string' => ':attribute դաշտը չի կարող գերազանցել :max նիշը։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'membership_category_id' => 'աբոնեմենտի կատեգորիա',
+            'price' => 'գին',
+            'duration_type' => 'տևողության տեսակ',
+            'duration_value' => 'տևողություն',
+            'visits_limit' => 'այցելությունների քանակ',
+            'start_date' => 'սկիզբ',
+            'end_date' => 'ավարտ',
+            'guest_limit' => 'հյուրերի քանակ',
+            'freeze_limit' => 'սառեցման քանակ',
+            'active' => 'կարգավիճակ',
+            'translations' => 'թարգմանություններ',
+            'translations.*.name' => 'անուն',
+            'translations.*.description' => 'նկարագրություն',
+            'trainers' => 'մարզիչներ',
+        ];
+    }
 }

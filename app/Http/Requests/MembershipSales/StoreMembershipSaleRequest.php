@@ -88,11 +88,11 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->boolean('is_partial_payment') && $this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', __('Choose either partial payment or full payment.'));
+                $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
             }
 
             if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
-                $validator->errors()->add('payment_method_id', __('Payment method is required when payment amount is greater than zero.'));
+                $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
             }
 
             $paymentMethod = $this->filled('payment_method_id')
@@ -103,11 +103,11 @@ class StoreMembershipSaleRequest extends FormRequest
                 $requiresCardType = $paymentMethod->cardTypes->count() > 0;
 
                 if ($requiresCardType && !$this->filled('card_type_id')) {
-                    $validator->errors()->add('card_type_id', __('Card type is required for this payment method.'));
+                    $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
                 }
 
                 if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
-                    $validator->errors()->add('card_type_id', __('Selected card type does not belong to the selected payment method.'));
+                    $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
                 }
             }
 
@@ -116,18 +116,59 @@ class StoreMembershipSaleRequest extends FormRequest
             }
 
             if (!$this->filled('discount_type')) {
-                $validator->errors()->add('discount_type', __('Discount type is required.'));
+                $validator->errors()->add('discount_type', 'Զեղչի տեսակը պարտադիր է։');
             }
 
             if (!$this->filled('discount_value')) {
-                $validator->errors()->add('discount_value', __('Discount value is required.'));
+                $validator->errors()->add('discount_value', 'Զեղչի արժեքը պարտադիր է։');
             }
 
             if ($this->input('discount_type') === 'percent' && (float) $this->input('discount_value') > 100) {
-                $validator->errors()->add('discount_value', __('Percentage discount cannot be greater than 100.'));
+                $validator->errors()->add('discount_value', 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։');
             }
 
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute դաշտը պարտադիր է։',
+            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
+            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
+            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
+            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
+            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
+            'after_or_equal' => ':attribute-ը պետք է լինի :date-ից ոչ շուտ։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'person_id' => 'հաճախորդ',
+            'membership_plan_id' => 'աբոնեմենտ',
+            'start_date' => 'սկիզբ',
+            'end_date' => 'ավարտ',
+            'membership_discount_ids' => 'աբոնեմենտի զեղչեր',
+            'membership_discount_ids.*' => 'աբոնեմենտի զեղչ',
+            'discount_type' => 'զեղչի տեսակ',
+            'discount_value' => 'զեղչի արժեք',
+            'is_hdm' => 'ՀԴՄ',
+            'notes' => 'նշումներ',
+            'trainer_id' => 'մարզիչ',
+            'amount' => 'վճարվող գումար',
+            'payment_amount' => 'վճարվող գումար',
+            'payment_method_id' => 'վճարման եղանակ',
+            'card_type_id' => 'քարտի տեսակ',
+            'payment_type' => 'վճարման տեսակ',
+            'payment_record_status' => 'վճարման կարգավիճակ',
+            'payment_notes' => 'վճարման նշումներ',
+        ];
     }
 
     protected function submittedPaymentAmount(): float

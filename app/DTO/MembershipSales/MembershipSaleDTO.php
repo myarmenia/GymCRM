@@ -16,7 +16,6 @@ class MembershipSaleDTO
         public float $final_price,
         public string $payment_status,
         public ?string $notes,
-        public bool $is_hdm,
         public float $discount_membership_amount,
         public ?string $sold_at,
     ) {}
@@ -35,7 +34,6 @@ class MembershipSaleDTO
             final_price: (float) ($data['final_price'] ?? 0),
             payment_status: $data['payment_status'] ?? 'unpaid',
             notes: $data['notes'] ?? null,
-            is_hdm: (bool) ($data['is_hdm'] ?? false),
             discount_membership_amount: (float) ($data['discount_membership_amount'] ?? 0),
             sold_at: $data['sold_at'] ?? null,
         );
@@ -55,7 +53,6 @@ class MembershipSaleDTO
             'final_price' => $this->final_price,
             'payment_status' => $this->payment_status,
             'notes' => $this->notes,
-            'is_hdm' => $this->is_hdm,
             'discount_membership_amount' => $this->discount_membership_amount,
             'sold_at' => $this->sold_at,
         ];

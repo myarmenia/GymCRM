@@ -32,7 +32,7 @@ const form = useForm({
     payment_method_id: '',
     card_type_id: '',
     payment_notes: '',
-    is_hdm: Boolean(props.membershipSale.is_hdm),
+    is_hdm: false,
 })
 
 const membership = computed(() => props.membershipSale.person_memberships?.[0] ?? null)
@@ -268,6 +268,7 @@ const submit = () => {
                                         <th>Քարտ</th>
                                         <th>Տեսակ</th>
                                         <th>Կարգավիճակ</th>
+                                        <th>ՀԴՄ</th>
                                         <th>Ամսաթիվ</th>
                                     </tr>
                                 </thead>
@@ -281,6 +282,7 @@ const submit = () => {
                                         <td>{{ payment.card_type?.name ?? payment.card_type?.slug ?? '-' }}</td>
                                         <td>{{ paymentTypeLabel(payment.type) }}</td>
                                         <td>{{ paymentStatusLabel(payment.status) }}</td>
+                                        <td>{{ payment.is_hdm ? 'Այո' : 'Ոչ' }}</td>
                                         <td>{{ formatDate(payment.created_at) }}</td>
                                     </tr>
                                 </tbody>

@@ -148,7 +148,7 @@ class MembershipSaleService
 
             if ($paymentAmount <= 0) {
                 throw ValidationException::withMessages([
-                    'amount' => __('Payment amount must be greater than zero.'),
+                    'amount' => 'Վճարվող գումարը պետք է մեծ լինի 0-ից։',
                 ]);
             }
 
@@ -163,20 +163,15 @@ class MembershipSaleService
                     'card_type_id' => $cardTypeId,
                     'status' => 'paid',
                     'type' => 'payment',
+                    'is_hdm' => $data['is_hdm'] ?? false,
                     'notes' => $data['payment_notes'] ?? null,
                 ])
             );
 
             $newPaidAmount = $this->paidAmount($membershipSale->fresh());
-            $updateData = [
+            $membershipSale->update([
                 'payment_status' => $this->paymentStatus($newPaidAmount, (float) $membershipSale->final_price),
-            ];
-
-            if (array_key_exists('is_hdm', $data)) {
-                $updateData['is_hdm'] = (bool) $data['is_hdm'];
-            }
-
-            $membershipSale->update($updateData);
+            ]);
 
             DB::commit();
 
@@ -268,7 +263,6 @@ class MembershipSaleService
                     'final_price' => $finalPrice,
                     'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                     'notes' => $data['notes'] ?? null,
-                    'is_hdm' => $data['is_hdm'] ?? false,
                     'discount_membership_amount' => $discountData['membership_amount'],
                     'sold_at' => now()->toDateTimeString(),
                 ])
@@ -320,6 +314,7 @@ class MembershipSaleService
                         'card_type_id' => $cardTypeId,
                         'status' => $this->paymentRecordStatus([], $paymentAmount),
                         'type' => 'payment',
+                        'is_hdm' => $data['is_hdm'] ?? false,
                         'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
                     ])
                 );
@@ -397,7 +392,6 @@ class MembershipSaleService
                 'final_price' => $finalPrice,
                 'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                 'notes' => $membershipSale->notes,
-                'is_hdm' => $membershipSale->is_hdm,
                 'discount_membership_amount' => $discountData['membership_amount'],
                 'sold_at' => $membershipSale->sold_at?->toDateTimeString() ?? now()->toDateTimeString(),
             ]));
@@ -475,7 +469,7 @@ class MembershipSaleService
 
             if (!$hasGym || (int) $membershipPlan->gym_id !== (int) $user->gym_id) {
                 throw ValidationException::withMessages([
-                    'person_id' => __('Selected person does not belong to your gym.'),
+                    'person_id' => 'Ընտրված հաճախորդը չի պատկանում ձեր մարզասրահին։',
                 ]);
             }
         }
@@ -504,7 +498,7 @@ class MembershipSaleService
 
         if (!$gymId) {
             throw ValidationException::withMessages([
-                'gym_id' => __('Gym is required.'),
+                'gym_id' => 'Մարզասրահը պարտադիր է։',
             ]);
         }
 
@@ -547,7 +541,7 @@ class MembershipSaleService
 
         if ($discounts->count() !== count($discountIds)) {
             throw ValidationException::withMessages([
-                'membership_discount_ids' => __('One or more selected discounts are not available for this membership plan.'),
+                'membership_discount_ids' => 'Ընտրված զեղչերից մեկը կամ մի քանիսը հասանելի չեն այս աբոնեմենտի համար։',
             ]);
         }
 
@@ -666,7 +660,7 @@ class MembershipSaleService
     {
         if ($debtAmount <= 0) {
             throw ValidationException::withMessages([
-                'amount' => __('This membership sale has no remaining debt.'),
+                'amount' => 'Այս վաճառքի համար մնացած պարտք չկա։',
             ]);
         }
 
@@ -678,7 +672,7 @@ class MembershipSaleService
 
         if ($paymentAmount > $debtAmount) {
             throw ValidationException::withMessages([
-                'amount' => __('Payment amount cannot be greater than remaining debt.'),
+                'amount' => 'Վճարվող գումարը չի կարող գերազանցել մնացած պարտքը։',
             ]);
         }
 
@@ -696,7 +690,7 @@ class MembershipSaleService
         if (!$paymentMethodId) {
             if ($paymentAmount > 0) {
                 throw ValidationException::withMessages([
-                    'payment_method_id' => __('Payment method is required when payment amount is greater than zero.'),
+                    'payment_method_id' => 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։',
                 ]);
             }
 
@@ -709,7 +703,7 @@ class MembershipSaleService
 
         if (!$paymentMethod) {
             throw ValidationException::withMessages([
-                'payment_method_id' => __('Selected payment method is invalid.'),
+                'payment_method_id' => 'Ընտրված վճարման եղանակը անվավեր է։',
             ]);
         }
 
@@ -728,13 +722,13 @@ class MembershipSaleService
 
         if (!$cardTypeId) {
             throw ValidationException::withMessages([
-                'card_type_id' => __('Card type is required for this payment method.'),
+                'card_type_id' => 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։',
             ]);
         }
 
         if (!$paymentMethod->cardTypes->contains('id', (int) $cardTypeId)) {
             throw ValidationException::withMessages([
-                'card_type_id' => __('Selected card type does not belong to the selected payment method.'),
+                'card_type_id' => 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։',
             ]);
         }
 

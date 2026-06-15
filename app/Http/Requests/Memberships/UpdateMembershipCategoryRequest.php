@@ -20,4 +20,29 @@ class UpdateMembershipCategoryRequest extends FormRequest
             'translations.*.description' => 'nullable|string',
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute դաշտը պարտադիր է։',
+            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'max.string' => ':attribute դաշտը չի կարող գերազանցել :max նիշը։',
+            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
+            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'unique' => ':attribute դաշտի արժեքը արդեն օգտագործվում է։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'gym_id' => 'մարզասրահ',
+            'active' => 'կարգավիճակ',
+            'slug' => 'հղում',
+            'translations' => 'թարգմանություններ',
+            'translations.*.name' => 'անուն',
+            'translations.*.description' => 'նկարագրություն',
+        ];
+    }
 }

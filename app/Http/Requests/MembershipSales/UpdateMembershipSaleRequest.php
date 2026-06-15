@@ -48,17 +48,40 @@ class UpdateMembershipSaleRequest extends FormRequest
             }
 
             if (!$this->filled('discount_type')) {
-                $validator->errors()->add('discount_type', __('Discount type is required.'));
+                $validator->errors()->add('discount_type', 'Զեղչի տեսակը պարտադիր է։');
             }
 
             if (!$this->filled('discount_value')) {
-                $validator->errors()->add('discount_value', __('Discount value is required.'));
+                $validator->errors()->add('discount_value', 'Զեղչի արժեքը պարտադիր է։');
             }
 
             if ($this->input('discount_type') === 'percent' && (float) $this->input('discount_value') > 100) {
-                $validator->errors()->add('discount_value', __('Percentage discount cannot be greater than 100.'));
+                $validator->errors()->add('discount_value', 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։');
             }
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
+            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
+            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
+            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'membership_discount_ids' => 'աբոնեմենտի զեղչեր',
+            'membership_discount_ids.*' => 'աբոնեմենտի զեղչ',
+            'discount_type' => 'զեղչի տեսակ',
+            'discount_value' => 'զեղչի արժեք',
+        ];
     }
 
     protected function discountTypes(): array
