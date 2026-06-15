@@ -35,7 +35,7 @@ class MembershipSaleController extends Controller
         $sale = $this->membershipSaleService->store($request->validated());
 
         return redirect()
-            ->route('membership_sale.edit', ['locale' => app()->getLocale(), 'id' => $sale->id])
+            ->route('membership_sale.list', ['locale' => app()->getLocale()])
             ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ստեղծվեց։');
     }
 

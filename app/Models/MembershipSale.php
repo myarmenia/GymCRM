@@ -144,4 +144,9 @@ class MembershipSale extends Model
     {
         return $this->hasMany(TrainerCommission::class);
     }
+
+    public function salespersonCommissions()
+    {
+        return $this->hasMany(SalespersonCommission::class);
+    }
 }

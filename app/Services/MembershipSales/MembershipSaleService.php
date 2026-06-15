@@ -6,11 +6,13 @@ use App\DTO\MembershipPlanPayments\MembershipPlanPaymentDTO;
 use App\DTO\MembershipSaleDiscounts\MembershipSaleDiscountDTO;
 use App\DTO\MembershipSales\MembershipSaleDTO;
 use App\DTO\PersonMemberships\PersonMembershipDTO;
+use App\DTO\SalespersonCommissions\SalespersonCommissionDTO;
 use App\DTO\TrainerCommissions\TrainerCommissionDTO;
 use App\Interfaces\MembershipPlanPayments\MembershipPlanPaymentInterface;
 use App\Interfaces\MembershipSaleDiscounts\MembershipSaleDiscountInterface;
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
+use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
 use App\Models\MembershipPlan;
@@ -31,6 +33,7 @@ class MembershipSaleService
         protected MembershipSaleDiscountInterface $membershipSaleDiscountRepository,
         protected MembershipPlanPaymentInterface $membershipPlanPaymentRepository,
         protected TrainerCommissionInterface $trainerCommissionRepository,
+        protected SalespersonCommissionInterface $salespersonCommissionRepository,
     ) {
     }
 
@@ -49,6 +52,7 @@ class MembershipSaleService
                 'discounts.discount.translations',
                 'payments.paymentMethod.translations',
                 'payments.cardType',
+                'salespersonCommissions.salesperson',
             ])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
@@ -114,6 +118,7 @@ class MembershipSaleService
                 'payments.paymentMethod.cardTypes',
                 'payments.cardType',
                 'trainerCommissions.trainer',
+                'salespersonCommissions.salesperson',
             ])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
@@ -404,6 +409,22 @@ class MembershipSaleService
                 );
             }
 
+            $salespersonCommissionData = $this->calculateSalespersonCommission($membershipPlan, $finalPrice);
+            $this->salespersonCommissionRepository->create(
+                $this->salespersonCommissionDtoData([
+                    'salesperson_id' => $user->id,
+                    'membership_sale_id' => $membershipSale->id,
+                    'person_membership_id' => $personMembership->id,
+                    'membership_plan_id' => $membershipPlan->id,
+                    'salary_type' => $salespersonCommissionData['type'],
+                    'salary_value' => $salespersonCommissionData['value'],
+                    'salary_amount' => $salespersonCommissionData['amount'],
+                    'sale_amount' => $finalPrice,
+                    'status' => 'pending',
+                    'paid_at' => null,
+                ])
+            );
+
             DB::commit();
 
             return $membershipSale->load([
@@ -411,6 +432,7 @@ class MembershipSaleService
                 'discounts',
                 'payments',
                 'trainerCommissions',
+                'salespersonCommissions',
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -779,6 +801,10 @@ class MembershipSaleService
 
     protected function resolvePaymentAmount(array $data, float $finalPrice): float
     {
+        if (!empty($data['stay_debt'])) {
+            return 0;
+        }
+
         if (!empty($data['is_full_payment'])) {
             return $finalPrice;
         }
@@ -929,6 +955,21 @@ class MembershipSaleService
         ];
     }
 
+    protected function calculateSalespersonCommission(MembershipPlan $membershipPlan, float $finalPrice): array
+    {
+        $type = $membershipPlan->price_type === 'percent' ? 'percent' : 'fixed';
+        $value = (float) ($membershipPlan->price_value ?? 0);
+        $amount = $type === 'percent'
+            ? ($finalPrice * $value / 100)
+            : $value;
+
+        return [
+            'type' => $type,
+            'value' => $value,
+            'amount' => $amount,
+        ];
+    }
+
     protected function shouldKeepTrainerCommission(float $paymentAmount, float $finalPrice, ?int $paymentMethodId): bool
     {
         if (!$paymentMethodId || $finalPrice <= 0 || $paymentAmount < $finalPrice) {
@@ -963,6 +1004,11 @@ class MembershipSaleService
     protected function trainerCommissionDtoData(array $data): array
     {
         return TrainerCommissionDTO::fromArray($data)->toArray();
+    }
+
+    protected function salespersonCommissionDtoData(array $data): array
+    {
+        return SalespersonCommissionDTO::fromArray($data)->toArray();
     }
 
     protected function discountTypes(): array

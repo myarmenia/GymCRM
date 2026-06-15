@@ -72,6 +72,7 @@ class StoreMembershipSaleRequest extends FormRequest
             'is_hdm' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
             'trainer_id' => ['nullable', 'integer', 'exists:users,id'],
+            'stay_debt' => ['sometimes', 'boolean'],
             'is_partial_payment' => ['sometimes', 'boolean'],
             'is_full_payment' => ['sometimes', 'boolean'],
             'amount' => ['nullable', 'numeric', 'min:0'],
@@ -91,23 +92,25 @@ class StoreMembershipSaleRequest extends FormRequest
                 $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
             }
 
-            if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
-                $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
-            }
-
-            $paymentMethod = $this->filled('payment_method_id')
-                ? PaymentMethod::query()->with('cardTypes')->find($this->input('payment_method_id'))
-                : null;
-
-            if ($paymentMethod) {
-                $requiresCardType = $paymentMethod->cardTypes->count() > 0;
-
-                if ($requiresCardType && !$this->filled('card_type_id')) {
-                    $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
+            if (!$this->boolean('stay_debt')) {
+                if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
+                    $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
                 }
 
-                if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
-                    $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
+                $paymentMethod = $this->filled('payment_method_id')
+                    ? PaymentMethod::query()->with('cardTypes')->find($this->input('payment_method_id'))
+                    : null;
+
+                if ($paymentMethod) {
+                    $requiresCardType = $paymentMethod->cardTypes->count() > 0;
+
+                    if ($requiresCardType && !$this->filled('card_type_id')) {
+                        $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
+                    }
+
+                    if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
+                        $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
+                    }
                 }
             }
 
@@ -161,6 +164,7 @@ class StoreMembershipSaleRequest extends FormRequest
             'is_hdm' => 'ՀԴՄ',
             'notes' => 'նշումներ',
             'trainer_id' => 'մարզիչ',
+            'stay_debt' => 'մնալ պարտք',
             'amount' => 'վճարվող գումար',
             'payment_amount' => 'վճարվող գումար',
             'payment_method_id' => 'վճարման եղանակ',
@@ -173,6 +177,10 @@ class StoreMembershipSaleRequest extends FormRequest
 
     protected function submittedPaymentAmount(): float
     {
+        if ($this->boolean('stay_debt')) {
+            return 0;
+        }
+
         if ($this->boolean('is_full_payment')) {
             return (float) ($this->input('payment_amount') ?? $this->input('amount') ?? 0);
         }

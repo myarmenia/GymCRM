@@ -85,4 +85,9 @@ class MembershipPlan extends Model
     {
         return $this->hasMany(MembershipPlanTrainer::class, 'membership_plan_id');
     }
+
+    public function salespersonCommissions()
+    {
+        return $this->hasMany(SalespersonCommission::class);
+    }
 }
