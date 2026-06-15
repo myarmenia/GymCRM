@@ -187,6 +187,8 @@ class MembershipPlanService
             $membershipPlan = $this->membershipPlanRepository->update($id, [
                 'membership_category_id' => $data['membership_category_id'],
                 'price' => $data['price'],
+                'price_type' => $data['price_type'],
+                'price_value' => $data['price_value'],
                 'duration_type' => $data['duration_type'],
                 'duration_value' => $data['duration_value'] ?? null,
                 'visits_limit' => $data['visits_limit'] ?? null,
