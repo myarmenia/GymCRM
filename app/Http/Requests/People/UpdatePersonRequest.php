@@ -29,7 +29,7 @@ class UpdatePersonRequest extends FormRequest
             ],
             'password' => 'nullable|string|min:6',
             'phone' => 'sometimes|required|string|max:50',
-            'type' => 'sometimes|required|in:visitor,employee',
+            'type' => 'sometimes|required|in:visitor,guest',
             'entry_code_id' => 'nullable|exists:entry_codes,id',
             'birth_date' => 'sometimes|required|date',
             'gender' => 'nullable|string|in:male,female,other',

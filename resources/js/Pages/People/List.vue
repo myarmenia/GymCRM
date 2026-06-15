@@ -3,7 +3,6 @@ import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
 import { Link, router, usePage } from "@inertiajs/vue3";
-import { useTrans } from "/resources/js/trans";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
@@ -24,21 +23,51 @@ const filters = ref({
     ...Object.fromEntries(new URLSearchParams(window.location.search)),
 });
 const peopleTypes = [
-    { value: "visitor", label: "Visitor" },
-    { value: "guest", label: "Guest" },
+    { value: "visitor", label: "Այցելու" },
+    { value: "guest", label: "Հյուր" },
 ];
 const peopleFilterSelectFields = computed(() => [
     {
         name: "type",
-        label: "Type",
-        placeholder: "All types",
+        label: "Տեսակ",
+        placeholder: "Բոլորը",
         options: peopleTypes,
+    },
+    {
+        name: "has_membership",
+        label: "Աբոնեմենտ",
+        placeholder: "Բոլորը",
+        options: [
+            { value: "with", label: "Աբոնեմենտ ունեցողներ" },
+            { value: "without", label: "Առանց աբոնեմենտի" },
+        ],
     },
 ]);
 const peopleFilterDateFields = [
-    { value: "birth_date", label: "Birth date" },
-    { value: "created_at", label: "Created at" },
+    { value: "birth_date", label: "Ծննդյան ամսաթիվ" },
+    { value: "created_at", label: "Ստեղծման ամսաթիվ" },
 ];
+const personTypeLabel = type => ({
+    visitor: "Այցելու",
+    guest: "Հյուր",
+}[type] ?? type ?? "-");
+
+const personTypeClass = type => ({
+    visitor: "bg-label-secondary",
+    guest: "bg-label-info",
+}[type] ?? "bg-label-secondary");
+const planName = plan => {
+    return plan?.translations?.find(item => item.locale === currentLocale.value)?.name
+        ?? plan?.name
+        ?? (plan?.id ? `#${plan.id}` : null);
+};
+const membershipNames = person => {
+    const names = (person.memberships ?? [])
+        .map(membership => planName(membership.membership_plan))
+        .filter(Boolean);
+
+    return names.length ? names.join(", ") : "Ոչ";
+};
 
 watch(
     () => props.people,
@@ -130,6 +159,7 @@ const resetFilters = () => {
                                 <th>Հեռախոս</th>
                                 <th>Ծննդյան ամսաթիվ</th>
                                 <th>Տեսակ</th>
+                                <th>Աբոնեմենտ</th>
                                 <th v-if="hasRole('owner')">
                                     Մարզասրահ(ներ)
                                 </th>
@@ -147,10 +177,13 @@ const resetFilters = () => {
                                 <td>
                                     <span
                                         class="badge"
-                                        :class="person.type === 'employee' ? 'bg-label-primary' : 'bg-label-secondary'"
+                                        :class="personTypeClass(person.type)"
                                     >
-                                        {{ useTrans(`page.people.type.${person.type}`) || person.type === 'employee' ? 'Աշխատակից' : 'Այցելու' }}
+                                        {{ personTypeLabel(person.type) }}
                                     </span>
+                                </td>
+                                <td>
+                                    {{ membershipNames(person) }}
                                 </td>
                                 <td v-if="hasRole('owner')">
                                     <span v-if="person.gyms && person.gyms.length">

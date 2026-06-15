@@ -38,7 +38,7 @@ class MembershipCategoryController extends Controller
     public function store(StoreMembershipCategoryRequest $request)
     {
         $category = $this->service->store(MembershipCategoryDTO::fromArray($request->all()));
-        return redirect()->route('membership-category.edit', ['locale' => app()->getLocale(), 'id' => $category->id])
+        return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
             ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ ստեղծվեց։');
     }
 
