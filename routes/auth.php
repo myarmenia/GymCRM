@@ -14,6 +14,7 @@ use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\Membership\MembershipPlanController;
+use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
@@ -219,6 +220,17 @@ Route::prefix('{locale}')
                 Route::middleware('check.gym:MembershipPlan,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipPlanController::class, 'edit'])->name('edit');
                     Route::put('/update/{id}', [MembershipPlanController::class, 'update'])->name('update');
+                });
+            });
+
+            Route::prefix('membership-sale')->name('membership_sale.')->group(function () {
+                Route::get('/list', [MembershipSaleController::class, 'list'])->name('list');
+                Route::get('/create/{person}', [MembershipSaleController::class, 'create'])->name('create');
+                Route::post('/store/{person}', [MembershipSaleController::class, 'store'])->name('store');
+                Route::middleware('check.gym:MembershipSale,id')->group(function () {
+                    Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
+                    Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
+                    Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
             });
 

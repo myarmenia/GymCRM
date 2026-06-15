@@ -27,6 +27,13 @@ class MembershipPlan extends Model
         return $this->hasMany(PersonMembership::class);
     }
 
+    public function membershipSales()
+    {
+        return $this->hasMany(MembershipSale::class);
+    }
+
+
+
     public function translations()
     {
         return $this->hasMany(MembershipPlanTranslation::class);

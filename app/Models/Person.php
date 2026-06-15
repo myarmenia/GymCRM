@@ -104,6 +104,11 @@ class Person extends Model
         return $this->hasMany(PersonMembership::class);
     }
 
+    public function membershipSales()
+    {
+        return $this->hasMany(MembershipSale::class);
+    }
+
     public function activeMemberships()
     {
         return $this->hasMany(PersonMembership::class)

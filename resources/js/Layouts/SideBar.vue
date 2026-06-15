@@ -298,6 +298,20 @@ const { hasRole, hasAnyRole } = useAuth();
                     <div data-i18n="Զեղչեր">Զեղչեր</div>
                 </Link>
             </li>
+            <li
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
+                :class="[
+                    'menu-item',
+                    route().current('membership_sale.list') ? 'active' : '',
+                ]"
+            >
+                <Link :href="route('membership_sale.list', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-receipt"></i>
+                    <div data-i18n="Membership Sales">
+                        Աբոնեմենտների վաճառքներ
+                    </div>
+                </Link>
+            </li>
         </ul>
     </aside>
 
