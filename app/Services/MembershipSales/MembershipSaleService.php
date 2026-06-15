@@ -133,7 +133,10 @@ class MembershipSaleService
             'membershipSale' => $membershipSale,
             'paymentMethods' => $paymentMethods,
             'paidAmount' => $this->paidAmount($membershipSale),
+            'refundedAmount' => $this->refundedAmount($membershipSale),
+            'netPaidAmount' => $this->netPaidAmount($membershipSale),
             'debtAmount' => $this->debtAmount($membershipSale),
+            'availableRefundAmount' => $this->availableRefundAmount($membershipSale),
         ];
     }
 
@@ -168,9 +171,8 @@ class MembershipSaleService
                 ])
             );
 
-            $newPaidAmount = $this->paidAmount($membershipSale->fresh());
             $membershipSale->update([
-                'payment_status' => $this->paymentStatus($newPaidAmount, (float) $membershipSale->final_price),
+                'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
             ]);
 
             DB::commit();
@@ -180,6 +182,69 @@ class MembershipSaleService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function storeRefund(int $id, array $data): MembershipSale
+    {
+        DB::beginTransaction();
+
+        try {
+            $membershipSale = $this->getById($id);
+
+            if ($this->paidAmount($membershipSale) <= 0) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Վճարումը չի գտնվել։',
+                ]);
+            }
+
+            $availableRefundAmount = $this->availableRefundAmount($membershipSale);
+            $refundAmount = $this->resolveRefundAmount($data, $availableRefundAmount);
+
+            $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $refundAmount);
+            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
+
+            $this->membershipPlanPaymentRepository->create(
+                $this->paymentDtoData([
+                    'membership_sale_id' => $membershipSale->id,
+                    'amount' => $refundAmount,
+                    'payment_method_id' => $paymentMethod->id,
+                    'card_type_id' => $cardTypeId,
+                    'status' => 'paid',
+                    'type' => 'refund',
+                    'is_hdm' => $data['is_hdm'] ?? false,
+                    'notes' => $data['refund_notes'] ?? null,
+                ])
+            );
+
+            $membershipSale->update([
+                'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
+            ]);
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function cancelMembership(int $id): MembershipSale
+    {
+        $membershipSale = $this->getById($id);
+        $personMembership = $membershipSale->personMemberships->first();
+
+        if (!$personMembership) {
+            throw ValidationException::withMessages([
+                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+            ]);
+        }
+
+        $personMembership->update([
+            'status' => 'cancelled',
+        ]);
+
+        return $this->getById($membershipSale->id);
     }
 
     public function formOptions(?int $personId = null): array
@@ -378,7 +443,7 @@ class MembershipSaleService
             $totalPrice = (float) $membershipSale->total_price;
             $discountData = $this->calculateDiscount($discounts, $totalPrice, $data);
             $finalPrice = max($totalPrice - $discountData['amount'], 0);
-            $paymentAmount = (float) $membershipSale->payments()->sum('amount');
+            $paymentAmount = $this->netPaidAmount($membershipSale);
 
             $membershipSale->update($this->saleDtoData([
                 'user_id' => $membershipSale->user_id,
@@ -439,12 +504,21 @@ class MembershipSaleService
     {
         unset($filters['page'], $filters['per_page']);
 
-        if (!empty($filters['date_from'])) {
-            $filters['sold_at_from'] = $filters['date_from'];
-        }
+        $dateFieldMap = [
+            'membership_start_date' => 'membership_start_date',
+            'membership_end_date' => 'membership_end_date',
+        ];
 
-        if (!empty($filters['date_to'])) {
-            $filters['sold_at_to'] = $filters['date_to'];
+        $dateField = $filters['date_field'] ?? null;
+
+        if ($dateField && isset($dateFieldMap[$dateField])) {
+            if (!empty($filters['date_from'])) {
+                $filters[$dateFieldMap[$dateField] . '_from'] = $filters['date_from'];
+            }
+
+            if (!empty($filters['date_to'])) {
+                $filters[$dateFieldMap[$dateField] . '_to'] = $filters['date_to'];
+            }
         }
 
         unset($filters['date_field'], $filters['date_from'], $filters['date_to']);
@@ -455,8 +529,10 @@ class MembershipSaleService
             'membership_discount_ids',
             'manual_discount',
             'payment_status',
-            'sold_at_from',
-            'sold_at_to',
+            'membership_start_date_from',
+            'membership_start_date_to',
+            'membership_end_date_from',
+            'membership_end_date_to',
         ]));
     }
 
@@ -638,9 +714,67 @@ class MembershipSaleService
             ->sum('amount');
     }
 
+    protected function refundedAmount(MembershipSale $membershipSale): float
+    {
+        return (float) $membershipSale
+            ->payments()
+            ->where('type', 'refund')
+            ->where('status', 'paid')
+            ->sum('amount');
+    }
+
+    protected function netPaidAmount(MembershipSale $membershipSale): float
+    {
+        return max($this->paidAmount($membershipSale) - $this->refundedAmount($membershipSale), 0);
+    }
+
     protected function debtAmount(MembershipSale $membershipSale): float
     {
-        return max((float) $membershipSale->final_price - $this->paidAmount($membershipSale), 0);
+        if ($this->isMembershipCancelled($membershipSale)) {
+            return 0;
+        }
+
+        return max((float) $membershipSale->final_price - $this->netPaidAmount($membershipSale), 0);
+    }
+
+    protected function availableRefundAmount(MembershipSale $membershipSale): float
+    {
+        $paidAmount = $this->paidAmount($membershipSale);
+        $refundedAmount = $this->refundedAmount($membershipSale);
+
+        if ($paidAmount <= 0) {
+            return 0;
+        }
+
+        if ($this->isMembershipCancelled($membershipSale)) {
+            return max($paidAmount - $refundedAmount, 0);
+        }
+
+        $overpaidAmount = max($paidAmount - (float) $membershipSale->final_price, 0);
+
+        return max($overpaidAmount - $refundedAmount, 0);
+    }
+
+    protected function isMembershipCancelled(MembershipSale $membershipSale): bool
+    {
+        $membership = $membershipSale->relationLoaded('personMemberships')
+            ? $membershipSale->personMemberships->first()
+            : $membershipSale->personMemberships()->first();
+
+        return $membership?->status === 'cancelled';
+    }
+
+    protected function recalculatedPaymentStatus(MembershipSale $membershipSale): string
+    {
+        $paidAmount = $this->paidAmount($membershipSale);
+        $refundedAmount = $this->refundedAmount($membershipSale);
+        $netPaidAmount = max($paidAmount - $refundedAmount, 0);
+
+        if ($paidAmount > 0 && $refundedAmount >= $paidAmount) {
+            return 'refunded';
+        }
+
+        return $this->paymentStatus($netPaidAmount, (float) $membershipSale->final_price);
     }
 
     protected function resolvePaymentAmount(array $data, float $finalPrice): float
@@ -677,6 +811,33 @@ class MembershipSaleService
         }
 
         return $paymentAmount;
+    }
+
+    protected function resolveRefundAmount(array $data, float $availableRefundAmount): float
+    {
+        if ($availableRefundAmount <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => 'Վերադարձն անհնար է, քանի որ վերադարձվող գումար առկա չէ։',
+            ]);
+        }
+
+        $refundAmount = !empty($data['is_full_refund'])
+            ? $availableRefundAmount
+            : (float) ($data['amount'] ?? 0);
+
+        if ($refundAmount <= 0) {
+            throw ValidationException::withMessages([
+                'amount' => 'Վերադարձի գումարը պետք է լինի 0-ից մեծ։',
+            ]);
+        }
+
+        if ($refundAmount > $availableRefundAmount) {
+            throw ValidationException::withMessages([
+                'amount' => 'Վերադարձի գումարը չի կարող գերազանցել հասանելի վերադարձի գումարը։',
+            ]);
+        }
+
+        return $refundAmount;
     }
 
     protected function paymentRecordStatus(array $data, float $paymentAmount): string

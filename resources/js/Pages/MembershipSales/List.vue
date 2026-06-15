@@ -39,7 +39,7 @@ const queryValue = name => {
     return values[0] ?? ''
 }
 const filters = ref({
-    date_field: queryParams.get('date_field') ?? 'sold_at',
+    date_field: queryParams.get('date_field') ?? '',
     trainer_id: queryParams.get('trainer_id') ?? '',
     membership_plan_id: queryParams.get('membership_plan_id') ?? '',
     membership_discount_ids: queryValue('membership_discount_ids'),
@@ -110,7 +110,8 @@ const saleFilterSelectFields = computed(() => [
 ])
 
 const saleFilterDateFields = [
-    { value: 'sold_at', label: 'Վաճառքի օր' },
+    { value: 'membership_start_date', label: 'Աբոնեմենտի սկիզբ' },
+    { value: 'membership_end_date', label: 'Աբոնեմենտի ավարտ' },
 ]
 
 watch(
@@ -155,10 +156,38 @@ const statusClass = status => ({
 
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
-const paidAmount = sale => (sale.payments ?? []).reduce((total, payment) => total + Number(payment.amount || 0), 0)
-const debtAmount = sale => Math.max(Number(sale.final_price || 0) - paidAmount(sale), 0)
-const membershipDiscountAmount = sale => {
-    return (sale.discounts ?? []).reduce((total, discount) => total + Number(discount.discount_amount || 0), 0)
+const paidAmount = sale => (sale.payments ?? [])
+    .filter(payment => payment.type === 'payment' && payment.status === 'paid')
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+const refundedAmount = sale => (sale.payments ?? [])
+    .filter(payment => payment.type === 'refund' && payment.status === 'paid')
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+const netPaidAmount = sale => Math.max(paidAmount(sale) - refundedAmount(sale), 0)
+const isCancelled = sale => sale.person_memberships?.[0]?.status === 'cancelled'
+const debtAmount = sale => isCancelled(sale) ? 0 : Math.max(Number(sale.final_price || 0) - netPaidAmount(sale), 0)
+const membershipStatus = sale => sale.person_memberships?.[0]?.status ?? 'active'
+const membershipStatusLabel = status => ({
+    active: 'Ակտիվ',
+    cancelled: 'Չեղարկված',
+}[status] ?? status ?? '-')
+const membershipStatusClass = status => ({
+    active: 'bg-label-success',
+    cancelled: 'bg-label-danger',
+}[status] ?? 'bg-label-secondary')
+const membershipStartDate = sale => sale.person_memberships?.[0]?.start_date
+const membershipEndDate = sale => sale.person_memberships?.[0]?.end_date
+const availableRefundAmount = sale => Math.max(
+    paidAmount(sale) - Number(sale.final_price || 0) - refundedAmount(sale),
+    0,
+)
+const displayDebtAmount = sale => {
+    const availableRefund = availableRefundAmount(sale)
+
+    if (availableRefund > 0) {
+        return -availableRefund
+    }
+
+    return debtAmount(sale)
 }
 const formattedAmount = value => Number(value || 0).toFixed(2)
 
@@ -176,7 +205,7 @@ const applyFilters = (payload) => {
 
 const resetFilters = () => {
     filters.value = {
-        date_field: 'sold_at',
+        date_field: '',
         membership_discount_ids: '',
     }
 
@@ -207,7 +236,8 @@ const resetFilters = () => {
             :text-fields="[]"
             :select-fields="saleFilterSelectFields"
             :date-fields="saleFilterDateFields"
-            default-date-field="sold_at"
+            default-date-field=""
+            date-placeholder="Ընտրել ամսաթվի տեսակը"
             @filter="applyFilters"
             @reset="resetFilters"
         />
@@ -229,11 +259,10 @@ const resetFilters = () => {
                                 <th>Աբոնեմենտ</th>
                                 <th>Մարզիչ</th>
                                 <th>Գին</th>
-                                <th>Զեղչեր</th>
-                                <th>Վերջնական գին</th>
                                 <th>Վճարում</th>
+                                <th>Կարգավիճակ</th>
                                 <th>Պարտք</th>
-                                <th>Վաճառքի օր</th>
+                                <th>Ժամկետ</th>
                                 <th>Գործողություններ</th>
                             </tr>
                         </thead>
@@ -246,18 +275,16 @@ const resetFilters = () => {
                                 <td>{{ personName(sale) }}</td>
                                 <td>{{ planName(sale.membership_plan) }}</td>
                                 <td>{{ trainerName(sale) }}</td>
-                                <td>{{ sale.total_price }}</td>
                                 <td>
                                     <div>
-                                        <span class="text-muted">Ձեռքով զեղչ՝</span>
-                                        {{ formattedAmount(sale.discount_amount) }}
+                                        <span class="text-muted">Գին՝</span>
+                                        {{ formattedAmount(sale.total_price) }}
                                     </div>
                                     <div>
-                                        <span class="text-muted">Աբոնեմենտի զեղչ՝</span>
-                                        {{ formattedAmount(membershipDiscountAmount(sale)) }}
+                                        <span class="text-muted">Վերջնական՝</span>
+                                        {{ formattedAmount(sale.final_price) }}
                                     </div>
                                 </td>
-                                <td>{{ sale.final_price }}</td>
                                 <td>
                                     <span
                                         class="badge me-1"
@@ -268,14 +295,31 @@ const resetFilters = () => {
                                 </td>
                                 <td>
                                     <span
-                                        v-if="debtAmount(sale) > 0"
+                                        class="badge"
+                                        :class="membershipStatusClass(membershipStatus(sale))"
+                                    >
+                                        {{ membershipStatusLabel(membershipStatus(sale)) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span
+                                        v-if="displayDebtAmount(sale) !== 0"
                                         class="text-danger fw-semibold"
                                     >
-                                        {{ formattedAmount(debtAmount(sale)) }}
+                                        {{ formattedAmount(displayDebtAmount(sale)) }}
                                     </span>
                                     <span v-else>0</span>
                                 </td>
-                                <td>{{ formatDate(sale.sold_at) }}</td>
+                                <td>
+                                    <div>
+                                        <span class="text-muted">Սկիզբ՝</span>
+                                        {{ formatDate(membershipStartDate(sale)) }}
+                                    </div>
+                                    <div>
+                                        <span class="text-muted">Ավարտ՝</span>
+                                        {{ formatDate(membershipEndDate(sale)) }}
+                                    </div>
+                                </td>
                                 <td>
                                     <div class="dropdown">
                                         <button
@@ -309,7 +353,7 @@ const resetFilters = () => {
 
                             <tr v-if="!salesList.length">
                                 <td
-                                    colspan="10"
+                                    colspan="9"
                                     class="text-center text-muted"
                                 >
                                     Վաճառքներ չկան

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleService;
@@ -58,6 +59,24 @@ class MembershipSaleController extends Controller
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
             ->with('success', 'Վճարումը հաջողությամբ պահպանվեց։');
+    }
+
+    public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->storeRefund((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Վերադարձը հաջողությամբ պահպանվեց։');
+    }
+
+    public function cancel($locale, $id)
+    {
+        $this->membershipSaleService->cancelMembership((int) $id);
+
+        return redirect()
+            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Աբոնեմենտը հաջողությամբ չեղարկվեց։');
     }
 
     public function update(UpdateMembershipSaleRequest $request, $locale, $id)

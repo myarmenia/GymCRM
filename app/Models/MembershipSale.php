@@ -29,14 +29,24 @@ class MembershipSale extends Model
         'payment_status' => [
             'method' => 'where',
         ],
-        'sold_at_from' => [
-            'column' => 'sold_at',
-            'method' => 'whereDate',
+        'membership_start_date_from' => [
+            'callback' => 'filterMembershipPeriodDate',
+            'column' => 'start_date',
             'operator' => '>=',
         ],
-        'sold_at_to' => [
-            'column' => 'sold_at',
-            'method' => 'whereDate',
+        'membership_start_date_to' => [
+            'callback' => 'filterMembershipPeriodDate',
+            'column' => 'start_date',
+            'operator' => '<=',
+        ],
+        'membership_end_date_from' => [
+            'callback' => 'filterMembershipPeriodDate',
+            'column' => 'end_date',
+            'operator' => '>=',
+        ],
+        'membership_end_date_to' => [
+            'callback' => 'filterMembershipPeriodDate',
+            'column' => 'end_date',
             'operator' => '<=',
         ],
     ];
@@ -86,6 +96,13 @@ class MembershipSale extends Model
                     ->orWhere('discount_amount', '<=', 0);
             });
         }
+    }
+
+    protected function filterMembershipPeriodDate(Builder $query, mixed $value, string $field, array $config): void
+    {
+        $query->whereHas('personMemberships', function (Builder $q) use ($value, $config) {
+            $q->whereDate($config['column'], $config['operator'], $value);
+        });
     }
 
     public function user()
