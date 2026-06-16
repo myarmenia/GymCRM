@@ -42,7 +42,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Discount created');
+            ->with('success', 'Զեղչը հաջողությամբ ստեղծվեց։');
     }
 
     public function edit($locale, $id)
@@ -72,7 +72,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Discount updated');
+            ->with('success', 'Զեղչը հաջողությամբ թարմացվեց։');
     }
 
     public function destroy($locale, $id)
@@ -81,7 +81,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Discount deleted');
+            ->with('success', 'Զեղչը հաջողությամբ ջնջվեց։');
     }
 
     protected function membershipPlans()

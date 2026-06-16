@@ -21,7 +21,7 @@ class StorePersonRequest extends FormRequest
             'email' => 'required|email|max:255|unique:people,email',
             'password' => 'required|string|min:6',
             'phone' => 'required|string|max:50',
-            'type' => 'required|in:visitor,employee',
+            'type' => 'required|in:visitor,guest',
             'entry_code_id' => 'nullable|exists:entry_codes,id',
             'birth_date' => 'required|date',
             'gender' => 'nullable|string|in:male,female,other',

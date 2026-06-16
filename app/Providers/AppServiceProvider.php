@@ -31,6 +31,7 @@ use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
 use App\Interfaces\ScheduleName\ScheduleNameInterface;
 use App\Interfaces\ScheduleSmoke\ScheduleSmokeInterface;
+use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\SubCategory\SubCategoryInterface;
 use App\Interfaces\SubCategoryTranslations\SubCategoryTranslationInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
@@ -72,6 +73,7 @@ use App\Repositories\Schedule\ScheduleRepository;
 use App\Repositories\ScheduleDetails\ScheduleDetailsRepository;
 use App\Repositories\ScheduleName\ScheduleNameRepository;
 use App\Repositories\ScheduleSmoke\ScheduleSmokeRepository;
+use App\Repositories\SalespersonCommissions\SalespersonCommissionRepository;
 use App\Repositories\SubCategory\SubCategoryRepository;
 use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
 use App\Repositories\People\PersonRepository;
@@ -144,6 +146,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(MembershipSaleDiscountInterface::class, MembershipSaleDiscountRepository::class);
         $this->app->bind(MembershipPlanPaymentInterface::class, MembershipPlanPaymentRepository::class);
         $this->app->bind(TrainerCommissionInterface::class, TrainerCommissionRepository::class);
+        $this->app->bind(SalespersonCommissionInterface::class, SalespersonCommissionRepository::class);
         $this->app->bind(TrainerInterface::class, TrainerRepository::class);
 
         $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class,TrainerSessionDurationRepository::class);

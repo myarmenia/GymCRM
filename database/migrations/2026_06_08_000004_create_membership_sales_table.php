@@ -21,7 +21,6 @@ return new class extends Migration
             $table->decimal('final_price', 10, 2)->default(0);
             $table->enum('payment_status', ['unpaid', 'partial', 'paid', 'refunded', 'cancelled'])->default('unpaid');
             $table->text('notes')->nullable();
-            $table->boolean('is_hdm')->default(false);
             $table->decimal('discount_membership_amount', 10, 2)->default(0);
             $table->dateTime('sold_at')->nullable();
             $table->softDeletes();

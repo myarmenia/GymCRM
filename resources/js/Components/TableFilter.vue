@@ -32,6 +32,10 @@ const props = defineProps({
         type: String,
         default: 'created_at',
     },
+    datePlaceholder: {
+        type: String,
+        default: 'Ընտրել ամսաթվի դաշտը',
+    },
     submitLabel: {
         type: String,
         default: 'Ֆիլտրել',
@@ -65,7 +69,6 @@ const resolvedTextFields = computed(() => props.textFields ?? defaultTextFields.
 
 const selectedDateField = computed(() => {
     return props.dateFields.find(field => field.value === form.date_field)
-        ?? props.dateFields[0]
         ?? null
 })
 
@@ -84,10 +87,12 @@ const syncFromModelValue = value => {
 }
 
 const cleanPayload = () => {
-    const payload = {
-        date_field: form.date_field,
-        date_from: form.date_from,
-        date_to: form.date_to,
+    const payload = {}
+
+    if (form.date_field) {
+        payload.date_field = form.date_field
+        payload.date_from = form.date_from
+        payload.date_to = form.date_to
     }
 
     resolvedTextFields.value.forEach(field => {
@@ -203,6 +208,9 @@ watch(
                         class="form-select"
                         @change="updateModel"
                     >
+                        <option value="">
+                            {{ datePlaceholder }}
+                        </option>
                         <option
                             v-for="field in dateFields"
                             :key="field.value"
@@ -225,6 +233,7 @@ watch(
                         v-model="form.date_from"
                         type="date"
                         class="form-control"
+                        :disabled="!form.date_field"
                         @input="updateModel"
                     />
                 </div>
@@ -241,6 +250,7 @@ watch(
                         v-model="form.date_to"
                         type="date"
                         class="form-control"
+                        :disabled="!form.date_field"
                         @input="updateModel"
                     />
                 </div>

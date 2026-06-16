@@ -22,4 +22,27 @@ class StoreMembershipSaleDiscountRequest extends FormRequest
             'discount_amount' => ['required', 'numeric', 'min:0'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'required' => ':attribute դաշտը պարտադիր է։',
+            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
+            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
+            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
+            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
+            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+        ];
+    }
+
+    public function attributes(): array
+    {
+        return [
+            'membership_sale_id' => 'աբոնեմենտի վաճառք',
+            'discount_id' => 'զեղչ',
+            'discount_type' => 'զեղչի տեսակ',
+            'discount_value' => 'զեղչի արժեք',
+            'discount_amount' => 'զեղչի գումար',
+        ];
+    }
 }

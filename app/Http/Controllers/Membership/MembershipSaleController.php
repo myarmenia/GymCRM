@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleService;
@@ -33,8 +35,8 @@ class MembershipSaleController extends Controller
         $sale = $this->membershipSaleService->store($request->validated());
 
         return redirect()
-            ->route('membership_sale.edit', ['locale' => app()->getLocale(), 'id' => $sale->id])
-            ->with('success', 'Membership sale created successfully');
+            ->route('membership_sale.list', ['locale' => app()->getLocale()])
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ստեղծվեց։');
     }
 
     public function edit($locale, $id)
@@ -45,13 +47,45 @@ class MembershipSaleController extends Controller
         ]);
     }
 
+    public function payments($locale, $id)
+    {
+        return Inertia::render('MembershipSales/Payments', $this->membershipSaleService->paymentPageData((int) $id));
+    }
+
+    public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->storePayment((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Վճարումը հաջողությամբ պահպանվեց։');
+    }
+
+    public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->storeRefund((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Վերադարձը հաջողությամբ պահպանվեց։');
+    }
+
+    public function cancel($locale, $id)
+    {
+        $this->membershipSaleService->cancelMembership((int) $id);
+
+        return redirect()
+            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Աբոնեմենտը հաջողությամբ չեղարկվեց։');
+    }
+
     public function update(UpdateMembershipSaleRequest $request, $locale, $id)
     {
         $this->membershipSaleService->update((int) $id, $request->validated());
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Membership sale updated successfully');
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ թարմացվեց։');
     }
 
     public function destroy($locale, $id)
@@ -60,6 +94,6 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Membership sale deleted successfully');
+            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ջնջվեց։');
     }
 }

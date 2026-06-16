@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('card_type_id')->nullable()->constrained()->nullOnDelete();
             $table->enum('status', ['unpaid', 'pending', 'paid', 'cancelled'])->default('pending');
             $table->enum('type', ['payment', 'refund'])->default('payment');
+            $table->boolean('is_hdm')->default(false);
             $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();

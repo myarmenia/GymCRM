@@ -49,7 +49,7 @@ class MembershipCategoryService
             : ($dto->gym_id ?? $user->gym_id);
 
         if (!$gymId && !$user->hasRole('owner')) {
-            throw new \Exception('Gym is required');
+            throw new \Exception('Մարզասրահը պարտադիր է։');
         }
 
         $data = [

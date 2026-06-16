@@ -229,6 +229,10 @@ Route::prefix('{locale}')
                 Route::post('/store/{person}', [MembershipSaleController::class, 'store'])->name('store');
                 Route::middleware('check.gym:MembershipSale,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
+                    Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
+                    Route::post('/payments/{id}', [MembershipSaleController::class, 'storePayment'])->name('payments.store');
+                    Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
+                    Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
