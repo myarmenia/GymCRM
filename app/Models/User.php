@@ -5,7 +5,9 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Traits\BelongsToGym;
+use App\Traits\FilterTrait;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -15,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes, BelongsToGym;
+    use HasFactory, Notifiable, HasRoles, SoftDeletes, BelongsToGym, FilterTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +31,45 @@ class User extends Authenticatable
     // ];
 
     protected $guarded = [];
+
+    protected array $filterConfig = [
+        'name' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'surname' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'phone' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'email' => [
+            'method' => 'where',
+            'operator' => 'like',
+        ],
+        'role' => [
+            'callback' => 'filterRole',
+        ],
+        'created_at_from' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '>=',
+        ],
+        'created_at_to' => [
+            'column' => 'created_at',
+            'method' => 'whereDate',
+            'operator' => '<=',
+        ],
+    ];
+
+    protected function filterRole(Builder $query, mixed $value): void
+    {
+        $query->whereHas('roles', function (Builder $q) use ($value) {
+            $q->where('name', $value);
+        });
+    }
 
 
     public function documents()
@@ -59,5 +100,103 @@ class User extends Authenticatable
         ];
     }
 
-    
+    public function gym()
+    {
+        return $this->belongsTo(Gym::class, 'gym_id');
+    }
+
+    public function entryPermissions()
+    {
+        return $this->morphMany(EntryPermission::class, 'relation');
+    }
+
+
+    // Օժանդակ մեթոդ՝ ստուգելու, արդյոք user-ն ունի կոնկրետ entry code
+    public function hasEntryCode(EntryCode $entryCode): bool
+    {
+        return $this->entryPermissions()
+            ->where('entry_code_id', $entryCode->id)
+            ->where('status', 1)
+            ->exists();
+    }
+
+    public function faceId()
+    {
+        return $this->entryPermissions()
+            ->whereHas('entryCode', function ($q) {
+                $q->where('type', 'face_id');
+            });
+    }
+
+
+    public function rfIds()
+    {
+        return $this->entryPermissions()
+            ->whereHas('entryCode', function ($q) {
+                $q->where('type', 'rfid');
+            });
+    }
+
+    public function attendanceSheets()
+    {
+        return $this->morphMany(AttendanceSheet::class, 'relation');
+    }
+
+    public function membershipSales()
+    {
+        return $this->hasMany(MembershipSale::class);
+    }
+
+    public function soldPersonMemberships()
+    {
+        return $this->hasMany(PersonMembership::class);
+    }
+
+    public function trainedPersonMemberships()
+    {
+        return $this->hasMany(PersonMembership::class, 'trainer_id');
+    }
+
+    public function trainerCommissions()
+    {
+        return $this->hasMany(TrainerCommission::class, 'trainer_id');
+    }
+
+    public function salespersonCommissions()
+    {
+        return $this->hasMany(SalespersonCommission::class, 'salesperson_id');
+    }
+
+
+    public function getEntryCodesAttribute()
+    {
+        return $this->entryPermissions()
+            ->where('status', 1)
+            ->with('entryCode')
+            ->get()
+            ->pluck('entryCode')
+            ->filter();
+    }
+
+    //public function trainerSchedule()
+    //{
+    //   
+    //    return $this->hasOne(TrainerSchedule::class, 'user_id');
+    //
+    //}
+
+    public function trainerSchedules()
+    {
+        return $this->hasMany(TrainerSchedule::class, 'user_id');
+    }
+
+    public function scheduleNames()
+    {
+        return $this->belongsToMany(
+            ScheduleName::class,
+            'trainer_schedules',
+            'user_id',
+            'schedule_name_id'
+        );
+    }
 }

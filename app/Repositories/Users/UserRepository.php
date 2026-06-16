@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Users;
 
+use App\Helpers\MyHelper;
 use App\Interfaces\Users\UserInterface;
 use App\Models\User;
 use App\Repositories\BaseRepository;
@@ -15,14 +16,33 @@ class UserRepository extends BaseRepository implements UserInterface
     }
 
 
-    public function paginateForUser($user, int $perPage = 10)
+    public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
         return $this->query()
             ->with('roles')
-            ->when(!$user->hasRole('owner'), function ($q) use ($user) {
-                $q->where('gym_id', $user->gym_id);
+            ->when(!$user->hasRole('owner'), function ($q) {
+                $q->currentGym();
             })
-            ->paginate($perPage);
+            ->filter($this->normalizeFilters($filters))
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    protected function normalizeFilters(array $filters): array
+    {
+        unset($filters['page'], $filters['per_page']);
+
+        if (!empty($filters['date_from'])) {
+            $filters['created_at_from'] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $filters['created_at_to'] = $filters['date_to'];
+        }
+
+        unset($filters['date_field'], $filters['date_from'], $filters['date_to']);
+
+        return $filters;
     }
 
     public function getCleanersWithCleaningsCount($gymId)
@@ -42,6 +62,27 @@ class UserRepository extends BaseRepository implements UserInterface
             ->whereHas('roles', function ($query) {
                 $query->where('name', 'cleaner');
             })
+            ->get();
+    }
+
+    public function getTrainersWithSchedulesByGymId()
+    {
+        $gymId = MyHelper::find_auth_user_client();
+
+        return $this->query()
+            ->where('gym_id', $gymId)
+            ->whereHas('roles', function ($query) {
+                $query->where('id', 7);
+            })
+            ->with([
+                'scheduleNames:id,name',
+            ])
+            ->select([
+                'id',
+                'gym_id',
+                'name',
+                'surname',
+            ])
             ->get();
     }
 }

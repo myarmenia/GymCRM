@@ -38,9 +38,17 @@ class RoleSeeder extends Seeder
                 'g_name' => 'super_admin',
             ],
             [
+                'name' => 'trainer',
+                'g_name' => 'super_admin',
+            ],
+            [
                 'name' => 'owner',
                 'g_name' => 'owner',
             ],
+            [
+                'name'=> 'sales_manager',
+                'g_name' => 'super_admin',
+            ]
         ];
 
 

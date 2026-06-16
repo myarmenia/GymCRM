@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 
 const page = usePage()
-const currentLocale = page.props.locale ?? 'en'
+const currentLocale = page.props.locale ?? 'hy'
 
 const props = defineProps({
     modelValue: Object,

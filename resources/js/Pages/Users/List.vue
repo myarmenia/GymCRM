@@ -1,40 +1,111 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
-import { Link, usePage } from "@inertiajs/vue3";
+import { Link, router, usePage } from "@inertiajs/vue3";
 import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+import { useAuth } from "@/composables/useAuth";
+import TableFilter from "@/Components/TableFilter.vue";
 
 const props = defineProps({
     users: Object,
+    roles: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "en";
+const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);
+const {  hasAnyRole } = useAuth();
+const filters = ref({
+    date_field: "created_at",
+    ...Object.fromEntries(new URLSearchParams(window.location.search)),
+});
+const userFilterSelectFields = computed(() => [
+    {
+        name: "role",
+        label: "Role",
+        placeholder: "All roles",
+        options: props.roles,
+    },
+    
+]);
+const userFilterDateFields = [
+    { value: "created_at", label: "Created at" },
+];
+
+watch(
+    () => props.users,
+    (users) => {
+        usersList.value = users.data;
+        pagination.value = users;
+    },
+);
+
+const applyFilters = (payload) => {
+    router.get(
+        route("user.list", { locale: currentLocale.value }),
+        payload,
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const resetFilters = () => {
+    filters.value = {
+        date_field: "created_at",
+    };
+
+    router.get(
+        route("user.list", { locale: currentLocale.value }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+
 </script>
 
 <template>
-    <Head title="Users List" />
+    <Head title="Օգտատերերի ցուցակ" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Users List
+                Օգտատերերի ցուցակ
             </h2>
         </template>
+
+        <TableFilter
+            v-model="filters"
+            name-mode="separate"
+            :select-fields="userFilterSelectFields"
+            :date-fields="userFilterDateFields"
+            @filter="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="card">
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Users List</h5>
+                <h5 class="mb-0">Օգտատերերի ցուցակ</h5>
                 <Link
+                    v-if="hasAnyRole([ 'owner', 'super_admin'])"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     aria-controls="DataTables_Table_0"
@@ -45,26 +116,26 @@ const pagination = ref(props.users);
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Add New Employee</span
+                                >Ավելացնել նոր աշխատակից</span
                             >
                         </span>
                     </span>
                 </Link>
             </div>
-            <h5 class="card-header">Bordered Table</h5>
+            <h5 class="card-header">Օգտատերերի աղյուսակ</h5>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Name</th>
-                                <th>Surname</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Roles</th>
-                                <th>Active</th>
-                                <th>Actions</th>
+                                <th>Անուն</th>
+                                <th>Ազգանուն</th>
+                                <th>Հեռախոս</th>
+                                <th>Էլ. հասցե</th>
+                                <th>Դերեր</th>
+                                <th>Կարգավիճակ</th>
+                                <th>Գործողություններ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -134,6 +205,7 @@ const pagination = ref(props.users);
                                                 />
                                             </a>
                                             <Link
+                                                v-if="hasAnyRole([ 'owner', 'super_admin'])"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('user.edit', {
@@ -145,8 +217,19 @@ const pagination = ref(props.users);
                                                 <i
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
-                                                Edit
+                                                Խմբագրել
                                             </Link>
+                                            <Link
+                                                v-if="hasAnyRole([  'admin'])"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('user.show', { locale: currentLocale, id: user.id })"
+                                            >
+                                                <i
+                                                    class="icon-base ti tabler-eye me-1"
+                                                ></i>
+                                                Դիտել
+                                            </Link>
+                                           
                                             <a
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"

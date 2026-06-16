@@ -13,13 +13,13 @@ class LangSeeder extends Seeder
     public function run(): void
     {
         $langs = [
-            ['id' => 1, 'name' => 'hy'],
-            ['id' => 2, 'name' => 'ru'],
-            ['id' => 3, 'name' => 'en'],
+            ['id' => 1, 'code' => 'hy', 'name' => 'Հայերեն'],
+            ['id' => 2, 'code' => 'ru', 'name' => 'Русский'],
+            ['id' => 3, 'code' => 'en', 'name' => 'English'],
         ];
 
         foreach ($langs as $lang) {
-            Lang::updateOrCreate(['name' => $lang['name']], $lang);
+            Lang::updateOrCreate(['code' => $lang['code']], $lang);
         }
     }
 }

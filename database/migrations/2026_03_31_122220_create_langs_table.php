@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('langs', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->default('hy');
+            $table->string('code')->default('hy');
+            $table->string('name');
             $table->timestamps();
         });
     }
