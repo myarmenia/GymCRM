@@ -68,7 +68,7 @@ class CategoryService
 
     public function findById(int $id): array
     {
-        $category = $this->categoryRepository->findCategoryBy('id', $id, ['translations']);
+        $category = $this->categoryRepository->findBy('id', $id, ['translations']);
         $locale = app()->getLocale();
         $translations = $category->translations->keyBy('locale');
 
@@ -120,7 +120,7 @@ class CategoryService
                 ],
             ],
         ];
-        $category = $this->categoryRepository->findCategoryBy('id', $id, ['translations']);
+        $category = $this->categoryRepository->findBy('id', $id, ['translations']);
 
         $this->categoryRepository->update($id, [
             'status' => $payload['status'],
@@ -154,7 +154,7 @@ class CategoryService
 
     public function getParentCategories(string $locale)
     {
-        
+
         return $this->categoryRepository->getParentCategories($locale);
     }
 }
