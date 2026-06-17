@@ -26,7 +26,7 @@ class PersonRepository extends BaseRepository implements PersonInterface
         $query = $this->query()
             ->with([
                 'gyms',
-                'memberships.membershipPlan.translations',
+                'activeMemberships.membershipPlan.translations',
             ]);
 
         if (!$user->hasRole('owner')) {
@@ -36,11 +36,11 @@ class PersonRepository extends BaseRepository implements PersonInterface
         }
 
         if ($membershipFilter === 'with') {
-            $query->has('memberships');
+            $query->has('activeMemberships');
         }
 
         if ($membershipFilter === 'without') {
-            $query->doesntHave('memberships');
+            $query->doesntHave('activeMemberships');
         }
 
         return $query

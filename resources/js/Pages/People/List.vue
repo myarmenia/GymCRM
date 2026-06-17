@@ -62,7 +62,7 @@ const planName = plan => {
         ?? (plan?.id ? `#${plan.id}` : null);
 };
 const membershipNames = person => {
-    const names = (person.memberships ?? [])
+    const names = (person.active_memberships ?? [])
         .map(membership => planName(membership.membership_plan))
         .filter(Boolean);
 

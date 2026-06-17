@@ -3,11 +3,13 @@
 namespace App\Services\People;
 
 use App\Interfaces\People\PersonInterface;
+use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\EntryCodes\EntryCodeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class PersonService
 {
@@ -28,6 +30,7 @@ class PersonService
 
     public function store($data)
     {
+        $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
         $dataStore = $this->dataToArray($data);
         $person = $this->personRepository->create($dataStore);
 
@@ -35,15 +38,13 @@ class PersonService
         $this->syncGyms($person);
 
         // Entry code association
-        if (!empty($data->entry_code_id)) {
-            EntryPermission::create([
-                'entry_code_id' => $data->entry_code_id,
-                'relation_type' => Person::class,
-                'relation_id'   => $person->id,
-                'status'        => 1,
-            ]);
-            $this->entryCodeService->activateEntryCode($data->entry_code_id, true);
-        }
+        EntryPermission::create([
+            'entry_code_id' => $entryCode->id,
+            'relation_type' => Person::class,
+            'relation_id'   => $person->id,
+            'status'        => 1,
+        ]);
+        $this->entryCodeService->activateEntryCode($entryCode->id, true);
 
         return $person;
     }
@@ -93,6 +94,27 @@ class PersonService
         }
 
         return $array;
+    }
+
+    protected function availableEntryCode(int $entryCodeId): EntryCode
+    {
+        $user = Auth::user();
+        $entryCode = EntryCode::query()
+            ->where('id', $entryCodeId)
+            ->where('status', true)
+            ->where('activation', false)
+            ->when(!$user->hasRole('owner') && $user->gym_id, function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->first();
+
+        if (!$entryCode) {
+            throw ValidationException::withMessages([
+                'entry_code_id' => 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր',
+            ]);
+        }
+
+        return $entryCode;
     }
 
     /**

@@ -31,12 +31,15 @@ return new class extends Migration
 
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
+            $table->date('valid_at')->nullable();
 
             // progress only
             $table->integer('visits_used')->default(0);
             $table->integer('visits_left')->nullable();
             $table->integer('freeze_used')->default(0);
             $table->integer('guest_used')->default(0);
+            $table->integer('freeze_left')->default(0);
+            $table->integer('guest_left')->default(0);
 
             $table->foreignId('next_membership_id')
                 ->nullable()

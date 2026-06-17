@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleGuestRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
@@ -50,6 +51,31 @@ class MembershipSaleController extends Controller
     public function payments($locale, $id)
     {
         return Inertia::render('MembershipSales/Payments', $this->membershipSaleService->paymentPageData((int) $id));
+    }
+
+    public function guests($locale, $id)
+    {
+        return Inertia::render('MembershipSales/Guests', $this->membershipSaleService->guestPageData((int) $id));
+    }
+
+    public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->storeGuest((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.guests', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Հյուրը հաջողությամբ ավելացվեց։');
+    }
+
+    public function lookupGuest(Request $request, $locale, $id)
+    {
+        $request->validate([
+            'phone' => ['required', 'string'],
+        ]);
+
+        return response()->json(
+            $this->membershipSaleService->lookupGuestPerson((int) $id, $request->query('phone'))
+        );
     }
 
     public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)

@@ -127,6 +127,7 @@ const saleStatusLabel = status => ({
 }[status] ?? status ?? '-')
 
 const planPrice = computed(() => Number(props.membershipSale.total_price ?? selectedPlan.value?.price ?? 0))
+const hasExistingManualDiscount = computed(() => Number(props.membershipSale.discount_amount || 0) > 0)
 const membershipDiscounts = computed(() => selectedPlan.value?.discounts ?? [])
 const existingMembershipDiscountIds = computed(() => {
     return (props.membershipSale.discounts ?? []).map(item => Number(item.discount_id))
@@ -188,6 +189,10 @@ const membershipDiscountRows = computed(() => {
 const membershipDiscountAmount = computed(() => membershipDiscountRows.value.reduce((total, row) => total + row.amount, 0))
 const membershipDiscountedPrice = computed(() => Math.max(planPrice.value - membershipDiscountAmount.value, 0))
 const manualDiscountAmount = computed(() => {
+    if (hasExistingManualDiscount.value) {
+        return Number(props.membershipSale.discount_amount || 0)
+    }
+
     if (!form.apply_discount) {
         return 0
     }
@@ -225,6 +230,10 @@ const toggleMembershipDiscount = discountId => {
 }
 
 watch(() => form.apply_discount, (enabled) => {
+    if (hasExistingManualDiscount.value) {
+        return
+    }
+
     if (!enabled) {
         form.discount_type = props.discountTypes[0] ?? ''
         form.discount_value = null
@@ -232,10 +241,18 @@ watch(() => form.apply_discount, (enabled) => {
 })
 
 watch(() => form.discount_type, () => {
+    if (hasExistingManualDiscount.value) {
+        return
+    }
+
     form.discount_value = null
 })
 
 watch(() => form.discount_value, (value) => {
+    if (hasExistingManualDiscount.value) {
+        return
+    }
+
     const discountValue = Number(value) || 0
 
     if (discountValue < 0) {
@@ -252,10 +269,22 @@ watch(() => form.discount_value, (value) => {
 })
 
 const submit = () => {
-    form.patch(route('membership_sale.update', {
-        locale: currentLocale.value,
-        id: props.membershipSale.id,
-    }))
+    form
+        .transform(data => {
+            if (!hasExistingManualDiscount.value) {
+                return data
+            }
+
+            const { apply_discount, discount_type, discount_value, ...payload } = data
+
+            return payload
+        })
+        .patch(route('membership_sale.update', {
+            locale: currentLocale.value,
+            id: props.membershipSale.id,
+        }), {
+            onFinish: () => form.transform(data => data),
+        })
 }
 </script>
 
@@ -457,7 +486,28 @@ const submit = () => {
 
                 <div class="border rounded p-4 mb-4">
                     <InputLabel value="Ձեռքով զեղչ" />
-                    <label class="form-check mt-2">
+                    <div
+                        v-if="hasExistingManualDiscount"
+                        class="alert alert-secondary mt-3 mb-0"
+                    >
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Զեղչի տեսակ</span>
+                            <strong>{{ discountTypeLabel(membershipSale.discount_type) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Զեղչի արժեք</span>
+                            <strong>{{ membershipSale.discount_value ?? '-' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Ձեռքով զեղչ</span>
+                            <strong>{{ manualDiscountAmount.toFixed(2) }}</strong>
+                        </div>
+                    </div>
+
+                    <label
+                        v-else
+                        class="form-check mt-2"
+                    >
                         <input
                             v-model="form.apply_discount"
                             type="checkbox"
@@ -470,7 +520,7 @@ const submit = () => {
                     <InputError :message="form.errors.apply_discount" />
 
                     <div
-                        v-if="form.apply_discount"
+                        v-if="!hasExistingManualDiscount && form.apply_discount"
                         class="mt-4"
                     >
                         <div class="row">

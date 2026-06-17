@@ -168,9 +168,9 @@ const calculateEndDate = () => {
         return
     }
 
-    if (['day', 'visit'].includes(selectedPlan.value.duration_type)) {
+    if (selectedPlan.value.duration_type === 'day') {
         form.end_date = addDays(form.start_date, value - 1)
-    } else if (selectedPlan.value.duration_type === 'month') {
+    } else if (['month', 'visit'].includes(selectedPlan.value.duration_type)) {
         form.end_date = addDays(addMonths(form.start_date, value), -1)
     } else if (selectedPlan.value.duration_type === 'year') {
         form.end_date = addDays(addMonths(form.start_date, value * 12), -1)

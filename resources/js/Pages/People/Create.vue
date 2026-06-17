@@ -1,7 +1,7 @@
-<script setup>
+﻿<script setup>
 import { ref, onMounted } from 'vue';
 import Index from '@/Layouts/Index.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -35,31 +35,51 @@ onMounted(() => {
 });
 
 const submit = () => {
+    if (!form.entry_code_id) {
+        form.setError('entry_code_id', 'Մուտքի կոդը պարտադիր է։');
+        return;
+    }
+
     form.post(route('person.store', { locale: currentLocale }));
 };
 </script>
 
 <template>
-    <Head title="Ավելացնել նոր անձ" />
+    <Head title="Ստեղծել նոր անձ" />
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Անձինք / Ավելացնել նոր անձ</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">Անձինք / Ստեղծել նոր անձ</h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Ավելացնել նոր անձ</h5>
+            <h5 class="card-header">Ստեղծել նոր անձ</h5>
             <form @submit.prevent="submit" class="card-body">
                 <h6>Ընդհանուր տվյալներ</h6>
                 <div class="row g-6">
                     <!-- Entry Code dropdown -->
-                    <div v-if="entryCodes.length" class="col-md-12">
+                    <div class="col-md-12">
                         <InputLabel for="entry_codes" class="form-label" value="Մուտքի կոդ" />
-                        <select id="entry_codes" class="form-select" v-model="form.entry_code_id">
-                            <option :value="null">Ոչինչ</option>
+                        <select
+                            v-if="entryCodes.length"
+                            id="entry_codes"
+                            class="form-select"
+                            v-model="form.entry_code_id"
+                            required
+                        >
+                            <option :value="null" disabled>Ընտրել մուտքի կոդը</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
                                 {{ code.token }} ({{ code.gym?.name || 'Առանց մարզադահլիճի' }}) {{ code.type }}
                             </option>
                         </select>
+                        <div
+                            v-else
+                            class="alert alert-warning mb-0"
+                        >
+                            Մուտքի կոդեր չկան։ Խնդրում ենք նախ ստեղծել մուտքի կոդ։
+                            <Link :href="route('entry-code.create', { locale: currentLocale })">
+                                Ստեղծիր
+                            </Link>
+                        </div>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
                     </div>
 
@@ -79,8 +99,8 @@ const submit = () => {
 
                     <!-- Email -->
                     <div class="col-md-6">
-                        <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Մուտքագրել էլ. հասցեն"  />
+                        <InputLabel for="email" class="form-label" value="Էլ․ փոստ" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" placeholder="Մուտքագրել էլ․ փոստը"  />
                         <InputError :message="form.errors.email" />
                     </div>
 
@@ -108,14 +128,14 @@ const submit = () => {
                         <InputError :message="form.errors.type" />
                     </div>
 
-                    <!-- 🔹 Birth Date -->
+                    <!-- Birth Date -->
                     <div class="col-md-6">
                         <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date"  />
                         <InputError :message="form.errors.birth_date" />
                     </div>
 
-                    <!-- 🔹 Gender -->
+                    <!-- Gender -->
                     <div class="col-md-6">
                         <InputLabel for="gender" class="form-label" value="Սեռ" />
                         <select id="gender" class="form-select" v-model="form.gender">
@@ -130,7 +150,7 @@ const submit = () => {
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                        Պահպանել
+                        Ստեղծել
                     </PrimaryButton>
                     <button type="reset" class="btn btn-label-secondary waves-effect">Չեղարկել</button>
                 </div>

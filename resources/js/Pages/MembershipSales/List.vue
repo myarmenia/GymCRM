@@ -14,6 +14,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    people: {
+        type: Array,
+        default: () => [],
+    },
     trainers: {
         type: Array,
         default: () => [],
@@ -40,6 +44,7 @@ const queryValue = name => {
 }
 const filters = ref({
     date_field: queryParams.get('date_field') ?? '',
+    person_id: queryParams.get('person_id') ?? '',
     trainer_id: queryParams.get('trainer_id') ?? '',
     membership_plan_id: queryParams.get('membership_plan_id') ?? '',
     membership_discount_ids: queryValue('membership_discount_ids'),
@@ -61,7 +66,22 @@ const trainerOptionName = trainer => {
     return fullName || trainer.email || `#${trainer.id}`
 }
 
+const personOptionName = person => {
+    const fullName = `${person.name ?? ''} ${person.surname ?? ''}`.trim()
+
+    return fullName || person.email || person.phone || `#${person.id}`
+}
+
 const saleFilterSelectFields = computed(() => [
+    {
+        name: 'person_id',
+        label: 'Հաճախորդ',
+        placeholder: 'Բոլոր հաճախորդները',
+        options: props.people.map(person => ({
+            value: person.id,
+            label: personOptionName(person),
+        })),
+    },
     {
         name: 'trainer_id',
         label: 'Մարզիչ',
@@ -166,6 +186,32 @@ const netPaidAmount = sale => Math.max(paidAmount(sale) - refundedAmount(sale), 
 const isCancelled = sale => sale.person_memberships?.[0]?.status === 'cancelled'
 const debtAmount = sale => isCancelled(sale) ? 0 : Math.max(Number(sale.final_price || 0) - netPaidAmount(sale), 0)
 const membershipStatus = sale => sale.person_memberships?.[0]?.status ?? 'active'
+const isActiveGuestMembership = sale => {
+    const membership = sale.person_memberships?.[0]
+
+    if (!membership || membership.status !== 'active') {
+        return false
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
+    const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
+    const startDate = membership.start_date ? String(membership.start_date).slice(0, 10) : null
+
+    if (startDate && startDate > today) {
+        return false
+    }
+
+    if (validAt && validAt < today) {
+        return false
+    }
+
+    if (endDate && endDate < today) {
+        return false
+    }
+
+    return true
+}
 const membershipStatusLabel = status => ({
     active: 'Ակտիվ',
     cancelled: 'Չեղարկված',
@@ -337,6 +383,15 @@ const resetFilters = () => {
                                             >
                                                 <i class="icon-base ti tabler-cash me-1"></i>
                                                 Վճարումներ
+                                            </Link>
+
+                                            <Link
+                                                v-if="isActiveGuestMembership(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.guests', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-user-plus me-1"></i>
+                                                Ավելացնել հյուր
                                             </Link>
 
                                             <Link
