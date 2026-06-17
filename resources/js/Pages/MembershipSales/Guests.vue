@@ -194,11 +194,11 @@ const submit = () => {
                         <hr>
 
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Թույլատրված հյուրեր</span>
+                            <span class="text-muted">Օգտագործված հյուրեր</span>
                             <strong>{{ allowedGuestCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Օգտագործված հյուրեր</span>
+                            <span class="text-muted">Թույլատրված հյուրեր</span>
                             <strong>{{ usedGuestCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-0">
