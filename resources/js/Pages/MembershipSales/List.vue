@@ -212,12 +212,37 @@ const isActiveGuestMembership = sale => {
 
     return true
 }
+const isFreezableMembership = sale => {
+    const membership = sale.person_memberships?.[0]
+
+    if (!membership || !['waiting', 'active', 'frozen'].includes(membership.status)) {
+        return false
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+    const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
+    const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
+
+    if (validAt && validAt < today) {
+        return false
+    }
+
+    if (endDate && endDate < today) {
+        return false
+    }
+
+    return true
+}
 const membershipStatusLabel = status => ({
+    waiting: 'Սպասման մեջ',
     active: 'Ակտիվ',
+    frozen: 'Սառեցված',
     cancelled: 'Չեղարկված',
 }[status] ?? status ?? '-')
 const membershipStatusClass = status => ({
+    waiting: 'bg-label-info',
     active: 'bg-label-success',
+    frozen: 'bg-label-warning',
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 const membershipStartDate = sale => sale.person_memberships?.[0]?.start_date
@@ -395,7 +420,7 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
-                                                v-if="isActiveGuestMembership(sale)"
+                                                v-if="isFreezableMembership(sale)"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.freezes', { locale: currentLocale, id: sale.id })"
                                             >

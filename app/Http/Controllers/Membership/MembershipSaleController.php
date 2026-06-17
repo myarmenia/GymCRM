@@ -11,6 +11,7 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class MembershipSaleController extends Controller
@@ -61,7 +62,13 @@ class MembershipSaleController extends Controller
 
     public function freezes($locale, $id)
     {
-        return Inertia::render('MembershipSales/Freezes', $this->membershipSaleService->freezePageData((int) $id));
+        try {
+            return Inertia::render('MembershipSales/Freezes', $this->membershipSaleService->freezePageData((int) $id));
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('membership_sale.list', ['locale' => app()->getLocale()])
+                ->withErrors($e->errors());
+        }
     }
 
     public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)

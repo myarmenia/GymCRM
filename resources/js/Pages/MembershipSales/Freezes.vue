@@ -38,7 +38,9 @@ const form = useForm({
 })
 
 const remaining = computed(() => Number(props.remainingFreezeCount || 0))
-const canAddFreeze = computed(() => remaining.value > 0 && props.personMembership?.status === 'active')
+const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen'].includes(props.personMembership?.status))
+const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value)
+const freezeOverlapMessage = 'Սառեցման սկիզբը չի կարող լինել արդեն գոյություն ունեցող սառեցման ժամանակահատվածում։'
 
 const personName = person => `${person?.name ?? ''} ${person?.surname ?? ''}`.trim() || '-'
 const translatedName = item => {
@@ -56,8 +58,27 @@ const statusLabel = status => ({
     deleted: 'Ջնջված',
     cancelled: 'Չեղարկված',
 }[status] ?? status ?? '-')
+const dateInsideFreezePeriod = value => {
+    if (!value) {
+        return false
+    }
+
+    const selectedDate = String(value).slice(0, 10)
+
+    return props.freezes.some(freeze => {
+        const startDate = freeze.start_date ? String(freeze.start_date).slice(0, 10) : null
+        const endDate = freeze.end_date ? String(freeze.end_date).slice(0, 10) : null
+
+        return startDate && endDate && selectedDate >= startDate && selectedDate <= endDate
+    })
+}
 
 const submit = () => {
+    if (dateInsideFreezePeriod(form.start_date)) {
+        form.setError('start_date', freezeOverlapMessage)
+        return
+    }
+
     form.post(route('membership_sale.freezes.store', {
         locale: currentLocale.value,
         id: props.membershipSale.id,
@@ -243,7 +264,7 @@ const submit = () => {
             v-else
             class="alert alert-warning"
         >
-            Սառեցման փորձեր չեն մնացել։
+            {{ remaining > 0 && !hasFreezableStatus ? 'Այս կարգավիճակով աբոնեմենտը սառեցնել հնարավոր չէ։' : 'Սառեցման փորձեր չեն մնացել։' }}
         </div>
     </Index>
 </template>

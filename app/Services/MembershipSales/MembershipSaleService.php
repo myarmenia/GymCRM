@@ -85,6 +85,11 @@ class MembershipSaleService
         return 'Սառեցումների թույլատրելի քանակը սպառված է։';
     }
 
+    protected function freezeStartDateOverlapsMessage(): string
+    {
+        return 'Սառեցման սկիզբը չի կարող լինել արդեն գոյություն ունեցող սառեցման ժամանակահատվածում։';
+    }
+
     public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
         $user = Auth::user();
@@ -235,7 +240,7 @@ class MembershipSaleService
     public function freezePageData(int $id): array
     {
         $membershipSale = $this->getById($id);
-        $personMembership = $this->activePersonMembershipForFreezes($membershipSale);
+        $personMembership = $this->personMembershipForFreezePage($membershipSale);
 
         if (!$personMembership) {
             throw ValidationException::withMessages([
@@ -292,6 +297,12 @@ class MembershipSaleService
             $endDate = Carbon::parse($data['end_date'])->startOfDay();
             $freezeDays = (int) $startDate->diffInDays($endDate) + 1;
 
+            if ($this->freezeStartDateOverlaps($personMembership, $startDate)) {
+                throw ValidationException::withMessages([
+                    'start_date' => $this->freezeStartDateOverlapsMessage(),
+                ]);
+            }
+
             PersonMembershipFreeze::query()->create([
                 'person_membership_id' => $personMembership->id,
                 'start_date' => $startDate->toDateString(),
@@ -303,11 +314,17 @@ class MembershipSaleService
                 ? Carbon::parse($personMembership->valid_at)
                 : ($personMembership->end_date ? Carbon::parse($personMembership->end_date) : null);
 
-            $personMembership->update([
+            $personMembershipUpdateData = [
                 'freeze_left' => max((int) ($personMembership->freeze_left ?? 0) - 1, 0),
                 'freeze_used' => (int) ($personMembership->freeze_used ?? 0) + 1,
                 'valid_at' => $validAt?->addDays($freezeDays)->toDateString(),
-            ]);
+            ];
+
+            if ($startDate->isToday()) {
+                $personMembershipUpdateData['status'] = 'frozen';
+            }
+
+            $personMembership->update($personMembershipUpdateData);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -1100,11 +1117,23 @@ class MembershipSaleService
     {
         return $membershipSale
             ->personMemberships()
-            ->where('status', 'active')
+            ->whereIn('status', ['waiting', 'active', 'frozen'])
             ->where(function ($query) {
-                $query->whereNull('start_date')
-                    ->orWhereDate('start_date', '<=', today());
+                $query->whereNull('valid_at')
+                    ->orWhereDate('valid_at', '>=', today());
             })
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', today());
+            })
+            ->first();
+    }
+
+    protected function personMembershipForFreezePage(MembershipSale $membershipSale)
+    {
+        return $membershipSale
+            ->personMemberships()
+            ->whereIn('status', ['waiting', 'active', 'frozen'])
             ->where(function ($query) {
                 $query->whereNull('valid_at')
                     ->orWhereDate('valid_at', '>=', today());
@@ -1120,11 +1149,7 @@ class MembershipSaleService
     {
         $today = today();
 
-        if ($personMembership->status !== 'active') {
-            return false;
-        }
-
-        if ($personMembership->start_date && Carbon::parse($personMembership->start_date)->gt($today)) {
+        if (!in_array($personMembership->status, ['waiting', 'active', 'frozen'], true)) {
             return false;
         }
 
@@ -1137,6 +1162,15 @@ class MembershipSaleService
         }
 
         return true;
+    }
+
+    protected function freezeStartDateOverlaps(PersonMembership $personMembership, Carbon $startDate): bool
+    {
+        return $personMembership
+            ->freezes()
+            ->whereDate('start_date', '<=', $startDate->toDateString())
+            ->whereDate('end_date', '>=', $startDate->toDateString())
+            ->exists();
     }
 
     protected function guestSummary($personMembership): array
