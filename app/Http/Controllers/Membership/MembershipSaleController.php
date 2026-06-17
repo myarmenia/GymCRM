@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleFreezeRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleGuestRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
@@ -56,6 +57,20 @@ class MembershipSaleController extends Controller
     public function guests($locale, $id)
     {
         return Inertia::render('MembershipSales/Guests', $this->membershipSaleService->guestPageData((int) $id));
+    }
+
+    public function freezes($locale, $id)
+    {
+        return Inertia::render('MembershipSales/Freezes', $this->membershipSaleService->freezePageData((int) $id));
+    }
+
+    public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->storeFreeze((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.freezes', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Աբոնեմենտը հաջողությամբ սառեցվեց։');
     }
 
     public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)

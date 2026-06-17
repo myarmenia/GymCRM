@@ -234,6 +234,8 @@ Route::prefix('{locale}')
                     Route::get('/guests/{id}', [MembershipSaleController::class, 'guests'])->name('guests');
                     Route::get('/guests/{id}/lookup', [MembershipSaleController::class, 'lookupGuest'])->name('guests.lookup');
                     Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
+                    Route::get('/freezes/{id}', [MembershipSaleController::class, 'freezes'])->name('freezes');
+                    Route::post('/freezes/{id}', [MembershipSaleController::class, 'storeFreeze'])->name('freezes.store');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');

@@ -395,6 +395,15 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
+                                                v-if="isActiveGuestMembership(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.freezes', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-snowflake me-1"></i>
+                                                Սառեցնել աբոնեմենտը
+                                            </Link>
+
+                                            <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.edit', { locale: currentLocale, id: sale.id })"
                                             >

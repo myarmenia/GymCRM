@@ -22,6 +22,8 @@ use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
+use App\Models\PersonMembership;
+use App\Models\PersonMembershipFreeze;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -71,6 +73,16 @@ class MembershipSaleService
     protected function entryCodeUnavailableMessage(): string
     {
         return 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր';
+    }
+
+    protected function freezeRequiresActiveMembershipMessage(): string
+    {
+        return 'Աբոնեմենտը սառեցնել հնարավոր է միայն ակտիվ աբոնեմենտի համար։';
+    }
+
+    protected function freezeLimitReachedMessage(): string
+    {
+        return 'Սառեցումների թույլատրելի քանակը սպառված է։';
     }
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -218,6 +230,90 @@ class MembershipSaleService
             'entryCodes' => $this->availableEntryCodes($membershipSale->gym_id),
             ...$guestSummary,
         ];
+    }
+
+    public function freezePageData(int $id): array
+    {
+        $membershipSale = $this->getById($id);
+        $personMembership = $this->activePersonMembershipForFreezes($membershipSale);
+
+        if (!$personMembership) {
+            throw ValidationException::withMessages([
+                'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
+            ]);
+        }
+
+        $personMembership->load([
+            'person',
+            'membershipPlan.translations',
+            'freezes',
+        ]);
+
+        return [
+            'membershipSale' => $membershipSale,
+            'personMembership' => $personMembership,
+            'freezes' => $personMembership->freezes,
+            ...$this->freezeSummary($personMembership),
+        ];
+    }
+
+    public function storeFreeze(int $id, array $data): void
+    {
+        DB::beginTransaction();
+
+        try {
+            $membershipSale = $this->getById($id);
+            $activePersonMembership = $this->activePersonMembershipForFreezes($membershipSale);
+
+            if (!$activePersonMembership) {
+                throw ValidationException::withMessages([
+                    'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
+                ]);
+            }
+
+            $personMembership = PersonMembership::query()
+                ->whereKey($activePersonMembership->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$this->isActiveValidPersonMembership($personMembership)) {
+                throw ValidationException::withMessages([
+                    'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
+                ]);
+            }
+
+            if ((int) ($personMembership->freeze_left ?? 0) <= 0) {
+                throw ValidationException::withMessages([
+                    'freeze_left' => $this->freezeLimitReachedMessage(),
+                ]);
+            }
+
+            $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            $endDate = Carbon::parse($data['end_date'])->startOfDay();
+            $freezeDays = (int) $startDate->diffInDays($endDate) + 1;
+
+            PersonMembershipFreeze::query()->create([
+                'person_membership_id' => $personMembership->id,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            $validAt = $personMembership->valid_at
+                ? Carbon::parse($personMembership->valid_at)
+                : ($personMembership->end_date ? Carbon::parse($personMembership->end_date) : null);
+
+            $personMembership->update([
+                'freeze_left' => max((int) ($personMembership->freeze_left ?? 0) - 1, 0),
+                'freeze_used' => (int) ($personMembership->freeze_used ?? 0) + 1,
+                'valid_at' => $validAt?->addDays($freezeDays)->toDateString(),
+            ]);
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     public function storeGuest(int $id, array $data): void
@@ -1000,6 +1096,49 @@ class MembershipSaleService
             ->first();
     }
 
+    protected function activePersonMembershipForFreezes(MembershipSale $membershipSale)
+    {
+        return $membershipSale
+            ->personMemberships()
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('start_date')
+                    ->orWhereDate('start_date', '<=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('valid_at')
+                    ->orWhereDate('valid_at', '>=', today());
+            })
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', today());
+            })
+            ->first();
+    }
+
+    protected function isActiveValidPersonMembership(PersonMembership $personMembership): bool
+    {
+        $today = today();
+
+        if ($personMembership->status !== 'active') {
+            return false;
+        }
+
+        if ($personMembership->start_date && Carbon::parse($personMembership->start_date)->gt($today)) {
+            return false;
+        }
+
+        if ($personMembership->valid_at && Carbon::parse($personMembership->valid_at)->lt($today)) {
+            return false;
+        }
+
+        if ($personMembership->end_date && Carbon::parse($personMembership->end_date)->lt($today)) {
+            return false;
+        }
+
+        return true;
+    }
+
     protected function guestSummary($personMembership): array
     {
         $allowedGuestCount = (int) ($personMembership->guest_used ?? 0);
@@ -1009,6 +1148,15 @@ class MembershipSaleService
             'allowedGuestCount' => $allowedGuestCount,
             'usedGuestCount' => $usedGuestCount,
             'remainingGuestCount' => max((int) ($personMembership->guest_left ?? 0), 0),
+        ];
+    }
+
+    protected function freezeSummary(PersonMembership $personMembership): array
+    {
+        return [
+            'allowedFreezeCount' => (int) ($personMembership->freeze_used ?? 0) + (int) ($personMembership->freeze_left ?? 0),
+            'usedFreezeCount' => (int) ($personMembership->freeze_used ?? 0),
+            'remainingFreezeCount' => max((int) ($personMembership->freeze_left ?? 0), 0),
         ];
     }
 
