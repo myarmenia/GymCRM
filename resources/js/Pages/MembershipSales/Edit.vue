@@ -19,6 +19,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    customerMemberships: {
+        type: Array,
+        default: () => [],
+    },
     trainers: {
         type: Array,
         default: () => [],
@@ -69,6 +73,13 @@ const planName = plan => {
 const selectedPlan = computed(() => {
     return props.membershipSale.membership_plan
         ?? props.membershipPlans.find(item => Number(item.id) === Number(props.membershipSale.membership_plan_id))
+})
+const matchingCustomerMemberships = computed(() => {
+    if (!selectedPlan.value) {
+        return []
+    }
+
+    return props.customerMemberships.filter(membershipItem => Number(membershipItem.membership_plan_id) === Number(selectedPlan.value.id))
 })
 
 const selectedPerson = computed(() => {
@@ -125,6 +136,30 @@ const saleStatusLabel = status => ({
     refunded: 'Վերադարձված',
     cancelled: 'Չեղարկված',
 }[status] ?? status ?? '-')
+const planTypeLabel = type => ({
+    day: 'Օրական',
+    month: 'Ամսական',
+    year: 'Տարեկան',
+    visit: 'Այցելություններով',
+    period: 'Ժամանակահատված',
+}[type] ?? type ?? '-')
+const membershipStatusLabel = status => ({
+    waiting: 'Սպասման մեջ',
+    active: 'Ակտիվ',
+    frozen: 'Սառեցված',
+    expired: 'Ժամկետանց',
+    cancelled: 'Չեղարկված',
+}[status] ?? status ?? '-')
+const formatDate = value => value ? String(value).slice(0, 10) : '-'
+const membershipPlanName = membershipItem => planName(membershipItem?.membership_plan)
+const membershipValidityDate = membershipItem => membershipItem?.valid_at ?? membershipItem?.end_date
+const durationLabel = plan => {
+    if (!plan) {
+        return '-'
+    }
+
+    return plan.duration_value ?? '-'
+}
 
 const planPrice = computed(() => Number(props.membershipSale.total_price ?? selectedPlan.value?.price ?? 0))
 const hasExistingManualDiscount = computed(() => Number(props.membershipSale.discount_amount || 0) > 0)
@@ -353,6 +388,97 @@ const submit = () => {
                             readonly
                         />
                         <InputError :message="form.errors.end_date" />
+                    </div>
+                </div>
+
+                <div
+                    v-if="selectedPlan"
+                    class="border rounded p-4 mb-4"
+                >
+                    <h5 class="mb-4">
+                        Աբոնեմենտի տվյալներ
+                    </h5>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <span class="text-muted d-block">Տեսակ</span>
+                            <strong>{{ planTypeLabel(selectedPlan.duration_type) }}</strong>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <span class="text-muted d-block">Ամիսների քանակ</span>
+                            <strong>{{ durationLabel(selectedPlan) }}</strong>
+                        </div>
+                        <div
+                            v-if="selectedPlan.visits_limit"
+                            class="col-md-4 mb-3"
+                        >
+                            <span class="text-muted d-block">Այցելությունների քանակ</span>
+                            <strong>{{ selectedPlan.visits_limit }}</strong>
+                        </div>
+                        <div
+                            v-if="selectedPlan.guest_limit"
+                            class="col-md-4 mb-3"
+                        >
+                            <span class="text-muted d-block">Հյուրերի քանակ</span>
+                            <strong>{{ selectedPlan.guest_limit }}</strong>
+                        </div>
+                        <div
+                            v-if="selectedPlan.freeze_limit"
+                            class="col-md-4 mb-3"
+                        >
+                            <span class="text-muted d-block">Սառեցումների քանակ</span>
+                            <strong>{{ selectedPlan.freeze_limit }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    v-if="matchingCustomerMemberships.length"
+                    class="border rounded p-4 mb-4"
+                >
+                    <h5 class="mb-4">
+                        Հաճախորդի ընթացիկ աբոնեմենտներ
+                    </h5>
+
+                    <div class="row">
+                        <div
+                            v-for="membershipItem in matchingCustomerMemberships"
+                            :key="membershipItem.id"
+                            class="col-md-6 col-xl-4 mb-3"
+                        >
+                            <div class="border rounded p-3 h-100 bg-light">
+                                <div class="fw-bold mb-2">
+                                    {{ membershipPlanName(membershipItem) }}
+                                </div>
+                                <div class="small d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Կարգավիճակ</span>
+                                    <span>{{ membershipStatusLabel(membershipItem.status) }}</span>
+                                </div>
+                                <div class="small d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Սկիզբ</span>
+                                    <span>{{ formatDate(membershipItem.start_date) }}</span>
+                                </div>
+                                <div class="small d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Ավարտ / վավեր է մինչև</span>
+                                    <span>{{ formatDate(membershipValidityDate(membershipItem)) }}</span>
+                                </div>
+                                <div
+                                    v-if="membershipItem.visits_left !== null"
+                                    class="small d-flex justify-content-between mb-1"
+                                >
+                                    <span class="text-muted">Մնացած այցելություններ</span>
+                                    <span>{{ membershipItem.visits_left }}</span>
+                                </div>
+                                <div class="small d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Մնացած հյուրեր</span>
+                                    <span>{{ membershipItem.guest_left ?? 0 }}</span>
+                                </div>
+                                <div class="small d-flex justify-content-between">
+                                    <span class="text-muted">Մնացած սառեցումներ</span>
+                                    <span>{{ membershipItem.freeze_left ?? 0 }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

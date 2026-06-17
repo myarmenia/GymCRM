@@ -44,9 +44,11 @@ class MembershipSaleController extends Controller
 
     public function edit($locale, $id)
     {
+        $membershipSale = $this->membershipSaleService->getById((int) $id);
+
         return Inertia::render('MembershipSales/Edit', [
-            'membershipSale' => $this->membershipSaleService->getById((int) $id),
-            ...$this->membershipSaleService->formOptions(),
+            'membershipSale' => $membershipSale,
+            ...$this->membershipSaleService->formOptions((int) $membershipSale->person_id),
         ]);
     }
 

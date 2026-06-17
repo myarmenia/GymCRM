@@ -583,7 +583,11 @@ class MembershipSaleService
 
         $discountTypes = $this->discountTypes();
 
-        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson');
+        $customerMemberships = $personId
+            ? $this->customerCurrentMemberships($personId, $user)
+            : collect();
+
+        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson', 'customerMemberships');
     }
 
     public function store(array $data)
@@ -597,6 +601,8 @@ class MembershipSaleService
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            $previousMatchingMembership = $this->previousMatchingMembershipForSale($person, $membershipPlan);
+            $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
             $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
 
             $discounts = $this->getMembershipAttachedDiscounts($membershipPlan, $data['membership_discount_ids'] ?? []);
@@ -649,6 +655,12 @@ class MembershipSaleService
                     'expired_at' => null,
                 ])
             );
+
+            if ($previousMatchingMembership) {
+                $previousMatchingMembership->update([
+                    'next_membership_id' => $personMembership->id,
+                ]);
+            }
 
             foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
                 $this->membershipSaleDiscountRepository->create(
@@ -1111,6 +1123,49 @@ class MembershipSaleService
                     ->orWhereDate('end_date', '>=', today());
             })
             ->first();
+    }
+
+    protected function customerCurrentMemberships(int $personId, User $user)
+    {
+        return PersonMembership::query()
+            ->with([
+                'membershipPlan.translations',
+                'trainer',
+            ])
+            ->where('person_id', $personId)
+            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    protected function previousMatchingMembershipForSale(Person $person, MembershipPlan $membershipPlan): ?PersonMembership
+    {
+        return PersonMembership::query()
+            ->with('membershipPlan.translations')
+            ->where('person_id', $person->id)
+            ->where('membership_plan_id', $membershipPlan->id)
+            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->whereNotNull('valid_at')
+            ->orderByDesc('valid_at')
+            ->first();
+    }
+
+    protected function ensureMembershipStartDateIsAllowed(?PersonMembership $previousMatchingMembership, Carbon $startDate): void
+    {
+        if (!$previousMatchingMembership || !$previousMatchingMembership->valid_at) {
+            return;
+        }
+
+        if (Carbon::parse($previousMatchingMembership->valid_at)->startOfDay()->lte($startDate)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'start_date' => 'Այս աբոնեմենտի նոր վաճառքը կարող է սկսվել միայն ընթացիկ նույն աբոնեմենտի ավարտից հետո։',
+        ]);
     }
 
     protected function activePersonMembershipForFreezes(MembershipSale $membershipSale)
