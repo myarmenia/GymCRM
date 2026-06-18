@@ -28,6 +28,51 @@ class PersonService
         return $this->personRepository->findOrFail((int) $id, ['gyms']);
     }
 
+    public function profileData(int $id): array
+    {
+        $user = Auth::user();
+
+        $person = Person::query()
+            ->with([
+                'gyms',
+                'entryPermissions.entryCode.gym:id,name',
+                'memberships' => function ($query) {
+                    $query->latest('id');
+                },
+                'memberships.membershipPlan.translations',
+                'memberships.trainer',
+                'memberships.freezes',
+                'memberships.guests.guest',
+                'memberships.membershipSale.membershipPlan.translations',
+                'memberships.membershipSale.payments.paymentMethod.translations',
+                'memberships.membershipSale.payments.cardType',
+                'memberships.membershipSale.discounts.discount.translations',
+                'membershipSales' => function ($query) {
+                    $query->latest('sold_at')->latest('id');
+                },
+                'membershipSales.membershipPlan.translations',
+                'membershipSales.payments.paymentMethod.translations',
+                'membershipSales.payments.cardType',
+                'membershipSales.discounts.discount.translations',
+            ])
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->whereHas('gyms', function ($q) use ($user) {
+                    $q->where('gyms.id', $user->gym_id);
+                });
+            })
+            ->findOrFail($id);
+
+        $entryPermission = $person->entryPermissions
+            ->sortByDesc('id')
+            ->first(fn ($permission) => (bool) $permission->status)
+            ?? $person->entryPermissions->sortByDesc('id')->first();
+
+        return [
+            'person' => $person,
+            'entryCode' => $entryPermission?->entryCode,
+        ];
+    }
+
     public function store($data)
     {
         $entryCode = $this->availableEntryCode((int) $data->entry_code_id);

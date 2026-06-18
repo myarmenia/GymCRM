@@ -204,6 +204,18 @@ const resetFilters = () => {
                                             <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="
+                                                    route('person.profile', {
+                                                        locale: currentLocale,
+                                                        id: person.id,
+                                                    })
+                                                "
+                                            >
+                                                <i class="icon-base ti tabler-eye me-1"></i>
+                                                Դիտել պրոֆիլը
+                                            </Link>
+                                            <Link
+                                                class="dropdown-item waves-effect"
+                                                :href="
                                                     route('membership_sale.create', {
                                                         locale: currentLocale,
                                                         person: person.id,

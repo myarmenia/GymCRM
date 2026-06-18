@@ -106,6 +106,7 @@ Route::prefix('{locale}')
                 Route::post('/store', [PersonController::class, 'store'])->name('store');
 
                 // Route::middleware('check.gym:Person,id')->group(function () {
+                Route::get('/profile/{id}', [PersonController::class, 'profile'])->name('profile');
                 Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
                 Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
                 // });
