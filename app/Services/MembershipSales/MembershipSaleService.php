@@ -313,11 +313,12 @@ class MembershipSaleService
             $validAt = $personMembership->valid_at
                 ? Carbon::parse($personMembership->valid_at)
                 : ($personMembership->end_date ? Carbon::parse($personMembership->end_date) : null);
+            $extendedValidAt = $validAt?->copy()->addDays($freezeDays);
 
             $personMembershipUpdateData = [
                 'freeze_left' => max((int) ($personMembership->freeze_left ?? 0) - 1, 0),
                 'freeze_used' => (int) ($personMembership->freeze_used ?? 0) + 1,
-                'valid_at' => $validAt?->addDays($freezeDays)->toDateString(),
+                'valid_at' => $extendedValidAt?->toDateString(),
             ];
 
             if ($startDate->isToday()) {
@@ -325,6 +326,7 @@ class MembershipSaleService
             }
 
             $personMembership->update($personMembershipUpdateData);
+            $this->shiftNextMembershipAfterFreeze($personMembership, $extendedValidAt);
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -1226,6 +1228,44 @@ class MembershipSaleService
             ->whereDate('start_date', '<=', $startDate->toDateString())
             ->whereDate('end_date', '>=', $startDate->toDateString())
             ->exists();
+    }
+
+    protected function shiftNextMembershipAfterFreeze(PersonMembership $personMembership, ?Carbon $extendedValidAt): void
+    {
+        if (!$personMembership->next_membership_id || !$extendedValidAt) {
+            return;
+        }
+
+        $nextMembership = PersonMembership::query()
+            ->whereKey($personMembership->next_membership_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$nextMembership || !$nextMembership->start_date) {
+            return;
+        }
+
+        $nextStartDate = Carbon::parse($nextMembership->start_date)->startOfDay();
+
+        if ($extendedValidAt->lte($nextStartDate)) {
+            return;
+        }
+
+        $overlapDays = (int) $nextStartDate->diffInDays($extendedValidAt);
+
+        if ($overlapDays <= 0) {
+            return;
+        }
+
+        $nextMembership->update([
+            'start_date' => $nextStartDate->copy()->addDays($overlapDays)->toDateString(),
+            'end_date' => $nextMembership->end_date
+                ? Carbon::parse($nextMembership->end_date)->addDays($overlapDays)->toDateString()
+                : null,
+            'valid_at' => $nextMembership->valid_at
+                ? Carbon::parse($nextMembership->valid_at)->addDays($overlapDays)->toDateString()
+                : null,
+        ]);
     }
 
     protected function guestSummary($personMembership): array
