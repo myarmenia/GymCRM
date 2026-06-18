@@ -124,6 +124,44 @@ const canAddGuest = membership => {
         && membership?.status === 'active'
         && isMembershipCurrentlyValid(membership)
 }
+const saleForMembership = membership => membership?.membership_sale
+    ?? sales.value.find(sale => Number(sale.id) === Number(membershipSaleId(membership)))
+const salePaidAmount = sale => (sale?.payments ?? [])
+    .filter(payment => payment.type === 'payment' && payment.status === 'paid')
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+const saleRefundedAmount = sale => (sale?.payments ?? [])
+    .filter(payment => payment.type === 'refund' && payment.status === 'paid')
+    .reduce((total, payment) => total + Number(payment.amount || 0), 0)
+const saleNetPaidAmount = sale => Math.max(salePaidAmount(sale) - saleRefundedAmount(sale), 0)
+const saleDebtAmount = sale => Math.max(Number(sale?.final_price || 0) - saleNetPaidAmount(sale), 0)
+const membershipPaymentStatus = membership => {
+    const sale = saleForMembership(membership)
+
+    if (!sale) {
+        return 'unpaid'
+    }
+
+    if (sale.payment_status === 'paid' || saleDebtAmount(sale) <= 0) {
+        return 'paid'
+    }
+
+    if (sale.payment_status === 'partial' || saleNetPaidAmount(sale) > 0) {
+        return 'partial'
+    }
+
+    return 'unpaid'
+}
+const membershipPaymentStatusLabel = membership => ({
+    paid: 'Վճարված',
+    partial: 'Մասնակի վճարված',
+    unpaid: 'Չվճարված',
+}[membershipPaymentStatus(membership)] ?? '-')
+const membershipPaymentStatusClass = membership => ({
+    paid: 'bg-label-success',
+    partial: 'bg-label-warning',
+    unpaid: 'bg-label-danger',
+}[membershipPaymentStatus(membership)] ?? 'bg-label-secondary')
+const membershipHasDebt = membership => saleDebtAmount(saleForMembership(membership)) > 0
 
 const paidAmount = computed(() => transactions.value
     .filter(payment => payment.type === 'payment' && payment.status === 'paid')
@@ -167,15 +205,19 @@ const visitStats = computed(() => [
     { label: 'Ակտիվ աբոնեմենտներ', value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success' },
 ])
 
-const infoItems = computed(() => [
-    { label: 'Անուն', value: props.person?.name || '-' },
-    { label: 'Ազգանուն', value: props.person?.surname || '-' },
-    { label: 'Հեռախոսահամար', value: props.person?.phone || '-' },
-    { label: 'Էլ․ փոստ', value: props.person?.email || '-' },
-    { label: 'Մուտքի կոդ', value: props.entryCode?.token || '-' },
-    { label: 'Ծննդյան ամսաթիվ', value: formatDate(props.person?.birth_date) },
-    { label: 'Սեռ', value: genderLabel(props.person?.gender) },
-    { label: 'Մարզասրահ', value: props.person?.gyms?.length ? props.person.gyms.map(gym => gym.name).join(', ') : '-' },
+const primaryInfoItems = computed(() => [
+    { label: 'Անուն', value: props.person?.name || '-', icon: 'tabler-user' },
+    { label: 'Ազգանուն', value: props.person?.surname || '-', icon: 'tabler-user' },
+    { label: 'Հեռախոսահամար', value: props.person?.phone || '-', icon: 'tabler-phone' },
+    { label: 'Էլ․ փոստ', value: props.person?.email || '-', icon: 'tabler-mail' },
+    { label: 'Մուտքի կոդ', value: props.entryCode?.token || '-', icon: 'tabler-key' },
+])
+const secondaryInfoItems = computed(() => [
+    { label: 'Տեսակ', value: personTypeLabel(props.person?.type), icon: 'tabler-users' },
+    { label: 'Կարգավիճակ', value: personStatusLabel.value, icon: 'tabler-circle-check' },
+    { label: 'Ծննդյան ամսաթիվ', value: formatDate(props.person?.birth_date), icon: 'tabler-calendar' },
+    { label: 'Սեռ', value: genderLabel(props.person?.gender), icon: 'tabler-gender-bigender' },
+    { label: 'Մարզասրահ', value: props.person?.gyms?.length ? props.person.gyms.map(gym => gym.name).join(', ') : '-', icon: 'tabler-building' },
 ])
 </script>
 
@@ -264,15 +306,41 @@ const infoItems = computed(() => [
                 </div>
             </div>
             <div class="card-body">
-                <div class="row g-3">
-                    <div
-                        v-for="item in infoItems"
-                        :key="item.label"
-                        class="col-md-6 col-xl-3"
-                    >
-                        <div class="info-tile h-100">
-                            <div class="text-muted small mb-1">{{ item.label }}</div>
-                            <div class="fw-semibold text-break">{{ item.value }}</div>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="profile-info-group h-100">
+                            <h6 class="mb-3">Կոնտակտային տվյալներ</h6>
+                            <div
+                                v-for="item in primaryInfoItems"
+                                :key="item.label"
+                                class="profile-info-row"
+                            >
+                                <div class="profile-info-icon bg-label-primary">
+                                    <i :class="['icon-base ti', item.icon]"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="text-muted small">{{ item.label }}</div>
+                                    <div class="fw-semibold text-break">{{ item.value }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="profile-info-group h-100">
+                            <h6 class="mb-3">Լրացուցիչ տվյալներ</h6>
+                            <div
+                                v-for="item in secondaryInfoItems"
+                                :key="item.label"
+                                class="profile-info-row"
+                            >
+                                <div class="profile-info-icon bg-label-info">
+                                    <i :class="['icon-base ti', item.icon]"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="text-muted small">{{ item.label }}</div>
+                                    <div class="fw-semibold text-break">{{ item.value }}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -318,8 +386,8 @@ const infoItems = computed(() => [
                             :key="membership.id"
                             class="membership-card"
                         >
-                            <div class="d-flex justify-content-between gap-3 flex-wrap mb-3">
-                                <div>
+                            <div class="membership-header mb-4">
+                                <div class="membership-header-section">
                                     <h5 class="mb-2">{{ membershipPlanName(membership) }}</h5>
                                     <span
                                         class="badge"
@@ -328,9 +396,48 @@ const infoItems = computed(() => [
                                         {{ membershipStatusLabel(membership.status) }}
                                     </span>
                                 </div>
-                                <div class="date-box">
-                                    <div><span class="text-muted">Սկիզբ՝</span> {{ formatDate(membership.start_date) }}</div>
-                                    <div><span class="text-muted">Ավարտ՝</span> {{ formatDate(membership.valid_at || membership.end_date) }}</div>
+                                <div class="membership-header-section membership-period">
+                                    <div>
+                                        <div class="text-muted small">Սկիզբ</div>
+                                        <div class="fw-semibold">{{ formatDate(membership.start_date) }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-muted small">Ավարտ</div>
+                                        <div class="fw-semibold">{{ formatDate(membership.valid_at || membership.end_date) }}</div>
+                                    </div>
+                                </div>
+                                <div class="membership-header-section payment-box">
+                                    <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap mb-2">
+                                        <span
+                                            class="badge"
+                                            :class="membershipPaymentStatusClass(membership)"
+                                        >
+                                            {{ membershipPaymentStatusLabel(membership) }}
+                                        </span>
+                                        <Link
+                                            v-if="membershipSaleId(membership)"
+                                            class="btn btn-sm btn-outline-primary"
+                                            :href="route('membership_sale.payments', {
+                                                locale: currentLocale,
+                                                id: membershipSaleId(membership),
+                                            })"
+                                        >
+                                            <i class="icon-base ti tabler-cash me-1"></i>
+                                            Վճարումներ
+                                        </Link>
+                                    </div>
+                                    <div
+                                        v-if="membershipHasDebt(membership)"
+                                        class="text-danger fw-semibold"
+                                    >
+                                        Պարտք՝ {{ formatAmount(saleDebtAmount(saleForMembership(membership))) }}
+                                    </div>
+                                    <div
+                                        v-else
+                                        class="text-success fw-semibold"
+                                    >
+                                        Պարտք չկա
+                                    </div>
                                 </div>
                             </div>
 
@@ -631,7 +738,6 @@ const infoItems = computed(() => [
     width: 46px;
 }
 
-.info-tile,
 .metric-box,
 .finance-card,
 .subsection {
@@ -641,10 +747,63 @@ const infoItems = computed(() => [
     padding: 1rem;
 }
 
+.profile-info-group {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.profile-info-row {
+    align-items: center;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    gap: .875rem;
+    padding: .75rem 0;
+}
+
+.profile-info-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.profile-info-row:first-of-type {
+    padding-top: 0;
+}
+
+.profile-info-icon {
+    align-items: center;
+    border-radius: 8px;
+    display: flex;
+    flex: 0 0 38px;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
 .membership-card {
     border: 1px solid var(--bs-border-color);
     border-radius: 8px;
     padding: 1.25rem;
+}
+
+.membership-header {
+    align-items: stretch;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, .9fr) minmax(260px, 1fr);
+}
+
+.membership-header-section {
+    min-width: 0;
+}
+
+.membership-period {
+    background: var(--bs-body-bg);
+    border-radius: 8px;
+    display: flex;
+    gap: 1.25rem;
+    padding: .75rem 1rem;
 }
 
 .trainer-section {
@@ -672,11 +831,11 @@ const infoItems = computed(() => [
     font-size: .875rem;
 }
 
-.date-box {
+.payment-box {
     background: var(--bs-body-bg);
     border-radius: 8px;
-    min-width: 220px;
     padding: .75rem 1rem;
+    text-align: right;
 }
 
 .finance-card {
@@ -694,5 +853,19 @@ const infoItems = computed(() => [
     justify-content: center;
     min-height: 72px;
     text-align: center;
+}
+
+@media (max-width: 991.98px) {
+    .membership-header {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-box {
+        text-align: left;
+    }
+
+    .payment-box .justify-content-end {
+        justify-content: flex-start !important;
+    }
 }
 </style>
