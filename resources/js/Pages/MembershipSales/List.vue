@@ -246,7 +246,7 @@ const membershipStatusClass = status => ({
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 const membershipStartDate = sale => sale.person_memberships?.[0]?.start_date
-const membershipEndDate = sale => sale.person_memberships?.[0]?.end_date
+const membershipEndDate = sale => sale.person_memberships?.[0]?.valid_at
 const availableRefundAmount = sale => Math.max(
     paidAmount(sale) - Number(sale.final_price || 0) - refundedAmount(sale),
     0,

@@ -9,6 +9,8 @@ use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
+use App\Services\MembershipSales\MembershipSaleFreezeService;
+use App\Services\MembershipSales\MembershipSaleGuestService;
 use App\Services\MembershipSales\MembershipSaleService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -16,8 +18,11 @@ use Inertia\Inertia;
 
 class MembershipSaleController extends Controller
 {
-    public function __construct(protected MembershipSaleService $membershipSaleService)
-    {
+    public function __construct(
+        protected MembershipSaleService $membershipSaleService,
+        protected MembershipSaleGuestService $membershipSaleGuestService,
+        protected MembershipSaleFreezeService $membershipSaleFreezeService,
+    ) {
     }
 
     public function list(Request $request)
@@ -59,13 +64,13 @@ class MembershipSaleController extends Controller
 
     public function guests($locale, $id)
     {
-        return Inertia::render('MembershipSales/Guests', $this->membershipSaleService->guestPageData((int) $id));
+        return Inertia::render('MembershipSales/Guests', $this->membershipSaleGuestService->guestPageData((int) $id));
     }
 
     public function freezes($locale, $id)
     {
         try {
-            return Inertia::render('MembershipSales/Freezes', $this->membershipSaleService->freezePageData((int) $id));
+            return Inertia::render('MembershipSales/Freezes', $this->membershipSaleFreezeService->freezePageData((int) $id));
         } catch (ValidationException $e) {
             return redirect()
                 ->route('membership_sale.list', ['locale' => app()->getLocale()])
@@ -75,7 +80,7 @@ class MembershipSaleController extends Controller
 
     public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)
     {
-        $this->membershipSaleService->storeFreeze((int) $id, $request->validated());
+        $this->membershipSaleFreezeService->storeFreeze((int) $id, $request->validated());
 
         return redirect()
             ->route('membership_sale.freezes', ['locale' => app()->getLocale(), 'id' => $id])
@@ -84,7 +89,7 @@ class MembershipSaleController extends Controller
 
     public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)
     {
-        $this->membershipSaleService->storeGuest((int) $id, $request->validated());
+        $this->membershipSaleGuestService->storeGuest((int) $id, $request->validated());
 
         return redirect()
             ->route('membership_sale.guests', ['locale' => app()->getLocale(), 'id' => $id])
@@ -98,7 +103,7 @@ class MembershipSaleController extends Controller
         ]);
 
         return response()->json(
-            $this->membershipSaleService->lookupGuestPerson((int) $id, $request->query('phone'))
+            $this->membershipSaleGuestService->lookupGuestPerson((int) $id, $request->query('phone'))
         );
     }
 
