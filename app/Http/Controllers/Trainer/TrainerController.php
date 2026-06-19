@@ -85,6 +85,33 @@ class TrainerController extends Controller
         return Inertia::render('Trainer/Profile', $this->trainerService->profileData($id));
     }
 
+    public function salary(string $locale, int $id)
+    {
+        return Inertia::render('Trainer/Salary', $this->trainerService->salaryPageData($id));
+    }
+
+    public function updateSalaryStatus(Request $request, string $locale, int $id)
+    {
+        $validated = $request->validate([
+            'salary_ids' => ['required', 'array', 'min:1'],
+            'salary_ids.*' => ['integer', 'exists:trainer_monthly_salaries,id'],
+            'action' => ['required', 'in:pay,cancel'],
+        ], [
+            'salary_ids.required' => 'Ընտրեք առնվազն մեկ աշխատավարձ։',
+            'salary_ids.array' => 'Ընտրված աշխատավարձերի տվյալները սխալ են։',
+            'salary_ids.min' => 'Ընտրեք առնվազն մեկ աշխատավարձ։',
+            'salary_ids.*.exists' => 'Ընտրված աշխատավարձը չի գտնվել։',
+            'action.required' => 'Գործողությունը պարտադիր է։',
+            'action.in' => 'Ընտրված գործողությունը սխալ է։',
+        ]);
+
+        $this->trainerService->updateMonthlySalaryStatuses($id, $validated['salary_ids'], $validated['action']);
+
+        return redirect()
+            ->route('trainer.salary', ['locale' => $locale, 'id' => $id])
+            ->with('success', 'Աշխատավարձերի կարգավիճակը թարմացվեց։');
+    }
+
 
 
     // ========== update =====================

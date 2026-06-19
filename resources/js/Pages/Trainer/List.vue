@@ -76,6 +76,16 @@ const { hasAnyRole } = useAuth();
                                                 Դիտել պրոֆիլը
                                             </Link>
                                             <Link
+                                                class="dropdown-item waves-effect"
+                                                :href="route('trainer.salary', {
+                                                    locale: currentLocale,
+                                                    id: user.id,
+                                                })"
+                                            >
+                                                <i class="icon-base ti tabler-cash me-1"></i>
+                                                Վճարել աշխատավարձ
+                                            </Link>
+                                            <Link
                                                 v-if="hasAnyRole(['owner', 'super_admin'])"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('trainer.edit', {

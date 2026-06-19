@@ -9,10 +9,12 @@ use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface;
 use App\Interfaces\TrainerSessionDurationSlot\TrainerSessionDurationSlotInterface;
 use App\Interfaces\Users\UserInterface;
 use App\Models\EntryPermission;
+use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\EntryCodes\EntryCodeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Laravel\Reverb\Loggers\Log;
 
 class TrainerService
@@ -77,6 +79,83 @@ class TrainerService
         return [
             'trainer' => $trainer,
         ];
+    }
+
+    public function salaryPageData(int $id): array
+    {
+        $user = Auth::user();
+
+        $trainer = User::query()
+            ->with([
+                'roles',
+                'gym',
+                'trainerCommissions' => function ($query) {
+                    $query->latest('id');
+                },
+                'trainerCommissions.personMembership.person',
+                'trainerCommissions.personMembership.membershipPlan.translations',
+                'trainerCommissions.monthlySalaries' => function ($query) {
+                    $query->latest('salary_month')->latest('id');
+                },
+                'trainerCommissions.monthlySalaries.personMembership.person',
+                'trainerCommissions.monthlySalaries.personMembership.membershipPlan.translations',
+            ])
+            ->whereHas('roles', function ($query) {
+                $query->where('roles.id', 7);
+            })
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->findOrFail($id);
+
+        return [
+            'trainer' => $trainer,
+        ];
+    }
+
+    public function updateMonthlySalaryStatuses(int $trainerId, array $salaryIds, string $action): void
+    {
+        $salaryIds = array_values(array_unique(array_map('intval', $salaryIds)));
+
+        DB::transaction(function () use ($trainerId, $salaryIds, $action) {
+            $this->ensureTrainerIsVisible($trainerId);
+
+            $salaries = TrainerMonthlySalary::query()
+                ->whereIn('id', $salaryIds)
+                ->lockForUpdate()
+                ->get();
+
+            if ($salaries->count() !== count($salaryIds)) {
+                throw ValidationException::withMessages([
+                    'salary_ids' => 'Ընտրված աշխատավարձերից մեկը չի գտնվել։',
+                ]);
+            }
+
+            $wrongTrainerExists = $salaries->contains(fn ($salary) => (int) $salary->trainer_id !== (int) $trainerId);
+
+            if ($wrongTrainerExists) {
+                throw ValidationException::withMessages([
+                    'salary_ids' => 'Ընտրված աշխատավարձը չի պատկանում տվյալ մարզչին։',
+                ]);
+            }
+
+            $allowedStatuses = ['pending', 'transfer'];
+            $invalidStatusExists = $salaries->contains(fn ($salary) => !in_array($salary->status, $allowedStatuses, true));
+
+            if ($invalidStatusExists) {
+                throw ValidationException::withMessages([
+                    'salary_ids' => $action === 'pay'
+                        ? 'Միայն սպասման կամ փոխանցման կարգավիճակով աշխատավարձերը կարող են վճարվել։'
+                        : 'Միայն սպասման կամ փոխանցման կարգավիճակով աշխատավարձերը կարող են չեղարկվել։',
+                ]);
+            }
+
+            $newStatus = $action === 'pay' ? 'paid' : 'cancel';
+
+            TrainerMonthlySalary::query()
+                ->whereIn('id', $salaryIds)
+                ->update(['status' => $newStatus]);
+        });
     }
 
     //public function update(int $trainerId, array $data): void
@@ -179,6 +258,21 @@ class TrainerService
     public function getTrainerSessionDuration($trainerId)
     {
         return $this->trainerScheduleRepository->getTrainerSessionDuration($trainerId);
+    }
+
+    protected function ensureTrainerIsVisible(int $trainerId): void
+    {
+        $user = Auth::user();
+
+        User::query()
+            ->whereKey($trainerId)
+            ->whereHas('roles', function ($query) {
+                $query->where('roles.id', 7);
+            })
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->firstOrFail();
     }
 
     //public function store(int $trainerId, array $data): void

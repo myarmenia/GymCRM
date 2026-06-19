@@ -297,6 +297,8 @@ Route::prefix('{locale}')
             Route::prefix('trainer')->name('trainer.')->group(function () {
                 Route::get('/', [TrainerController::class, 'index'])->name('index');
                 Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
+                Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');
+                Route::patch('/{id}/salary/status', [TrainerController::class, 'updateSalaryStatus'])->name('salary.status');
                 Route::get('/{id}/edit', [TrainerController::class, 'edit'])->name('edit');
                 Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
                 Route::put('/{id}', [TrainerController::class, 'update'])->name('update');
