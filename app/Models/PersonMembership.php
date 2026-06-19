@@ -67,6 +67,11 @@ class PersonMembership extends Model
         return $this->hasMany(TrainerCommission::class);
     }
 
+    public function trainerMonthlySalaries()
+    {
+        return $this->hasMany(TrainerMonthlySalary::class);
+    }
+
     public function salespersonCommissions()
     {
         return $this->hasMany(SalespersonCommission::class);

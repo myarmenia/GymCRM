@@ -162,6 +162,11 @@ class User extends Authenticatable
         return $this->hasMany(TrainerCommission::class, 'trainer_id');
     }
 
+    public function trainerMonthlySalaries()
+    {
+        return $this->hasMany(TrainerMonthlySalary::class, 'trainer_id');
+    }
+
     public function salespersonCommissions()
     {
         return $this->hasMany(SalespersonCommission::class, 'salesperson_id');

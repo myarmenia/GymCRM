@@ -80,6 +80,11 @@ class TrainerController extends Controller
         ]);
     }
 
+    public function profile(string $locale, int $id)
+    {
+        return Inertia::render('Trainer/Profile', $this->trainerService->profileData($id));
+    }
+
 
 
     // ========== update =====================

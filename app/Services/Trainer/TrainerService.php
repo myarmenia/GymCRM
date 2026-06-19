@@ -41,6 +41,44 @@ class TrainerService
         return $this->trainerRepository->findOrFail($id, ['roles']);
     }
 
+    public function profileData(int $id): array
+    {
+        $user = Auth::user();
+
+        $trainer = User::query()
+            ->with([
+                'roles',
+                'gym',
+                'trainedPersonMemberships' => function ($query) {
+                    $query->latest('id');
+                },
+                'trainedPersonMemberships.person',
+                'trainedPersonMemberships.membershipPlan.translations',
+                'trainerCommissions' => function ($query) {
+                    $query->latest('id');
+                },
+                'trainerCommissions.personMembership.person',
+                'trainerCommissions.personMembership.membershipPlan.translations',
+                'trainerMonthlySalaries' => function ($query) {
+                    $query->latest('salary_month')->latest('id');
+                },
+                'trainerMonthlySalaries.personMembership.person',
+                'trainerMonthlySalaries.personMembership.membershipPlan.translations',
+                'trainerMonthlySalaries.trainerCommission',
+            ])
+            ->whereHas('roles', function ($query) {
+                $query->where('roles.id', 7);
+            })
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->findOrFail($id);
+
+        return [
+            'trainer' => $trainer,
+        ];
+    }
+
     //public function update(int $trainerId, array $data): void
     //{
     //    $this->trainerRepository->saveTrainerScheduleData($trainerId, $data);
