@@ -233,6 +233,12 @@ const isFreezableMembership = sale => {
 
     return true
 }
+const canChangeTrainer = sale => {
+    const membership = sale.person_memberships?.[0]
+    const trainers = sale.membership_plan?.trainers ?? []
+
+    return Boolean(membership?.trainer_id && trainers.length > 1)
+}
 const membershipStatusLabel = status => ({
     waiting: 'Սպասման մեջ',
     active: 'Ակտիվ',
@@ -277,7 +283,14 @@ const applyFilters = (payload) => {
 const resetFilters = () => {
     filters.value = {
         date_field: '',
+        person_id: '',
+        trainer_id: '',
+        membership_plan_id: '',
         membership_discount_ids: '',
+        manual_discount: '',
+        payment_status: '',
+        date_from: '',
+        date_to: '',
     }
 
     router.get(
@@ -318,7 +331,6 @@ const resetFilters = () => {
                 <h5 class="mb-0">
                     Վաճառքների ցանկ
                 </h5>
-
             </div>
 
             <div class="card-body">
@@ -408,6 +420,15 @@ const resetFilters = () => {
                                             >
                                                 <i class="icon-base ti tabler-cash me-1"></i>
                                                 Վճարումներ
+                                            </Link>
+
+                                            <Link
+                                                v-if="canChangeTrainer(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.change_trainer', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-user-cog me-1"></i>
+                                                Փոխել մարզիչին
                                             </Link>
 
                                             <Link

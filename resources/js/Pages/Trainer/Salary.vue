@@ -15,6 +15,9 @@ const bulkForm = useForm({
     salary_ids: [],
     action: '',
 })
+const transferForm = useForm({
+    salary_id: null,
+})
 
 const commissions = computed(() => props.trainer?.trainer_commissions ?? [])
 const salaries = computed(() => commissions.value.flatMap(commission => commission.monthly_salaries ?? []))
@@ -87,6 +90,15 @@ const selectedCount = computed(() => selectedSalaryIds.value.length)
 const allSelectableSelected = computed(() => selectableSalaryRows.value.length > 0
     && selectableSalaryRows.value.every(row => selectedSalaryIds.value.includes(row.salary.id)))
 const canSelectSalary = salary => payableStatuses.includes(salary.status)
+const canTransfer = row => {
+    const currentTrainerId = Number(row.membership?.trainer_id || 0)
+    const salaryTrainerId = Number(row.salary?.trainer_id || 0)
+
+    return row.salary?.status !== 'transfer'
+        && currentTrainerId
+        && salaryTrainerId
+        && currentTrainerId !== salaryTrainerId
+}
 const toggleAllSelectable = () => {
     selectedSalaryIds.value = allSelectableSelected.value
         ? []
@@ -107,6 +119,18 @@ const submitBulkAction = action => {
             },
         },
     )
+}
+const transferSalary = salaryId => {
+    transferForm.salary_id = salaryId
+    transferForm.patch(route('trainer.salary.transfer', {
+        locale: currentLocale.value,
+        id: props.trainer.id,
+    }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            transferForm.reset()
+        },
+    })
 }
 </script>
 
@@ -226,10 +250,10 @@ const submitBulkAction = action => {
                     </div>
                 </div>
                 <div
-                    v-if="bulkForm.errors.salary_ids"
+                    v-if="bulkForm.errors.salary_ids || transferForm.errors.salary_id"
                     class="text-danger mb-3"
                 >
-                    {{ bulkForm.errors.salary_ids }}
+                    {{ bulkForm.errors.salary_ids || transferForm.errors.salary_id }}
                 </div>
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered align-middle">
@@ -252,6 +276,7 @@ const submitBulkAction = action => {
                                 <th>Ամսական աշխատավարձ</th>
                                 <th>Կարգավիճակ</th>
                                 <th>Ստեղծվել է</th>
+                                <th>Գործողություն</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -305,10 +330,21 @@ const submitBulkAction = action => {
                                     </span>
                                 </td>
                                 <td>{{ formatDate(row.salary.created_at) }}</td>
+                                <td>
+                                    <button
+                                        v-if="canTransfer(row)"
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        :disabled="transferForm.processing"
+                                        @click="transferSalary(row.salary.id)"
+                                    >
+                                        Transfer
+                                    </button>
+                                </td>
                             </tr>
                             <tr v-if="!salaryRows.length">
                                 <td
-                                    colspan="9"
+                                    colspan="10"
                                     class="text-center text-muted"
                                 >
                                     Ամսական աշխատավարձեր չկան

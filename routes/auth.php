@@ -237,6 +237,8 @@ Route::prefix('{locale}')
                     Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
                     Route::get('/freezes/{id}', [MembershipSaleController::class, 'freezes'])->name('freezes');
                     Route::post('/freezes/{id}', [MembershipSaleController::class, 'storeFreeze'])->name('freezes.store');
+                    Route::get('/change-trainer/{id}', [MembershipSaleController::class, 'changeTrainer'])->name('change_trainer');
+                    Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
@@ -299,6 +301,7 @@ Route::prefix('{locale}')
                 Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
                 Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');
                 Route::patch('/{id}/salary/status', [TrainerController::class, 'updateSalaryStatus'])->name('salary.status');
+                Route::patch('/{id}/salary/transfer', [TrainerController::class, 'transferSalary'])->name('salary.transfer');
                 Route::get('/{id}/edit', [TrainerController::class, 'edit'])->name('edit');
                 Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
                 Route::put('/{id}', [TrainerController::class, 'update'])->name('update');

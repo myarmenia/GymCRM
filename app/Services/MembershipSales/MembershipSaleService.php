@@ -20,6 +20,7 @@ use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
 use App\Models\PersonMembership;
+use App\Models\TrainerCommission;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -129,6 +130,7 @@ class MembershipSaleService
                 'payments.paymentMethod.cardTypes',
                 'payments.cardType',
                 'trainerCommissions.trainer',
+                'trainerCommissions.monthlySalaries',
                 'salespersonCommissions.salesperson',
             ])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
@@ -154,6 +156,138 @@ class MembershipSaleService
             'debtAmount' => $this->debtAmount($membershipSale),
             'availableRefundAmount' => $this->availableRefundAmount($membershipSale),
         ];
+    }
+
+    public function trainerChangePageData(int $id): array
+    {
+        $membershipSale = $this->getById($id);
+        $personMembership = $membershipSale->personMemberships->first();
+
+        if (!$personMembership) {
+            throw ValidationException::withMessages([
+                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+            ]);
+        }
+
+        if (!$personMembership->trainer_id) {
+            throw ValidationException::withMessages([
+                'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+            ]);
+        }
+
+        return [
+            'membershipSale' => $membershipSale,
+            'personMembership' => $personMembership,
+            'currentTrainer' => $personMembership->trainer,
+            'trainers' => $membershipSale->membershipPlan?->trainers ?? collect(),
+        ];
+    }
+
+    public function changeTrainer(int $id, array $data): MembershipSale
+    {
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+            $membershipSale = $this->membershipSaleRepository
+                ->query()
+                ->with([
+                    'membershipPlan.trainers',
+                    'personMemberships.trainer',
+                    'payments.paymentMethod',
+                ])
+                ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                    $query->where('gym_id', $user->gym_id);
+                })
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            $personMembership = $membershipSale
+                ->personMemberships()
+                ->with(['trainer', 'membershipPlan.trainers'])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$personMembership) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                ]);
+            }
+
+            if (!$personMembership->trainer_id) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+                ]);
+            }
+
+            $newTrainerId = (int) $data['trainer_id'];
+
+            if ((int) $personMembership->trainer_id === $newTrainerId) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Նոր մարզիչը չի կարող նույնը լինել գործող մարզչի հետ։',
+                ]);
+            }
+
+            $newTrainer = $this->getTrainer(
+                $newTrainerId,
+                $user,
+                (int) $membershipSale->gym_id,
+                $membershipSale->membershipPlan
+            );
+
+            $oldTrainerCommission = TrainerCommission::query()
+                ->where('membership_sale_id', $membershipSale->id)
+                ->where('person_membership_id', $personMembership->id)
+                ->where('trainer_id', $personMembership->trainer_id)
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$oldTrainerCommission) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Գործող մարզչի կոմիսիան չի գտնվել։',
+                ]);
+            }
+
+            $oldOriginalSalaryAmount = (float) $oldTrainerCommission->salary_amount;
+            $generatedSalaryAmount = (float) $oldTrainerCommission
+                ->monthlySalaries()
+                ->sum('price');
+            $remainingAmount = max($oldOriginalSalaryAmount - $generatedSalaryAmount, 0);
+
+            $oldTrainerCommission->update([
+                'salary_amount' => $generatedSalaryAmount,
+            ]);
+
+            if ($remainingAmount > 0) {
+                $commissionData = $this->calculateTrainerCommission($newTrainer, (float) $membershipSale->final_price, []);
+
+                $this->trainerCommissionRepository->create(
+                    $this->trainerCommissionDtoData([
+                        'trainer_id' => $newTrainer->id,
+                        'membership_sale_id' => $membershipSale->id,
+                        'person_membership_id' => $personMembership->id,
+                        'salary_type' => $commissionData['type'],
+                        'salary_value' => $commissionData['value'],
+                        'salary_amount' => $remainingAmount,
+                        'status' => 'pending',
+                        'paid_at' => null,
+                        'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
+                    ])
+                );
+            }
+
+            $personMembership->update([
+                'trainer_id' => $newTrainer->id,
+            ]);
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
 
@@ -1068,6 +1202,23 @@ class MembershipSaleService
         $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
 
         return $paymentMethod?->slug !== 'cash';
+    }
+
+    protected function shouldKeepTrainerCommissionForSale(MembershipSale $membershipSale): bool
+    {
+        if ((float) $membershipSale->final_price <= 0 || $this->netPaidAmount($membershipSale) < (float) $membershipSale->final_price) {
+            return false;
+        }
+
+        $payment = $membershipSale
+            ->payments()
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->with('paymentMethod')
+            ->latest('id')
+            ->first();
+
+        return $payment?->paymentMethod?->slug !== 'cash';
     }
 
     protected function saleDtoData(array $data): array

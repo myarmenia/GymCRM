@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MembershipSales\ChangeMembershipSaleTrainerRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleFreezeRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleGuestRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
@@ -40,7 +41,7 @@ class MembershipSaleController extends Controller
 
     public function store(StoreMembershipSaleRequest $request, $locale, $person)
     {
-        $sale = $this->membershipSaleService->store($request->validated());
+        $this->membershipSaleService->store($request->validated());
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
@@ -76,6 +77,26 @@ class MembershipSaleController extends Controller
                 ->route('membership_sale.list', ['locale' => app()->getLocale()])
                 ->withErrors($e->errors());
         }
+    }
+
+    public function changeTrainer($locale, $id)
+    {
+        try {
+            return Inertia::render('MembershipSales/ChangeTrainer', $this->membershipSaleService->trainerChangePageData((int) $id));
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('membership_sale.list', ['locale' => app()->getLocale()])
+                ->withErrors($e->errors());
+        }
+    }
+
+    public function updateTrainer(ChangeMembershipSaleTrainerRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->changeTrainer((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.list', ['locale' => app()->getLocale()])
+            ->with('success', 'Մարզիչը հաջողությամբ փոխվեց։');
     }
 
     public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)

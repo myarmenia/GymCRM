@@ -7,19 +7,16 @@ use App\Interfaces\Trainer\TrainerInterface;
 use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
 use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface;
 use App\Interfaces\TrainerSessionDurationSlot\TrainerSessionDurationSlotInterface;
-use App\Interfaces\Users\UserInterface;
-use App\Models\EntryPermission;
+use App\Models\TrainerCommission;
 use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\EntryCodes\EntryCodeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Laravel\Reverb\Loggers\Log;
 
 class TrainerService
 {
-
     public function __construct(
         protected TrainerInterface $trainerRepository,
         protected TrainerScheduleInterface $trainerScheduleRepository,
@@ -31,15 +28,12 @@ class TrainerService
 
     public function getAllPaginated()
     {
-        $users = $this->trainerRepository
+        return $this->trainerRepository
             ->paginateForUser(auth()->user(), 1000);
-        return $users;
     }
-
 
     public function getById($id)
     {
-        // return $this->trainerRepository->getById($id)->load('roles');
         return $this->trainerRepository->findOrFail($id, ['roles']);
     }
 
@@ -98,6 +92,7 @@ class TrainerService
                     $query->latest('salary_month')->latest('id');
                 },
                 'trainerCommissions.monthlySalaries.personMembership.person',
+                'trainerCommissions.monthlySalaries.personMembership.trainer',
                 'trainerCommissions.monthlySalaries.personMembership.membershipPlan.translations',
             ])
             ->whereHas('roles', function ($query) {
@@ -158,10 +153,101 @@ class TrainerService
         });
     }
 
-    //public function update(int $trainerId, array $data): void
-    //{
-    //    $this->trainerRepository->saveTrainerScheduleData($trainerId, $data);
-    //}
+    public function transferMonthlySalary(int $trainerId, int $salaryId): void
+    {
+        DB::transaction(function () use ($trainerId, $salaryId) {
+            $this->ensureTrainerIsVisible($trainerId);
+
+            $salary = TrainerMonthlySalary::query()
+                ->with('personMembership')
+                ->whereKey($salaryId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $salary->trainer_id !== (int) $trainerId) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Ընտրված աշխատավարձը չի պատկանում տվյալ մարզչին։',
+                ]);
+            }
+
+            if ($salary->status === 'transfer') {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Այս աշխատավարձն արդեն փոխանցված է։',
+                ]);
+            }
+
+            $personMembership = $salary->personMembership;
+
+            if (!$personMembership || !$personMembership->trainer_id) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Աբոնեմենտի ընթացիկ մարզիչը չի գտնվել։',
+                ]);
+            }
+
+            $newTrainerId = (int) $personMembership->trainer_id;
+
+            if ($newTrainerId === (int) $salary->trainer_id) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Փոխանցումը հնարավոր չէ, քանի որ մարզիչը չի փոխվել։',
+                ]);
+            }
+
+            $oldCommission = TrainerCommission::query()
+                ->whereKey($salary->trainer_commission_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$oldCommission) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Հին մարզչի կոմիսիան չի գտնվել։',
+                ]);
+            }
+
+            $newCommission = TrainerCommission::query()
+                ->where('trainer_id', $newTrainerId)
+                ->where('membership_sale_id', $oldCommission->membership_sale_id)
+                ->where('person_membership_id', $personMembership->id)
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$newCommission) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Նոր մարզչի կոմիսիան չի գտնվել։',
+                ]);
+            }
+
+            $targetSalaryExists = TrainerMonthlySalary::query()
+                ->where('trainer_id', $newTrainerId)
+                ->where('person_membership_id', $personMembership->id)
+                ->where('trainer_commission_id', $newCommission->id)
+                ->whereDate('salary_month', $salary->salary_month)
+                ->whereKeyNot($salary->id)
+                ->exists();
+
+            if ($targetSalaryExists) {
+                throw ValidationException::withMessages([
+                    'salary_id' => 'Այս ամսվա աշխատավարձն արդեն գոյություն ունի նոր մարզչի համար։',
+                ]);
+            }
+
+            $amount = (float) $salary->price;
+
+            $oldCommission->update([
+                'salary_amount' => max((float) $oldCommission->salary_amount - $amount, 0),
+            ]);
+
+            $newCommission->update([
+                'salary_amount' => (float) $newCommission->salary_amount + $amount,
+            ]);
+
+            $salary->update([
+                'trainer_id' => $newTrainerId,
+                'trainer_commission_id' => $newCommission->id,
+                'status' => 'transfer',
+            ]);
+        });
+    }
 
     public function saveTrainerScheduleData(int $trainerId, array $data): void
     {
@@ -238,10 +324,8 @@ class TrainerService
         });
     }
 
-
     protected function dataToArray($data)
     {
-
         $authUser = Auth::user();
 
         if ($authUser->hasRole('owner')) {
@@ -274,9 +358,4 @@ class TrainerService
             })
             ->firstOrFail();
     }
-
-    //public function store(int $trainerId, array $data): void
-    //{
-    //    $this->trainerRepository->saveTrainerScheduleData($trainerId, $data);
-    //}
 }
