@@ -1,19 +1,23 @@
 <script setup>
-// import { useTrans } from '/resources/js/trans';
-import { Link, usePage } from "@inertiajs/vue3";
-import { useAuth } from "@/composables/useAuth";
+import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { useAuth } from '@/composables/useAuth'
 
-const page = usePage();
-
-const currentLocale = page.props.locale;
-
-const { hasRole, hasAnyRole } = useAuth();
+const page = usePage()
+const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? 'hy')
+const { hasRole, hasAnyRole } = useAuth()
 </script>
 
 <template>
-    <aside id="layout-menu" class="layout-menu menu-vertical menu">
+    <aside
+        id="layout-menu"
+        class="layout-menu menu-vertical menu"
+    >
         <div class="app-brand demo">
-            <a href="index.html" class="app-brand-link">
+            <a
+                href="index.html"
+                class="app-brand-link"
+            >
                 <span class="app-brand-logo demo">
                     <span class="text-primary">
                         <svg
@@ -52,9 +56,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         </svg>
                     </span>
                 </span>
-                <span class="app-brand-text demo menu-text fw-bold ms-3"
-                    >Vuexy</span
-                >
+                <span class="app-brand-text demo menu-text fw-bold ms-3">Vuexy</span>
             </a>
             <a
                 href="javascript:void(0);"
@@ -67,249 +69,192 @@ const { hasRole, hasAnyRole } = useAuth();
 
         <div class="menu-inner-shadow"></div>
         <ul class="menu-inner py-1">
-            <!-- ======== users ========== -->
             <li
-                :class="[
-                    'menu-item',
-                    route().current('user.list') ? 'active' : '',
-                ]"
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
+                :class="['menu-item', route().current('user.list') ? 'active' : '']"
             >
                 <Link
-                    v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
                     :href="route('user.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div data-i18n="Service Types">
-                        {{ hasRole("owner") ? "Օգտատերեր" : "Անձնակազմ" }}
-                    </div>
+                    <div>{{ hasRole('owner') ? 'Օգտատերեր' : 'Անձնակազմ' }}</div>
                 </Link>
             </li>
+
             <li
-                :class="[
-                    'menu-item',
-                    route().current('trainer.index') ? 'active' : '',
-                ]"
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
+                :class="['menu-item', route().current('trainer.index') ? 'active' : '']"
             >
                 <Link
-                    v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
                     :href="route('trainer.index', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div data-i18n="Trainers">Մարզիչներ</div>
+                    <div>Մարզիչներ</div>
                 </Link>
             </li>
-            <!-- 🟢 PEOPLE (նոր ավելացված) -->
+
             <li
                 v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
-                :class="[
-                    'menu-item',
-                    route().current('person.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('person.list') ? 'active' : '']"
             >
                 <Link
                     :href="route('person.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
-                    <div data-i18n="People">People</div>
+                    <div>Հաճախորդներ</div>
                 </Link>
             </li>
 
-            <!-- ======== Gym ====== -->
             <li
                 v-if="hasRole('owner')"
-                :class="[
-                    'menu-item',
-                    route().current('gym.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('gym.list') ? 'active' : '']"
             >
                 <Link
                     :href="route('gym.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-building"></i>
-                    <div data-i18n="Service Types">Մարզասրահ</div>
+                    <div>Մարզադահլիճ</div>
                 </Link>
             </li>
+
             <li
                 v-if="!hasRole('cleaner')"
-                :class="[
-                    'menu-item',
-                    route().current('warehouse.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('warehouse.list') ? 'active' : '']"
             >
                 <Link
                     :href="route('warehouse.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-packages"></i>
-                    <div data-i18n="Warehouses">Պահեստներ</div>
+                    <div>Պահեստներ</div>
                 </Link>
             </li>
+
             <li
                 v-if="!hasRole('cleaner')"
-                :class="[
-                    'menu-item',
-                    route().current('categories.index') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('categories.index') ? 'active' : '']"
             >
                 <Link
                     :href="route('categories.index', { locale: currentLocale })"
                     class="menu-link"
                 >
-                    <i class="icon-base ti tabler-list"></i>
-                    <div data-i18n="Categories" class="categories">
-                        Կատեգորիաներ
-                    </div>
+                    <i class="menu-icon icon-base ti tabler-list"></i>
+                    <div>Կատեգորիաներ</div>
                 </Link>
             </li>
+
             <li
                 v-if="!hasRole('cleaner')"
-                :class="[
-                    'menu-item',
-                    route().current('products.index') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('products.index') ? 'active' : '']"
             >
                 <Link
                     :href="route('products.index', { locale: currentLocale })"
                     class="menu-link"
                 >
-                    <i class="icon-base ti tabler-list-details"></i>
-                    <div data-i18n="Products" class="products">Ապրանքներ</div>
-                </Link>
-            </li>
-            <li
-                v-if="!hasRole('cleaner')"
-                :class="[
-                    'menu-item',
-                    route().current('product-consumptions.index')
-                        ? 'active'
-                        : '',
-                ]"
-            >
-                <Link
-                    :href="
-                        route('product-consumptions.index', {
-                            locale: currentLocale,
-                        })
-                    "
-                    class="menu-link"
-                >
-                    <i class="icon-base ti tabler-package-export me-1"></i>
-                    <div
-                        data-i18n="product-consumption"
-                        class="product-consumption"
-                    >
-                        Ապրանքների սպառում
-                    </div>
-                </Link>
-            </li>
-            <li
-                v-if="!hasRole('cleaner')"
-                :class="[
-                    'menu-item',
-                    route().current('schedule.index') ? 'active' : '',
-                ]"
-            >
-                <Link
-                    :href="
-                        route('schedule.index', {
-                            locale: currentLocale,
-                        })
-                    "
-                    class="menu-link"
-                >
-                    <i class="icon-base ti tabler-calendar-time"></i>
-                    <div data-i18n="product-consumption" class="schedule">
-                        Ժամային գրաֆիկ
-                    </div>
+                    <i class="menu-icon icon-base ti tabler-list-details"></i>
+                    <div>Ապրանքներ</div>
                 </Link>
             </li>
 
-            <!-- ======== entry codes ========== -->
             <li
-                :class="[
-                    'menu-item',
-                    route().current('entry-code.list') ? 'active' : '',
-                ]"
+                v-if="!hasRole('cleaner')"
+                :class="['menu-item', route().current('product-consumptions.index') ? 'active' : '']"
             >
+                <Link
+                    :href="route('product-consumptions.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-package-export"></i>
+                    <div>Ապրանքների սպառում</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="!hasRole('cleaner')"
+                :class="['menu-item', route().current('schedule.index') ? 'active' : '']"
+            >
+                <Link
+                    :href="route('schedule.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-calendar-time"></i>
+                    <div>Ժամային գրաֆիկ</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager'])"
+                :class="['menu-item', route().current('schedule.trainer_occupancy') ? 'active' : '']"
+            >
+                <Link
+                    :href="route('schedule.trainer_occupancy', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-calendar-stats"></i>
+                    <div>Մարզիչների զբաղվածություն</div>
+                </Link>
+            </li>
+
+            <li :class="['menu-item', route().current('entry-code.list') ? 'active' : '']">
                 <Link
                     :href="route('entry-code.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-qrcode"></i>
-                    <!-- or use any icon you prefer, e.g. ti tabler-ticket -->
-                    <div data-i18n="Entry Codes">Entry Codes</div>
+                    <div>Մուտքի կոդեր</div>
                 </Link>
             </li>
 
-            <!-- ======== membership plans ========== -->
-            <li
-                :class="[
-                    'menu-item',
-                    route().current('membership_plan.list') ? 'active' : '',
-                ]"
-            >
+            <li :class="['menu-item', route().current('membership_plan.list') ? 'active' : '']">
                 <Link
-                    :href="
-                        route('membership_plan.list', { locale: currentLocale })
-                    "
+                    :href="route('membership_plan.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div data-i18n="Service Types">Աբոնեմենտներ</div>
+                    <div>Աբոնեմենտներ</div>
                 </Link>
             </li>
 
-            <!-- ======== membership categories (NEW) ========== -->
             <li
                 v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
-                :class="[
-                    'menu-item',
-                    route().current('membership-category.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('membership-category.list') ? 'active' : '']"
             >
                 <Link
-                    :href="
-                        route('membership-category.list', {
-                            locale: currentLocale,
-                        })
-                    "
+                    :href="route('membership-category.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div data-i18n="Membership Categories">Կատեգորիաներ</div>
+                    <div>Աբոնեմենտների Կատեգորիաներ</div>
                 </Link>
             </li>
+
             <li
                 v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
-                :class="[
-                    'menu-item',
-                    route().current('discount.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('discount.list') ? 'active' : '']"
             >
                 <Link
                     :href="route('discount.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-percentage"></i>
-                    <div data-i18n="Զեղչեր">Զեղչեր</div>
+                    <div>Զեղչեր</div>
                 </Link>
             </li>
+
             <li
                 v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
-                :class="[
-                    'menu-item',
-                    route().current('membership_sale.list') ? 'active' : '',
-                ]"
+                :class="['menu-item', route().current('membership_sale.list') ? 'active' : '']"
             >
-                <Link :href="route('membership_sale.list', { locale: currentLocale })" class="menu-link">
+                <Link
+                    :href="route('membership_sale.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-receipt"></i>
-                    <div data-i18n="Membership Sales">
-                        Աբոնեմենտների վաճառքներ
-                    </div>
+                    <div>Աբոնեմենտների վաճառքներ</div>
                 </Link>
             </li>
         </ul>
@@ -325,24 +270,3 @@ const { hasRole, hasAnyRole } = useAuth();
         </a>
     </div>
 </template>
-<style scoped>
-.product-consumption {
-    text-transform: capitalize;
-    margin-left: 5px;
-}
-
-.schedule {
-    text-transform: capitalize;
-    margin-left: 10px;
-}
-
-.products {
-    text-transform: capitalize;
-    margin-left: 10px;
-}
-
-.categories {
-    text-transform: capitalize;
-    margin-left: 10px;
-}
-</style>

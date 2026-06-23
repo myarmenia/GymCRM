@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -30,21 +30,6 @@ const fullName = user => `${user?.name ?? ''} ${user?.surname ?? ''}`.trim() || 
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const formatAmount = value => Number(value || 0).toFixed(2)
 const availableTrainers = computed(() => props.trainers.filter(trainer => Number(trainer.id) !== Number(props.currentTrainer?.id)))
-const currentTrainerSalary = computed(() => {
-    const commission = (props.membershipSale?.trainer_commissions ?? [])
-        .find(item => Number(item.trainer_id) === Number(props.currentTrainer?.id)
-            && Number(item.person_membership_id) === Number(props.personMembership?.id))
-
-    return commission?.salary_amount ?? 0
-})
-
-const trainerPivotInfo = trainer => {
-    const type = trainer?.pivot?.price_type === 'percent' ? '%' : 'ֆիքսված'
-    const value = trainer?.pivot?.price_value ?? 0
-    const total = trainer?.pivot?.total_price ?? 0
-
-    return `${type}: ${value}, ընդհանուր՝ ${formatAmount(total)}`
-}
 
 const selectTrainer = trainerId => {
     form.trainer_id = Number(form.trainer_id) === Number(trainerId) ? '' : trainerId
@@ -127,13 +112,9 @@ const submit = () => {
                             <span>Կարգավիճակ</span>
                             <strong>{{ personMembership.status ?? '-' }}</strong>
                         </div>
-                        <div class="detail-row">
+                        <div class="detail-row mb-0">
                             <span>Գործող մարզիչ</span>
                             <strong>{{ fullName(currentTrainer) }}</strong>
-                        </div>
-                        <div class="detail-row mb-0">
-                            <span>Գործող կոմիսիա</span>
-                            <strong>{{ formatAmount(currentTrainerSalary) }}</strong>
                         </div>
                     </div>
                 </div>
@@ -160,9 +141,19 @@ const submit = () => {
                         :class="{ selected: Number(form.trainer_id) === Number(trainer.id) }"
                         @click="selectTrainer(trainer.id)"
                     >
-                        <span class="fw-semibold">{{ fullName(trainer) }}</span>
-                        <span class="text-muted small">{{ trainer.phone ?? trainer.email ?? '-' }}</span>
-                        <span class="text-primary small">{{ trainerPivotInfo(trainer) }}</span>
+                        <span class="trainer-icon">
+                            <i class="icon-base ti tabler-user-star"></i>
+                        </span>
+                        <span class="trainer-info">
+                            <span class="fw-semibold">{{ fullName(trainer) }}</span>
+                            <span class="text-muted small">{{ trainer.phone ?? trainer.email ?? '-' }}</span>
+                        </span>
+                        <span
+                            v-if="Number(form.trainer_id) === Number(trainer.id)"
+                            class="selected-mark"
+                        >
+                            <i class="icon-base ti tabler-check"></i>
+                        </span>
                     </button>
                 </div>
                 <div
@@ -198,8 +189,8 @@ const submit = () => {
     align-items: center;
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
-    justify-content: space-between;
     gap: 1rem;
+    justify-content: space-between;
     padding: .625rem 0;
 }
 
@@ -214,28 +205,65 @@ const submit = () => {
 .trainer-grid {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .trainer-card {
+    align-items: center;
     background: var(--bs-body-bg);
     border: 1px solid var(--bs-border-color);
     border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: .35rem;
+    display: grid;
+    gap: .85rem;
+    grid-template-columns: auto 1fr auto;
+    min-height: 82px;
     padding: 1rem;
+    position: relative;
     text-align: left;
     transition: .15s ease-in-out;
 }
 
 .trainer-card:hover {
-    border-color: var(--bs-primary);
+    border-color: rgba(var(--bs-primary-rgb), .55);
+    box-shadow: 0 .25rem .75rem rgba(var(--bs-primary-rgb), .08);
+    transform: translateY(-1px);
 }
 
 .trainer-card.selected {
     background: rgba(var(--bs-primary-rgb), .08);
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 1px var(--bs-primary);
+}
+
+.trainer-icon,
+.selected-mark {
+    align-items: center;
+    border-radius: 50%;
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
+}
+
+.trainer-icon {
+    background: rgba(var(--bs-primary-rgb), .1);
+    color: var(--bs-primary);
+    font-size: 1.25rem;
+    height: 44px;
+    width: 44px;
+}
+
+.trainer-info {
+    display: flex;
+    flex-direction: column;
+    gap: .2rem;
+    min-width: 0;
+}
+
+.selected-mark {
+    background: var(--bs-primary);
+    color: var(--bs-white);
+    font-size: .95rem;
+    height: 28px;
+    width: 28px;
 }
 </style>

@@ -261,6 +261,7 @@ Route::prefix('{locale}')
 
             Route::prefix('schedule')->name('schedule.')->group(function () {
                 Route::get('/', [ScheduleController::class, 'index'])->name('index');
+                Route::get('/trainer-occupancy', [ScheduleController::class, 'trainerOccupancy'])->name('trainer_occupancy');
                 Route::get('/create', [ScheduleController::class, 'create'])->name('create');
                 Route::post('/', [ScheduleController::class, 'store'])->name('store');
 
