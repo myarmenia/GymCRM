@@ -19,6 +19,7 @@ use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
+use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
@@ -84,6 +85,14 @@ Route::prefix('{locale}')
 
             Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');
+
+            Route::prefix('notifications')->name('notifications.')->group(function () {
+                Route::get('/', [NotificationController::class, 'index'])->name('index');
+                Route::get('/create', [NotificationController::class, 'create'])->name('create');
+                Route::post('/', [NotificationController::class, 'store'])->name('store');
+                Route::delete('/all', [NotificationController::class, 'destroyAll'])->name('destroy-all');
+                Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+            });
 
 
             // ====== users ================
