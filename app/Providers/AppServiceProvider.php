@@ -20,6 +20,7 @@ use App\Interfaces\GymSchedule\GymScheduleInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
 use App\Interfaces\MembershipPlanSchedule\MembershipPlanScheduleInterface;
 use App\Interfaces\MembershipPlanTrainer\MembershipPlanTrainerInterface;
+use App\Interfaces\Notifications\NotificationRepositoryInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
@@ -61,6 +62,7 @@ use App\Repositories\GymSchedule\GymScheduleRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
 use App\Repositories\MembershipPlanSchedule\MembershipPlanScheduleRepository;
 use App\Repositories\MembershipPlanTrainer\MembershipPlanTrainerRepository;
+use App\Repositories\Notifications\NotificationRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\PersonMemberships\PersonMembershipRepository;
@@ -143,6 +145,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TrainerCommissionInterface::class, TrainerCommissionRepository::class);
         $this->app->bind(SalespersonCommissionInterface::class, SalespersonCommissionRepository::class);
         $this->app->bind(TrainerInterface::class, TrainerRepository::class);
+        $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
 
         $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class,TrainerSessionDurationRepository::class);
 

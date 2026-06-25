@@ -19,6 +19,8 @@ use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
+use App\Models\PersonMembership;
+use App\Models\TrainerCommission;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -76,6 +78,16 @@ class MembershipSaleService
             ->orderBy('id', 'desc')
             ->get();
 
+        $people = Person::query()
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->whereHas('gyms', function ($q) use ($user) {
+                    $q->where('gyms.id', $user->gym_id);
+                });
+            })
+            ->orderBy('name')
+            ->orderBy('surname')
+            ->get();
+
         $trainers = User::query()
             ->with('roles')
             ->whereHas('roles', function ($query) {
@@ -97,7 +109,7 @@ class MembershipSaleService
             ->orderBy('id', 'desc')
             ->get();
 
-        return compact('membershipPlans', 'trainers', 'discounts');
+        return compact('membershipPlans', 'people', 'trainers', 'discounts');
     }
 
     public function getById(int $id): MembershipSale
@@ -118,6 +130,7 @@ class MembershipSaleService
                 'payments.paymentMethod.cardTypes',
                 'payments.cardType',
                 'trainerCommissions.trainer',
+                'trainerCommissions.monthlySalaries',
                 'salespersonCommissions.salesperson',
             ])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
@@ -144,6 +157,139 @@ class MembershipSaleService
             'availableRefundAmount' => $this->availableRefundAmount($membershipSale),
         ];
     }
+
+    public function trainerChangePageData(int $id): array
+    {
+        $membershipSale = $this->getById($id);
+        $personMembership = $membershipSale->personMemberships->first();
+
+        if (!$personMembership) {
+            throw ValidationException::withMessages([
+                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+            ]);
+        }
+
+        if (!$personMembership->trainer_id) {
+            throw ValidationException::withMessages([
+                'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+            ]);
+        }
+
+        return [
+            'membershipSale' => $membershipSale,
+            'personMembership' => $personMembership,
+            'currentTrainer' => $personMembership->trainer,
+            'trainers' => $membershipSale->membershipPlan?->trainers ?? collect(),
+        ];
+    }
+
+    public function changeTrainer(int $id, array $data): MembershipSale
+    {
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+            $membershipSale = $this->membershipSaleRepository
+                ->query()
+                ->with([
+                    'membershipPlan.trainers',
+                    'personMemberships.trainer',
+                    'payments.paymentMethod',
+                ])
+                ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                    $query->where('gym_id', $user->gym_id);
+                })
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            $personMembership = $membershipSale
+                ->personMemberships()
+                ->with(['trainer', 'membershipPlan.trainers'])
+                ->lockForUpdate()
+                ->first();
+
+            if (!$personMembership) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                ]);
+            }
+
+            if (!$personMembership->trainer_id) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+                ]);
+            }
+
+            $newTrainerId = (int) $data['trainer_id'];
+
+            if ((int) $personMembership->trainer_id === $newTrainerId) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Նոր մարզիչը չի կարող նույնը լինել գործող մարզչի հետ։',
+                ]);
+            }
+
+            $newTrainer = $this->getTrainer(
+                $newTrainerId,
+                $user,
+                (int) $membershipSale->gym_id,
+                $membershipSale->membershipPlan
+            );
+
+            $oldTrainerCommission = TrainerCommission::query()
+                ->where('membership_sale_id', $membershipSale->id)
+                ->where('person_membership_id', $personMembership->id)
+                ->where('trainer_id', $personMembership->trainer_id)
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$oldTrainerCommission) {
+                throw ValidationException::withMessages([
+                    'trainer_id' => 'Գործող մարզչի կոմիսիան չի գտնվել։',
+                ]);
+            }
+
+            $oldOriginalSalaryAmount = (float) $oldTrainerCommission->salary_amount;
+            $generatedSalaryAmount = (float) $oldTrainerCommission
+                ->monthlySalaries()
+                ->sum('price');
+            $remainingAmount = max($oldOriginalSalaryAmount - $generatedSalaryAmount, 0);
+
+            $oldTrainerCommission->update([
+                'salary_amount' => $generatedSalaryAmount,
+            ]);
+
+            if ($remainingAmount > 0) {
+                $commissionData = $this->calculateTrainerCommission($newTrainer, (float) $membershipSale->final_price, []);
+
+                $this->trainerCommissionRepository->create(
+                    $this->trainerCommissionDtoData([
+                        'trainer_id' => $newTrainer->id,
+                        'membership_sale_id' => $membershipSale->id,
+                        'person_membership_id' => $personMembership->id,
+                        'salary_type' => $commissionData['type'],
+                        'salary_value' => $commissionData['value'],
+                        'salary_amount' => $remainingAmount,
+                        'status' => 'pending',
+                        'paid_at' => null,
+                        'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
+                    ])
+                );
+            }
+
+            $personMembership->update([
+                'trainer_id' => $newTrainer->id,
+            ]);
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
 
     public function storePayment(int $id, array $data): MembershipSale
     {
@@ -298,7 +444,11 @@ class MembershipSaleService
 
         $discountTypes = $this->discountTypes();
 
-        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson');
+        $customerMemberships = $personId
+            ? $this->customerCurrentMemberships($personId, $user)
+            : collect();
+
+        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson', 'customerMemberships');
     }
 
     public function store(array $data)
@@ -312,6 +462,8 @@ class MembershipSaleService
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            $previousMatchingMembership = $this->previousMatchingMembershipForSale($person, $membershipPlan);
+            $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
             $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
 
             $discounts = $this->getMembershipAttachedDiscounts($membershipPlan, $data['membership_discount_ids'] ?? []);
@@ -319,6 +471,11 @@ class MembershipSaleService
             $discountData = $this->calculateDiscount($discounts, $totalPrice, $data);
             $finalPrice = max($totalPrice - $discountData['amount'], 0);
             $paymentAmount = $this->resolvePaymentAmount($data, $finalPrice);
+            $guestLeft = (int) ($membershipPlan->guest_limit ?? 0);
+            $freezeLeft = (int) ($membershipPlan->freeze_limit ?? 0);
+            $visitsLeft = isset($membershipPlan->visits_limit)
+                ? (int) $membershipPlan->visits_limit
+                : null;
 
             $membershipSale = $this->membershipSaleRepository->create(
                 $this->saleDtoData([
@@ -349,15 +506,22 @@ class MembershipSaleService
                     'status' => 'waiting',
                     'start_date' => $startDate->toDateString(),
                     'end_date' => $endDate?->toDateString(),
+                    'valid_at' => $endDate?->toDateString(),
                     'visits_used' => 0,
-                    'visits_left' => $membershipPlan->visits_limit,
-                    'freeze_used' => $membershipPlan->freeze_limit ?? 0,
-                    'guest_used' => $membershipPlan->guest_limit ?? 0,
+                    'visits_left' => $visitsLeft,
+                    'freeze_left' => $freezeLeft,
+                    'guest_left' => $guestLeft,
                     'next_membership_id' => null,
                     'activated_at' => null,
                     'expired_at' => null,
                 ])
             );
+
+            if ($previousMatchingMembership) {
+                $previousMatchingMembership->update([
+                    'next_membership_id' => $personMembership->id,
+                ]);
+            }
 
             foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
                 $this->membershipSaleDiscountRepository->create(
@@ -463,8 +627,23 @@ class MembershipSaleService
                 ])
                 ->concat($newDiscounts);
             $totalPrice = (float) $membershipSale->total_price;
-            $discountData = $this->calculateDiscount($discounts, $totalPrice, $data);
-            $finalPrice = max($totalPrice - $discountData['amount'], 0);
+            $hasExistingManualDiscount = (float) ($membershipSale->discount_amount ?? 0) > 0;
+            $discountData = $this->calculateDiscount(
+                $discounts,
+                $totalPrice,
+                $hasExistingManualDiscount ? [] : $data
+            );
+            $manualDiscountType = $hasExistingManualDiscount
+                ? $membershipSale->discount_type
+                : $discountData['sale_type'];
+            $manualDiscountValue = $hasExistingManualDiscount
+                ? $membershipSale->discount_value
+                : $discountData['sale_value'];
+            $manualDiscountAmount = $hasExistingManualDiscount
+                ? (float) $membershipSale->discount_amount
+                : $discountData['manual_amount'];
+            $totalDiscountAmount = min($discountData['membership_amount'] + $manualDiscountAmount, $totalPrice);
+            $finalPrice = max($totalPrice - $totalDiscountAmount, 0);
             $paymentAmount = $this->netPaidAmount($membershipSale);
 
             $membershipSale->update($this->saleDtoData([
@@ -473,9 +652,9 @@ class MembershipSaleService
                 'gym_id' => $membershipSale->gym_id,
                 'membership_plan_id' => $membershipPlan->id,
                 'total_price' => $totalPrice,
-                'discount_type' => $discountData['sale_type'],
-                'discount_value' => $discountData['sale_value'],
-                'discount_amount' => $discountData['manual_amount'],
+                'discount_type' => $manualDiscountType,
+                'discount_value' => $manualDiscountValue,
+                'discount_amount' => $manualDiscountAmount,
                 'final_price' => $finalPrice,
                 'payment_status' => $this->paymentStatus($paymentAmount, $finalPrice),
                 'notes' => $membershipSale->notes,
@@ -547,6 +726,7 @@ class MembershipSaleService
 
         return array_intersect_key($filters, array_flip([
             'trainer_id',
+            'person_id',
             'membership_plan_id',
             'membership_discount_ids',
             'manual_discount',
@@ -618,8 +798,8 @@ class MembershipSaleService
         }
 
         return match ($plan->duration_type) {
-            'day', 'visit' => $startDate->copy()->addDays((int) $plan->duration_value)->subDay(),
-            'month' => $startDate->copy()->addMonthsNoOverflow((int) $plan->duration_value)->subDay(),
+            'day' => $startDate->copy()->addDays((int) $plan->duration_value)->subDay(),
+            'month', 'visit' => $startDate->copy()->addMonthsNoOverflow((int) $plan->duration_value)->subDay(),
             'year' => $startDate->copy()->addYearsNoOverflow((int) $plan->duration_value)->subDay(),
             default => null,
         };
@@ -784,6 +964,49 @@ class MembershipSaleService
             : $membershipSale->personMemberships()->first();
 
         return $membership?->status === 'cancelled';
+    }
+
+    protected function customerCurrentMemberships(int $personId, User $user)
+    {
+        return PersonMembership::query()
+            ->with([
+                'membershipPlan.translations',
+                'trainer',
+            ])
+            ->where('person_id', $personId)
+            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    protected function previousMatchingMembershipForSale(Person $person, MembershipPlan $membershipPlan): ?PersonMembership
+    {
+        return PersonMembership::query()
+            ->with('membershipPlan.translations')
+            ->where('person_id', $person->id)
+            ->where('membership_plan_id', $membershipPlan->id)
+            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->whereNotNull('valid_at')
+            ->orderByDesc('valid_at')
+            ->first();
+    }
+
+    protected function ensureMembershipStartDateIsAllowed(?PersonMembership $previousMatchingMembership, Carbon $startDate): void
+    {
+        if (!$previousMatchingMembership || !$previousMatchingMembership->valid_at) {
+            return;
+        }
+
+        if (Carbon::parse($previousMatchingMembership->valid_at)->startOfDay()->lte($startDate)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'start_date' => 'Այս աբոնեմենտի նոր վաճառքը կարող է սկսվել միայն ընթացիկ նույն աբոնեմենտի ավարտից հետո։',
+        ]);
     }
 
     protected function recalculatedPaymentStatus(MembershipSale $membershipSale): string
@@ -981,6 +1204,23 @@ class MembershipSaleService
         return $paymentMethod?->slug !== 'cash';
     }
 
+    protected function shouldKeepTrainerCommissionForSale(MembershipSale $membershipSale): bool
+    {
+        if ((float) $membershipSale->final_price <= 0 || $this->netPaidAmount($membershipSale) < (float) $membershipSale->final_price) {
+            return false;
+        }
+
+        $payment = $membershipSale
+            ->payments()
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->with('paymentMethod')
+            ->latest('id')
+            ->first();
+
+        return $payment?->paymentMethod?->slug !== 'cash';
+    }
+
     protected function saleDtoData(array $data): array
     {
         return MembershipSaleDTO::fromArray($data)->toArray();
@@ -988,6 +1228,8 @@ class MembershipSaleService
 
     protected function personMembershipDtoData(array $data): array
     {
+        unset($data['freeze_used'], $data['guest_used']);
+
         return PersonMembershipDTO::fromArray($data)->toArray();
     }
 

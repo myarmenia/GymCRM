@@ -89,6 +89,11 @@ class PersonController extends Controller
     }
 
     // Ավելացրու $locale պարամետրը առաջին տեղում
+    public function profile($locale, $id)
+    {
+        return Inertia::render('People/Profile', $this->personService->profileData((int) $id));
+    }
+
     public function update(UpdatePersonRequest $request, $locale, $id)
     {
         $person = $this->personService->getById($id);

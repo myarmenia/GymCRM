@@ -3,18 +3,27 @@
 namespace App\Http\Controllers\Membership;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MembershipSales\ChangeMembershipSaleTrainerRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleFreezeRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleGuestRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
+use App\Services\MembershipSales\MembershipSaleFreezeService;
+use App\Services\MembershipSales\MembershipSaleGuestService;
 use App\Services\MembershipSales\MembershipSaleService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class MembershipSaleController extends Controller
 {
-    public function __construct(protected MembershipSaleService $membershipSaleService)
-    {
+    public function __construct(
+        protected MembershipSaleService $membershipSaleService,
+        protected MembershipSaleGuestService $membershipSaleGuestService,
+        protected MembershipSaleFreezeService $membershipSaleFreezeService,
+    ) {
     }
 
     public function list(Request $request)
@@ -32,7 +41,7 @@ class MembershipSaleController extends Controller
 
     public function store(StoreMembershipSaleRequest $request, $locale, $person)
     {
-        $sale = $this->membershipSaleService->store($request->validated());
+        $this->membershipSaleService->store($request->validated());
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
@@ -41,15 +50,82 @@ class MembershipSaleController extends Controller
 
     public function edit($locale, $id)
     {
+        $membershipSale = $this->membershipSaleService->getById((int) $id);
+
         return Inertia::render('MembershipSales/Edit', [
-            'membershipSale' => $this->membershipSaleService->getById((int) $id),
-            ...$this->membershipSaleService->formOptions(),
+            'membershipSale' => $membershipSale,
+            ...$this->membershipSaleService->formOptions((int) $membershipSale->person_id),
         ]);
     }
 
     public function payments($locale, $id)
     {
         return Inertia::render('MembershipSales/Payments', $this->membershipSaleService->paymentPageData((int) $id));
+    }
+
+    public function guests($locale, $id)
+    {
+        return Inertia::render('MembershipSales/Guests', $this->membershipSaleGuestService->guestPageData((int) $id));
+    }
+
+    public function freezes($locale, $id)
+    {
+        try {
+            return Inertia::render('MembershipSales/Freezes', $this->membershipSaleFreezeService->freezePageData((int) $id));
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('membership_sale.list', ['locale' => app()->getLocale()])
+                ->withErrors($e->errors());
+        }
+    }
+
+    public function changeTrainer($locale, $id)
+    {
+        try {
+            return Inertia::render('MembershipSales/ChangeTrainer', $this->membershipSaleService->trainerChangePageData((int) $id));
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('membership_sale.list', ['locale' => app()->getLocale()])
+                ->withErrors($e->errors());
+        }
+    }
+
+    public function updateTrainer(ChangeMembershipSaleTrainerRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->changeTrainer((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.list', ['locale' => app()->getLocale()])
+            ->with('success', 'Մարզիչը հաջողությամբ փոխվեց։');
+    }
+
+    public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)
+    {
+        $this->membershipSaleFreezeService->storeFreeze((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.freezes', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Աբոնեմենտը հաջողությամբ սառեցվեց։');
+    }
+
+    public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)
+    {
+        $this->membershipSaleGuestService->storeGuest((int) $id, $request->validated());
+
+        return redirect()
+            ->route('membership_sale.guests', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Հյուրը հաջողությամբ ավելացվեց։');
+    }
+
+    public function lookupGuest(Request $request, $locale, $id)
+    {
+        $request->validate([
+            'phone' => ['required', 'string'],
+        ]);
+
+        return response()->json(
+            $this->membershipSaleGuestService->lookupGuestPerson((int) $id, $request->query('phone'))
+        );
     }
 
     public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)

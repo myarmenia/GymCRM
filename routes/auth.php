@@ -19,6 +19,7 @@ use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
+use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
@@ -85,6 +86,14 @@ Route::prefix('{locale}')
             Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');
 
+            Route::prefix('notifications')->name('notifications.')->group(function () {
+                Route::get('/', [NotificationController::class, 'index'])->name('index');
+                Route::get('/create', [NotificationController::class, 'create'])->name('create');
+                Route::post('/', [NotificationController::class, 'store'])->name('store');
+                Route::delete('/all', [NotificationController::class, 'destroyAll'])->name('destroy-all');
+                Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+            });
+
 
             // ====== users ================
             Route::prefix('user')->name('user.')->group(function () {
@@ -106,6 +115,7 @@ Route::prefix('{locale}')
                 Route::post('/store', [PersonController::class, 'store'])->name('store');
 
                 // Route::middleware('check.gym:Person,id')->group(function () {
+                Route::get('/profile/{id}', [PersonController::class, 'profile'])->name('profile');
                 Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
                 Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
                 // });
@@ -231,6 +241,13 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
                     Route::post('/payments/{id}', [MembershipSaleController::class, 'storePayment'])->name('payments.store');
+                    Route::get('/guests/{id}', [MembershipSaleController::class, 'guests'])->name('guests');
+                    Route::get('/guests/{id}/lookup', [MembershipSaleController::class, 'lookupGuest'])->name('guests.lookup');
+                    Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
+                    Route::get('/freezes/{id}', [MembershipSaleController::class, 'freezes'])->name('freezes');
+                    Route::post('/freezes/{id}', [MembershipSaleController::class, 'storeFreeze'])->name('freezes.store');
+                    Route::get('/change-trainer/{id}', [MembershipSaleController::class, 'changeTrainer'])->name('change_trainer');
+                    Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
@@ -253,6 +270,7 @@ Route::prefix('{locale}')
 
             Route::prefix('schedule')->name('schedule.')->group(function () {
                 Route::get('/', [ScheduleController::class, 'index'])->name('index');
+                Route::get('/trainer-occupancy', [ScheduleController::class, 'trainerOccupancy'])->name('trainer_occupancy');
                 Route::get('/create', [ScheduleController::class, 'create'])->name('create');
                 Route::post('/', [ScheduleController::class, 'store'])->name('store');
 
@@ -290,6 +308,10 @@ Route::prefix('{locale}')
 
             Route::prefix('trainer')->name('trainer.')->group(function () {
                 Route::get('/', [TrainerController::class, 'index'])->name('index');
+                Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
+                Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');
+                Route::patch('/{id}/salary/status', [TrainerController::class, 'updateSalaryStatus'])->name('salary.status');
+                Route::patch('/{id}/salary/transfer', [TrainerController::class, 'transferSalary'])->name('salary.transfer');
                 Route::get('/{id}/edit', [TrainerController::class, 'edit'])->name('edit');
                 Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
                 Route::put('/{id}', [TrainerController::class, 'update'])->name('update');

@@ -20,13 +20,22 @@ class StorePersonRequest extends FormRequest
             'image' => 'nullable|string|max:255',
             'email' => 'required|email|max:255|unique:people,email',
             'password' => 'required|string|min:6',
-            'phone' => 'required|string|max:50',
+            'phone' => ['required', 'string', 'max:50', Rule::unique('people', 'phone')],
             'type' => 'required|in:visitor,guest',
-            'entry_code_id' => 'nullable|exists:entry_codes,id',
+            'entry_code_id' => 'required|exists:entry_codes,id',
             'birth_date' => 'required|date',
             'gender' => 'nullable|string|in:male,female,other',
             'mobile_deleted' => 'sometimes|boolean',
             'fcm_token' => 'nullable|string|max:255',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'entry_code_id.required' => 'Մուտքի կոդը պարտադիր է։',
+            'entry_code_id.exists' => 'Ընտրված մուտքի կոդը չի գտնվել։ Ստեղծիր',
+            'phone.unique' => 'Այս հեռախոսահամարով անձ արդեն գոյություն ունի։',
         ];
     }
 }

@@ -62,7 +62,7 @@ const planName = plan => {
         ?? (plan?.id ? `#${plan.id}` : null);
 };
 const membershipNames = person => {
-    const names = (person.memberships ?? [])
+    const names = (person.active_memberships ?? [])
         .map(membership => planName(membership.membership_plan))
         .filter(Boolean);
 
@@ -201,6 +201,18 @@ const resetFilters = () => {
                                             <i class="icon-base ti tabler-dots-vertical"></i>
                                         </button>
                                         <div class="dropdown-menu">
+                                            <Link
+                                                class="dropdown-item waves-effect"
+                                                :href="
+                                                    route('person.profile', {
+                                                        locale: currentLocale,
+                                                        id: person.id,
+                                                    })
+                                                "
+                                            >
+                                                <i class="icon-base ti tabler-eye me-1"></i>
+                                                Դիտել պրոֆիլը
+                                            </Link>
                                             <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="
