@@ -31,7 +31,6 @@ use App\Interfaces\Roles\RoleInterface;
 use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
 use App\Interfaces\ScheduleName\ScheduleNameInterface;
-use App\Interfaces\ScheduleSmoke\ScheduleSmokeInterface;
 use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\SubCategory\SubCategoryInterface;
 use App\Interfaces\SubCategoryTranslations\SubCategoryTranslationInterface;
@@ -74,7 +73,6 @@ use App\Repositories\Roles\RoleRepository;
 use App\Repositories\Schedule\ScheduleRepository;
 use App\Repositories\ScheduleDetails\ScheduleDetailsRepository;
 use App\Repositories\ScheduleName\ScheduleNameRepository;
-use App\Repositories\ScheduleSmoke\ScheduleSmokeRepository;
 use App\Repositories\SalespersonCommissions\SalespersonCommissionRepository;
 use App\Repositories\SubCategory\SubCategoryRepository;
 use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
@@ -82,15 +80,12 @@ use App\Repositories\People\PersonRepository;
 use App\Repositories\Trainer\TrainerRepository;
 use App\Repositories\TrainerCommissions\TrainerCommissionRepository;
 use App\Repositories\TrainerSchedule\TrainerScheduleRepository;
-use App\Repositories\TrainerSessionDuration\TrainerSessionDurationInterface;
 use App\Repositories\TrainerSessionDuration\TrainerSessionDurationRepository;
 use App\Repositories\TrainerSessionDurationSlot\TrainerSessionDurationSlotRepository;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Repositories\Users\UserRepository;
+
 use App\Repositories\Warehouses\WarehouseRepository;
-
-use Illuminate\Support\Facades\Request;
-
 use App\Repositories\WarehouseStock\WarehouseStockRepository;
 
 use Illuminate\Support\Facades\Session;

@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers\Schedule;
 
-use App\DTO\schedule\WorkTimeManagmentDto;
+use App\DTO\Schedule\WorkTimeManagmentDto;
 use App\Helpers\MyHelper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Products\ProductEditRequest;
 use App\Http\Requests\Products\ProductStoreRequest;
 use App\Http\Requests\Schedule\TrainerOccupancyCalendarRequest;
 use App\Http\Requests\Schedule\WorkTimeManagmentRequest;
-use App\Services\Category\CategoryService;
-use App\Services\MeasurementUnit\MeasurementUnitService;
-use App\Services\Products\ProductsService;
 use App\Services\Schedule\ScheduleService;
 use App\Services\Schedule\TrainerOccupancyCalendarService;
 use App\Services\Warehouses\WarehouseService;
+
+
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
