@@ -53,6 +53,7 @@ const form = useForm({
     is_partial_payment: false,
     is_full_payment: true,
     amount: 0,
+    stay_debt: false,
     payment_method_id: '',
     card_type_id: '',
     payment_notes: '',
@@ -295,10 +296,36 @@ watch(() => form.amount, (value) => {
 })
 
 const submit = () => {
-    form.post(route('membership_sale.store', {
-        locale: currentLocale.value,
-        person: props.selectedPerson?.id,
-    }))
+    form
+        .transform(data => ({
+            ...data,
+            stay_debt: false,
+        }))
+        .post(route('membership_sale.store', {
+            locale: currentLocale.value,
+            person: props.selectedPerson?.id,
+        }), {
+            onFinish: () => form.transform(data => data),
+        })
+}
+
+const submitDebt = () => {
+    form
+        .transform(data => ({
+            ...data,
+            stay_debt: true,
+            is_full_payment: false,
+            is_partial_payment: false,
+            amount: 0,
+            payment_method_id: null,
+            card_type_id: null,
+        }))
+        .post(route('membership_sale.store', {
+            locale: currentLocale.value,
+            person: props.selectedPerson?.id,
+        }), {
+            onFinish: () => form.transform(data => data),
+        })
 }
 </script>
 
@@ -710,6 +737,14 @@ const submit = () => {
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
+                    <button
+                        type="button"
+                        class="btn btn-label-warning"
+                        :disabled="form.processing"
+                        @click="submitDebt"
+                    >
+                        Մնալ պարտք
+                    </button>
                     <PrimaryButton :disabled="form.processing">
                         Պահպանել
                     </PrimaryButton>

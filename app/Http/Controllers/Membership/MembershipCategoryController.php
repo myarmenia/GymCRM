@@ -38,8 +38,8 @@ class MembershipCategoryController extends Controller
     public function store(StoreMembershipCategoryRequest $request)
     {
         $category = $this->service->store(MembershipCategoryDTO::fromArray($request->all()));
-        return redirect()->route('membership-category.edit', ['locale' => app()->getLocale(), 'id' => $category->id])
-            ->with('success', 'Category created');
+        return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
+            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ ստեղծվեց։');
     }
 
     public function edit($locale, $id)
@@ -68,13 +68,13 @@ class MembershipCategoryController extends Controller
     {
         $this->service->update($id, MembershipCategoryDTO::fromArray($request->all()));
         return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Category updated');
+            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ թարմացվեց։');
     }
 
     public function destroy($locale, $id)
     {
         $this->service->delete($id);
         return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Category deleted');
+            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ ջնջվեց։');
     }
 }

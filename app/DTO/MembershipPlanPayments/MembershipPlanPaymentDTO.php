@@ -11,6 +11,7 @@ class MembershipPlanPaymentDTO
         public ?int $card_type_id,
         public string $status,
         public string $type,
+        public bool $is_hdm,
         public ?string $notes,
     ) {}
 
@@ -23,6 +24,7 @@ class MembershipPlanPaymentDTO
             card_type_id: isset($data['card_type_id']) ? (int) $data['card_type_id'] : null,
             status: $data['status'] ?? 'pending',
             type: $data['type'] ?? 'payment',
+            is_hdm: (bool) ($data['is_hdm'] ?? false),
             notes: $data['notes'] ?? null,
         );
     }
@@ -36,6 +38,7 @@ class MembershipPlanPaymentDTO
             'card_type_id' => $this->card_type_id,
             'status' => $this->status,
             'type' => $this->type,
+            'is_hdm' => $this->is_hdm,
             'notes' => $this->notes,
         ];
     }

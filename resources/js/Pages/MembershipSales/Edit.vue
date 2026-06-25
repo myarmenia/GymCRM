@@ -47,7 +47,7 @@ const form = useForm({
     apply_discount: Number(props.membershipSale.discount_amount || 0) > 0,
     discount_type: props.membershipSale.discount_type ?? props.discountTypes[0] ?? '',
     discount_value: props.membershipSale.discount_value ?? null,
-    is_hdm: Boolean(props.membershipSale.is_hdm),
+    is_hdm: Boolean(payment.value?.is_hdm),
     notes: props.membershipSale.notes ?? '',
     trainer_id: membership.value?.trainer_id ?? '',
     is_partial_payment: Boolean(payment.value?.amount && Number(payment.value.amount) < Number(props.membershipSale.final_price || 0)),

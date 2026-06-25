@@ -20,12 +20,27 @@ class PersonRepository extends BaseRepository implements PersonInterface
      */
     public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
-        $query = $this->query()->with('gyms');
+        $membershipFilter = $filters['has_membership'] ?? null;
+        unset($filters['has_membership']);
+
+        $query = $this->query()
+            ->with([
+                'gyms',
+                'memberships.membershipPlan.translations',
+            ]);
 
         if (!$user->hasRole('owner')) {
             $query->whereHas('gyms', function ($q) use ($user) {
                 $q->where('gyms.id', $user->gym_id);
             });
+        }
+
+        if ($membershipFilter === 'with') {
+            $query->has('memberships');
+        }
+
+        if ($membershipFilter === 'without') {
+            $query->doesntHave('memberships');
         }
 
         return $query
@@ -70,7 +85,7 @@ class PersonRepository extends BaseRepository implements PersonInterface
     }
 
     /**
-     * Get people by type (visitor/employee)
+     * Get people by type (visitor/guest)
      */
     public function getByType($type)
     {

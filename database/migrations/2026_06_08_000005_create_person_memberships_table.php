@@ -26,7 +26,8 @@ return new class extends Migration
                 'frozen',
                 'expired',
                 'deleted',
-            ])->default('waiting');
+                'cancelled',
+            ])->default('active');
 
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
