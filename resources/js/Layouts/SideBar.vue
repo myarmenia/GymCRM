@@ -134,7 +134,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 </Link>
             </li>
             <li
-                v-if="!hasRole('cleaner')"
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'cleaner'])"
                 :class="[
                     'menu-item',
                     route().current('warehouse.list') ? 'active' : '',
@@ -245,6 +245,28 @@ const { hasRole, hasAnyRole } = useAuth();
                 </Link>
             </li>
 
+            <li
+                v-if="hasAnyRole(['manager', 'admin', 'super_admin', 'owner'])"
+                :class="[
+                    'menu-item',
+                    route().current('entry-reports.*') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="
+                        route('entry-reports.index', {
+                            locale: currentLocale,
+                        })
+                    "
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-report-analytics"></i>
+                    <div data-i18n="Entry Reports">
+                        Մուտք/ելք հաշվետվություն
+                    </div>
+                </Link>
+            </li>
+
             <!-- ======== membership plans ========== -->
             <li
                 :class="[
@@ -299,18 +321,87 @@ const { hasRole, hasAnyRole } = useAuth();
                 </Link>
             </li>
             <li
-                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
+                v-if="
+                    hasAnyRole([
+                        'sales_manager',
+                        'admin',
+                        'super_admin',
+                        'owner',
+                    ])
+                "
                 :class="[
                     'menu-item',
                     route().current('membership_sale.list') ? 'active' : '',
                 ]"
             >
-                <Link :href="route('membership_sale.list', { locale: currentLocale })" class="menu-link">
+                <Link
+                    :href="
+                        route('membership_sale.list', { locale: currentLocale })
+                    "
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-receipt"></i>
                     <div data-i18n="Membership Sales">
                         Աբոնեմենտների վաճառքներ
                     </div>
                 </Link>
+            </li>
+
+            <li
+                v-if="hasAnyRole(['admin', 'super_admin', 'owner','sales_manager','manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('purchase.*') ? 'active open' : '',
+                ]"
+            >
+                <a href="javascript:void(0);" class="menu-link menu-toggle">
+                    <i class="menu-icon icon-base ti tabler-cash-register"></i>
+                    <div data-i18n="Cashier">Դրամարկղ</div>
+                </a>
+
+                <ul class="menu-sub">
+                    <li
+                        :class="[
+                            'menu-item',
+                            route().current('purchase.index') ? 'active' : '',
+                        ]"
+                    >
+                        <Link
+                            :href="
+                                route('purchase.index', {
+                                    locale: currentLocale,
+                                })
+                            "
+                            class="menu-link"
+                        >
+                            <div data-i18n="Sale">Վաճառք</div>
+                        </Link>
+                    </li>
+
+                    <li
+                        :class="[
+                            'menu-item',
+                            route().current('purchase.history')
+                                ? 'active'
+                                : '',
+                        ]"
+                    >
+                        <Link
+                            :href="
+                                route().has?.('purchase.history')
+                                    ? route('purchase.history', {
+                                          locale: currentLocale,
+                                      })
+                                    : 'javascript:void(0);'
+                            "
+                            class="menu-link"
+                        >
+                            <div data-i18n="Sales History">
+                                Վաճառքների պատմություն
+                            </div>
+                        </Link>
+                    </li>
+                </ul>
             </li>
         </ul>
     </aside>

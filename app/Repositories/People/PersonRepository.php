@@ -78,4 +78,29 @@ class PersonRepository extends BaseRepository implements PersonInterface
             ->where('type', $type)
             ->get();
     }
+
+    public function getPeopleByGymId(int $gymId)
+    {
+        return $this->model->query()
+            ->whereHas('gyms', function ($query) use ($gymId) {
+                $query->where('gyms.id', $gymId);
+            })
+            ->get()
+            ->map(function ($person) {
+                return [
+                    'id' => $person->id,
+                    'name' => $person->name,
+                    'surname' => $person->surname,
+                ];
+            });
+    }
+
+    public function getPeopleByGymIdForSelect(int $gymId)
+    {
+        return $this->model->query()
+            ->whereHas('gyms', function ($query) use ($gymId) {
+                $query->where('gyms.id', $gymId);
+            })
+            ->get(['id', 'name', 'surname']);
+    }
 }

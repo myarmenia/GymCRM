@@ -14,5 +14,20 @@ class WarehouseRepository extends BaseRepository implements WarehouseInterface
         parent::__construct($model);
     }
 
+    public function getCashierWarehouseByGymId(int $gymId)
+    {
+        return $this->model::query()
+            ->where('gym_id', $gymId)
+            ->where('type', 'cashier')
+            ->first();
+    }
+
+    public function getWarehousesByGymIdForSelect(int $gymId)
+    {
+        return $this->model->query()
+            ->where('gym_id', $gymId)
+            ->get(['id', 'name']);
+    }
+
     
 }

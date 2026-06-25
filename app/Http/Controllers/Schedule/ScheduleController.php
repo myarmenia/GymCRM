@@ -14,6 +14,7 @@ use App\Services\Products\ProductsService;
 use App\Services\Schedule\ScheduleService;
 use App\Services\Warehouses\WarehouseService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
@@ -64,7 +65,14 @@ class ScheduleController extends Controller
         //dd($id);
         $weekdays = MyHelper::week_days();
 
-        $data = $this->scheduleService->editScheduleName($id);
+        try {
+            $this->scheduleService->ensureScheduleCanBeModified((int) $id);
+            $data = $this->scheduleService->editScheduleName($id);
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('schedule.index', ['locale' => $locale])
+                ->withErrors($e->errors());
+        }
 
         return Inertia::render('Schedule/Edit', [
             'data' => $data,
@@ -86,5 +94,18 @@ class ScheduleController extends Controller
             'locale' => app()->getLocale(),
             'id' => $id,
         ]);
+    }
+
+    public function destroy($locale, $id)
+    {
+        try {
+            $this->scheduleService->destroy((int) $id);
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+
+        return redirect()
+            ->route('schedule.index', ['locale' => $locale])
+            ->with('success', 'Schedule deleted successfully.');
     }
 }

@@ -4,6 +4,7 @@ import Footer from '@/Layouts/Footer.vue';
 import NavBar from '@/Layouts/NavBar.vue';
 import SideBar from '@/Layouts/SideBar.vue';
 import { usePage } from '@inertiajs/vue3';
+import TurnstileEntryListener from '@/Components/TurnstileEntryListener.vue';
 
 // import { initHelper } from '../modules/helper';
 // import { initConfig } from '../modules/config';
@@ -86,5 +87,6 @@ onUnmounted(() => {
 
     <Footer></Footer>
     <GlobalConfirm />
+    <TurnstileEntryListener />
     <GlobalToast />
 </template>

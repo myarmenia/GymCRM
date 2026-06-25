@@ -94,6 +94,11 @@ class MembershipPlanStoreRequest extends FormRequest
                 'array',
                 'min:1',
             ],
+            'schedule_name_id' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
         ];
     }
 

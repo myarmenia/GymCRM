@@ -15,4 +15,6 @@ interface CategoryInterface extends BaseInterface
     public function wherePaginateCategory(array $conditions, array $with = [], int $perPage = 10): LengthAwarePaginator;
     public function getParentCategories(string $locale): Collection;
     public function createCategory(array $data): Model;
+    public function findCategoryBy(string $column, mixed $value, array $relations = []): ?Model;
+    public function getParentCategoriesWithChildren(string $locale);
 }

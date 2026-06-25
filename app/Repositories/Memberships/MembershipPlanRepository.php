@@ -174,6 +174,8 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
        // dd($membershipPlan->trainers);
         return [
             'id' => $membershipPlan->id,
+            'is_locked' => $membershipPlan->is_locked,
+            'lock_reason' => $membershipPlan->lock_reason,
             'membership_category_id' => $membershipPlan->membership_category_id,
             'price' => $membershipPlan->price,
             'price_type' => $membershipPlan->price_type,
@@ -187,7 +189,7 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             'freeze_limit' => $membershipPlan->freeze_limit,
             'active' => (bool) $membershipPlan->active,
 
-            'schedule_name_id' => $schedule?->schedule_id,
+            'schedule_name_id' => $schedule?->id,
 
             'translation' => [
                 'name' => $translation?->name ?? '',
