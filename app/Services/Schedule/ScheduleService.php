@@ -9,7 +9,6 @@ use App\Interfaces\Roles\RoleInterface;
 use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
 use App\Interfaces\ScheduleName\ScheduleNameInterface;
-use App\Repositories\ScheduleDetails\ScheduleDetailsRepository;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -125,4 +124,5 @@ class ScheduleService
     {
         return $this->gymScheduleRepository->getAllScheduleNamesForGym($gymId);
     }
+
 }

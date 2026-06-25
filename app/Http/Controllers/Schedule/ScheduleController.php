@@ -5,16 +5,24 @@ namespace App\Http\Controllers\Schedule;
 use App\DTO\Schedule\WorkTimeManagmentDto;
 use App\Helpers\MyHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Products\ProductEditRequest;
+use App\Http\Requests\Products\ProductStoreRequest;
+use App\Http\Requests\Schedule\TrainerOccupancyCalendarRequest;
 use App\Http\Requests\Schedule\WorkTimeManagmentRequest;
 use App\Services\Schedule\ScheduleService;
 use App\Services\Warehouses\WarehouseService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use App\Services\Schedule\TrainerOccupancyCalendarService;
+
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
 {
-    public function __construct(protected ScheduleService $scheduleService) {}
+    public function __construct(
+        protected ScheduleService $scheduleService,
+        protected TrainerOccupancyCalendarService $trainerOccupancyCalendarService,
+    ) {}
 
     public function index()
     {
@@ -27,6 +35,15 @@ class ScheduleController extends Controller
             'authUserRoles' => auth()->user()->getRoleNames(),
         ]);
     }
+
+    public function trainerOccupancy(TrainerOccupancyCalendarRequest $request)
+    {
+        return Inertia::render(
+            'Schedule/TrainerOccupancy',
+            $this->trainerOccupancyCalendarService->data($request->filters())
+        );
+    }
+
     public function create(string $locale, int $perPage = 100)
     {
         $weekdays = MyHelper::week_days();

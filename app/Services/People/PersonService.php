@@ -3,11 +3,13 @@
 namespace App\Services\People;
 
 use App\Interfaces\People\PersonInterface;
+use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\EntryCodes\EntryCodeService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class PersonService
 {
@@ -26,8 +28,54 @@ class PersonService
         return $this->personRepository->findOrFail((int) $id, ['gyms']);
     }
 
+    public function profileData(int $id): array
+    {
+        $user = Auth::user();
+
+        $person = Person::query()
+            ->with([
+                'gyms',
+                'entryPermissions.entryCode.gym:id,name',
+                'memberships' => function ($query) {
+                    $query->latest('id');
+                },
+                'memberships.membershipPlan.translations',
+                'memberships.trainer',
+                'memberships.freezes',
+                'memberships.guests.guest',
+                'memberships.membershipSale.membershipPlan.translations',
+                'memberships.membershipSale.payments.paymentMethod.translations',
+                'memberships.membershipSale.payments.cardType',
+                'memberships.membershipSale.discounts.discount.translations',
+                'membershipSales' => function ($query) {
+                    $query->latest('sold_at')->latest('id');
+                },
+                'membershipSales.membershipPlan.translations',
+                'membershipSales.payments.paymentMethod.translations',
+                'membershipSales.payments.cardType',
+                'membershipSales.discounts.discount.translations',
+            ])
+            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                $query->whereHas('gyms', function ($q) use ($user) {
+                    $q->where('gyms.id', $user->gym_id);
+                });
+            })
+            ->findOrFail($id);
+
+        $entryPermission = $person->entryPermissions
+            ->sortByDesc('id')
+            ->first(fn ($permission) => (bool) $permission->status)
+            ?? $person->entryPermissions->sortByDesc('id')->first();
+
+        return [
+            'person' => $person,
+            'entryCode' => $entryPermission?->entryCode,
+        ];
+    }
+
     public function store($data)
     {
+        $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
         $dataStore = $this->dataToArray($data);
         $person = $this->personRepository->create($dataStore);
 
@@ -35,15 +83,13 @@ class PersonService
         $this->syncGyms($person);
 
         // Entry code association
-        if (!empty($data->entry_code_id)) {
-            EntryPermission::create([
-                'entry_code_id' => $data->entry_code_id,
-                'relation_type' => Person::class,
-                'relation_id'   => $person->id,
-                'status'        => 1,
-            ]);
-            $this->entryCodeService->activateEntryCode($data->entry_code_id, true);
-        }
+        EntryPermission::create([
+            'entry_code_id' => $entryCode->id,
+            'relation_type' => Person::class,
+            'relation_id'   => $person->id,
+            'status'        => 1,
+        ]);
+        $this->entryCodeService->activateEntryCode($entryCode->id, true);
 
         return $person;
     }
@@ -93,6 +139,27 @@ class PersonService
         }
 
         return $array;
+    }
+
+    protected function availableEntryCode(int $entryCodeId): EntryCode
+    {
+        $user = Auth::user();
+        $entryCode = EntryCode::query()
+            ->where('id', $entryCodeId)
+            ->where('status', true)
+            ->where('activation', false)
+            ->when(!$user->hasRole('owner') && $user->gym_id, function ($query) use ($user) {
+                $query->where('gym_id', $user->gym_id);
+            })
+            ->first();
+
+        if (!$entryCode) {
+            throw ValidationException::withMessages([
+                'entry_code_id' => 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր',
+            ]);
+        }
+
+        return $entryCode;
     }
 
     /**

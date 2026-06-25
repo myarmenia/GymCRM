@@ -16,6 +16,7 @@ class PersonMembership extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'valid_at' => 'date',
             'activated_at' => 'datetime',
             'expired_at' => 'datetime',
         ];
@@ -66,8 +67,23 @@ class PersonMembership extends Model
         return $this->hasMany(TrainerCommission::class);
     }
 
+    public function trainerMonthlySalaries()
+    {
+        return $this->hasMany(TrainerMonthlySalary::class);
+    }
+
     public function salespersonCommissions()
     {
         return $this->hasMany(SalespersonCommission::class);
+    }
+
+    public function freezes()
+    {
+        return $this->hasMany(PersonMembershipFreeze::class);
+    }
+
+    public function guests()
+    {
+        return $this->hasMany(Guest::class);
     }
 }
