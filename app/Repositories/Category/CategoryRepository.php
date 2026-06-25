@@ -53,4 +53,40 @@ class CategoryRepository extends BaseRepository implements CategoryInterface
     {
         return $this->query()->create($data);
     }
+
+    public function findCategoryBy(string $column, mixed $value, array $relations = []): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->with($relations)
+            ->where($column, $value)
+            ->first();
+    }
+
+    public function getParentCategoriesWithChildren(string $locale)
+    {
+        return $this->model->query()
+            ->with([
+                'translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+                'children.translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+            ])
+            ->whereNull('parent_id')
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->translations->first()?->name ?? '',
+                    'children' => $category->children->map(function ($child) {
+                        return [
+                            'id' => $child->id,
+                            'name' => $child->translations->first()?->name ?? '',
+                        ];
+                    })->values(),
+                ];
+            });
+    }
 }

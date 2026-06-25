@@ -41,4 +41,30 @@ class WarehouseStockRepository extends BaseRepository implements WarehouseStockI
                 'reserved_quantity' => $reservedQuantity,
             ]);
     }
+
+    public function sumQuantityByProductAndWarehouse(int $productId, int $warehouseId): float|int
+    {
+        return $this->model::query()
+            ->where('inventory_product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->sum('quantity');
+    }
+
+    public function findByProductAndWarehouseForUpdate(int $productId, int $warehouseId)
+    {
+        return $this->model->query()
+            ->where('inventory_product_id', $productId)
+            ->where('warehouse_id', $warehouseId)
+            ->lockForUpdate()
+            ->first();
+    }
+
+    public function updateQuantity(int $warehouseStockId, float $quantity): bool
+    {
+        return $this->model->query()
+            ->where('id', $warehouseStockId)
+            ->update([
+                'quantity' => $quantity,
+            ]);
+    }
 }

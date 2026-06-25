@@ -13,6 +13,7 @@ use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
+use App\Http\Controllers\EntryReportController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Users\UserController;
@@ -25,6 +26,7 @@ use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
+use App\Http\Controllers\Purchase\PurchaseController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
 use App\Http\Controllers\Trainer\TrainerController;
@@ -152,6 +154,12 @@ Route::prefix('{locale}')
                 });
             });
 
+            Route::prefix('entry-reports')->name('entry-reports.')->group(function () {
+                Route::get('/', [EntryReportController::class, 'index'])->name('index');
+                Route::get('/export', [EntryReportController::class, 'export'])->name('export');
+                Route::get('/{entryReport}', [EntryReportController::class, 'show'])->name('show');
+            });
+
             Route::prefix('partner')->name('partner.')->group(function () {
                 Route::get('/list', [PartnerController::class, 'list'])->name('list');
                 Route::get('/create', [PartnerController::class, 'create'])->name('create');
@@ -199,12 +207,12 @@ Route::prefix('{locale}')
                 Route::get('/', [DiscountController::class, 'list'])->name('list');
                 Route::get('/create', [DiscountController::class, 'create'])->name('create');
                 Route::post('/', [DiscountController::class, 'store'])->name('store');
-                
+
                 // Route::middleware('check.gym:Discount,id')->group(function () {
-                    Route::get('/{id}/edit', [DiscountController::class, 'edit'])->name('edit');
-                    Route::patch('/{id}', [DiscountController::class, 'update'])->name('update');
-                    Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
-                    Route::patch('/{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
+                Route::get('/{id}/edit', [DiscountController::class, 'edit'])->name('edit');
+                Route::patch('/{id}', [DiscountController::class, 'update'])->name('update');
+                Route::delete('/{model}/{id}', [TableDeleteController::class, 'destroyLocale']);
+                Route::patch('/{model}/{id}/toggle-active', [TableToggleController::class, 'toggleChangeLocale']);
                 // });
             });
 
@@ -315,6 +323,13 @@ Route::prefix('{locale}')
                 Route::get('/{id}/edit', [TrainerController::class, 'edit'])->name('edit');
                 Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
                 Route::put('/{id}', [TrainerController::class, 'update'])->name('update');
+            });
+
+
+            Route::prefix('purchase')->name('purchase.')->group(function () {
+                Route::get('/', [PurchaseController::class, 'index'])->name('index');
+                Route::get('/history', [PurchaseController::class, 'history'])->name('history');
+                Route::post('/sell', [PurchaseController::class, 'sell'])->name('sell');
             });
         });
     });

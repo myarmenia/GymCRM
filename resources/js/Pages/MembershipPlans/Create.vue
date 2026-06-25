@@ -87,6 +87,13 @@ const isTrainerSelected = (trainerId) => {
     return selectedTrainerIds.value.includes(Number(trainerId));
 };
 
+const changeTrainerPriceType = (trainer) => {
+    trainer.price_value = 0;
+    trainer.total_price = 0;
+
+    updateTrainerPrice(trainer);
+};
+
 const getTrainerIndex = (trainerId) => {
     return form.trainers.findIndex(
         (item) => Number(item.trainer_id) === Number(trainerId),
@@ -533,7 +540,7 @@ const submit = () => {
                                                 "
                                                 class="form-select"
                                                 @change="
-                                                    updateTrainerPrice(
+                                                    changeTrainerPriceType(
                                                         form.trainers[
                                                             getTrainerIndex(
                                                                 trainer.id,

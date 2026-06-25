@@ -257,11 +257,6 @@ class TrainerService
                 ->unique()
                 ->values();
 
-            $this->trainerScheduleRepository->deleteMissingSchedules(
-                $trainerId,
-                $scheduleIds
-            );
-
             foreach ($scheduleIds as $scheduleId) {
                 $this->trainerScheduleRepository->firstOrCreate(
                     $trainerId,
@@ -269,9 +264,11 @@ class TrainerService
                 );
             }
 
-            $existingDurationIds = [];
+            foreach ($data['session_durations'] ?? [] as $durationData) {
+                if (!empty($durationData['id'])) {
+                    continue;
+                }
 
-            foreach ($data['session_durations'] as $durationData) {
                 $trainerSchedule = $this->trainerScheduleRepository
                     ->findByTrainerAndScheduleName(
                         $trainerId,
@@ -291,11 +288,9 @@ class TrainerService
                     ]
                 );
 
-                $existingDurationIds[] = $duration->id;
-
                 $existingSlotIds = [];
 
-                foreach ($durationData['slots'] as $slotData) {
+                foreach ($durationData['slots'] ?? [] as $slotData) {
                     $slot = $this->trainerSessionDurationSlotRepository->updateOrCreate(
                         [
                             'id' => $slotData['id'] ?? null,
@@ -316,11 +311,6 @@ class TrainerService
                     $existingSlotIds
                 );
             }
-
-            $this->trainerSessionDurationRepository->deleteMissingByTrainer(
-                $trainerId,
-                $existingDurationIds
-            );
         });
     }
 

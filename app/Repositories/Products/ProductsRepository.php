@@ -52,13 +52,19 @@ class ProductsRepository extends BaseRepository implements ProductsInterface
             });
         }
 
+        if (!empty($filters['warehouse_id'])) {
+            $query->whereHas('warehouseStocks', function ($q) use ($filters) {
+                $q->where('warehouse_id', $filters['warehouse_id']);
+            });
+        }
+
         return $query
             ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }
 
-        public function getProductForConsumption(array $ids): Collection
+    public function getProductForConsumption(array $ids): Collection
     {
         return $this->model
             ->with([
@@ -70,5 +76,62 @@ class ProductsRepository extends BaseRepository implements ProductsInterface
             ])
             ->whereIn('id', $ids)
             ->get();
+    }
+
+    public function paginateForPurchaseIndex(
+        int $gymId,
+        string $locale,
+        int $cashierWarehouseId,
+        ?string $search = null,
+        ?int $categoryId = null,
+        ?int $subCategoryId = null,
+        int $perPage = 10
+    ) {
+        return $this->model->query()
+            ->with([
+                'translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+                'category.translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+                'subCategory.translations' => function ($query) use ($locale) {
+                    $query->where('locale', $locale);
+                },
+                'warehouseStocks' => function ($query) use ($cashierWarehouseId) {
+                    $query->where('warehouse_id', $cashierWarehouseId);
+                },
+            ])
+            ->where('gym_id', $gymId)
+            ->whereHas('warehouseStocks', function ($query) use ($cashierWarehouseId) {
+                $query->where('warehouse_id', $cashierWarehouseId);
+            })
+            ->when($search, function ($query) use ($search, $locale) {
+                $query->where(function ($q) use ($search, $locale) {
+                    $q->where('sku', 'like', "%{$search}%")
+                        ->orWhereHas('translations', function ($translationQuery) use ($search, $locale) {
+                            $translationQuery
+                                ->where('locale', $locale)
+                                ->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->where('category_id', $categoryId);
+            })
+            ->when($subCategoryId, function ($query) use ($subCategoryId) {
+                $query->where('sub_category_id', $subCategoryId);
+            })
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    public function findByGymAndId(int $gymId, int $productId)
+    {
+        return $this->model->query()
+            ->where('gym_id', $gymId)
+            ->where('id', $productId)
+            ->first();
     }
 }

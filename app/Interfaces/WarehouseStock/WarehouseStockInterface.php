@@ -13,4 +13,10 @@ interface WarehouseStockInterface extends BaseInterface
     public function updateStockQuantity(int $stockId, float $quantity): bool;
 
     public function updateReservedQuantity(int $stockId, float $reservedQuantity): bool;
+
+    public function sumQuantityByProductAndWarehouse(int $productId, int $warehouseId): float|int;
+
+    public function findByProductAndWarehouseForUpdate(int $productId, int $warehouseId);
+
+    public function updateQuantity(int $warehouseStockId, float $quantity): bool;
 }

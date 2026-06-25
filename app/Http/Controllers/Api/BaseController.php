@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use lluminate\Http\JsonResponse;
+use Illuminate\Http\JsonResponse;
 
 
 class BaseController extends Controller
 {
-    public function sendResponse($result = null, $message, $additionals = null, $params = null)
+    public function sendResponse($result = null, $message = '', $additionals = null, $params = null): JsonResponse
     {
         $response = [
             'success' => true,
@@ -36,7 +35,7 @@ class BaseController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function sendError($error,  $additionals = null, $errorMessages = [], $code = 404)
+    public function sendError($error, $additionals = null, $errorMessages = [], $code = 404): JsonResponse
     {
         $response = [
             'success' => false,

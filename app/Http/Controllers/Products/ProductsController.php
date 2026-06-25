@@ -28,6 +28,8 @@ class ProductsController extends Controller
             'category_id' => $request->filled('category_id') ? $request->category_id : null,
             'sub_category_id' => $request->filled('sub_category_id') ? $request->sub_category_id : null,
             'name' => $request->filled('name') ? $request->name : null,
+            'warehouse_id' => $request->get('warehouse_id'),
+
         ];
 
         $categories = $this->categoryService->getAll($locale, $perPage = 100);
@@ -38,10 +40,13 @@ class ProductsController extends Controller
             $request->get('per_page', 10)
         );
 
+        $warehouses = $this->warehouseService->all($locale, $perPage = 100);
+
         return Inertia::render('Products/Index', [
             'products' => $products,
             'categories' => $categories,
             'filters' => $filters,
+            'warehouses' => $warehouses
         ]);
     }
 

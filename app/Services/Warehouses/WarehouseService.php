@@ -19,7 +19,7 @@ class WarehouseService
 
         return Warehouse::where('gym_id', auth()->user()->gym_id)
             ->with('gym')
-            ->paginate(10);
+            ->paginate(100);
     }
 
     public function find(int $id): Warehouse

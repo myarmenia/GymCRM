@@ -64,6 +64,11 @@ const removeBreakTime = (index) => {
 };
 
 const openCopyModal = () => {
+    const sourceIndex = form.week_days.findIndex(
+        (day) => day.day_start_time || day.day_end_time,
+    );
+
+    selectedDayIndexes.value = sourceIndex === -1 ? [] : [sourceIndex];
     showCopyModal.value = true;
 };
 
