@@ -7,15 +7,19 @@ use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\EntryCodes\EntryCodeService;
+use App\Services\FileUploadService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class PersonService
 {
     public function __construct(
         protected PersonInterface $personRepository,
-        protected EntryCodeService $entryCodeService
+        protected EntryCodeService $entryCodeService,
+        protected FileUploadService $fileUploadService,
     ) {}
 
     public function getAllPaginated(array $filters = [])
@@ -98,7 +102,7 @@ class PersonService
     {
         $person = $this->personRepository->findOrFail((int) $id, ['gyms']);
 
-        $dataUpdate = $this->dataToArray($data);
+        $dataUpdate = $this->dataToArray($data, $person);
         $person = $this->personRepository->update((int) $id, $dataUpdate);
 
         // Sync gyms (sales_manager forces his own gym)
@@ -127,9 +131,19 @@ class PersonService
         return $person;
     }
 
-    protected function dataToArray($data)
+    protected function dataToArray($data, ?Person $person = null)
     {
         $array = $data->toArray();
+
+        if (($array['image'] ?? null) instanceof UploadedFile) {
+            if ($person?->image && Storage::disk('public')->exists($person->image)) {
+                Storage::disk('public')->delete($person->image);
+            }
+
+            $array['image'] = $this->fileUploadService->upload($array['image'], 'people/images');
+        } elseif ($person) {
+            $array['image'] = $array['image'] ?? $person->image;
+        }
 
         // Hash password if present
         if (!empty($array['password'])) {

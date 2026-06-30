@@ -5,6 +5,11 @@ import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
+import {
+    addDaysToYmd,
+    addMonthsToYmd,
+    todayInYerevan,
+} from '@/utils/yerevanDate'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -40,7 +45,7 @@ const props = defineProps({
     },
 })
 
-const today = new Date().toISOString().slice(0, 10)
+const today = todayInYerevan()
 
 const form = useForm({
     person_id: props.selectedPerson?.id ?? '',
@@ -188,15 +193,11 @@ const calculatedSaleStatus = computed(() => {
 })
 
 const addDays = (date, days) => {
-    const result = new Date(`${date}T00:00:00`)
-    result.setDate(result.getDate() + days)
-    return result.toISOString().slice(0, 10)
+    return addDaysToYmd(date, days)
 }
 
 const addMonths = (date, months) => {
-    const result = new Date(`${date}T00:00:00`)
-    result.setMonth(result.getMonth() + months)
-    return result.toISOString().slice(0, 10)
+    return addMonthsToYmd(date, months)
 }
 
 const calculateEndDate = () => {

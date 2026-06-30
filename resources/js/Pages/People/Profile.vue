@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
+import { todayInYerevan } from '@/utils/yerevanDate'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -93,7 +94,7 @@ const trainerRoleNames = trainer => {
 const membershipSaleId = membership => membership?.membership_sale_id ?? membership?.membership_sale?.id
 const dateValue = value => value ? String(value).slice(0, 10) : null
 const isMembershipCurrentlyValid = membership => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayInYerevan()
     const startDate = dateValue(membership?.start_date)
     const validAt = dateValue(membership?.valid_at)
     const endDate = dateValue(membership?.end_date)

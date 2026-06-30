@@ -8,6 +8,9 @@ use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
 use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface;
 use App\Interfaces\TrainerSessionDurationSlot\TrainerSessionDurationSlotInterface;
 use App\Models\TrainerCommission;
+use App\Models\PersonMembership;
+use App\Models\TrainerSchedule;
+use App\Models\TrainerSessionDuration;
 use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\EntryCodes\EntryCodeService;
@@ -254,8 +257,30 @@ class TrainerService
         DB::transaction(function () use ($trainerId, $data) {
             $scheduleIds = collect($data['schedule_names'])
                 ->filter()
+                ->map(fn ($id) => (int) $id)
                 ->unique()
                 ->values();
+
+            $lockedScheduleIds = $this->lockedScheduleIdsForTrainer($trainerId);
+            $existingScheduleIds = TrainerSchedule::query()
+                ->where('user_id', $trainerId)
+                ->pluck('schedule_name_id')
+                ->map(fn ($id) => (int) $id);
+
+            $removedLockedScheduleIds = $existingScheduleIds
+                ->diff($scheduleIds)
+                ->intersect($lockedScheduleIds);
+
+            if ($removedLockedScheduleIds->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'schedule_names' => 'Այս ժամային գրաֆիկը կապված է վաճառված/ակտիվ աբոնեմենտի հետ և հնարավոր չէ հեռացնել։',
+                ]);
+            }
+
+            $this->trainerScheduleRepository->deleteMissingSchedules(
+                $trainerId,
+                $scheduleIds
+            );
 
             foreach ($scheduleIds as $scheduleId) {
                 $this->trainerScheduleRepository->firstOrCreate(
@@ -264,16 +289,38 @@ class TrainerService
                 );
             }
 
+            $keptDurationIds = [];
+
             foreach ($data['session_durations'] ?? [] as $durationData) {
-                if (!empty($durationData['id'])) {
+                $scheduleNameId = (int) ($durationData['schedule_name_id'] ?? 0);
+
+                if (!$scheduleNameId) {
                     continue;
                 }
 
                 $trainerSchedule = $this->trainerScheduleRepository
                     ->findByTrainerAndScheduleName(
                         $trainerId,
-                        $durationData['schedule_name_id']
+                        $scheduleNameId
                     );
+
+                if (!empty($durationData['id'])) {
+                    $duration = TrainerSessionDuration::query()
+                        ->with('trainerSchedule:id,schedule_name_id')
+                        ->whereKey((int) $durationData['id'])
+                        ->whereHas('trainerSchedule', function ($query) use ($trainerId) {
+                            $query->where('user_id', $trainerId);
+                        })
+                        ->firstOrFail();
+
+                    $keptDurationIds[] = $duration->id;
+
+                    $existingScheduleNameId = (int) $duration->trainerSchedule->schedule_name_id;
+
+                    if ($lockedScheduleIds->contains($existingScheduleNameId)) {
+                        continue;
+                    }
+                }
 
                 $duration = $this->trainerSessionDurationRepository->updateOrCreate(
                     [
@@ -288,6 +335,7 @@ class TrainerService
                     ]
                 );
 
+                $keptDurationIds[] = $duration->id;
                 $existingSlotIds = [];
 
                 foreach ($durationData['slots'] ?? [] as $slotData) {
@@ -311,6 +359,12 @@ class TrainerService
                     $existingSlotIds
                 );
             }
+
+            $this->deleteMissingUnlockedDurations(
+                $trainerId,
+                $keptDurationIds,
+                $lockedScheduleIds
+            );
         });
     }
 
@@ -331,7 +385,32 @@ class TrainerService
 
     public function getTrainerSessionDuration($trainerId)
     {
-        return $this->trainerScheduleRepository->getTrainerSessionDuration($trainerId);
+        $trainerSchedules = $this->trainerScheduleRepository->getTrainerSessionDuration($trainerId);
+        $lockedScheduleIds = $this->lockedScheduleIdsForTrainer((int) $trainerId);
+
+        return $trainerSchedules->map(function ($trainerSchedule) use ($lockedScheduleIds) {
+            $isLocked = $lockedScheduleIds->contains((int) $trainerSchedule->schedule_name_id);
+
+            $trainerSchedule->setAttribute('is_locked', $isLocked);
+            $trainerSchedule->setAttribute(
+                'lock_reason',
+                $isLocked
+                    ? 'Այս գրաֆիկը կապված է վաճառված/ակտիվ աբոնեմենտի հետ։'
+                    : null
+            );
+
+            $trainerSchedule->sessionDurations->each(function ($duration) use ($isLocked) {
+                $duration->setAttribute('is_locked', $isLocked);
+                $duration->setAttribute(
+                    'lock_reason',
+                    $isLocked
+                        ? 'Այս պարապունքի տեսակը կապված է վաճառված/ակտիվ աբոնեմենտի հետ։'
+                        : null
+                );
+            });
+
+            return $trainerSchedule;
+        });
     }
 
     protected function ensureTrainerIsVisible(int $trainerId): void
@@ -347,5 +426,39 @@ class TrainerService
                 $query->where('gym_id', $user->gym_id);
             })
             ->firstOrFail();
+    }
+
+    protected function lockedScheduleIdsForTrainer(int $trainerId)
+    {
+        return PersonMembership::query()
+            ->where('trainer_id', $trainerId)
+            ->whereIn('status', ['waiting', 'active', 'frozen'])
+            ->whereHas('membershipPlan.schedules')
+            ->with('membershipPlan.schedules:id')
+            ->get()
+            ->flatMap(function (PersonMembership $personMembership) {
+                return $personMembership->membershipPlan?->schedules?->pluck('id') ?? collect();
+            })
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+    }
+
+    protected function deleteMissingUnlockedDurations(
+        int $trainerId,
+        array $keptDurationIds,
+        $lockedScheduleIds
+    ): void {
+        TrainerSessionDuration::query()
+            ->whereHas('trainerSchedule', function ($query) use ($trainerId, $lockedScheduleIds) {
+                $query->where('user_id', $trainerId)
+                    ->when($lockedScheduleIds->isNotEmpty(), function ($q) use ($lockedScheduleIds) {
+                        $q->whereNotIn('schedule_name_id', $lockedScheduleIds);
+                    });
+            })
+            ->when(!empty($keptDurationIds), function ($query) use ($keptDurationIds) {
+                $query->whereNotIn('id', $keptDurationIds);
+            })
+            ->delete();
     }
 }

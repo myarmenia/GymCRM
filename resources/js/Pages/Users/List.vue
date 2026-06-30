@@ -23,7 +23,13 @@ const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);
-const {  hasAnyRole } = useAuth();
+const { hasAnyRole } = useAuth();
+const canManageUsers = computed(() =>
+    hasAnyRole(["owner", "super_admin", "sales_manager"]),
+);
+const canViewUsers = computed(() =>
+    hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager"]),
+);
 const filters = ref({
     date_field: "created_at",
     ...Object.fromEntries(new URLSearchParams(window.location.search)),
@@ -105,7 +111,7 @@ const resetFilters = () => {
             >
                 <h5 class="mb-0">Օգտատերերի ցուցակ</h5>
                 <Link
-                    v-if="hasAnyRole([ 'owner', 'super_admin'])"
+                    v-if="canManageUsers"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     aria-controls="DataTables_Table_0"
@@ -186,6 +192,7 @@ const resetFilters = () => {
                                         </button>
                                         <div class="dropdown-menu">
                                             <a
+                                                v-if="canManageUsers"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >
@@ -205,7 +212,7 @@ const resetFilters = () => {
                                                 />
                                             </a>
                                             <Link
-                                                v-if="hasAnyRole([ 'owner', 'super_admin'])"
+                                                v-if="canManageUsers"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('user.edit', {
@@ -220,7 +227,7 @@ const resetFilters = () => {
                                                 Խմբագրել
                                             </Link>
                                             <Link
-                                                v-if="hasAnyRole([  'admin'])"
+                                                v-if="canViewUsers"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('user.show', { locale: currentLocale, id: user.id })"
                                             >
@@ -231,6 +238,7 @@ const resetFilters = () => {
                                             </Link>
                                            
                                             <a
+                                                v-if="canManageUsers"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >

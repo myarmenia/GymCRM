@@ -1,23 +1,19 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { Link, usePage } from "@inertiajs/vue3";
+import { computed } from "vue";
+import { useAuth } from "@/composables/useAuth";
 
-const page = usePage()
-const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? 'hy')
-const { hasRole, hasAnyRole } = useAuth()
+const page = usePage();
+const currentLocale = computed(
+    () => page.props.locale ?? page.props.lang ?? "hy",
+);
+const { hasRole, hasAnyRole } = useAuth();
 </script>
 
 <template>
-    <aside
-        id="layout-menu"
-        class="layout-menu menu-vertical menu"
-    >
+    <aside id="layout-menu" class="layout-menu menu-vertical menu">
         <div class="app-brand demo">
-            <a
-                href="index.html"
-                class="app-brand-link"
-            >
+            <a href="index.html" class="app-brand-link">
                 <span class="app-brand-logo demo">
                     <span class="text-primary">
                         <svg
@@ -56,7 +52,9 @@ const { hasRole, hasAnyRole } = useAuth()
                         </svg>
                     </span>
                 </span>
-                <span class="app-brand-text demo menu-text fw-bold ms-3">Vuexy</span>
+                <span class="app-brand-text demo menu-text fw-bold ms-3"
+                    >Vuexy</span
+                >
             </a>
             <a
                 href="javascript:void(0);"
@@ -70,21 +68,29 @@ const { hasRole, hasAnyRole } = useAuth()
         <div class="menu-inner-shadow"></div>
         <ul class="menu-inner py-1">
             <li
-                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
-                :class="['menu-item', route().current('user.list') ? 'active' : '']"
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('user.list') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('user.list', { locale: currentLocale })"
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div>{{ hasRole('owner') ? 'Օգտատերեր' : 'Անձնակազմ' }}</div>
+                    <div>
+                        {{ hasRole("owner") ? "Օգտատերեր" : "Անձնակազմ" }}
+                    </div>
                 </Link>
             </li>
 
             <li
-                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
-                :class="['menu-item', route().current('trainer.index') ? 'active' : '']"
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('trainer.index') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('trainer.index', { locale: currentLocale })"
@@ -96,8 +102,11 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
-                :class="['menu-item', route().current('person.list') ? 'active' : '']"
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('person.list') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('person.list', { locale: currentLocale })"
@@ -110,7 +119,10 @@ const { hasRole, hasAnyRole } = useAuth()
 
             <li
                 v-if="hasRole('owner')"
-                :class="['menu-item', route().current('gym.list') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('gym.list') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('gym.list', { locale: currentLocale })"
@@ -122,12 +134,11 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-
-               
-
                 v-if="!hasRole('cleaner')"
-                :class="['menu-item', route().current('warehouse.list') ? 'active' : '']"
-
+                :class="[
+                    'menu-item',
+                    route().current('warehouse.list') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('warehouse.list', { locale: currentLocale })"
@@ -140,7 +151,10 @@ const { hasRole, hasAnyRole } = useAuth()
 
             <li
                 v-if="!hasRole('cleaner')"
-                :class="['menu-item', route().current('categories.index') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('categories.index') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('categories.index', { locale: currentLocale })"
@@ -153,7 +167,10 @@ const { hasRole, hasAnyRole } = useAuth()
 
             <li
                 v-if="!hasRole('cleaner')"
-                :class="['menu-item', route().current('products.index') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('products.index') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('products.index', { locale: currentLocale })"
@@ -166,10 +183,19 @@ const { hasRole, hasAnyRole } = useAuth()
 
             <li
                 v-if="!hasRole('cleaner')"
-                :class="['menu-item', route().current('product-consumptions.index') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('product-consumptions.index')
+                        ? 'active'
+                        : '',
+                ]"
             >
                 <Link
-                    :href="route('product-consumptions.index', { locale: currentLocale })"
+                    :href="
+                        route('product-consumptions.index', {
+                            locale: currentLocale,
+                        })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-package-export"></i>
@@ -179,7 +205,10 @@ const { hasRole, hasAnyRole } = useAuth()
 
             <li
                 v-if="!hasRole('cleaner')"
-                :class="['menu-item', route().current('schedule.index') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('schedule.index') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('schedule.index', { locale: currentLocale })"
@@ -191,11 +220,27 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager'])"
-                :class="['menu-item', route().current('schedule.trainer_occupancy') ? 'active' : '']"
+                v-if="
+                    hasAnyRole([
+                        'owner',
+                        'admin',
+                        'super_admin',
+                        'sales_manager',
+                    ])
+                "
+                :class="[
+                    'menu-item',
+                    route().current('schedule.trainer_occupancy')
+                        ? 'active'
+                        : '',
+                ]"
             >
                 <Link
-                    :href="route('schedule.trainer_occupancy', { locale: currentLocale })"
+                    :href="
+                        route('schedule.trainer_occupancy', {
+                            locale: currentLocale,
+                        })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-calendar-stats"></i>
@@ -203,7 +248,12 @@ const { hasRole, hasAnyRole } = useAuth()
                 </Link>
             </li>
 
-            <li :class="['menu-item', route().current('entry-code.list') ? 'active' : '']">
+            <li
+                :class="[
+                    'menu-item',
+                    route().current('entry-code.list') ? 'active' : '',
+                ]"
+            >
                 <Link
                     :href="route('entry-code.list', { locale: currentLocale })"
                     class="menu-link"
@@ -212,7 +262,6 @@ const { hasRole, hasAnyRole } = useAuth()
                     <div>Մուտքի կոդեր</div>
                 </Link>
             </li>
-
 
             <li
                 v-if="hasAnyRole(['manager', 'admin', 'super_admin', 'owner'])"
@@ -229,7 +278,9 @@ const { hasRole, hasAnyRole } = useAuth()
                     "
                     class="menu-link"
                 >
-                    <i class="menu-icon icon-base ti tabler-report-analytics"></i>
+                    <i
+                        class="menu-icon icon-base ti tabler-report-analytics"
+                    ></i>
                     <div data-i18n="Entry Reports">
                         Մուտք/ելք հաշվետվություն
                     </div>
@@ -242,9 +293,11 @@ const { hasRole, hasAnyRole } = useAuth()
                     'menu-item',
                     route().current('membership_plan.list') ? 'active' : '',
                 ]"
-            >            
+            >
                 <Link
-                    :href="route('membership_plan.list', { locale: currentLocale })"
+                    :href="
+                        route('membership_plan.list', { locale: currentLocale })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
@@ -253,11 +306,18 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-                v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
-                :class="['menu-item', route().current('membership-category.list') ? 'active' : '']"
+                v-if="hasAnyRole(['admin', 'super_admin', 'owner', 'sales_manager', 'manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('membership-category.list') ? 'active' : '',
+                ]"
             >
                 <Link
-                    :href="route('membership-category.list', { locale: currentLocale })"
+                    :href="
+                        route('membership-category.list', {
+                            locale: currentLocale,
+                        })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
@@ -266,8 +326,11 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-                v-if="hasAnyRole(['admin', 'super_admin', 'owner'])"
-                :class="['menu-item', route().current('discount.list') ? 'active' : '']"
+                v-if="hasAnyRole(['admin', 'super_admin', 'owner', 'sales_manager', 'manager'])"
+                :class="[
+                    'menu-item',
+                    route().current('discount.list') ? 'active' : '',
+                ]"
             >
                 <Link
                     :href="route('discount.list', { locale: currentLocale })"
@@ -279,13 +342,13 @@ const { hasRole, hasAnyRole } = useAuth()
             </li>
 
             <li
-
                 v-if="
                     hasAnyRole([
                         'sales_manager',
                         'admin',
                         'super_admin',
                         'owner',
+                        'manager',
                     ])
                 "
                 :class="[
@@ -297,18 +360,35 @@ const { hasRole, hasAnyRole } = useAuth()
                     :href="
                         route('membership_sale.list', { locale: currentLocale })
                     "
-
-                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
-                :class="['menu-item', route().current('membership_sale.list') ? 'active' : '']"
-            >
-               
+                    v-if="
+                    hasAnyRole([
+                        'sales_manager',
+                        'admin',
+                        'super_admin',
+                        'owner',
+                        'manager',
+                    ])
+                "
+                    :class="[
+                        'menu-link',
+                        route().current('membership_sale.list') ? 'active' : '',
+                    ]"
+                >
                     <i class="menu-icon icon-base ti tabler-receipt"></i>
                     <div>Աբոնեմենտների վաճառքներ</div>
                 </Link>
             </li>
 
             <li
-                v-if="hasAnyRole(['admin', 'super_admin', 'owner','sales_manager','manager'])"
+                v-if="
+                    hasAnyRole([
+                        'admin',
+                        'super_admin',
+                        'owner',
+                        'sales_manager',
+                        'manager',
+                    ])
+                "
                 :class="[
                     'menu-item',
                     route().current('purchase.*') ? 'active open' : '',
@@ -341,9 +421,7 @@ const { hasRole, hasAnyRole } = useAuth()
                     <li
                         :class="[
                             'menu-item',
-                            route().current('purchase.history')
-                                ? 'active'
-                                : '',
+                            route().current('purchase.history') ? 'active' : '',
                         ]"
                     >
                         <Link

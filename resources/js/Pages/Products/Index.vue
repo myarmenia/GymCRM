@@ -4,6 +4,7 @@ import { ref, computed, watch } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     products: Object,
@@ -32,6 +33,10 @@ const showDeleteError = (message) => {
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
+const { hasAnyRole } = useAuth();
+const canManageInventory = computed(() =>
+    hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager"]),
+);
 
 const productsData = ref([...(props.products?.data ?? [])]);
 const selectedProductIds = ref([]);
@@ -219,6 +224,7 @@ console.log(props.products.data);
 
                 <div class="d-flex gap-2">
                     <button
+                        v-if="canManageInventory"
                         type="button"
                         class="btn product-consumption-btn"
                         :class="
@@ -233,6 +239,7 @@ console.log(props.products.data);
                     </button>
 
                     <Link
+                        v-if="canManageInventory"
                         class="btn btn-primary add-product-btn"
                         :href="
                             route('products.create', { locale: currentLocale })
@@ -426,6 +433,7 @@ console.log(props.products.data);
 
                                         <div class="dropdown-menu">
                                             <Link
+                                                v-if="canManageInventory"
                                                 class="product-action-item"
                                                 :href="
                                                     route('products.edit', {
@@ -442,7 +450,7 @@ console.log(props.products.data);
                                                 >
                                             </Link>
 
-                                            <div @click.stop>
+                                            <div v-if="canManageInventory" @click.stop>
                                                 <DeleteButton
                                                     prefix="tables"
                                                     model="inventoryproduct"

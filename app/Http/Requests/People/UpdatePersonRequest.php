@@ -19,7 +19,7 @@ class UpdatePersonRequest extends FormRequest
         return [
             'name' => 'sometimes|required|string|max:255',
             'surname' => 'nullable|string|max:255',
-            'image' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:2048',
             'email' => [
                 'sometimes',
                 'required',

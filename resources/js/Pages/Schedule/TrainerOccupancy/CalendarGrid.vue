@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import CalendarEventItem from './CalendarEventItem.vue'
+import { parseYmdAsUtcDate } from '@/utils/yerevanDate'
 
 const props = defineProps({
     weekDates: {
@@ -49,16 +50,16 @@ const selectedTimeRange = computed(() => {
 
 const parseLocalDate = value => {
     if (!value) {
-        return new Date()
+        return parseYmdAsUtcDate('1970-01-01')
     }
 
-    return new Date(`${String(value).slice(0, 10)}T00:00:00`)
+    return parseYmdAsUtcDate(String(value).slice(0, 10))
 }
 
 const formatShortDate = value => {
     const date = parseLocalDate(value)
 
-    return `${date.getDate()} ${props.monthNames[date.getMonth()] ?? ''}`
+    return `${date.getUTCDate()} ${props.monthNames[date.getUTCMonth()] ?? ''}`
 }
 
 const slotEvents = (day, slot) => eventGroups.value[cellKey(day.date, slot)] ?? []

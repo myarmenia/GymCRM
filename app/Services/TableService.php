@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\InventoryProduct;
 use App\Models\MembershipPlan;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -26,7 +28,6 @@ class TableService
         return $modelClass::findOrFail($id);
     }
 
-
     public function toggleChange(string $model, $id, string $column = 'active'): bool
     {
         $item = $this->find($model, $id);
@@ -45,7 +46,6 @@ class TableService
 
     public function delete(string $model, $id): void
     {
-
         $item = $this->find($model, $id);
         $this->ensureCanUseGenericMutation($item);
         $item->delete();
@@ -53,8 +53,19 @@ class TableService
 
     private function ensureCanUseGenericMutation(Model $item): void
     {
+        $user = auth()->user();
+
+        if (
+            $user?->hasRole('manager')
+            && !$user->hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager'])
+            && !($item instanceof Warehouse)
+            && !($item instanceof InventoryProduct)
+        ) {
+            abort(403, 'Managers can only modify warehouses and products.');
+        }
+
         if ($item instanceof MembershipPlan && $item->is_locked) {
-            abort(422, $item->lock_reason ?? 'Այս աբոնեմենտը հնարավոր չէ փոփոխել։');
+            abort(422, $item->lock_reason ?? 'This membership plan cannot be changed.');
         }
     }
 }

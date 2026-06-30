@@ -4,9 +4,15 @@ import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { todayInYerevan } from '@/utils/yerevanDate'
+import { useAuth } from '@/composables/useAuth'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const { hasAnyRole } = useAuth()
+const canManageSales = computed(() =>
+    hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager']),
+)
 
 const props = defineProps({
     membershipSales: Object,
@@ -193,7 +199,7 @@ const isActiveGuestMembership = sale => {
         return false
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayInYerevan()
     const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
     const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
     const startDate = membership.start_date ? String(membership.start_date).slice(0, 10) : null
@@ -219,7 +225,7 @@ const isFreezableMembership = sale => {
         return false
     }
 
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayInYerevan()
     const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
     const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
 
@@ -415,6 +421,7 @@ const resetFilters = () => {
 
                                         <div class="dropdown-menu">
                                             <Link
+                                                v-if="canManageSales"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.payments', { locale: currentLocale, id: sale.id })"
                                             >
@@ -423,7 +430,7 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
-                                                v-if="canChangeTrainer(sale)"
+                                                v-if="canManageSales && canChangeTrainer(sale)"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.change_trainer', { locale: currentLocale, id: sale.id })"
                                             >
@@ -432,7 +439,7 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
-                                                v-if="isActiveGuestMembership(sale)"
+                                                v-if="canManageSales && isActiveGuestMembership(sale)"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.guests', { locale: currentLocale, id: sale.id })"
                                             >
@@ -441,7 +448,7 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
-                                                v-if="isFreezableMembership(sale)"
+                                                v-if="canManageSales && isFreezableMembership(sale)"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.freezes', { locale: currentLocale, id: sale.id })"
                                             >
@@ -450,6 +457,7 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
+                                                v-if="canManageSales"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.edit', { locale: currentLocale, id: sale.id })"
                                             >
