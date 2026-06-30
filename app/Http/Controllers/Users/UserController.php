@@ -27,6 +27,15 @@ class UserController extends Controller
 
     }
 
+    private function authorizeUserManagement(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['owner', 'super_admin', 'sales_manager']),
+            403,
+            'You are not allowed to manage users.'
+        );
+    }
+
     // ========== list =====================
     public function list(Request $request){
 
@@ -49,13 +58,15 @@ class UserController extends Controller
     // ========== create =====================
     public function create()
     {
+        $this->authorizeUserManagement();
+
       
         $user = Auth::user();
         $roles = $this->roleService->getAvailableRoles($user);
         $gyms = $this->gymService->getAll();
         $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
 
-        $entryCodes =$user->hasRole('super_admin') ? $this->entryCodeService->getByGymId($user->gym_id ?? null) : [];
+        $entryCodes =$user->hasAnyRole(['super_admin', 'sales_manager']) ? $this->entryCodeService->getByGymId($user->gym_id ?? null) : [];
         
         return Inertia::render('Users/Create', [
                 'roles' => $roles,
@@ -70,7 +81,12 @@ class UserController extends Controller
 
     public function store(StoreUserRequest $request)
     {
-        $user = $this->userService->store(UserDTO::fromArray($request->all()));
+        $this->authorizeUserManagement();
+
+        $user = $this->userService->store(UserDTO::fromArray([
+            ...$request->all(),
+            'image' => $request->file('image'),
+        ]));
 
         // Save entry code association if provided
 
@@ -88,6 +104,8 @@ class UserController extends Controller
 
     public function edit($locale, $userId)
     {
+        $this->authorizeUserManagement();
+
         $user = $this->userService->getById($userId);
         $authUser = Auth::user();
 
@@ -110,7 +128,14 @@ class UserController extends Controller
     // ========== update =====================
     public function update(UpdateUserRequest $request)
     {
-        $user = $this->userService->update($request->id, UserDTO::fromArray($request->all()));
+        $this->authorizeUserManagement();
+
+        $existingUser = $this->userService->getById($request->id);
+
+        $user = $this->userService->update($request->id, UserDTO::fromArray([
+            ...$request->all(),
+            'image' => $request->file('image') ?? $existingUser->image,
+        ]));
 
         return redirect()->route('user.list', ['locale' => app()->getLocale()])
                         ->with('success', 'User updated successfully');

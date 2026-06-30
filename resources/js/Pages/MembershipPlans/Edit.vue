@@ -15,12 +15,12 @@ const props = defineProps({
     scheduleNames: Array,
 });
 
-console.log("scheduleNames", props.membershipPlan.trainers);
 const getTrainerId = (trainer) => {
     return Number(trainer.pivot?.user_id ?? trainer.id);
 };
 
-console.log("props.membershipPlan", props.membershipPlan);
+const isPlanLocked = computed(() => Boolean(props.membershipPlan.is_locked));
+
 const form = useForm({
     membership_category_id: props.membershipPlan.membership_category_id ?? "",
 
@@ -48,7 +48,10 @@ const form = useForm({
         },
     },
 
-    schedule_name_id: props.scheduleNames[0].id ?? "",
+    schedule_name_id:
+        props.membershipPlan.schedule_name_id ??
+        props.scheduleNames?.[0]?.id ??
+        "",
     trainers:
         props.membershipPlan.trainers?.map((item) => ({
             trainer_id: Number(item.trainer_id),
@@ -121,7 +124,7 @@ const calculateTrainerTotalPrice = (trainer) => {
 
 const toggleTrainer = (trainerId) => {
     const id = Number(trainerId);
-    console.log("id", id);
+
     if (isTrainerSelected(id)) {
         form.trainers = form.trainers.filter(
             (item) => Number(item.trainer_id) !== id,
@@ -147,6 +150,13 @@ const updateTrainerPrice = (trainer) => {
     }
 
     calculateTrainerTotalPrice(trainer);
+};
+
+const changeTrainerPriceType = (trainer) => {
+    trainer.price_value = 0;
+    trainer.total_price = 0;
+
+    updateTrainerPrice(trainer);
 };
 
 watch(
@@ -221,12 +231,20 @@ const submit = () => {
             <h5 class="card-header">Խմբագրել աբոնեմենտ</h5>
 
             <form class="card-body" @submit.prevent="submit">
+                <div v-if="isPlanLocked" class="alert alert-warning mb-4">
+                    {{
+                        membershipPlan.lock_reason ||
+                        "Այս աբոնեմենտը կապված է այցելուի աբոնեմենտի հետ։ Կարելի է փոփոխել միայն մարզիչներին։"
+                    }}
+                </div>
+
                 <div class="mb-4">
                     <InputLabel value="Կատեգորիա" />
 
                     <select
                         v-model="form.membership_category_id"
                         class="form-select"
+                        :disabled="isPlanLocked"
                     >
                         <option value="">Ընտրել</option>
 
@@ -252,6 +270,7 @@ const submit = () => {
                             v-model="form.translations.hy.name"
                             class="form-control"
                             type="text"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError
@@ -265,6 +284,7 @@ const submit = () => {
                         <textarea
                             v-model="form.translations.hy.description"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError
@@ -284,6 +304,7 @@ const submit = () => {
                         min="0"
                         step="0.01"
                         class="form-control"
+                        :disabled="isPlanLocked"
                         @wheel.prevent
                     />
 
@@ -293,7 +314,11 @@ const submit = () => {
                     <div class="col-md-6">
                         <InputLabel value="Աշխատավարձ" />
 
-                        <select v-model="form.price_type" class="form-select">
+                        <select
+                            v-model="form.price_type"
+                            class="form-select"
+                            :disabled="isPlanLocked"
+                        >
                             <option value="fixed">Ֆիքսված գումար</option>
 
                             <option value="percent">Տոկոս</option>
@@ -318,6 +343,7 @@ const submit = () => {
                             :max="form.price_type === 'percent' ? 100 : null"
                             step="0.01"
                             class="form-control"
+                            :disabled="isPlanLocked"
                             @wheel.prevent
                         />
 
@@ -328,7 +354,11 @@ const submit = () => {
                 <div class="mb-4">
                     <InputLabel value="Աբոնեմենտի տեսակ" />
 
-                    <select v-model="form.duration_type" class="form-select">
+                    <select
+                        v-model="form.duration_type"
+                        class="form-select"
+                        :disabled="isPlanLocked"
+                    >
                         <option
                             v-for="item in durationTypes"
                             :key="item.value"
@@ -356,6 +386,7 @@ const submit = () => {
                         v-model="form.duration_value"
                         type="number"
                         class="form-control"
+                        :disabled="isPlanLocked"
                     />
 
                     <InputError :message="form.errors.duration_value" />
@@ -369,6 +400,7 @@ const submit = () => {
                             v-model="form.visits_limit"
                             type="number"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.visits_limit" />
@@ -381,6 +413,7 @@ const submit = () => {
                             v-model="form.duration_value"
                             type="number"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.duration_value" />
@@ -395,6 +428,7 @@ const submit = () => {
                             v-model="form.start_date"
                             type="date"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.start_date" />
@@ -407,6 +441,7 @@ const submit = () => {
                             v-model="form.end_date"
                             type="date"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.end_date" />
@@ -421,6 +456,7 @@ const submit = () => {
                             v-model="form.guest_limit"
                             type="number"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.guest_limit" />
@@ -433,6 +469,7 @@ const submit = () => {
                             v-model="form.freeze_limit"
                             type="number"
                             class="form-control"
+                            :disabled="isPlanLocked"
                         />
 
                         <InputError :message="form.errors.freeze_limit" />
@@ -448,6 +485,7 @@ const submit = () => {
                         <select
                             v-model="form.schedule_name_id"
                             class="form-select"
+                            :disabled="isPlanLocked"
                         >
                             <option value="">Ընտրել գրաֆիկ</option>
 
@@ -556,7 +594,7 @@ const submit = () => {
                                                 "
                                                 class="form-select"
                                                 @change="
-                                                    updateTrainerPrice(
+                                                    changeTrainerPriceType(
                                                         form.trainers[
                                                             getTrainerIndex(
                                                                 trainer.pivot
@@ -690,6 +728,7 @@ const submit = () => {
                             v-model="form.active"
                             type="checkbox"
                             class="form-check-input"
+                            :disabled="isPlanLocked"
                         />
 
                         <span class="form-check-label">Ակտիվ</span>

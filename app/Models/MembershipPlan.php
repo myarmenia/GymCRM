@@ -10,7 +10,7 @@ class MembershipPlan extends Model
 {
     use  BelongsToGym, ModelTranslationTrait;
     protected $guarded = [];
-    protected $appends = ['is_locked', 'name'];
+    protected $appends = ['is_locked', 'lock_reason', 'name'];
     public function MembershipCategory()
     {
         return $this->belongsTo(MembershipCategory::class, 'membership_category_id');
@@ -55,6 +55,13 @@ class MembershipPlan extends Model
     public function getIsLockedAttribute(): bool
     {
         return $this->isLocked();
+    }
+
+    public function getLockReasonAttribute(): ?string
+    {
+        return $this->is_locked
+            ? 'Այս աբոնեմենտը կապված է այցելուի աբոնեմենտի հետ։ Կարելի է փոփոխել միայն մարզիչներին։'
+            : null;
     }
 
     public function trainers()

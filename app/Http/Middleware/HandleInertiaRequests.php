@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use App\Services\Notifications\NotificationService;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -61,6 +62,7 @@ class HandleInertiaRequests extends Middleware
             ? $langFromUrl
             : $langs[0];
 
+        $roleName = $user?->roles?->first()?->name;
 
         $name = request()->route()?->getName();
         $group = $name ? explode('.', $name)[0] : 'app';
@@ -85,10 +87,21 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'surname' => $user->surname,
                     'email' => $user->email,
+                    'gym_id' => $user->gym_id,
+                    'client_id' => $user->gym_id,
+                    'role' => $roleName,
+                    'role_name' => $roleName,
                     'roles' => $user->roles,
                     'verified' => $user->email_verified_at,
                 ] : null,
             ],
+
+            'client_id' => $user?->gym_id,
+
+            'notificationUnreadCount' => $user
+                ? app(NotificationService::class)->unreadCount($user)
+                : 0,
+
             'translations' => [
                 'form' => File::exists($formFile) ? File::json($formFile) : [],
                 'page' => File::exists($file) ? File::json($file) : [],

@@ -26,7 +26,7 @@ class PersonRepository extends BaseRepository implements PersonInterface
         $query = $this->query()
             ->with([
                 'gyms',
-                'memberships.membershipPlan.translations',
+                'activeMemberships.membershipPlan.translations',
             ]);
 
         if (!$user->hasRole('owner')) {
@@ -36,11 +36,11 @@ class PersonRepository extends BaseRepository implements PersonInterface
         }
 
         if ($membershipFilter === 'with') {
-            $query->has('memberships');
+            $query->has('activeMemberships');
         }
 
         if ($membershipFilter === 'without') {
-            $query->doesntHave('memberships');
+            $query->doesntHave('activeMemberships');
         }
 
         return $query
@@ -92,5 +92,30 @@ class PersonRepository extends BaseRepository implements PersonInterface
         return $this->query()
             ->where('type', $type)
             ->get();
+    }
+
+    public function getPeopleByGymId(int $gymId)
+    {
+        return $this->model->query()
+            ->whereHas('gyms', function ($query) use ($gymId) {
+                $query->where('gyms.id', $gymId);
+            })
+            ->get()
+            ->map(function ($person) {
+                return [
+                    'id' => $person->id,
+                    'name' => $person->name,
+                    'surname' => $person->surname,
+                ];
+            });
+    }
+
+    public function getPeopleByGymIdForSelect(int $gymId)
+    {
+        return $this->model->query()
+            ->whereHas('gyms', function ($query) use ($gymId) {
+                $query->where('gyms.id', $gymId);
+            })
+            ->get(['id', 'name', 'surname']);
     }
 }

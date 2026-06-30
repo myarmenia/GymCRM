@@ -35,4 +35,9 @@ class TrainerCommission extends Model
     {
         return $this->belongsTo(PersonMembership::class);
     }
+
+    public function monthlySalaries()
+    {
+        return $this->hasMany(TrainerMonthlySalary::class);
+    }
 }

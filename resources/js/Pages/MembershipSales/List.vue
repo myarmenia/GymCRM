@@ -4,13 +4,23 @@ import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { todayInYerevan } from '@/utils/yerevanDate'
+import { useAuth } from '@/composables/useAuth'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const { hasAnyRole } = useAuth()
+const canManageSales = computed(() =>
+    hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager']),
+)
 
 const props = defineProps({
     membershipSales: Object,
     membershipPlans: {
+        type: Array,
+        default: () => [],
+    },
+    people: {
         type: Array,
         default: () => [],
     },
@@ -40,6 +50,7 @@ const queryValue = name => {
 }
 const filters = ref({
     date_field: queryParams.get('date_field') ?? '',
+    person_id: queryParams.get('person_id') ?? '',
     trainer_id: queryParams.get('trainer_id') ?? '',
     membership_plan_id: queryParams.get('membership_plan_id') ?? '',
     membership_discount_ids: queryValue('membership_discount_ids'),
@@ -61,7 +72,22 @@ const trainerOptionName = trainer => {
     return fullName || trainer.email || `#${trainer.id}`
 }
 
+const personOptionName = person => {
+    const fullName = `${person.name ?? ''} ${person.surname ?? ''}`.trim()
+
+    return fullName || person.email || person.phone || `#${person.id}`
+}
+
 const saleFilterSelectFields = computed(() => [
+    {
+        name: 'person_id',
+        label: 'Հաճախորդ',
+        placeholder: 'Բոլոր հաճախորդները',
+        options: props.people.map(person => ({
+            value: person.id,
+            label: personOptionName(person),
+        })),
+    },
     {
         name: 'trainer_id',
         label: 'Մարզիչ',
@@ -166,16 +192,73 @@ const netPaidAmount = sale => Math.max(paidAmount(sale) - refundedAmount(sale), 
 const isCancelled = sale => sale.person_memberships?.[0]?.status === 'cancelled'
 const debtAmount = sale => isCancelled(sale) ? 0 : Math.max(Number(sale.final_price || 0) - netPaidAmount(sale), 0)
 const membershipStatus = sale => sale.person_memberships?.[0]?.status ?? 'active'
+const isActiveGuestMembership = sale => {
+    const membership = sale.person_memberships?.[0]
+
+    if (!membership || membership.status !== 'active') {
+        return false
+    }
+
+    const today = todayInYerevan()
+    const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
+    const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
+    const startDate = membership.start_date ? String(membership.start_date).slice(0, 10) : null
+
+    if (startDate && startDate > today) {
+        return false
+    }
+
+    if (validAt && validAt < today) {
+        return false
+    }
+
+    if (endDate && endDate < today) {
+        return false
+    }
+
+    return true
+}
+const isFreezableMembership = sale => {
+    const membership = sale.person_memberships?.[0]
+
+    if (!membership || !['waiting', 'active', 'frozen'].includes(membership.status)) {
+        return false
+    }
+
+    const today = todayInYerevan()
+    const validAt = membership.valid_at ? String(membership.valid_at).slice(0, 10) : null
+    const endDate = membership.end_date ? String(membership.end_date).slice(0, 10) : null
+
+    if (validAt && validAt < today) {
+        return false
+    }
+
+    if (endDate && endDate < today) {
+        return false
+    }
+
+    return true
+}
+const canChangeTrainer = sale => {
+    const membership = sale.person_memberships?.[0]
+    const trainers = sale.membership_plan?.trainers ?? []
+
+    return Boolean(membership?.trainer_id && trainers.length > 1)
+}
 const membershipStatusLabel = status => ({
+    waiting: 'Սպասման մեջ',
     active: 'Ակտիվ',
+    frozen: 'Սառեցված',
     cancelled: 'Չեղարկված',
 }[status] ?? status ?? '-')
 const membershipStatusClass = status => ({
+    waiting: 'bg-label-info',
     active: 'bg-label-success',
+    frozen: 'bg-label-warning',
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 const membershipStartDate = sale => sale.person_memberships?.[0]?.start_date
-const membershipEndDate = sale => sale.person_memberships?.[0]?.end_date
+const membershipEndDate = sale => sale.person_memberships?.[0]?.valid_at
 const availableRefundAmount = sale => Math.max(
     paidAmount(sale) - Number(sale.final_price || 0) - refundedAmount(sale),
     0,
@@ -206,7 +289,14 @@ const applyFilters = (payload) => {
 const resetFilters = () => {
     filters.value = {
         date_field: '',
+        person_id: '',
+        trainer_id: '',
+        membership_plan_id: '',
         membership_discount_ids: '',
+        manual_discount: '',
+        payment_status: '',
+        date_from: '',
+        date_to: '',
     }
 
     router.get(
@@ -247,7 +337,6 @@ const resetFilters = () => {
                 <h5 class="mb-0">
                     Վաճառքների ցանկ
                 </h5>
-
             </div>
 
             <div class="card-body">
@@ -332,6 +421,7 @@ const resetFilters = () => {
 
                                         <div class="dropdown-menu">
                                             <Link
+                                                v-if="canManageSales"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.payments', { locale: currentLocale, id: sale.id })"
                                             >
@@ -340,6 +430,34 @@ const resetFilters = () => {
                                             </Link>
 
                                             <Link
+                                                v-if="canManageSales && canChangeTrainer(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.change_trainer', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-user-cog me-1"></i>
+                                                Փոխել մարզիչին
+                                            </Link>
+
+                                            <Link
+                                                v-if="canManageSales && isActiveGuestMembership(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.guests', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-user-plus me-1"></i>
+                                                Ավելացնել հյուր
+                                            </Link>
+
+                                            <Link
+                                                v-if="canManageSales && isFreezableMembership(sale)"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('membership_sale.freezes', { locale: currentLocale, id: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-snowflake me-1"></i>
+                                                Սառեցնել աբոնեմենտը
+                                            </Link>
+
+                                            <Link
+                                                v-if="canManageSales"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.edit', { locale: currentLocale, id: sale.id })"
                                             >

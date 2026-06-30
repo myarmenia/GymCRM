@@ -2,12 +2,14 @@
 
 namespace App\DTO\People;
 
+use Illuminate\Http\UploadedFile;
+
 class PersonDTO
 {
     public function __construct(
         public string $name,
         public ?string $surname,
-        public ?string $image,
+        public UploadedFile|string|null $image,
         public string $email,
         public string $password,
         public string $phone,

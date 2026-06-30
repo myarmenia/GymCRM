@@ -17,6 +17,9 @@ class MembershipSale extends Model
         'trainer_id' => [
             'callback' => 'filterTrainer',
         ],
+        'person_id' => [
+            'method' => 'where',
+        ],
         'membership_plan_id' => [
             'method' => 'where',
         ],

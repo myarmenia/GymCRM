@@ -4,23 +4,43 @@ namespace App\Http\Controllers\People;
 
 use App\DTO\People\PersonDTO;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\People\StorePersonVisitRequest;
 use App\Http\Requests\People\StorePersonRequest;
 use App\Http\Requests\People\UpdatePersonRequest;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
 use App\Services\People\PersonService;
+use App\Services\People\PersonVisitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Laravel\Reverb\Loggers\Log;
 
 class PersonController extends Controller
 {
     public function __construct(
         protected PersonService $personService,
         protected GymService $gymService,
-        protected EntryCodeService $entryCodeService
+        protected EntryCodeService $entryCodeService,
+        protected PersonVisitService $personVisitService
     ) {}
+
+    private function authorizePersonManagement(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['sales_manager', 'super_admin']),
+            403,
+            'You are not allowed to manage people.'
+        );
+    }
+
+    private function authorizePersonVisitManagement(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin']),
+            403,
+            'You are not allowed to manage person visits.'
+        );
+    }
 
     public function list(Request $request)
     {
@@ -34,8 +54,10 @@ class PersonController extends Controller
 
     public function create()
     {
+        $this->authorizePersonManagement();
+
         $user = Auth::user();
-       
+        //dd( $user);
         $entryCodes =$this->entryCodeService->getByGymId($user->gym_id ?? null);
 
         return Inertia::render('People/Create', [
@@ -47,7 +69,12 @@ class PersonController extends Controller
 
     public function store(StorePersonRequest $request)
     {
-        $person = $this->personService->store(PersonDTO::fromArray($request->all()));
+        $this->authorizePersonManagement();
+
+        $person = $this->personService->store(PersonDTO::fromArray([
+            ...$request->all(),
+            'image' => $request->file('image'),
+        ]));
 
         return redirect()
             ->route('person.edit', ['locale' => app()->getLocale(), 'id' => $person->id])
@@ -56,6 +83,7 @@ class PersonController extends Controller
 
     public function edit($locale, $id)
     {
+        $this->authorizePersonManagement();
 
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
@@ -89,8 +117,22 @@ class PersonController extends Controller
     }
 
     // Ավելացրու $locale պարամետրը առաջին տեղում
+    public function profile($locale, $id)
+    {
+        return Inertia::render('People/Profile', $this->personService->profileData((int) $id));
+    }
+
+    public function visitManagement($locale, $id)
+    {
+        $this->authorizePersonVisitManagement();
+
+        return Inertia::render('People/VisitManagement', $this->personVisitService->pageData((int) $id));
+    }
+
     public function update(UpdatePersonRequest $request, $locale, $id)
     {
+        $this->authorizePersonManagement();
+
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
 
@@ -102,9 +144,30 @@ class PersonController extends Controller
             }
         }
 
-        $person = $this->personService->update($id, PersonDTO::fromArray($request->all()));
+        $person = $this->personService->update($id, PersonDTO::fromArray([
+            ...$request->all(),
+            'image' => $request->file('image') ?? $person->image,
+        ]));
         return redirect()->route('person.list', ['locale' => app()->getLocale()])
                         ->with('success', 'Person updated successfully');
+    }
+
+    public function storeVisit(StorePersonVisitRequest $request, $locale, $id)
+    {
+        $this->authorizePersonVisitManagement();
+
+        $validated = $request->validated();
+
+        $this->personVisitService->storeManualVisit(
+            (int) $id,
+            $validated['action'],
+            $validated['membership_id'] ?? null,
+            $validated['manual_datetime'],
+        );
+
+        return redirect()
+            ->route('person.visits', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', 'Visit saved successfully');
     }
 
     // public function destroy($locale, $id)

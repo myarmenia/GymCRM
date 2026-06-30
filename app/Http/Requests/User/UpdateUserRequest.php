@@ -41,6 +41,7 @@ class UpdateUserRequest extends FormRequest
             'passport_number' => ['nullable', 'string', 'max:50'],
             'passport_expire_at' => ['nullable', 'date'],
             'birth_date' => ['nullable', 'date'],
+            'image' => ['nullable', 'image', 'max:2048'],
             'roles' => ['required', 'array'],
             'gym_id' => ['nullable', 'exists:gyms,id'],
             'active' => ['boolean'],

@@ -24,6 +24,7 @@ const props = defineProps({
 
 // const selectedGymId = ref(null);
 const entryCodes = ref([]);
+const imagePreview = ref(null);
 
 
 const form = useForm({
@@ -36,6 +37,7 @@ const form = useForm({
     passport_number: '',
     passport_expire_at: '',
     birth_date: '',
+    image: null,
     roles: [],
     active: true,
     gym_id: null,
@@ -112,6 +114,12 @@ const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
 };
 
+const onImageChange = (event) => {
+    const file = event.target.files?.[0] ?? null;
+    form.image = file;
+    imagePreview.value = file ? URL.createObjectURL(file) : null;
+};
+
 
 // onMounted(async () => {
 //     await nextTick();
@@ -158,6 +166,7 @@ const gymOptions = computed(() => {
 
 const submit = () => {
     form.post(route('user.store', { locale: currentLocale }), {
+        forceFormData: true,
         onError: (errors) => {
             if (errors.password || errors.password_confirmation) {
                 form.reset('password', 'password_confirmation');
@@ -312,6 +321,20 @@ const submit = () => {
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" tabindex="12" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
+                    <div class="col-md-6">
+                        <InputLabel for="image" class="form-label" value="Պրոֆիլի նկար" />
+                        <input
+                            id="image"
+                            type="file"
+                            class="form-control"
+                            accept="image/*"
+                            @change="onImageChange"
+                        >
+                        <InputError :message="form.errors.image" />
+                        <div v-if="imagePreview" class="mt-3">
+                            <img :src="imagePreview" alt="Preview" class="user-image-preview">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
@@ -328,6 +351,13 @@ const submit = () => {
 
 .select2-container {
     width: 100% !important;
+}
+
+.user-image-preview {
+    border-radius: 12px;
+    height: 120px;
+    object-fit: cover;
+    width: 120px;
 }
 
 </style>

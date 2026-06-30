@@ -4,9 +4,12 @@ import { Head, router, usePage, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DeleteButton from '@/Components/DeleteButton.vue';
 import ToggleStatus from '@/Components/ToggleStatus.vue';
+import { useAuth } from '@/composables/useAuth';
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
+const { hasAnyRole } = useAuth();
+const canManageWarehouses = hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager']);
 
 const props = defineProps({
     warehouses: Object
@@ -27,7 +30,7 @@ const warehousesList = ref(props.warehouses.data);
         <div class="card mb-6">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Պահեստների ցուցակ</h5>
-                <button @click="router.get(route('warehouse.create', { locale: currentLocale }))" class="btn btn-primary">
+                <button v-if="canManageWarehouses" @click="router.get(route('warehouse.create', { locale: currentLocale }))" class="btn btn-primary">
                     + Ավելացնել նոր պահեստ
                 </button>
             </div>
@@ -66,7 +69,7 @@ const warehousesList = ref(props.warehouses.data);
                                         <i class="icon-base ti tabler-dots-vertical"></i>
                                     </button>
                                     <div class="dropdown-menu">
-                                        <div class="dropdown-item waves-effect">
+                                        <div v-if="canManageWarehouses" class="dropdown-item waves-effect">
                                             <ToggleStatus
                                                 :model="'warehouses'"
                                                 :model-id="warehouse.id"
@@ -81,6 +84,7 @@ const warehousesList = ref(props.warehouses.data);
                                         </div>
 
                                         <Link
+                                            v-if="canManageWarehouses"
                                             class="dropdown-item waves-effect"
                                             :href="route('warehouse.edit', { locale: currentLocale, id: warehouse.id })"
                                         >
@@ -89,6 +93,7 @@ const warehousesList = ref(props.warehouses.data);
                                         </Link>
 
                                         <a
+                                                v-if="canManageWarehouses"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >

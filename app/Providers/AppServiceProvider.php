@@ -10,6 +10,7 @@ use App\Interfaces\CategoryTranslations\CategoryTranslationInterface;
 use App\Interfaces\Documents\DocumentInterface;
 use App\Interfaces\Discounts\DiscountInterface;
 use App\Interfaces\EntryCodes\EntryCodeInterface;
+use App\Interfaces\EntryReports\EntryReportInterface;
 use App\Interfaces\Gyms\GymInterface;
 use App\Interfaces\Memberships\MembershipCategoryInterface;
 use App\Interfaces\Memberships\MembershipPlanInterface;
@@ -20,6 +21,7 @@ use App\Interfaces\GymSchedule\GymScheduleInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
 use App\Interfaces\MembershipPlanSchedule\MembershipPlanScheduleInterface;
 use App\Interfaces\MembershipPlanTrainer\MembershipPlanTrainerInterface;
+use App\Interfaces\Notifications\NotificationRepositoryInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\PersonMemberships\PersonMembershipInterface;
@@ -38,6 +40,8 @@ use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
 use App\Interfaces\People\PersonInterface;
+use App\Interfaces\Purchase\PurchaseInterface;
+use App\Interfaces\PurchaseItem\PurchaseItemInterface;
 use App\Interfaces\Trainer\TrainerInterface;
 use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
 use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface as TrainerSessionDurationTrainerSessionDurationInterface;
@@ -51,6 +55,7 @@ use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Repositories\Documents\DocumentRepository;
 use App\Repositories\Discounts\DiscountRepository;
 use App\Repositories\EntryCodes\EntryCodeRepository;
+use App\Repositories\EntryReports\EntryReportRepository;
 use App\Repositories\Gyms\GymRepository;
 use App\Repositories\Memberships\MembershipCategoryRepository;
 use App\Repositories\Memberships\MembershipPlanRepository;
@@ -61,6 +66,7 @@ use App\Repositories\GymSchedule\GymScheduleRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
 use App\Repositories\MembershipPlanSchedule\MembershipPlanScheduleRepository;
 use App\Repositories\MembershipPlanTrainer\MembershipPlanTrainerRepository;
+use App\Repositories\Notifications\NotificationRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\PersonMemberships\PersonMembershipRepository;
@@ -75,6 +81,8 @@ use App\Repositories\SalespersonCommissions\SalespersonCommissionRepository;
 use App\Repositories\SubCategory\SubCategoryRepository;
 use App\Repositories\SubCategoryTranslations\SubCategoryTranslationsRepository;
 use App\Repositories\People\PersonRepository;
+use App\Repositories\Purchase\PurchaseRepository;
+use App\Repositories\PurchaseItem\PurchaseItemRepository;
 use App\Repositories\Trainer\TrainerRepository;
 use App\Repositories\TrainerCommissions\TrainerCommissionRepository;
 use App\Repositories\TrainerSchedule\TrainerScheduleRepository;
@@ -144,12 +152,20 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SalespersonCommissionInterface::class, SalespersonCommissionRepository::class);
         $this->app->bind(TrainerInterface::class, TrainerRepository::class);
 
-        $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class,TrainerSessionDurationRepository::class);
+        $this->app->bind(EntryReportInterface::class, EntryReportRepository::class);
 
-        $this->app->bind(TrainerSessionDurationSlotInterface::class,TrainerSessionDurationSlotRepository::class);
+        $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
 
-            $this->app->bind(MembershipPlanTrainerInterface::class, MembershipPlanTrainerRepository::class);
-    $this->app->bind(MembershipPlanScheduleInterface::class, MembershipPlanScheduleRepository::class);
+
+        $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class, TrainerSessionDurationRepository::class);
+
+        $this->app->bind(TrainerSessionDurationSlotInterface::class, TrainerSessionDurationSlotRepository::class);
+
+        $this->app->bind(MembershipPlanTrainerInterface::class, MembershipPlanTrainerRepository::class);
+        $this->app->bind(MembershipPlanScheduleInterface::class, MembershipPlanScheduleRepository::class);
+
+        $this->app->bind(PurchaseInterface::class, PurchaseRepository::class);
+        $this->app->bind(PurchaseItemInterface::class, PurchaseItemRepository::class);
     }
 
     /**

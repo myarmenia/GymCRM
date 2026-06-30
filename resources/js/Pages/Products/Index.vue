@@ -4,11 +4,16 @@ import { ref, computed, watch } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     products: Object,
     filters: Object,
     categories: {
+        type: [Array, Object],
+        default: () => [],
+    },
+    warehouses: {
         type: [Array, Object],
         default: () => [],
     },
@@ -28,6 +33,10 @@ const showDeleteError = (message) => {
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
+const { hasAnyRole } = useAuth();
+const canManageInventory = computed(() =>
+    hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager"]),
+);
 
 const productsData = ref([...(props.products?.data ?? [])]);
 const selectedProductIds = ref([]);
@@ -41,7 +50,7 @@ const getProductReservedQuantity = (product) => {
 };
 
 const getAvailableQuantity = (product) => {
-    return getProductQuantity(product) + getProductReservedQuantity(product);
+    return getProductQuantity(product);
 };
 
 const isProductOutOfStock = (product) => {
@@ -139,6 +148,10 @@ const localCategories = computed(() => {
 const name = ref(props.filters?.name ?? "");
 const categoryId = ref(props.filters?.category_id ?? "");
 const subCategoryId = ref(props.filters?.sub_category_id ?? "");
+const warehouseId = ref(props.filters?.warehouse_id ?? "");
+const localWarehouses = computed(() => {
+    return props.warehouses?.data ?? props.warehouses ?? [];
+});
 
 const selectedCategory = computed(() => {
     return localCategories.value.find(
@@ -169,6 +182,10 @@ const search = () => {
         params.sub_category_id = subCategoryId.value;
     }
 
+    if (warehouseId.value) {
+        params.warehouse_id = warehouseId.value;
+    }
+
     router.get(route("products.index", { locale: currentLocale }), params, {
         preserveState: true,
         preserveScroll: true,
@@ -180,6 +197,7 @@ const resetFilters = () => {
     name.value = "";
     categoryId.value = "";
     subCategoryId.value = "";
+    warehouseId.value = "";
 
     router.get(
         route("products.index", { locale: currentLocale }),
@@ -190,6 +208,8 @@ const resetFilters = () => {
         },
     );
 };
+
+console.log(props.products.data);
 </script>
 
 <template>
@@ -204,6 +224,7 @@ const resetFilters = () => {
 
                 <div class="d-flex gap-2">
                     <button
+                        v-if="canManageInventory"
                         type="button"
                         class="btn product-consumption-btn"
                         :class="
@@ -218,6 +239,7 @@ const resetFilters = () => {
                     </button>
 
                     <Link
+                        v-if="canManageInventory"
                         class="btn btn-primary add-product-btn"
                         :href="
                             route('products.create', { locale: currentLocale })
@@ -230,73 +252,87 @@ const resetFilters = () => {
             </div>
 
             <div class="card-body">
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-2">
-                        <input
-                            v-model="name"
-                            type="text"
-                            class="form-control"
-                            placeholder="Որոնել անունով..."
-                            @keyup.enter="search"
-                        />
-                    </div>
+<div class="row mb-4">
+    <div class="col-md-2 mb-2">
+        <input
+            v-model="name"
+            type="text"
+            class="form-control"
+            placeholder="Որոնել անունով..."
+            @keyup.enter="search"
+        />
+    </div>
 
-                    <div class="col-md-3 mb-2">
-                        <select v-model="categoryId" class="form-control">
-                            <option value="">Բոլոր կատեգորիաները</option>
+    <div class="col-md-2 mb-2">
+        <select v-model="warehouseId" class="form-control">
+            <option value="">Բոլոր պահեստները</option>
 
-                            <option
-                                v-for="category in localCategories"
-                                :key="category.id"
-                                :value="category.id"
-                            >
-                                {{
-                                    category.translations?.[0]?.name ??
-                                    category.name ??
-                                    "-"
-                                }}
-                            </option>
-                        </select>
-                    </div>
+            <option
+                v-for="warehouse in localWarehouses"
+                :key="warehouse.id"
+                :value="warehouse.id"
+            >
+                {{ warehouse.name ?? "-" }}
+            </option>
+        </select>
+    </div>
 
-                    <div class="col-md-3 mb-2">
-                        <select
-                            v-model="subCategoryId"
-                            class="form-control"
-                            :disabled="
-                                !categoryId ||
-                                filteredSubCategories.length === 0
-                            "
-                        >
-                            <option value="">Բոլոր ենթակատեգորիաները</option>
+    <div class="col-md-2 mb-2">
+        <select v-model="categoryId" class="form-control">
+            <option value="">Բոլոր կատեգորիաները</option>
 
-                            <option
-                                v-for="sub in filteredSubCategories"
-                                :key="sub.id"
-                                :value="sub.id"
-                            >
-                                {{
-                                    sub.translations?.[0]?.name ??
-                                    sub.name ??
-                                    "-"
-                                }}
-                            </option>
-                        </select>
-                    </div>
+            <option
+                v-for="category in localCategories"
+                :key="category.id"
+                :value="category.id"
+            >
+                {{
+                    category.translations?.[0]?.name ??
+                    category.name ??
+                    "-"
+                }}
+            </option>
+        </select>
+    </div>
 
-                    <div class="col-md-3 mb-2 d-flex gap-2">
-                        <button class="btn btn-secondary w-100" @click="search">
-                            Որոնել
-                        </button>
+    <div class="col-md-2 mb-2">
+        <select
+            v-model="subCategoryId"
+            class="form-control"
+            :disabled="
+                !categoryId ||
+                filteredSubCategories.length === 0
+            "
+        >
+            <option value="">Բոլոր ենթակատեգորիաները</option>
 
-                        <button
-                            class="btn btn-outline-secondary w-100"
-                            @click="resetFilters"
-                        >
-                            <i class="icon-base ti tabler-refresh"></i>
-                        </button>
-                    </div>
-                </div>
+            <option
+                v-for="sub in filteredSubCategories"
+                :key="sub.id"
+                :value="sub.id"
+            >
+                {{
+                    sub.translations?.[0]?.name ??
+                    sub.name ??
+                    "-"
+                }}
+            </option>
+        </select>
+    </div>
+
+    <div class="col-md-4 mb-2 d-flex gap-2">
+        <button class="btn btn-secondary w-100" @click="search">
+            Որոնել
+        </button>
+
+        <button
+            class="btn btn-outline-secondary w-100"
+            @click="resetFilters"
+        >
+            <i class="icon-base ti tabler-refresh"></i>
+        </button>
+    </div>
+</div>
 
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -397,6 +433,7 @@ const resetFilters = () => {
 
                                         <div class="dropdown-menu">
                                             <Link
+                                                v-if="canManageInventory"
                                                 class="product-action-item"
                                                 :href="
                                                     route('products.edit', {
@@ -413,7 +450,7 @@ const resetFilters = () => {
                                                 >
                                             </Link>
 
-                                            <div @click.stop>
+                                            <div v-if="canManageInventory" @click.stop>
                                                 <DeleteButton
                                                     prefix="tables"
                                                     model="inventoryproduct"
