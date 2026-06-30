@@ -204,6 +204,8 @@ const normalizeExistingDurations = () => {
                 minutes: duration.minutes ?? 60,
                 type: duration.type ?? "individual",
                 price: duration.price ?? null,
+                is_locked: Boolean(duration.is_locked ?? schedule.is_locked),
+                lock_reason: duration.lock_reason ?? schedule.lock_reason ?? null,
 
                 slots: (duration.slots ?? []).map((slot) => ({
                     id: slot.id ?? null,
@@ -228,12 +230,18 @@ const form = useForm({
     session_durations: normalizeExistingDurations(),
 });
 
-const existingScheduleIds = computed(() =>
-    props.trainerScheduleIds.map((id) => Number(id)),
-);
+const lockedScheduleIds = computed(() => {
+    if (!Array.isArray(props.trainerSessionDuration)) {
+        return [];
+    }
 
-const isExistingSchedule = (scheduleId) => {
-    return existingScheduleIds.value.includes(Number(scheduleId));
+    return props.trainerSessionDuration
+        .filter((schedule) => Boolean(schedule.is_locked))
+        .map((schedule) => Number(schedule.schedule_name_id));
+});
+
+const isLockedSchedule = (scheduleId) => {
+    return lockedScheduleIds.value.includes(Number(scheduleId));
 };
 
 const selectedScheduleNames = computed(() => {
@@ -249,7 +257,7 @@ const addScheduleName = () => {
 const removeScheduleName = (index) => {
     const scheduleId = form.schedule_names[index];
 
-    if (isExistingSchedule(scheduleId)) {
+    if (isLockedSchedule(scheduleId)) {
         return;
     }
 
@@ -268,20 +276,22 @@ const addSessionDuration = () => {
         minutes: 60,
         type: "individual",
         price: null,
+        is_locked: false,
+        lock_reason: null,
         slots: [],
     });
 };
 
 const removeSessionDuration = (index) => {
-    if (form.session_durations[index]?.id) {
+    if (isLockedDuration(form.session_durations[index])) {
         return;
     }
 
     form.session_durations.splice(index, 1);
 };
 
-const isExistingDuration = (duration) => {
-    return Boolean(duration?.id);
+const isLockedDuration = (duration) => {
+    return Boolean(duration?.is_locked);
 };
 
 const getScheduleDetails = (scheduleNameId) => {
@@ -305,7 +315,7 @@ const findScheduleDetailByWeekDay = (scheduleNameId, weekDay) => {
 const addSlot = (durationIndex, detail) => {
     const duration = form.session_durations[durationIndex];
 
-    if (isExistingDuration(duration)) {
+    if (isLockedDuration(duration)) {
         return;
     }
 
@@ -326,7 +336,7 @@ const addSlot = (durationIndex, detail) => {
 };
 
 const removeSlot = (durationIndex, slotIndex) => {
-    if (isExistingDuration(form.session_durations[durationIndex])) {
+    if (isLockedDuration(form.session_durations[durationIndex])) {
         return;
     }
 
@@ -431,7 +441,7 @@ const submit = () => {
                         <select
                             class="form-select"
                             v-model="form.schedule_names[index]"
-                            :disabled="isExistingSchedule(scheduleId)"
+                            :disabled="isLockedSchedule(scheduleId)"
                         >
                             <option :value="null" disabled>
                                 Ընտրել գրաֆիկ
@@ -457,7 +467,7 @@ const submit = () => {
 
                     <div class="col-md-2">
                         <button
-                            v-if="!isExistingSchedule(scheduleId)"
+                            v-if="!isLockedSchedule(scheduleId)"
                             type="button"
                             class="btn btn-danger w-100"
                             @click="removeScheduleName(index)"
@@ -517,7 +527,7 @@ const submit = () => {
                         </strong>
 
                         <button
-                            v-if="!isExistingDuration(duration)"
+                            v-if="!isLockedDuration(duration)"
                             type="button"
                             class="btn btn-danger btn-sm"
                             @click="removeSessionDuration(durationIndex)"
@@ -545,7 +555,7 @@ const submit = () => {
                             <select
                                 class="form-select"
                                 v-model="duration.schedule_name_id"
-                                :disabled="isExistingDuration(duration)"
+                                :disabled="isLockedDuration(duration)"
                             >
                                 <option :value="null" disabled>
                                     Ընտրել գրաֆիկ
@@ -580,7 +590,7 @@ const submit = () => {
                                     class="form-control"
                                     v-model="duration.price"
                                     min="0"
-                                    :disabled="isExistingDuration(duration)"
+                                    :disabled="isLockedDuration(duration)"
                                     @wheel.prevent
                                 />
 
@@ -602,7 +612,7 @@ const submit = () => {
                                 type="text"
                                 class="form-control"
                                 v-model="duration.title"
-                                :disabled="isExistingDuration(duration)"
+                                :disabled="isLockedDuration(duration)"
                                 placeholder="Օր․ 60 րոպե"
                                 @wheel.prevent
                             />
@@ -625,7 +635,7 @@ const submit = () => {
                                 class="form-control"
                                 v-model="duration.minutes"
                                 min="1"
-                                :disabled="isExistingDuration(duration)"
+                                :disabled="isLockedDuration(duration)"
                                 @input="updateDurationMinutes(durationIndex)"
                                 @wheel.prevent
                             />
@@ -646,7 +656,7 @@ const submit = () => {
                             <select
                                 class="form-select"
                                 v-model="duration.type"
-                                :disabled="isExistingDuration(duration)"
+                                :disabled="isLockedDuration(duration)"
                             >
                                 <option value="individual">Անհատական</option>
                                 <option value="group">Խմբային</option>
@@ -706,7 +716,7 @@ const submit = () => {
                             </strong>
 
                             <button
-                                v-if="!isExistingDuration(duration)"
+                                v-if="!isLockedDuration(duration)"
                                 type="button"
                                 class="btn btn-outline-primary btn-sm"
                                 @click="addSlot(durationIndex, detail)"
@@ -731,7 +741,7 @@ const submit = () => {
                                     v-model="slot.start_time"
                                     :min="normalizeTime(detail.day_start_time)"
                                     :max="normalizeTime(detail.day_end_time)"
-                                    :disabled="isExistingDuration(duration)"
+                                    :disabled="isLockedDuration(duration)"
                                     @change="
                                         updateSlotEndTime(
                                             durationIndex,
@@ -756,7 +766,7 @@ const submit = () => {
 
                             <div class="col-md-4">
                                 <button
-                                    v-if="!isExistingDuration(duration)"
+                                    v-if="!isLockedDuration(duration)"
                                     type="button"
                                     class="btn btn-danger"
                                     @click="

@@ -50,7 +50,7 @@ const hasScheduleCalendarRoute = computed(() => {
 
 const canEdit = computed(() => {
     return roleNames.value.some((role) =>
-        ["super_admin", "manager", "admin", "sales_manager"].includes(role),
+        ["super_admin", "admin", "sales_manager"].includes(role),
     );
 });
 
@@ -169,6 +169,7 @@ const deleteSchedule = (item) => {
                                         </h4>
 
                                         <Link
+                                            v-if="canEdit"
                                             :href="
                                                 route('schedule.create', {
                                                     locale: currentLocale,

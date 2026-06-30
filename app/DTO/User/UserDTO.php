@@ -19,6 +19,7 @@ class UserDTO
         public ?string $passport_number,
         public ?Carbon $passport_expire_at,
         public ?Carbon $birth_date,
+        public UploadedFile|string|null $image,
         public ?bool $active,
         public ?string $password,
 
@@ -38,7 +39,7 @@ class UserDTO
             $data['passport_number'] ?? null,
             isset($data['passport_expire_at']) ? Carbon::parse($data['passport_expire_at']) : null,
             isset($data['birth_date']) ? Carbon::parse($data['birth_date']) : null,
-
+            $data['image'] ?? null,
             $data['active'] ?? null,
             $data['password'] ?? null,
             $data['gym_id'] ?? null,
@@ -57,6 +58,7 @@ class UserDTO
             'passport_number' => $this->passport_number,
             'passport_expire_at' => $this->passport_expire_at,
             'birth_date' => $this->birth_date,
+            'image' => $this->image,
             'active' => $this->active,
             'password' => $this->password ? bcrypt($this->password) : null,
             'gym_id' => $this->gym_id

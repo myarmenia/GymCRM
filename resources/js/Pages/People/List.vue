@@ -14,7 +14,13 @@ const props = defineProps({
 
 const page = usePage();
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
-const { hasRole } = useAuth();
+const { hasRole, hasAnyRole } = useAuth();
+const canManagePeople = computed(() =>
+    hasAnyRole(["sales_manager", "super_admin"]),
+);
+const canManagePersonVisits = computed(() =>
+    hasAnyRole(["manager", "sales_manager", "super_admin"]),
+);
 
 const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
@@ -131,6 +137,7 @@ const resetFilters = () => {
             >
                 <h5 class="mb-0">Անձինք</h5>
                 <Link
+                    v-if="canManagePeople"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     aria-controls="DataTables_Table_0"
@@ -214,6 +221,7 @@ const resetFilters = () => {
                                                 Դիտել պրոֆիլը
                                             </Link>
                                             <Link
+                                                v-if="canManagePeople"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {
@@ -226,6 +234,20 @@ const resetFilters = () => {
                                                 Վաճառել աբոնեմենտ
                                             </Link>
                                             <Link
+                                                v-if="canManagePersonVisits"
+                                                class="dropdown-item waves-effect"
+                                                :href="
+                                                    route('person.visits', {
+                                                        locale: currentLocale,
+                                                        id: person.id,
+                                                    })
+                                                "
+                                            >
+                                                <i class="icon-base ti tabler-walk me-1"></i>
+                                                Այցելությունների կառավարում
+                                            </Link>
+                                            <Link
+                                                v-if="canManagePeople"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('person.edit', {
@@ -238,6 +260,7 @@ const resetFilters = () => {
                                                 Խմբագրել
                                             </Link>
                                             <a
+                                                v-if="canManagePeople"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >

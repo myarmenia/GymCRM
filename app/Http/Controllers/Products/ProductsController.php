@@ -10,6 +10,7 @@ use App\Services\MeasurementUnit\MeasurementUnitService;
 use App\Services\Products\ProductsService;
 use App\Services\Warehouses\WarehouseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ProductsController extends Controller
@@ -20,6 +21,15 @@ class ProductsController extends Controller
         private MeasurementUnitService $measurementUnitService,
         private WarehouseService $warehouseService
     ) {}
+
+    private function authorizeInventoryManagement(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager']),
+            403,
+            'You are not allowed to manage products.'
+        );
+    }
 
     public function index(Request $request, string $locale)
     {
@@ -52,6 +62,8 @@ class ProductsController extends Controller
 
     public function create(string $locale, int $perPage = 100)
     {
+        $this->authorizeInventoryManagement();
+
         $categories = $this->categoryService->getAll($locale, $perPage = 100);
         $warehouses = $this->warehouseService->all($locale, $perPage);
         return Inertia::render('Products/Create', [
@@ -64,6 +76,8 @@ class ProductsController extends Controller
 
     public function store(ProductStoreRequest $request, string $locale)
     {
+        $this->authorizeInventoryManagement();
+
         $data = $request->all();
 
         $this->productsService->createProduct($data);
@@ -75,6 +89,8 @@ class ProductsController extends Controller
 
     public function edit(string $locale, int $id, int $perPage = 100)
     {
+        $this->authorizeInventoryManagement();
+
         $product = $this->productsService->getProductForEdit($id);
         $categories = $this->categoryService->getAll($locale);
 
@@ -90,6 +106,8 @@ class ProductsController extends Controller
 
     public function update(ProductEditRequest $request, string $locale, int $id)
     {
+        $this->authorizeInventoryManagement();
+
         $data = $request->all();
 
         $this->productsService->updateProduct($id, $data);

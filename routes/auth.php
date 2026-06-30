@@ -118,6 +118,8 @@ Route::prefix('{locale}')
 
                 // Route::middleware('check.gym:Person,id')->group(function () {
                 Route::get('/profile/{id}', [PersonController::class, 'profile'])->name('profile');
+                Route::get('/visits/{id}', [PersonController::class, 'visitManagement'])->name('visits');
+                Route::post('/visits/{id}', [PersonController::class, 'storeVisit'])->name('visits.store');
                 Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');
                 Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
                 // });
@@ -258,6 +260,7 @@ Route::prefix('{locale}')
                     Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
+                    Route::post('/activate-waiting/{id}', [MembershipSaleController::class, 'activateWaitingMembership'])->name('activate_waiting');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });

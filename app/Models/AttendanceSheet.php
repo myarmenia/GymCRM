@@ -26,6 +26,11 @@ class AttendanceSheet extends Model
         return $this->morphTo();
     }
 
+    public function membershipPlan(): BelongsTo
+    {
+        return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
+    }
+
     // accesors
 
 

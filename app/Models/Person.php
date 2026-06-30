@@ -112,7 +112,7 @@ class Person extends Model
     public function activeMemberships()
     {
         return $this->hasMany(PersonMembership::class)
-            ->where('status', 'active');
+            ->whereIn('status', ['waiting', 'active']);
     }
 
     public function documents()
