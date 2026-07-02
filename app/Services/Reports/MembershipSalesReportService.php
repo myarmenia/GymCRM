@@ -5,14 +5,15 @@ namespace App\Services\Reports;
 use App\Interfaces\Reports\MembershipSalesReportRepositoryInterface;
 use App\Models\MembershipSale;
 use App\Models\User;
+use App\Services\MembershipSales\MembershipSaleService;
 use Carbon\Carbon;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class MembershipSalesReportService
 {
     public function __construct(
         protected MembershipSalesReportRepositoryInterface $membershipSalesReportRepository,
+        protected MembershipSaleService $membershipSaleService,
     ) {}
 
     public function report(User $user, array $filters): array
@@ -86,23 +87,31 @@ class MembershipSalesReportService
         $membershipDiscountAmount = 0;
         $totalAmount = 0;
         $finalAmount = 0;
+        $debtAmount = 0;
+        $refundDueAmount = 0;
 
         foreach ($sales as $sale) {
+            $saleFinalAmount = (float) (is_array($sale) ? ($sale['final_price'] ?? 0) : ($sale->final_price ?? 0));
+            $salePaidAmount = (float) (is_array($sale) ? ($sale['paid_amount'] ?? 0) : $this->paidAmount($sale));
+
             $totalAmount += (float) (is_array($sale) ? ($sale['total_price'] ?? 0) : ($sale->total_price ?? 0));
-            $finalAmount += (float) (is_array($sale) ? ($sale['final_price'] ?? 0) : ($sale->final_price ?? 0));
+            $finalAmount += $saleFinalAmount;
             $manualDiscountAmount += (float) (is_array($sale) ? ($sale['manual_discount_amount'] ?? 0) : ($sale->discount_amount ?? 0));
             $membershipDiscountAmount += (float) (is_array($sale) ? ($sale['membership_discount_amount'] ?? 0) : $this->membershipDiscountAmount($sale));
-            $paidAmount += (float) (is_array($sale) ? ($sale['paid_amount'] ?? 0) : $this->paidAmount($sale));
+            $paidAmount += $salePaidAmount;
+            $debtAmount += (float) (is_array($sale) ? ($sale['debt'] ?? 0) : max($saleFinalAmount - $salePaidAmount, 0));
+            $refundDueAmount += (float) (is_array($sale) ? ($sale['refund_due_amount'] ?? 0) : 0);
         }
 
         return [
             'sold_memberships_count' => $sales->count(),
             'total_amount' => round($totalAmount, 2),
             'paid_amount' => round($paidAmount, 2),
-            'debt' => round(max($finalAmount - $paidAmount, 0), 2),
+            'debt' => round($debtAmount, 2),
             'manual_discount_amount' => round($manualDiscountAmount, 2),
             'membership_discount_amount' => round($membershipDiscountAmount, 2),
             'final_amount' => round($finalAmount, 2),
+            'refund_due_amount' => round($refundDueAmount, 2),
         ];
     }
 
@@ -113,6 +122,7 @@ class MembershipSalesReportService
 
         return [
             'id' => $sale->id,
+            'person_id' => $sale->person_id,
             'customer' => $this->personName($sale),
             'membership_plan' => $this->planName($sale),
             'trainer' => $this->trainerName($membership),
@@ -125,6 +135,7 @@ class MembershipSalesReportService
             'final_price' => (float) $sale->final_price,
             'paid_amount' => $paidAmount,
             'debt' => max((float) $sale->final_price - $paidAmount, 0),
+            'refund_due_amount' => $this->membershipSaleService->availableRefundAmount($sale),
             'status' => $sale->payment_status,
             'created_at' => $sale->created_at?->toDateTimeString(),
         ];

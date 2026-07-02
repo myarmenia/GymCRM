@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, watch } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 
@@ -214,6 +214,7 @@ const statusClass = status => ({
                             <th>Վերջնական</th>
                             <th>Վճարված</th>
                             <th>Պարտք</th>
+                            <th>Հետվերադարձ</th>
                             <th>Կարգավիճակ</th>
                             <th>Ստեղծվել է</th>
                         </tr>
@@ -223,7 +224,16 @@ const statusClass = status => ({
                             v-for="sale in sales.data"
                             :key="sale.id"
                         >
-                            <td>{{ sale.customer }}</td>
+                            <td>
+                                <Link
+                                    v-if="sale.person_id"
+                                    :href="route('person.profile', { locale: currentLocale, id: sale.person_id })"
+                                    class="text-primary fw-semibold"
+                                >
+                                    {{ sale.customer }}
+                                </Link>
+                                <span v-else>{{ sale.customer }}</span>
+                            </td>
                             <td>{{ sale.membership_plan }}</td>
                             <td>{{ sale.trainer }}</td>
                             <td>
@@ -243,6 +253,11 @@ const statusClass = status => ({
                                 </span>
                             </td>
                             <td>
+                                <span :class="Number(sale.refund_due_amount || 0) > 0 ? 'text-warning fw-semibold' : ''">
+                                    {{ formatAmount(sale.refund_due_amount) }}
+                                </span>
+                            </td>
+                            <td>
                                 <span
                                     class="badge"
                                     :class="statusClass(sale.status)"
@@ -254,7 +269,7 @@ const statusClass = status => ({
                         </tr>
                         <tr v-if="!sales.data.length">
                             <td
-                                colspan="11"
+                                colspan="12"
                                 class="text-center text-muted py-4"
                             >
                                 Տվյալներ չկան։
@@ -272,6 +287,7 @@ const statusClass = status => ({
                             <td>{{ formatAmount(totals.final_amount) }}</td>
                             <td>{{ formatAmount(totals.paid_amount) }}</td>
                             <td>{{ formatAmount(totals.debt) }}</td>
+                            <td>{{ formatAmount(totals.refund_due_amount) }}</td>
                             <td colspan="2"></td>
                         </tr>
                     </tfoot>

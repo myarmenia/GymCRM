@@ -939,7 +939,7 @@ class MembershipSaleService
         return max((float) $membershipSale->final_price - $this->netPaidAmount($membershipSale), 0);
     }
 
-    protected function availableRefundAmount(MembershipSale $membershipSale): float
+    public function availableRefundAmount(MembershipSale $membershipSale): float
     {
         $paidAmount = $this->paidAmount($membershipSale);
         $refundedAmount = $this->refundedAmount($membershipSale);
