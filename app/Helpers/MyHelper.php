@@ -47,7 +47,8 @@ class MyHelper
                 'super_admin',
                 'admin',
                 'sales_manager',
-                'trainer'
+                'trainer',
+                'manager',
             ])
         ) {
             return $user->gym_id;

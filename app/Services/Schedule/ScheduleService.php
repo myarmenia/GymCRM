@@ -10,6 +10,7 @@ use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
 use App\Interfaces\ScheduleName\ScheduleNameInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ScheduleService
 {
@@ -25,6 +26,7 @@ class ScheduleService
     public function getAll()
     {
         $gymId = MyHelper::find_auth_user_client();
+        //dd($gymId);
         $schedules = $this->scheduleRepository->index($gymId);
         //dd($schedules);
         return $schedules;
@@ -70,6 +72,8 @@ class ScheduleService
         WorkTimeManagmentDto $dto,
         int $clientId
     ): void {
+        $this->ensureScheduleCanBeModified($scheduleId);
+
         DB::transaction(function () use ($scheduleId, $dto, $clientId) {
 
             // update schedule name
@@ -92,6 +96,28 @@ class ScheduleService
 
             }
         });
+    }
+
+    public function destroy(int $scheduleId): void
+    {
+        $this->ensureScheduleCanBeModified($scheduleId);
+
+        DB::transaction(function () use ($scheduleId) {
+            $this->scheduleDetailsRepository->deleteScheduleDetails($scheduleId);
+            $this->scheduleNameRepository->delete($scheduleId);
+        });
+    }
+
+    public function ensureScheduleCanBeModified(int $scheduleId): void
+    {
+        $schedule = $this->scheduleNameRepository->edit($scheduleId);
+
+        if ($schedule->is_locked) {
+            throw ValidationException::withMessages([
+                'schedule' => $schedule->lock_reason
+                    ?? 'Այս ժամային գրաֆիկը հնարավոր չէ փոփոխել։',
+            ]);
+        }
     }
 
     public function getAllScheduleNamesForGym($gymId)

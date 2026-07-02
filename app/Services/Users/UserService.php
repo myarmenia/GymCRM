@@ -6,7 +6,10 @@ use App\Interfaces\Users\UserInterface;
 use App\Models\EntryPermission;
 use App\Models\User;
 use App\Services\EntryCodes\EntryCodeService;
+use App\Services\FileUploadService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Reverb\Loggers\Log;
 
 class UserService
@@ -14,7 +17,8 @@ class UserService
 
     public function __construct(
         protected UserInterface $userRepository,
-        protected EntryCodeService $entryCodeService
+        protected EntryCodeService $entryCodeService,
+        protected FileUploadService $fileUploadService
     )
     {
     }
@@ -57,7 +61,8 @@ class UserService
     }
     public function update($id, $data)
     {
-        $dataUpdate = $this->dataToArray($data);
+        $existingUser = $this->userRepository->findOrFail($id);
+        $dataUpdate = $this->dataToArray($data, $existingUser);
 
         if (empty($dataUpdate['password'])) {
             unset($dataUpdate['password']);
@@ -91,7 +96,7 @@ class UserService
     }
 
 
-    protected function dataToArray($data){
+    protected function dataToArray($data, ?User $existingUser = null){
 
         $authUser = Auth::user();
 
@@ -103,7 +108,19 @@ class UserService
             $data->gym_id = $authUser->gym_id;
         }
 
-        return $data->toArray();
+        $array = $data->toArray();
+
+        if (($array['image'] ?? null) instanceof UploadedFile) {
+            if ($existingUser?->image && Storage::disk('public')->exists($existingUser->image)) {
+                Storage::disk('public')->delete($existingUser->image);
+            }
+
+            $array['image'] = $this->fileUploadService->upload($array['image'], 'users/images');
+        } elseif ($existingUser) {
+            $array['image'] = $array['image'] ?? $existingUser->image;
+        }
+
+        return $array;
 
     }
 

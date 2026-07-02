@@ -12,6 +12,7 @@
 /.vscode
 /.zed
 /.codex
+/docs/codex/
 /docs
 /auth.json
 /node_modules

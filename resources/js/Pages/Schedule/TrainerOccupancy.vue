@@ -6,6 +6,11 @@ import CalendarGrid from './TrainerOccupancy/CalendarGrid.vue'
 import CalendarHeader from './TrainerOccupancy/CalendarHeader.vue'
 import TrainerCards from './TrainerOccupancy/TrainerCards.vue'
 import TrainerFilter from './TrainerOccupancy/TrainerFilter.vue'
+import {
+    formatUtcDateToYmd,
+    parseYmdAsUtcDate,
+    todayInYerevan,
+} from '@/utils/yerevanDate'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? 'hy')
@@ -66,7 +71,7 @@ const weekDates = computed(() => {
 
     return weekDays.map((day, index) => {
         const date = new Date(start)
-        date.setDate(start.getDate() + index)
+        date.setUTCDate(start.getUTCDate() + index)
 
         return {
             ...day,
@@ -99,18 +104,14 @@ const weekRangeLabel = computed(() => {
 
 const parseLocalDate = value => {
     if (!value) {
-        return new Date()
+        return parseYmdAsUtcDate(todayInYerevan())
     }
 
-    return new Date(`${String(value).slice(0, 10)}T00:00:00`)
+    return parseYmdAsUtcDate(String(value).slice(0, 10))
 }
 
 const formatLocalDate = date => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-
-    return `${year}-${month}-${day}`
+    return formatUtcDateToYmd(date)
 }
 
 const changeWeek = offsetDays => {
@@ -121,7 +122,7 @@ const changeWeek = offsetDays => {
 }
 
 const goToday = () => {
-    loadCalendar(formatLocalDate(new Date()), selectedTrainer.value)
+    loadCalendar(todayInYerevan(), selectedTrainer.value)
 }
 
 const changeTrainer = trainerId => {

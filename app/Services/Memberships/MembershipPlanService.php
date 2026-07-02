@@ -183,7 +183,16 @@ class MembershipPlanService
 
     public function update(int $id, array $data): void
     {
+        //dd($data);
         DB::transaction(function () use ($id, $data) {
+            $existingMembershipPlan = $this->membershipPlanRepository->findOrFail($id);
+
+            if ($existingMembershipPlan->is_locked) {
+                $this->syncMembershipPlanTrainers($existingMembershipPlan->id, $data['trainers'] ?? []);
+
+                return;
+            }
+
             $membershipPlan = $this->membershipPlanRepository->update($id, [
                 'membership_category_id' => $data['membership_category_id'],
                 'price' => $data['price'],
@@ -220,7 +229,7 @@ class MembershipPlanService
             }
 
             $this->membershipPlanScheduleRepository->deleteByMembershipPlanId($membershipPlan->id);
-
+            //dd($data['schedule_name_id']);
             if (!empty($data['schedule_name_id'])) {
                 $this->membershipPlanScheduleRepository->store([
                     'membership_plan_id' => $membershipPlan->id,
@@ -228,17 +237,26 @@ class MembershipPlanService
                 ]);
             }
 
-            $this->membershipPlanTrainerRepository->deleteByMembershipPlanId($membershipPlan->id);
-
-            foreach ($data['trainers'] ?? [] as $trainer) {
-                $this->membershipPlanTrainerRepository->store([
-                    'membership_plan_id' => $membershipPlan->id,
-                    'trainer_id' => $trainer['trainer_id'],
-                    'price_type' => $trainer['price_type'],
-                    'price_value' => $trainer['price_value'],
-                    'total_price' => $trainer['total_price'],
-                ]);
-            }
+            $this->syncMembershipPlanTrainers($membershipPlan->id, $data['trainers'] ?? []);
         });
+    }
+
+    private function syncMembershipPlanTrainers(int $membershipPlanId, array $trainers): void
+    {
+        $this->membershipPlanTrainerRepository->deleteByMembershipPlanId($membershipPlanId);
+
+        foreach ($trainers as $trainer) {
+            if (empty($trainer['trainer_id'])) {
+                continue;
+            }
+
+            $this->membershipPlanTrainerRepository->store([
+                'membership_plan_id' => $membershipPlanId,
+                'trainer_id' => $trainer['trainer_id'],
+                'price_type' => $trainer['price_type'],
+                'price_value' => $trainer['price_value'],
+                'total_price' => $trainer['total_price'],
+            ]);
+        }
     }
 }

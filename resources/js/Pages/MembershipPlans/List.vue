@@ -11,7 +11,7 @@ import Pagination from "@/Components/Pagination.vue";
 const props = defineProps({
     membershipPlans: Object,
 });
-console.log(props.membershipPlans, 555);
+
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
 const membershipPlansList = ref(props.membershipPlans.data);
@@ -134,6 +134,7 @@ function findingDurationType(value) {
                                         </button>
                                         <div class="dropdown-menu">
                                             <a
+                                                v-if="!membershipPlan.is_locked"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >
@@ -152,7 +153,7 @@ function findingDurationType(value) {
                                                     "
                                                 />
                                             </a>
-                                            <Link v-if="!membershipPlansList.is_locked"
+                                            <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_plan.edit', {
@@ -167,6 +168,7 @@ function findingDurationType(value) {
                                                 Edit
                                             </Link>
                                             <a
+                                                v-if="!membershipPlan.is_locked"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >

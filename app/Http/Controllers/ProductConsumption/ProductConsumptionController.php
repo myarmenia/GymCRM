@@ -8,6 +8,7 @@ use App\Http\Requests\ProductConsumption\ProductConsumptionStoreRequest;
 use App\Models\ProductConsumption;
 use App\Services\ProductConsumption\ProductConsumptionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ProductConsumptionController extends Controller
@@ -15,6 +16,15 @@ class ProductConsumptionController extends Controller
     public function __construct(
         private ProductConsumptionService $productConsumptionService
     ) {}
+
+    private function authorizeInventoryManagement(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager']),
+            403,
+            'You are not allowed to manage product movements.'
+        );
+    }
 
 
     public function index(Request $request, string $locale)
@@ -76,6 +86,8 @@ class ProductConsumptionController extends Controller
     }
     public function create(Request $request)
     {
+        $this->authorizeInventoryManagement();
+
         $productIds = $request->input('product_ids', []);
         $products = $this->productConsumptionService->getProductsForConsumption($productIds);
         return Inertia::render('ProductConsumption/Create', [
@@ -85,6 +97,8 @@ class ProductConsumptionController extends Controller
 
     public function store(ProductConsumptionStoreRequest $request)
     {
+        $this->authorizeInventoryManagement();
+
         $this->productConsumptionService->store($request->input('products'));
 
         return redirect()

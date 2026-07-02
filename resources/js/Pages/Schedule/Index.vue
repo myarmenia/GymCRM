@@ -18,6 +18,8 @@ const props = defineProps({
     },
 });
 
+console.log("props.data",props.data);
+
 const page = usePage();
 
 const currentLocale = computed(() => page.props.locale ?? props.locale);
@@ -42,9 +44,13 @@ const isTrainer = computed(() => {
     return roleNames.value.includes("trainer");
 });
 
+const hasScheduleCalendarRoute = computed(() => {
+    return typeof route === "function" && route().has("schedule-calendar");
+});
+
 const canEdit = computed(() => {
     return roleNames.value.some((role) =>
-        ["super_admin", "manager", "admin", "sales_manager"].includes(role),
+        ["super_admin", "admin", "sales_manager"].includes(role),
     );
 });
 
@@ -113,13 +119,27 @@ const changeStatus = (item) => {
 };
 
 const deleteSchedule = (item) => {
+    if (item.schedule_name?.is_locked) {
+        alert(
+            item.schedule_name?.lock_reason ||
+                "Այս ժամային գրաֆիկը հնարավոր չէ ջնջել։",
+        );
+        return;
+    }
+
     if (!confirm("Delete this item?")) {
         return;
     }
 
-    router.delete(route("schedule.work-time-destroy", item.id), {
-        preserveScroll: true,
-    });
+    router.delete(
+        route("schedule.destroy", {
+            locale: currentLocale.value,
+            id: item.schedule_name?.id,
+        }),
+        {
+            preserveScroll: true,
+        },
+    );
 };
 </script>
 
@@ -149,6 +169,7 @@ const deleteSchedule = (item) => {
                                         </h4>
 
                                         <Link
+                                            v-if="canEdit"
                                             :href="
                                                 route('schedule.create', {
                                                     locale: currentLocale,
@@ -312,7 +333,10 @@ const deleteSchedule = (item) => {
                                                             class="d-flex justify-content-center align-items-center gap-2"
                                                         >
                                                             <Link
-                                                                v-if="isTrainer"
+                                                                v-if="
+                                                                    isTrainer &&
+                                                                    hasScheduleCalendarRoute
+                                                                "
                                                                 class="btn btn-sm btn-outline-primary"
                                                                 :href="
                                                                     route(
@@ -329,7 +353,7 @@ const deleteSchedule = (item) => {
                                                             </Link>
 
                                                             <Link
-                                                                v-if="canEdit"
+                                                                v-if="canEdit && !item.schedule_name?.is_locked"
                                                                 class="btn btn-sm btn-outline-primary"
                                                                 :href="
                                                                     route(
@@ -349,7 +373,23 @@ const deleteSchedule = (item) => {
                                                             </Link>
 
                                                             <button
-                                                                v-if="canEdit"
+                                                                v-if="canEdit && item.schedule_name?.is_locked"
+                                                                type="button"
+                                                                class="btn btn-sm btn-outline-secondary"
+                                                                :title="
+                                                                    item
+                                                                        .schedule_name
+                                                                        ?.lock_reason
+                                                                "
+                                                                disabled
+                                                            >
+                                                                <i
+                                                                    class="icon-base ti tabler-lock me-1"
+                                                                ></i>
+                                                            </button>
+
+                                                            <button
+                                                                v-if="canEdit && !item.schedule_name?.is_locked"
                                                                 type="button"
                                                                 class="btn btn-sm btn-outline-danger"
                                                                 @click="

@@ -25,6 +25,7 @@ const props = defineProps({
 
 const selectedGymId = ref(null);
 const entryCodes = ref([]);
+const imagePreview = ref(props.user?.image ? `/storage/${props.user.image}` : null);
 
 const form = useForm({
     name: '',
@@ -36,6 +37,7 @@ const form = useForm({
     passport_number: '',
     passport_expire_at: '',
     birth_date: '',
+    image: null,
     roles: [],
     active: true,
     gym_id: '',
@@ -71,6 +73,14 @@ const onGymChange = (event) => {
 
 const onEntryCodeChange = (event) => {
     form.entry_code_id = event.target.value;
+};
+
+const onImageChange = (event) => {
+    const file = event.target.files?.[0] ?? null;
+    form.image = file;
+    imagePreview.value = file
+        ? URL.createObjectURL(file)
+        : (props.user?.image ? `/storage/${props.user.image}` : null);
 };
 
 if (props.user) {
@@ -127,6 +137,7 @@ const gymOptions = computed(() => {
 
 const submit = () => {
     form.patch(route('user.update', { id: props.user.id, locale: currentLocale }), {
+        forceFormData: true,
         onError: () => {
             if (form.errors.password || form.errors.password_confirmation) {
                 form.reset('password', 'password_confirmation');
@@ -257,6 +268,20 @@ const submit = () => {
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" tabindex="12" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
+                    <div class="col-md-6">
+                        <InputLabel for="image" class="form-label" value="Պրոֆիլի նկար" />
+                        <input
+                            id="image"
+                            type="file"
+                            class="form-control"
+                            accept="image/*"
+                            @change="onImageChange"
+                        >
+                        <InputError :message="form.errors.image" />
+                        <div v-if="imagePreview" class="mt-3">
+                            <img :src="imagePreview" alt="Preview" class="user-image-preview">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Buttons aligned to the right -->
@@ -272,3 +297,12 @@ const submit = () => {
         <DocumentsUploader :ownerType="'user'" :ownerId="props.user.id" />
     </Index>
 </template>
+
+<style scoped>
+.user-image-preview {
+    border-radius: 12px;
+    height: 120px;
+    object-fit: cover;
+    width: 120px;
+}
+</style>

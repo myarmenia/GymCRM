@@ -13,6 +13,7 @@ use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleFreezeService;
 use App\Services\MembershipSales\MembershipSaleGuestService;
 use App\Services\MembershipSales\MembershipSaleService;
+use App\Services\Turnstile\EntryExitSystemService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -23,6 +24,7 @@ class MembershipSaleController extends Controller
         protected MembershipSaleService $membershipSaleService,
         protected MembershipSaleGuestService $membershipSaleGuestService,
         protected MembershipSaleFreezeService $membershipSaleFreezeService,
+        protected EntryExitSystemService $entryExitSystemService,
     ) {
     }
 
@@ -45,7 +47,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ստեղծվեց։');
+            ->with('success', 'Membership sale created successfully.');
     }
 
     public function edit($locale, $id)
@@ -96,7 +98,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Մարզիչը հաջողությամբ փոխվեց։');
+            ->with('success', 'Trainer changed successfully.');
     }
 
     public function storeFreeze(StoreMembershipSaleFreezeRequest $request, $locale, $id)
@@ -105,7 +107,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.freezes', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Աբոնեմենտը հաջողությամբ սառեցվեց։');
+            ->with('success', 'Membership frozen successfully.');
     }
 
     public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)
@@ -114,7 +116,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.guests', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Հյուրը հաջողությամբ ավելացվեց։');
+            ->with('success', 'Guest added successfully.');
     }
 
     public function lookupGuest(Request $request, $locale, $id)
@@ -134,7 +136,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Վճարումը հաջողությամբ պահպանվեց։');
+            ->with('success', 'Payment saved successfully.');
     }
 
     public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)
@@ -143,7 +145,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Վերադարձը հաջողությամբ պահպանվեց։');
+            ->with('success', 'Refund saved successfully.');
     }
 
     public function cancel($locale, $id)
@@ -152,7 +154,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
-            ->with('success', 'Աբոնեմենտը հաջողությամբ չեղարկվեց։');
+            ->with('success', 'Membership cancelled successfully.');
     }
 
     public function update(UpdateMembershipSaleRequest $request, $locale, $id)
@@ -161,7 +163,7 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ թարմացվեց։');
+            ->with('success', 'Membership sale updated successfully.');
     }
 
     public function destroy($locale, $id)
@@ -170,6 +172,23 @@ class MembershipSaleController extends Controller
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի վաճառքը հաջողությամբ ջնջվեց։');
+            ->with('success', 'Membership sale deleted successfully.');
+    }
+
+    public function activateWaitingMembership(Request $request, $locale, $id)
+    {
+        $context = $request->validate([
+            'action' => ['required', 'string'],
+            'detected_at' => ['nullable', 'date'],
+            'entry_code' => ['nullable', 'string'],
+            'scan_type' => ['nullable', 'string'],
+            'online' => ['nullable'],
+            'local_ip' => ['nullable', 'string'],
+            'mac' => ['nullable', 'string'],
+        ]);
+
+        return response()->json(
+            $this->entryExitSystemService->finalizeTurnstileMembershipSelection((int) $id, auth()->user(), $context)
+        );
     }
 }
