@@ -24,6 +24,7 @@ use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
+use App\Http\Controllers\Reports\CommissionsReportController;
 use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
@@ -100,6 +101,8 @@ Route::prefix('{locale}')
             Route::prefix('reports')->name('reports.')->group(function () {
                 Route::get('/membership-sales', [MembershipSalesReportController::class, 'index'])
                     ->name('membership-sales');
+                Route::get('/commissions', [CommissionsReportController::class, 'index'])
+                    ->name('commissions');
             });
 
 

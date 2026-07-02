@@ -49,12 +49,12 @@ const periodOptions = [
 
 const summaryCards = computed(() => [
     { label: 'Վաճառված աբոնեմենտներ', value: props.summary.sold_memberships_count, icon: 'tabler-id', class: 'bg-label-primary text-primary' },
-    { label: 'Ընդհանուր գումար', value: formatAmount(props.summary.total_amount), icon: 'tabler-cash', class: 'bg-label-info text-info' },
+    { label: 'Նախնական գումար', value: formatAmount(props.summary.total_amount), icon: 'tabler-cash', class: 'bg-label-info text-info' },
+    { label: 'Վերջնական գումար', value: formatAmount(props.summary.final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
     { label: 'Վճարված գումար', value: formatAmount(props.summary.paid_amount), icon: 'tabler-credit-card', class: 'bg-label-success text-success' },
     { label: 'Պարտք', value: formatAmount(props.summary.debt), icon: 'tabler-alert-circle', class: 'bg-label-danger text-danger' },
     { label: 'Ձեռքով զեղչ', value: formatAmount(props.summary.manual_discount_amount), icon: 'tabler-discount', class: 'bg-label-warning text-warning' },
     { label: 'Աբոնեմենտի զեղչ', value: formatAmount(props.summary.membership_discount_amount), icon: 'tabler-percentage', class: 'bg-label-secondary text-secondary' },
-    { label: 'Վերջնական գումար', value: formatAmount(props.summary.final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
 ])
 
 const applyFilters = () => {

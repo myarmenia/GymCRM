@@ -361,6 +361,14 @@ const { hasRole, hasAnyRole } = useAuth();
                             <div>Աբոնեմենտներ</div>
                         </Link>
                     </li>
+                    <li :class="['menu-item', route().current('reports.commissions') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.commissions', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Միջնորդավճարներ</div>
+                        </Link>
+                    </li>
                 </ul>
             </li>
 

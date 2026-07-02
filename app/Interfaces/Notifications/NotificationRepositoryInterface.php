@@ -10,13 +10,15 @@ interface NotificationRepositoryInterface
 {
     public function receivedForUser(User $user, int $perPage = 20): LengthAwarePaginator;
 
+    public function sentForUser(User $user, int $perPage = 20): LengthAwarePaginator;
+
     public function unreadCount(User $user): int;
 
     public function markSeenByIds(Collection $ids): void;
 
     public function insertMany(array $rows): void;
 
-    public function idsForInsertedRows(User $sender, Collection $recipientIds, string $title, string $description, $createdAt): Collection;
+    public function idsForInsertedRows(User $sender, Collection $recipientIds, ?string $title, ?string $description, $createdAt): Collection;
 
     public function getWithRelationsByIds(Collection $ids): Collection;
 

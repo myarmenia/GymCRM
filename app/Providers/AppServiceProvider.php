@@ -28,6 +28,7 @@ use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\ProductConsumption\ProductConsumptionInterface;
 use App\Interfaces\Products\ProductsInterface;
 use App\Interfaces\ProductTranslations\ProductTranslationInterface;
+use App\Interfaces\Reports\CommissionsReportRepositoryInterface;
 use App\Interfaces\Reports\MembershipSalesReportRepositoryInterface;
 use App\Interfaces\Roles\RoleInterface;
 use App\Interfaces\Schedule\ScheduleInterface;
@@ -74,6 +75,7 @@ use App\Repositories\PersonMemberships\PersonMembershipRepository;
 use App\Repositories\ProductConsumption\ProductConsumptionRepository;
 use App\Repositories\Products\ProductsRepository;
 use App\Repositories\ProductTranslations\ProductTranslationRepository;
+use App\Repositories\Reports\CommissionsReportRepository;
 use App\Repositories\Reports\MembershipSalesReportRepository;
 use App\Repositories\Roles\RoleRepository;
 use App\Repositories\Schedule\ScheduleRepository;
@@ -157,6 +159,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EntryReportInterface::class, EntryReportRepository::class);
 
         $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
+        $this->app->bind(CommissionsReportRepositoryInterface::class, CommissionsReportRepository::class);
         $this->app->bind(MembershipSalesReportRepositoryInterface::class, MembershipSalesReportRepository::class);
 
 

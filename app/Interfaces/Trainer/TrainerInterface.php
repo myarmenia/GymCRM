@@ -6,7 +6,7 @@ use App\Interfaces\BaseInterface;
 
 interface TrainerInterface extends BaseInterface
 {
-    public function paginateForUser($user, int $perPage);
+    public function paginateForUser($user, int $perPage, array $filters = []);
     //public function create(int $trainerId);
     public function findTrainerById(int $trainerId);
 

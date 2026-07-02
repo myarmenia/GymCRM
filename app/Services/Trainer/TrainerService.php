@@ -29,10 +29,10 @@ class TrainerService
         protected TrainerSessionDurationSlotInterface $trainerSessionDurationSlotRepository,
     ) {}
 
-    public function getAllPaginated()
+    public function getAllPaginated(array $filters = [])
     {
         return $this->trainerRepository
-            ->paginateForUser(auth()->user(), 1000);
+            ->paginateForUser(auth()->user(), 1000, $filters);
     }
 
     public function getById($id)
