@@ -4,6 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
+import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -50,6 +51,10 @@ const withoutPageParams = params => {
 
     return query
 }
+
+const cleanQuery = query => Object.fromEntries(
+    Object.entries(query).filter(([, value]) => value !== null && value !== undefined && value !== ''),
+)
 
 const tabs = computed(() => [
     {
@@ -150,6 +155,21 @@ const clearKeys = (params, keys) => {
     return query
 }
 
+const routeWithFilters = query => {
+    router.get(
+        route('reports.commissions', { locale: currentLocale.value }),
+        cleanQuery({
+            ...withoutPageParams(query),
+            tab: activeTab.value,
+        }),
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    )
+}
+
 const updateActiveFilters = payload => {
     filters.value = {
         ...clearKeys(filters.value, activeFilterKeys.value),
@@ -158,38 +178,39 @@ const updateActiveFilters = payload => {
 }
 
 const applyFilters = payload => {
-    router.get(
-        route('reports.commissions', { locale: currentLocale.value }),
-        {
-            ...clearKeys(filters.value, activeFilterKeys.value),
-            ...payload,
-            tab: activeTab.value,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        },
-    )
+    routeWithFilters({
+        ...clearKeys(filters.value, activeFilterKeys.value),
+        ...payload,
+    })
 }
 
 const resetFilters = () => {
-    const query = {
-        ...clearKeys(filters.value, activeFilterKeys.value),
-        tab: activeTab.value,
-    }
+    const query = clearKeys(filters.value, activeFilterKeys.value)
 
     filters.value = clearKeys(filters.value, activeFilterKeys.value)
 
-    router.get(
-        route('reports.commissions', { locale: currentLocale.value }),
-        query,
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        },
-    )
+    routeWithFilters(query)
+}
+
+const changePeriod = period => {
+    const query = {
+        ...filters.value,
+        period,
+    }
+
+    delete query.start_date
+    delete query.end_date
+
+    filters.value = {
+        ...filters.value,
+        period,
+    }
+
+    routeWithFilters(query)
+}
+
+const applyPeriodFilters = () => {
+    routeWithFilters(filters.value)
 }
 
 watch(
@@ -250,6 +271,14 @@ const statusClass = status => ({
                 {{ tab.label }}
             </Link>
         </div>
+
+        <PeriodDateRangeFilter
+            v-model:selected-period="filters.period"
+            v-model:start-date="filters.start_date"
+            v-model:end-date="filters.end_date"
+            @period-change="changePeriod"
+            @apply="applyPeriodFilters"
+        />
 
         <TableFilter
             :key="activeTab"

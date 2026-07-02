@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 interface MembershipSalesReportRepositoryInterface
 {
-    public function paginatedSales(User $user, string $startDate, string $endDate, int $perPage = 20): LengthAwarePaginator;
+    public function paginatedSales(User $user, string $startDate, string $endDate, array $filters = [], int $perPage = 20): LengthAwarePaginator;
 
-    public function salesForSummary(User $user, string $startDate, string $endDate): Collection;
+    public function salesForSummary(User $user, string $startDate, string $endDate, array $filters = []): Collection;
 }

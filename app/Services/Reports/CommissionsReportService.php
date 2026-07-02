@@ -6,6 +6,7 @@ use App\Interfaces\Reports\CommissionsReportRepositoryInterface;
 use App\Models\SalespersonCommission;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use Carbon\Carbon;
 
 class CommissionsReportService
 {
@@ -17,6 +18,8 @@ class CommissionsReportService
         'salesperson_status',
         'salesperson_id',
     ];
+
+    private const PERIODS = ['monthly', 'quarterly', 'yearly'];
 
     public function __construct(
         protected CommissionsReportRepositoryInterface $commissionsReportRepository,
@@ -70,10 +73,53 @@ class CommissionsReportService
 
     protected function reportFilters(array $filters): array
     {
-        return collect($filters)
+        $periodFilters = $this->resolvePeriod($filters);
+        $reportFilters = collect($filters)
             ->only(self::FILTER_KEYS)
             ->filter(fn ($value) => $value !== null && $value !== '')
             ->all();
+
+        return array_merge($periodFilters, $reportFilters);
+    }
+
+    protected function resolvePeriod(array $filters): array
+    {
+        $period = in_array($filters['period'] ?? null, self::PERIODS, true)
+            ? $filters['period']
+            : 'monthly';
+        $now = now();
+
+        [$defaultStart, $defaultEnd] = match ($period) {
+            'quarterly' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
+            'yearly' => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+        };
+
+        $startDate = $this->parseDate($filters['start_date'] ?? null, $defaultStart);
+        $endDate = $this->parseDate($filters['end_date'] ?? null, $defaultEnd);
+
+        if ($startDate->greaterThan($endDate)) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        return [
+            'period' => $period,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+        ];
+    }
+
+    protected function parseDate(?string $value, Carbon $fallback): Carbon
+    {
+        if (!$value) {
+            return $fallback;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return $fallback;
+        }
     }
 
     protected function mapTrainerCommission(TrainerCommission $commission): array

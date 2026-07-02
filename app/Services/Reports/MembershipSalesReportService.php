@@ -19,21 +19,24 @@ class MembershipSalesReportService
     public function report(User $user, array $filters): array
     {
         $period = $this->resolvePeriod($filters);
+        $reportFilters = $this->resolveReportFilters($filters);
         $summarySales = $this->membershipSalesReportRepository->salesForSummary(
             $user,
             $period['start_date'],
-            $period['end_date']
+            $period['end_date'],
+            $reportFilters
         );
         $paginatedSales = $this->membershipSalesReportRepository->paginatedSales(
             $user,
             $period['start_date'],
-            $period['end_date']
+            $period['end_date'],
+            $reportFilters
         );
 
         $paginatedSales->getCollection()->transform(fn (MembershipSale $sale) => $this->mapSale($sale));
 
         return [
-            'filters' => $period,
+            'filters' => array_merge($period, $reportFilters),
             'summary' => $this->summary($summarySales),
             'sales' => $paginatedSales,
             'totals' => $this->summary($paginatedSales->getCollection()),
@@ -64,6 +67,22 @@ class MembershipSalesReportService
             'period' => $period,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
+        ];
+    }
+
+    protected function resolveReportFilters(array $filters): array
+    {
+        $reportFilter = in_array($filters['report_filter'] ?? null, [
+            'discounted',
+            'manual_discount',
+            'membership_plan_discount',
+            'fully_paid',
+            'with_debt',
+            'refund_due',
+        ], true) ? $filters['report_filter'] : null;
+
+        return [
+            'report_filter' => $reportFilter,
         ];
     }
 

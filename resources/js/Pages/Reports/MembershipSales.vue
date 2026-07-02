@@ -1,8 +1,10 @@
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
+import TableFilter from '@/Components/TableFilter.vue'
+import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -30,6 +32,11 @@ const form = reactive({
     period: props.filters.period,
     start_date: props.filters.start_date,
     end_date: props.filters.end_date,
+    report_filter: props.filters.report_filter ?? '',
+})
+
+const reportFilters = ref({
+    report_filter: props.filters.report_filter ?? '',
 })
 
 watch(
@@ -38,13 +45,27 @@ watch(
         form.period = filters.period
         form.start_date = filters.start_date
         form.end_date = filters.end_date
+        form.report_filter = filters.report_filter ?? ''
+        reportFilters.value = {
+            report_filter: filters.report_filter ?? '',
+        }
     },
 )
 
-const periodOptions = [
-    { value: 'monthly', label: 'Ամսական' },
-    { value: 'quarterly', label: 'Եռամսյակային' },
-    { value: 'yearly', label: 'Տարեկան' },
+const reportFilterFields = [
+    {
+        name: 'report_filter',
+        label: 'Ֆիլտր',
+        placeholder: 'Բոլոր աբոնեմենտները',
+        options: [
+            { value: 'discounted', label: 'Զեղչված աբոնեմենտներ' },
+            { value: 'manual_discount', label: 'Միայն ձեռքով զեղչ' },
+            { value: 'membership_plan_discount', label: 'Աբոնեմենտի զեղչ' },
+            { value: 'fully_paid', label: 'Լիովին վճարված աբոնեմենտներ' },
+            { value: 'with_debt', label: 'Պարտքով աբոնեմենտներ' },
+            { value: 'refund_due', label: 'Հետվերադարձի գումարով աբոնեմենտներ' },
+        ],
+    },
 ]
 
 const summaryCards = computed(() => [
@@ -57,24 +78,48 @@ const summaryCards = computed(() => [
     { label: 'Աբոնեմենտի զեղչ', value: formatAmount(props.summary.membership_discount_amount), icon: 'tabler-percentage', class: 'bg-label-secondary text-secondary' },
 ])
 
+const cleanQuery = query => Object.fromEntries(
+    Object.entries(query).filter(([, value]) => value !== null && value !== undefined && value !== ''),
+)
+
 const applyFilters = () => {
-    router.get(route('reports.membership-sales', { locale: currentLocale.value }), {
+    router.get(route('reports.membership-sales', { locale: currentLocale.value }), cleanQuery({
         period: form.period,
         start_date: form.start_date,
         end_date: form.end_date,
-    }, {
+        report_filter: form.report_filter,
+    }), {
         preserveScroll: true,
         preserveState: true,
+        replace: true,
     })
 }
 
 const changePeriod = period => {
     form.period = period
-    router.get(route('reports.membership-sales', { locale: currentLocale.value }), {
+    router.get(route('reports.membership-sales', { locale: currentLocale.value }), cleanQuery({
         period,
-    }, {
+        report_filter: form.report_filter,
+    }), {
         preserveScroll: true,
+        preserveState: true,
+        replace: true,
     })
+}
+
+const updateReportFilters = payload => {
+    form.report_filter = payload.report_filter ?? ''
+    reportFilters.value = { report_filter: form.report_filter }
+}
+
+const applyReportFilters = payload => {
+    updateReportFilters(payload)
+    applyFilters()
+}
+
+const resetReportFilters = () => {
+    updateReportFilters({})
+    applyFilters()
 }
 
 const formatAmount = value => {
@@ -116,62 +161,26 @@ const statusClass = status => ({
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex gap-2 flex-wrap mb-4">
-                    <button
-                        v-for="option in periodOptions"
-                        :key="option.value"
-                        type="button"
-                        class="btn"
-                        :class="form.period === option.value ? 'btn-primary' : 'btn-outline-primary'"
-                        @click="changePeriod(option.value)"
-                    >
-                        {{ option.label }}
-                    </button>
-                </div>
+        <PeriodDateRangeFilter
+            v-model:selected-period="form.period"
+            v-model:start-date="form.start_date"
+            v-model:end-date="form.end_date"
+            @period-change="changePeriod"
+            @apply="applyFilters"
+        />
 
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <label
-                            class="form-label"
-                            for="report_start_date"
-                        >
-                            Սկիզբ
-                        </label>
-                        <input
-                            id="report_start_date"
-                            v-model="form.start_date"
-                            type="date"
-                            class="form-control"
-                        >
-                    </div>
-                    <div class="col-md-4">
-                        <label
-                            class="form-label"
-                            for="report_end_date"
-                        >
-                            Ավարտ
-                        </label>
-                        <input
-                            id="report_end_date"
-                            v-model="form.end_date"
-                            type="date"
-                            class="form-control"
-                        >
-                    </div>
-                    <div class="col-md-4">
-                        <button
-                            type="button"
-                            class="btn btn-primary w-100"
-                            @click="applyFilters"
-                        >
-                            Կիրառել
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <TableFilter
+            v-model="reportFilters"
+            :text-fields="[]"
+            :select-fields="reportFilterFields"
+            :date-fields="[]"
+            default-date-field=""
+            submit-label="Կիրառել"
+            reset-label="Վերականգնել"
+            @update:model-value="updateReportFilters"
+            @filter="applyReportFilters"
+            @reset="resetReportFilters"
+        />
 
         <div class="row g-4 mb-4">
             <div

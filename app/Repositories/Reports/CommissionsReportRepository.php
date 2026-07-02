@@ -24,6 +24,8 @@ class CommissionsReportRepository implements CommissionsReportRepositoryInterfac
                 'personMembership.membershipPlan.translations',
             ])
             ->when(!$user->hasRole('owner'), fn (Builder $query) => $this->scopeByMembershipSaleGym($query, $user))
+            ->when($filters['start_date'] ?? null, fn (Builder $query, $startDate) => $query->where('created_at', '>=', "{$startDate} 00:00:00"))
+            ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->where('created_at', '<=', "{$endDate} 23:59:59"))
             ->when($filters['trainer_id'] ?? null, fn (Builder $query, $trainerId) => $query->where('trainer_id', $trainerId))
             ->when($filters['trainer_status'] ?? null, fn (Builder $query, $status) => $query->where('status', $status))
             ->when($filters['trainer_membership_plan_id'] ?? null, function (Builder $query, $membershipPlanId) {
@@ -52,6 +54,8 @@ class CommissionsReportRepository implements CommissionsReportRepositoryInterfac
                 'membershipPlan.translations',
             ])
             ->when(!$user->hasRole('owner'), fn (Builder $query) => $this->scopeByMembershipSaleGym($query, $user))
+            ->when($filters['start_date'] ?? null, fn (Builder $query, $startDate) => $query->where('created_at', '>=', "{$startDate} 00:00:00"))
+            ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->where('created_at', '<=', "{$endDate} 23:59:59"))
             ->when($filters['salesperson_id'] ?? null, fn (Builder $query, $salespersonId) => $query->where('salesperson_id', $salespersonId))
             ->when($filters['salesperson_status'] ?? null, fn (Builder $query, $status) => $query->where('status', $status))
             ->when($filters['salesperson_membership_plan_id'] ?? null, function (Builder $query, $membershipPlanId) {

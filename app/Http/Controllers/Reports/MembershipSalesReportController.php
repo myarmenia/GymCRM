@@ -19,7 +19,7 @@ class MembershipSalesReportController extends Controller
             'Reports/MembershipSales',
             $this->membershipSalesReportService->report(
                 $request->user(),
-                $request->only(['period', 'start_date', 'end_date'])
+                $request->only(['period', 'start_date', 'end_date', 'report_filter'])
             )
         );
     }
