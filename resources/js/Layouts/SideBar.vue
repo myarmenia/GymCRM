@@ -228,7 +228,7 @@ const { hasRole, hasAnyRole } = useAuth()
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div>Աբոնեմենտների Կատեգորիաներ</div>
+                    <div>Աբոնեմենտների կատեգորիաներ</div>
                 </Link>
             </li>
 
@@ -243,6 +243,29 @@ const { hasRole, hasAnyRole } = useAuth()
                     <i class="menu-icon icon-base ti tabler-percentage"></i>
                     <div>Զեղչեր</div>
                 </Link>
+            </li>
+
+            <li
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
+                :class="['menu-item', route().current('reports.*') ? 'active open' : '']"
+            >
+                <a
+                    href="javascript:void(0);"
+                    class="menu-link menu-toggle"
+                >
+                    <i class="menu-icon icon-base ti tabler-report-analytics"></i>
+                    <div>Հաշվետվություններ</div>
+                </a>
+                <ul class="menu-sub">
+                    <li :class="['menu-item', route().current('reports.membership-sales') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.membership-sales', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Աբոնեմենտներ</div>
+                        </Link>
+                    </li>
+                </ul>
             </li>
 
             <li

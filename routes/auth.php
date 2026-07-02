@@ -23,6 +23,7 @@ use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
+use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\TableDeleteController;
@@ -92,6 +93,11 @@ Route::prefix('{locale}')
                 Route::post('/', [NotificationController::class, 'store'])->name('store');
                 Route::delete('/all', [NotificationController::class, 'destroyAll'])->name('destroy-all');
                 Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('reports')->name('reports.')->group(function () {
+                Route::get('/membership-sales', [MembershipSalesReportController::class, 'index'])
+                    ->name('membership-sales');
             });
 
 
