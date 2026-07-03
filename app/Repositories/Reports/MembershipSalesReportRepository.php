@@ -25,6 +25,14 @@ class MembershipSalesReportRepository implements MembershipSalesReportRepository
         return $this->baseQuery($user, $startDate, $endDate, $filters)->get();
     }
 
+    public function salesForExport(User $user, string $startDate, string $endDate, array $filters = []): Collection
+    {
+        return $this->baseQuery($user, $startDate, $endDate, $filters)
+            ->orderBy('sold_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
     protected function baseQuery(User $user, string $startDate, string $endDate, array $filters = []): Builder
     {
         return MembershipSale::query()

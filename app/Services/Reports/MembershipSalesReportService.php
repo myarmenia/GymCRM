@@ -43,6 +43,23 @@ class MembershipSalesReportService
         ];
     }
 
+    public function exportData(User $user, array $filters): array
+    {
+        $period = $this->resolvePeriod($filters);
+        $reportFilters = $this->resolveReportFilters($filters);
+        $sales = $this->membershipSalesReportRepository
+            ->salesForExport($user, $period['start_date'], $period['end_date'], $reportFilters)
+            ->map(fn (MembershipSale $sale) => $this->mapSale($sale));
+
+        return [
+            'rows' => $sales,
+            'columns' => $this->exportColumns(),
+            'filters' => array_merge($period, $reportFilters),
+            'filename' => 'membership-sales-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
+            'title' => 'Աբոնեմենտների հաշվետվություն',
+        ];
+    }
+
     protected function resolvePeriod(array $filters): array
     {
         $period = in_array($filters['period'] ?? null, ['monthly', 'quarterly', 'yearly'], true)
@@ -97,6 +114,27 @@ class MembershipSalesReportService
         } catch (\Throwable) {
             return $fallback;
         }
+    }
+
+    protected function exportColumns(): array
+    {
+        return [
+            ['key' => 'id', 'title' => 'ID'],
+            ['key' => 'customer', 'title' => 'Հաճախորդ'],
+            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
+            ['key' => 'trainer', 'title' => 'Մարզիչ'],
+            ['key' => 'start_date', 'title' => 'Սկիզբ'],
+            ['key' => 'end_date', 'title' => 'Ավարտ'],
+            ['key' => 'total_price', 'title' => 'Գին'],
+            ['key' => 'manual_discount_amount', 'title' => 'Ձեռքով զեղչ'],
+            ['key' => 'membership_discount_amount', 'title' => 'Աբոնեմենտի զեղչ'],
+            ['key' => 'final_price', 'title' => 'Վերջնական'],
+            ['key' => 'paid_amount', 'title' => 'Վճարված'],
+            ['key' => 'debt', 'title' => 'Պարտք'],
+            ['key' => 'refund_due_amount', 'title' => 'Հետվերադարձ'],
+            ['key' => 'status', 'title' => 'Վճարման վիճակ'],
+            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+        ];
     }
 
     protected function summary(Collection $sales): array

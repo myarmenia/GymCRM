@@ -15,6 +15,36 @@ class CommissionsReportRepository implements CommissionsReportRepositoryInterfac
 {
     public function paginatedTrainerCommissions(User $user, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
+        return $this->trainerCommissionsQuery($user, $filters)
+            ->latest()
+            ->paginate($perPage, ['*'], 'trainer_page')
+            ->withQueryString();
+    }
+
+    public function paginatedSalespersonCommissions(User $user, array $filters = [], int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->salespersonCommissionsQuery($user, $filters)
+            ->latest()
+            ->paginate($perPage, ['*'], 'salesperson_page')
+            ->withQueryString();
+    }
+
+    public function trainerCommissionsForExport(User $user, array $filters = []): Collection
+    {
+        return $this->trainerCommissionsQuery($user, $filters)
+            ->latest()
+            ->get();
+    }
+
+    public function salespersonCommissionsForExport(User $user, array $filters = []): Collection
+    {
+        return $this->salespersonCommissionsQuery($user, $filters)
+            ->latest()
+            ->get();
+    }
+
+    protected function trainerCommissionsQuery(User $user, array $filters = []): Builder
+    {
         return TrainerCommission::query()
             ->with([
                 'trainer',
@@ -36,13 +66,10 @@ class CommissionsReportRepository implements CommissionsReportRepositoryInterfac
                         $membershipSaleQuery->where('membership_plan_id', $membershipPlanId);
                     });
                 });
-            })
-            ->latest()
-            ->paginate($perPage, ['*'], 'trainer_page')
-            ->withQueryString();
+            });
     }
 
-    public function paginatedSalespersonCommissions(User $user, array $filters = [], int $perPage = 20): LengthAwarePaginator
+    protected function salespersonCommissionsQuery(User $user, array $filters = []): Builder
     {
         return SalespersonCommission::query()
             ->with([
@@ -68,10 +95,7 @@ class CommissionsReportRepository implements CommissionsReportRepositoryInterfac
                             $membershipSaleQuery->where('membership_plan_id', $membershipPlanId);
                         });
                 });
-            })
-            ->latest()
-            ->paginate($perPage, ['*'], 'salesperson_page')
-            ->withQueryString();
+            });
     }
 
     public function membershipPlanOptions(User $user): Collection

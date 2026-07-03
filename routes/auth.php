@@ -101,8 +101,12 @@ Route::prefix('{locale}')
             Route::prefix('reports')->name('reports.')->group(function () {
                 Route::get('/membership-sales', [MembershipSalesReportController::class, 'index'])
                     ->name('membership-sales');
+                Route::get('/membership-sales/export', [MembershipSalesReportController::class, 'export'])
+                    ->name('membership-sales.export');
                 Route::get('/commissions', [CommissionsReportController::class, 'index'])
                     ->name('commissions');
+                Route::get('/commissions/export', [CommissionsReportController::class, 'export'])
+                    ->name('commissions.export');
             });
 
 

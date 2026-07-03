@@ -82,6 +82,16 @@ const cleanQuery = query => Object.fromEntries(
     Object.entries(query).filter(([, value]) => value !== null && value !== undefined && value !== ''),
 )
 
+const exportHref = computed(() => route('reports.membership-sales.export', {
+    locale: currentLocale.value,
+    ...cleanQuery({
+        period: form.period,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        report_filter: form.report_filter,
+    }),
+}))
+
 const applyFilters = () => {
     router.get(route('reports.membership-sales', { locale: currentLocale.value }), cleanQuery({
         period: form.period,
@@ -159,6 +169,13 @@ const statusClass = status => ({
                     {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
                 </div>
             </div>
+            <a
+                :href="exportHref"
+                class="btn btn-outline-success"
+            >
+                <i class="icon-base ti tabler-file-export me-1"></i>
+                Արտահանել Excel
+            </a>
         </div>
 
         <PeriodDateRangeFilter

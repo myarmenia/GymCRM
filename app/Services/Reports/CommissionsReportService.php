@@ -71,6 +71,38 @@ class CommissionsReportService
         ];
     }
 
+    public function exportData(User $user, array $filters = []): array
+    {
+        $resolvedFilters = $this->reportFilters($filters);
+        $tab = ($filters['tab'] ?? null) === 'salesperson' ? 'salesperson' : 'trainer';
+
+        if ($tab === 'salesperson') {
+            $rows = $this->commissionsReportRepository
+                ->salespersonCommissionsForExport($user, $resolvedFilters)
+                ->map(fn (SalespersonCommission $commission) => $this->mapSalespersonCommission($commission));
+
+            return [
+                'rows' => $rows,
+                'columns' => $this->salespersonExportColumns(),
+                'filters' => array_merge($resolvedFilters, ['tab' => $tab]),
+                'filename' => 'salesperson-commissions-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
+                'title' => 'Վաճառողների միջնորդավճարների հաշվետվություն',
+            ];
+        }
+
+        $rows = $this->commissionsReportRepository
+            ->trainerCommissionsForExport($user, $resolvedFilters)
+            ->map(fn (TrainerCommission $commission) => $this->mapTrainerCommission($commission));
+
+        return [
+            'rows' => $rows,
+            'columns' => $this->trainerExportColumns(),
+            'filters' => array_merge($resolvedFilters, ['tab' => $tab]),
+            'filename' => 'trainer-commissions-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
+            'title' => 'Մարզիչների միջնորդավճարների հաշվետվություն',
+        ];
+    }
+
     protected function reportFilters(array $filters): array
     {
         $periodFilters = $this->resolvePeriod($filters);
@@ -120,6 +152,40 @@ class CommissionsReportService
         } catch (\Throwable) {
             return $fallback;
         }
+    }
+
+    protected function trainerExportColumns(): array
+    {
+        return [
+            ['key' => 'id', 'title' => 'ID'],
+            ['key' => 'trainer', 'title' => 'Մարզիչ'],
+            ['key' => 'customer', 'title' => 'Հաճախորդ'],
+            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
+            ['key' => 'salary_type', 'title' => 'Տեսակ'],
+            ['key' => 'salary_value', 'title' => 'Արժեք'],
+            ['key' => 'salary_amount', 'title' => 'Գումար'],
+            ['key' => 'status', 'title' => 'Կարգավիճակ'],
+            ['key' => 'is_kept', 'title' => 'Պահված է'],
+            ['key' => 'paid_at', 'title' => 'Վճարվել է'],
+            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+        ];
+    }
+
+    protected function salespersonExportColumns(): array
+    {
+        return [
+            ['key' => 'id', 'title' => 'ID'],
+            ['key' => 'salesperson', 'title' => 'Վաճառող'],
+            ['key' => 'customer', 'title' => 'Հաճախորդ'],
+            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
+            ['key' => 'salary_type', 'title' => 'Տեսակ'],
+            ['key' => 'salary_value', 'title' => 'Արժեք'],
+            ['key' => 'sale_amount', 'title' => 'Վաճառքի գումար'],
+            ['key' => 'salary_amount', 'title' => 'Միջնորդավճար'],
+            ['key' => 'status', 'title' => 'Կարգավիճակ'],
+            ['key' => 'paid_at', 'title' => 'Վճարվել է'],
+            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+        ];
     }
 
     protected function mapTrainerCommission(TrainerCommission $commission): array

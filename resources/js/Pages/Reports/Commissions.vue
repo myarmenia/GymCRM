@@ -77,6 +77,14 @@ const tabs = computed(() => [
     },
 ])
 
+const exportHref = computed(() => route('reports.commissions.export', {
+    locale: currentLocale.value,
+    ...cleanQuery({
+        ...withoutPageParams(filters.value),
+        tab: activeTab.value,
+    }),
+}))
+
 const trainerFilterKeys = [
     'trainer_membership_plan_id',
     'trainer_status',
@@ -257,6 +265,13 @@ const statusClass = status => ({
                 <h2 class="mb-1">Միջնորդավճարների հաշվետվություն</h2>
                 <div class="text-muted">Մարզիչների և վաճառողների միջնորդավճարներ</div>
             </div>
+            <a
+                :href="exportHref"
+                class="btn btn-outline-success"
+            >
+                <i class="icon-base ti tabler-file-export me-1"></i>
+                Արտահանել Excel
+            </a>
         </div>
 
         <div class="d-flex gap-2 flex-wrap mb-4">
