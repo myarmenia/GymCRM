@@ -26,6 +26,9 @@ use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Reports\CommissionsReportController;
 use App\Http\Controllers\Reports\MembershipSalesReportController;
+use App\Http\Controllers\Reports\SalespersonCommissionsReportController;
+use App\Http\Controllers\Reports\TrainerCommissionsReportController;
+use App\Http\Controllers\Reports\TrainerMonthlySalariesReportController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\Purchase\PurchaseController;
@@ -107,6 +110,18 @@ Route::prefix('{locale}')
                     ->name('commissions');
                 Route::get('/commissions/export', [CommissionsReportController::class, 'export'])
                     ->name('commissions.export');
+                Route::get('/trainer-commissions', [TrainerCommissionsReportController::class, 'index'])
+                    ->name('trainer-commissions');
+                Route::get('/trainer-commissions/export', [TrainerCommissionsReportController::class, 'export'])
+                    ->name('trainer-commissions.export');
+                Route::get('/trainer-monthly-salaries', [TrainerMonthlySalariesReportController::class, 'index'])
+                    ->name('trainer-monthly-salaries');
+                Route::get('/trainer-monthly-salaries/export', [TrainerMonthlySalariesReportController::class, 'export'])
+                    ->name('trainer-monthly-salaries.export');
+                Route::get('/salesperson-commissions', [SalespersonCommissionsReportController::class, 'index'])
+                    ->name('salesperson-commissions');
+                Route::get('/salesperson-commissions/export', [SalespersonCommissionsReportController::class, 'export'])
+                    ->name('salesperson-commissions.export');
             });
 
 

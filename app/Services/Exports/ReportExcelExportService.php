@@ -12,17 +12,33 @@ class ReportExcelExportService
         array $columns,
         array $filters = [],
         string $filename = 'report.xls',
-        ?string $title = null
+        ?string $title = null,
+        array $summary = []
     ): StreamedResponse {
         $columns = $this->normalizeColumns($columns);
+        $summary = $this->normalizeSummary($summary);
         $filename = $this->normalizeFilename($filename);
 
-        return response()->streamDownload(function () use ($rows, $columns, $filters, $title) {
+        return response()->streamDownload(function () use ($rows, $columns, $filters, $title, $summary) {
             echo "\xEF\xBB\xBF";
             echo '<html><head><meta charset="UTF-8"></head><body>';
 
             if ($title) {
                 echo '<table><tr><th colspan="' . count($columns) . '">' . $this->escape($title) . '</th></tr></table>';
+            }
+
+            if (!empty($summary)) {
+                echo '<table border="1">';
+                echo '<tr><th colspan="2">' . $this->escape($summary['title']) . '</th></tr>';
+
+                foreach ($summary['rows'] as $row) {
+                    echo '<tr>';
+                    echo '<td>' . $this->escape($row['label']) . '</td>';
+                    echo '<td>' . $this->escape($this->stringValue($row['value'])) . '</td>';
+                    echo '</tr>';
+                }
+
+                echo '</table><br>';
             }
 
             if (!empty($filters)) {
@@ -82,6 +98,29 @@ class ReportExcelExportService
             ->filter(fn (array $column) => $column['title'] !== '' && ($column['key'] || is_callable($column['value'])))
             ->values()
             ->all();
+    }
+
+    protected function normalizeSummary(array $summary): array
+    {
+        $rows = collect($summary['rows'] ?? $summary)
+            ->map(function (array $row) {
+                return [
+                    'label' => (string) ($row['label'] ?? $row['title'] ?? $row['key'] ?? ''),
+                    'value' => $row['value'] ?? null,
+                ];
+            })
+            ->filter(fn (array $row) => $row['label'] !== '')
+            ->values()
+            ->all();
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        return [
+            'title' => (string) ($summary['title'] ?? 'Ամփոփում'),
+            'rows' => $rows,
+        ];
     }
 
     protected function columnValue(mixed $row, array $column): string

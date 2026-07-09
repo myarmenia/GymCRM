@@ -57,6 +57,7 @@ class MembershipSalesReportService
             'filters' => array_merge($period, $reportFilters),
             'filename' => 'membership-sales-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
             'title' => 'Աբոնեմենտների հաշվետվություն',
+            'summary' => $this->exportSummary($this->summary($sales)),
         ];
     }
 
@@ -134,6 +135,23 @@ class MembershipSalesReportService
             ['key' => 'refund_due_amount', 'title' => 'Հետվերադարձ'],
             ['key' => 'status', 'title' => 'Վճարման վիճակ'],
             ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+        ];
+    }
+
+    protected function exportSummary(array $summary): array
+    {
+        return [
+            'title' => 'Այս էջի ամփոփում',
+            'rows' => [
+                ['label' => 'Վաճառված աբոնեմենտներ', 'value' => $summary['sold_memberships_count']],
+                ['label' => 'Նախնական գումար', 'value' => $summary['total_amount']],
+                ['label' => 'Ձեռքով զեղչ', 'value' => $summary['manual_discount_amount']],
+                ['label' => 'Աբոնեմենտի զեղչ', 'value' => $summary['membership_discount_amount']],
+                ['label' => 'Վերջնական գումար', 'value' => $summary['final_amount']],
+                ['label' => 'Վճարված գումար', 'value' => $summary['paid_amount']],
+                ['label' => 'Պարտք', 'value' => $summary['debt']],
+                ['label' => 'Հետվերադարձ', 'value' => $summary['refund_due_amount']],
+            ],
         ];
     }
 

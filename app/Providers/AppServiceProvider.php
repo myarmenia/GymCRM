@@ -30,6 +30,9 @@ use App\Interfaces\Products\ProductsInterface;
 use App\Interfaces\ProductTranslations\ProductTranslationInterface;
 use App\Interfaces\Reports\CommissionsReportRepositoryInterface;
 use App\Interfaces\Reports\MembershipSalesReportRepositoryInterface;
+use App\Interfaces\Reports\SalespersonCommissionsReportRepositoryInterface;
+use App\Interfaces\Reports\TrainerCommissionsReportRepositoryInterface;
+use App\Interfaces\Reports\TrainerMonthlySalariesReportRepositoryInterface;
 use App\Interfaces\Roles\RoleInterface;
 use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleDetails\ScheduleDetailsInterface;
@@ -77,6 +80,9 @@ use App\Repositories\Products\ProductsRepository;
 use App\Repositories\ProductTranslations\ProductTranslationRepository;
 use App\Repositories\Reports\CommissionsReportRepository;
 use App\Repositories\Reports\MembershipSalesReportRepository;
+use App\Repositories\Reports\SalespersonCommissionsReportRepository;
+use App\Repositories\Reports\TrainerCommissionsReportRepository;
+use App\Repositories\Reports\TrainerMonthlySalariesReportRepository;
 use App\Repositories\Roles\RoleRepository;
 use App\Repositories\Schedule\ScheduleRepository;
 use App\Repositories\ScheduleDetails\ScheduleDetailsRepository;
@@ -161,6 +167,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
         $this->app->bind(CommissionsReportRepositoryInterface::class, CommissionsReportRepository::class);
         $this->app->bind(MembershipSalesReportRepositoryInterface::class, MembershipSalesReportRepository::class);
+        $this->app->bind(TrainerCommissionsReportRepositoryInterface::class, TrainerCommissionsReportRepository::class);
+        $this->app->bind(TrainerMonthlySalariesReportRepositoryInterface::class, TrainerMonthlySalariesReportRepository::class);
+        $this->app->bind(SalespersonCommissionsReportRepositoryInterface::class, SalespersonCommissionsReportRepository::class);
 
 
         $this->app->bind(TrainerSessionDurationTrainerSessionDurationInterface::class, TrainerSessionDurationRepository::class);

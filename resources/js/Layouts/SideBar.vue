@@ -361,12 +361,28 @@ const { hasRole, hasAnyRole } = useAuth();
                             <div>Աբոնեմենտներ</div>
                         </Link>
                     </li>
-                    <li :class="['menu-item', route().current('reports.commissions') ? 'active' : '']">
+                    <li :class="['menu-item', route().current('reports.trainer-commissions') ? 'active' : '']">
                         <Link
-                            :href="route('reports.commissions', { locale: currentLocale })"
+                            :href="route('reports.trainer-commissions', { locale: currentLocale })"
                             class="menu-link"
                         >
-                            <div>Միջնորդավճարներ</div>
+                            <div>Մարզիչների միջնորդավճարներ</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.trainer-monthly-salaries') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.trainer-monthly-salaries', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Մարզիչների աշխատավարձեր</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.salesperson-commissions') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.salesperson-commissions', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Վաճառողների միջնորդավճարներ</div>
                         </Link>
                     </li>
                 </ul>
