@@ -7,6 +7,14 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    mode: {
+        type: String,
+        default: 'received',
+    },
+    canDelete: {
+        type: Boolean,
+        default: true,
+    },
 })
 
 defineEmits(['delete'])
@@ -14,6 +22,8 @@ defineEmits(['delete'])
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const isUnread = computed(() => props.notification.was_unread || !props.notification.seen)
+const personLabel = computed(() => props.mode === 'sent' ? 'Ստացող' : 'Ուղարկող')
+const displayUser = computed(() => props.mode === 'sent' ? props.notification.recipient : props.notification.sender)
 
 const fullName = user => `${user?.name ?? ''} ${user?.surname ?? ''}`.trim() || user?.email || '-'
 const personName = person => person ? `${person.name ?? ''} ${person.surname ?? ''}`.trim() || `#${person.id}` : '-'
@@ -46,7 +56,7 @@ const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ')
                         </div>
                         <div class="text-muted small">
                             <i class="icon-base ti tabler-user me-1"></i>
-                            {{ fullName(notification.sender) }}
+                            {{ personLabel }}: {{ fullName(displayUser) }}
                         </div>
                     </div>
                 </div>
@@ -54,6 +64,7 @@ const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ')
                 <div class="d-flex align-items-center gap-2">
                     <span class="text-muted small text-nowrap">{{ formatDate(notification.created_at) }}</span>
                     <button
+                        v-if="canDelete"
                         type="button"
                         class="btn btn-icon btn-sm btn-label-danger"
                         title="Ջնջել"

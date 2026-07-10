@@ -11,6 +11,10 @@ const { confirm } = useConfirm()
 
 const props = defineProps({
     notifications: Object,
+    activeTab: {
+        type: String,
+        default: 'received',
+    },
     unreadCount: {
         type: Number,
         default: 0,
@@ -19,6 +23,28 @@ const props = defineProps({
 
 const notificationRows = ref([...(props.notifications?.data ?? [])])
 const unreadCount = ref(props.unreadCount)
+const activeTab = computed(() => props.activeTab === 'sent' ? 'sent' : 'received')
+const isReceivedTab = computed(() => activeTab.value === 'received')
+const tabLinks = computed(() => [
+    {
+        key: 'received',
+        label: 'Ստացված notification-ները',
+        href: route('notifications.index', {
+            locale: currentLocale.value,
+            tab: 'received',
+        }),
+    },
+    {
+        key: 'sent',
+        label: 'Իմ ուղարկած notification-ները',
+        href: route('notifications.index', {
+            locale: currentLocale.value,
+            tab: 'sent',
+        }),
+    },
+])
+const pageTitle = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ' : 'Իմ ուղարկած notification-ները')
+const emptyText = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ չկան։' : 'Ուղարկած notification-ներ չկան։')
 
 watch(
     () => props.notifications?.data,
@@ -39,7 +65,10 @@ const handleNotification = event => {
         return
     }
 
-    notificationRows.value = [event.notification, ...notificationRows.value]
+    if (isReceivedTab.value) {
+        notificationRows.value = [event.notification, ...notificationRows.value]
+    }
+
     unreadCount.value = Number(event.unread_count ?? unreadCount.value + 1)
 }
 
@@ -113,6 +142,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button
+                    v-if="isReceivedTab"
                     type="button"
                     class="btn btn-label-danger"
                     :disabled="!notificationRows.length"
@@ -130,6 +160,24 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            <Link
+                v-for="tab in tabLinks"
+                :key="tab.key"
+                class="btn"
+                :class="activeTab === tab.key ? 'btn-primary' : 'btn-outline-primary'"
+                :href="tab.href"
+                preserve-scroll
+            >
+                {{ tab.label }}
+            </Link>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-3">
+            <h5 class="mb-0">{{ pageTitle }}</h5>
+            <span class="badge bg-label-primary">{{ notifications?.total ?? notificationRows.length }}</span>
+        </div>
+
         <div
             v-if="notificationRows.length"
             class="notification-list"
@@ -138,6 +186,8 @@ onBeforeUnmount(() => {
                 v-for="notification in notificationRows"
                 :key="notification.id"
                 :notification="notification"
+                :mode="activeTab"
+                :can-delete="isReceivedTab"
                 @delete="deleteNotification"
             />
         </div>
@@ -147,7 +197,7 @@ onBeforeUnmount(() => {
             class="card"
         >
             <div class="card-body text-center text-muted py-5">
-                Ծանուցումներ չկան։
+                {{ emptyText }}
             </div>
         </div>
 

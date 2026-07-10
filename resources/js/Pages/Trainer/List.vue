@@ -1,20 +1,63 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
-import { Head, Link, usePage } from "@inertiajs/vue3";
+import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import Pagination from "@/Components/Pagination.vue";
+import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
 
 const props = defineProps({
     users: Object,
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "hy";
+const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 
 const usersList = ref(props.users.data);
 const pagination = ref(props.users);
 const { hasAnyRole } = useAuth();
+const filters = ref({
+    ...Object.fromEntries(new URLSearchParams(window.location.search)),
+    ...props.filters,
+});
+
+watch(
+    () => props.users,
+    (users) => {
+        usersList.value = users.data;
+        pagination.value = users;
+    },
+);
+
+const applyFilters = (payload) => {
+    router.get(
+        route("trainer.index", { locale: currentLocale.value }),
+        payload,
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+const resetFilters = () => {
+    filters.value = {};
+
+    router.get(
+        route("trainer.index", { locale: currentLocale.value }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
 </script>
 
 <template>
@@ -26,6 +69,14 @@ const { hasAnyRole } = useAuth();
                 Մարզիչների ցուցակ
             </h2>
         </template>
+
+        <TableFilter
+            v-model="filters"
+            name-mode="full"
+            :date-fields="[]"
+            @filter="applyFilters"
+            @reset="resetFilters"
+        />
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">

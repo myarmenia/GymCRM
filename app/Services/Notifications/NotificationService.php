@@ -35,6 +35,23 @@ class NotificationService
         return $notifications;
     }
 
+    public function sentForUser(User $user): LengthAwarePaginator
+    {
+        return $this->notificationRepository->sentForUser($user);
+    }
+
+    public function forTab(User $user, string $tab): LengthAwarePaginator
+    {
+        return $tab === 'sent'
+            ? $this->sentForUser($user)
+            : $this->receivedForUser($user);
+    }
+
+    public function normalizeTab(?string $tab): string
+    {
+        return $tab === 'sent' ? 'sent' : 'received';
+    }
+
     public function unreadCount(User $user): int
     {
         return $this->notificationRepository->unreadCount($user);
@@ -62,8 +79,8 @@ class NotificationService
                     'sender_id' => $sender->id,
                     'recipient_id' => $recipientId,
                     'about_id' => $data['about_id'] ?? null,
-                    'title' => $data['title'],
-                    'description' => $data['description'],
+                    'title' => $data['title'] ?? null,
+                    'description' => $data['description'] ?? null,
                     'seen' => false,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -75,8 +92,8 @@ class NotificationService
                     $this->notificationRepository->idsForInsertedRows(
                         $sender,
                         $chunk,
-                        $data['title'],
-                        $data['description'],
+                        $data['title'] ?? null,
+                        $data['description'] ?? null,
                         $now
                     )
                 );
