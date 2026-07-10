@@ -29,6 +29,7 @@ use App\Interfaces\ProductConsumption\ProductConsumptionInterface;
 use App\Interfaces\Products\ProductsInterface;
 use App\Interfaces\ProductTranslations\ProductTranslationInterface;
 use App\Interfaces\Reports\CommissionsReportRepositoryInterface;
+use App\Interfaces\Reports\EntryExitReportRepositoryInterface;
 use App\Interfaces\Reports\MembershipSalesReportRepositoryInterface;
 use App\Interfaces\Reports\SalespersonCommissionsReportRepositoryInterface;
 use App\Interfaces\Reports\TrainerCommissionsReportRepositoryInterface;
@@ -79,6 +80,7 @@ use App\Repositories\ProductConsumption\ProductConsumptionRepository;
 use App\Repositories\Products\ProductsRepository;
 use App\Repositories\ProductTranslations\ProductTranslationRepository;
 use App\Repositories\Reports\CommissionsReportRepository;
+use App\Repositories\Reports\EntryExitReportRepository;
 use App\Repositories\Reports\MembershipSalesReportRepository;
 use App\Repositories\Reports\SalespersonCommissionsReportRepository;
 use App\Repositories\Reports\TrainerCommissionsReportRepository;
@@ -166,6 +168,7 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
         $this->app->bind(CommissionsReportRepositoryInterface::class, CommissionsReportRepository::class);
+        $this->app->bind(EntryExitReportRepositoryInterface::class, EntryExitReportRepository::class);
         $this->app->bind(MembershipSalesReportRepositoryInterface::class, MembershipSalesReportRepository::class);
         $this->app->bind(TrainerCommissionsReportRepositoryInterface::class, TrainerCommissionsReportRepository::class);
         $this->app->bind(TrainerMonthlySalariesReportRepositoryInterface::class, TrainerMonthlySalariesReportRepository::class);

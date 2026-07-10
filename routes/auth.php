@@ -25,6 +25,7 @@ use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Reports\CommissionsReportController;
+use App\Http\Controllers\Reports\EntryExitReportController;
 use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Reports\SalespersonCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerCommissionsReportController;
@@ -106,6 +107,10 @@ Route::prefix('{locale}')
                     ->name('membership-sales');
                 Route::get('/membership-sales/export', [MembershipSalesReportController::class, 'export'])
                     ->name('membership-sales.export');
+                Route::get('/entry-exit', [EntryExitReportController::class, 'index'])
+                    ->name('entry-exit');
+                Route::get('/entry-exit/export', [EntryExitReportController::class, 'export'])
+                    ->name('entry-exit.export');
                 Route::get('/commissions', [CommissionsReportController::class, 'index'])
                     ->name('commissions');
                 Route::get('/commissions/export', [CommissionsReportController::class, 'export'])
