@@ -37,3 +37,4 @@ Route::prefix('{locale}')
 // });
 
 require __DIR__ . '/auth.php';
+/////////
