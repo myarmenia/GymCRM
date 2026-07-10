@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Notifications;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notifications\StoreNotificationRequest;
 use App\Services\Notifications\NotificationService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class NotificationController extends Controller
@@ -13,12 +14,14 @@ class NotificationController extends Controller
         protected NotificationService $notificationService,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $activeTab = $this->notificationService->normalizeTab($request->query('tab'));
 
         return Inertia::render('Notifications/List', [
-            'notifications' => $this->notificationService->receivedForUser($user),
+            'notifications' => $this->notificationService->forTab($user, $activeTab),
+            'activeTab' => $activeTab,
             'unreadCount' => $this->notificationService->unreadCount($user),
         ]);
     }

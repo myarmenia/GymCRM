@@ -24,11 +24,14 @@ class TrainerController extends Controller
 
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $users = $this->trainerService->getAllPaginated();
+        $users = $this->trainerService->getAllPaginated($request->query());
 
-        return Inertia::render('Trainer/List', ['users' => $users]);
+        return Inertia::render('Trainer/List', [
+            'users' => $users,
+            'filters' => $request->query(),
+        ]);
     }
 
     public function edit(string $locale, int $id)

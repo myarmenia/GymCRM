@@ -321,7 +321,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div>Աբոնեմենտների Կատեգորիաներ</div>
+                    <div>Աբոնեմենտների կատեգորիաներ</div>
                 </Link>
             </li>
 
@@ -342,19 +342,64 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="
-                    hasAnyRole([
-                        'sales_manager',
-                        'admin',
-                        'super_admin',
-                        'owner',
-                        'manager',
-                    ])
-                "
-                :class="[
-                    'menu-item',
-                    route().current('membership_sale.list') ? 'active' : '',
-                ]"
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
+                :class="['menu-item', route().current('reports.*') ? 'active open' : '']"
+            >
+                <a
+                    href="javascript:void(0);"
+                    class="menu-link menu-toggle"
+                >
+                    <i class="menu-icon icon-base ti tabler-report-analytics"></i>
+                    <div>Հաշվետվություններ</div>
+                </a>
+                <ul class="menu-sub">
+                    <li :class="['menu-item', route().current('reports.membership-sales') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.membership-sales', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Աբոնեմենտներ</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.entry-exit') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.entry-exit', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Մուտք / Ելք</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.trainer-commissions') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.trainer-commissions', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Մարզիչների միջնորդավճարներ</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.trainer-monthly-salaries') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.trainer-monthly-salaries', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Մարզիչների աշխատավարձեր</div>
+                        </Link>
+                    </li>
+                    <li :class="['menu-item', route().current('reports.salesperson-commissions') ? 'active' : '']">
+                        <Link
+                            :href="route('reports.salesperson-commissions', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Վաճառողների միջնորդավճարներ</div>
+                        </Link>
+                    </li>
+                </ul>
+            </li>
+
+            <li
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin', 'owner'])"
+                :class="['menu-item', route().current('membership_sale.list') ? 'active' : '']"
+              
             >
                 <Link
                     :href="

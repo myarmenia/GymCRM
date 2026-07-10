@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
             </div>
 
             <ul class="navbar-nav flex-row align-items-center ms-md-auto">
-                <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
+                <!-- <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
                     <a
                         class="nav-link dropdown-toggle hide-arrow"
                         href="javascript:void(0);"
@@ -131,7 +131,7 @@ onBeforeUnmount(() => {
                             </button>
                         </li>
                     </ul>
-                </li>
+                </li> -->
 
                 <li class="nav-item me-2 me-xl-0">
                     <Link

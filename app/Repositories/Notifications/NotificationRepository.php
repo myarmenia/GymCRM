@@ -13,12 +13,12 @@ class NotificationRepository implements NotificationRepositoryInterface
 {
     public function receivedForUser(User $user, int $perPage = 20): LengthAwarePaginator
     {
-        return Notification::query()
-            ->with(['sender', 'about'])
-            ->where('recipient_id', $user->id)
-            ->latest()
-            ->paginate($perPage)
-            ->withQueryString();
+        return $this->notificationsForUser($user, 'recipient_id', $perPage);
+    }
+
+    public function sentForUser(User $user, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->notificationsForUser($user, 'sender_id', $perPage);
     }
 
     public function unreadCount(User $user): int
@@ -45,7 +45,7 @@ class NotificationRepository implements NotificationRepositoryInterface
         Notification::query()->insert($rows);
     }
 
-    public function idsForInsertedRows(User $sender, Collection $recipientIds, string $title, string $description, $createdAt): Collection
+    public function idsForInsertedRows(User $sender, Collection $recipientIds, ?string $title, ?string $description, $createdAt): Collection
     {
         return Notification::query()
             ->where('sender_id', $sender->id)
@@ -86,6 +86,7 @@ class NotificationRepository implements NotificationRepositoryInterface
     {
         return User::query()
             ->whereKeyNot($userId)
+            ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
     }
@@ -94,6 +95,7 @@ class NotificationRepository implements NotificationRepositoryInterface
     {
         return User::query()
             ->whereKeyNot($sender->id)
+            ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
             ->orderBy('name')
             ->orderBy('surname')
             ->get(['id', 'name', 'surname', 'email'])
@@ -129,5 +131,15 @@ class NotificationRepository implements NotificationRepositoryInterface
         return Notification::query()
             ->where('recipient_id', $user->id)
             ->delete();
+    }
+
+    private function notificationsForUser(User $user, string $column, int $perPage): LengthAwarePaginator
+    {
+        return Notification::query()
+            ->with(['sender', 'recipient', 'about'])
+            ->where($column, $user->id)
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }
