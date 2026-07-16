@@ -7,18 +7,24 @@ use Dom\Attr;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Sanctum\HasApiTokens;
 
 
-class Person extends Model
+class Person extends Authenticatable
 {
-    use HasFactory, SoftDeletes, FilterTrait;
+    use HasApiTokens, HasFactory, SoftDeletes, FilterTrait;
 
     protected $guarded =[];
     protected $table = 'people';
+
+    protected $hidden = [
+        'password',
+        'fcm_token',
+    ];
 
     protected array $filterConfig = [
         'name' => [
@@ -102,6 +108,11 @@ class Person extends Model
     public function memberships()
     {
         return $this->hasMany(PersonMembership::class);
+    }
+
+    public function biometric()
+    {
+        return $this->hasOne(PersonBiometric::class);
     }
 
     public function membershipSales()
