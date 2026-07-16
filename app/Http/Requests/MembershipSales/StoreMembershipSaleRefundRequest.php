@@ -48,6 +48,7 @@ class StoreMembershipSaleRefundRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'parent_payment_id' => ['required', 'integer', 'exists:membership_plan_payments,id'],
             'is_partial_refund' => ['sometimes', 'boolean'],
             'is_full_refund' => ['sometimes', 'boolean'],
             'amount' => ['required', 'numeric', 'gt:0'],

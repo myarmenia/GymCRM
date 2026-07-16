@@ -5,11 +5,15 @@ import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { useConfirm } from '@/composables/useConfirm'
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
+import { useAlert } from '@/composables/useAlert'
+import { printHdmReceipt } from '@/composables/useHdmPrint'
+import axios from 'axios'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const { confirm } = useConfirm()
+const alert = useAlert()
 
 const props = defineProps({
     membershipSale: Object,
@@ -37,6 +41,10 @@ const props = defineProps({
         type: [Number, String],
         default: 0,
     },
+    gateway: {
+        type: Object,
+        default: () => ({}),
+    },
 })
 
 const actionForm = useForm({
@@ -49,6 +57,7 @@ const actionForm = useForm({
     card_type_id: '',
     notes: '',
     is_hdm: false,
+    parent_payment_id: '',
 })
 
 const cancelForm = useForm({})
@@ -61,6 +70,14 @@ const paid = computed(() => Number(props.paidAmount || 0))
 const refunded = computed(() => Number(props.refundedAmount || 0))
 const netPaid = computed(() => Number(props.netPaidAmount || 0))
 const availableRefund = computed(() => Number(props.availableRefundAmount || 0))
+const refundablePayments = computed(() => transactions.value.filter(transaction => (
+    transaction.type === 'payment'
+    && transaction.status === 'paid'
+    && Number(transaction.refundable_amount || 0) > 0
+)))
+const selectedOriginalPayment = computed(() => refundablePayments.value.find(payment => (
+    Number(payment.id) === Number(actionForm.parent_payment_id)
+)) ?? null)
 
 const actionMode = computed(() => {
     if (availableRefund.value > 0) {
@@ -74,7 +91,9 @@ const actionMode = computed(() => {
     return null
 })
 
-const actionLimit = computed(() => actionMode.value === 'refund' ? availableRefund.value : debt.value)
+const actionLimit = computed(() => actionMode.value === 'refund'
+    ? Math.min(availableRefund.value, Number(selectedOriginalPayment.value?.refundable_amount || 0))
+    : debt.value)
 const isRefundMode = computed(() => actionMode.value === 'refund')
 const isPaymentMode = computed(() => actionMode.value === 'payment')
 const isMembershipCancelled = computed(() => membership.value?.status === 'cancelled')
@@ -153,6 +172,7 @@ const resetActionFormForMode = () => {
     actionForm.card_type_id = ''
     actionForm.notes = ''
     actionForm.is_hdm = false
+    actionForm.parent_payment_id = ''
     actionForm.amount = actionLimit.value
     actionForm.is_full_payment = isPaymentMode.value
     actionForm.is_partial_payment = false
@@ -163,7 +183,25 @@ const resetActionFormForMode = () => {
 watch(actionMode, resetActionFormForMode, { immediate: true })
 
 watch(() => actionForm.payment_method_id, () => {
+    if (isRefundMode.value) {
+        return
+    }
+
     actionForm.card_type_id = ''
+})
+
+watch(() => actionForm.parent_payment_id, () => {
+    if (!isRefundMode.value) {
+        return
+    }
+
+    const payment = selectedOriginalPayment.value
+    actionForm.payment_method_id = payment?.payment_method_id ?? ''
+    actionForm.card_type_id = payment?.card_type_id ?? ''
+    actionForm.is_hdm = Boolean(payment?.is_hdm)
+    actionForm.amount = Number(payment?.refundable_amount || 0)
+    actionForm.is_full_refund = Boolean(payment)
+    actionForm.is_partial_refund = false
 })
 
 watch(() => actionForm.is_full_payment, enabled => {
@@ -238,14 +276,65 @@ watch(() => actionForm.amount, value => {
     }
 })
 
-const submitAction = () => {
+const submitAction = async () => {
     if (!actionMode.value) {
         return
     }
 
-    const routeName = isRefundMode.value
-        ? 'membership_sale.refunds.store'
-        : 'membership_sale.payments.store'
+    if (isRefundMode.value) {
+        actionForm.clearErrors()
+        actionForm.processing = true
+
+        try {
+            const response = await axios.post(route('membership_sale.refunds.store', {
+                locale: currentLocale.value,
+                id: props.membershipSale.id,
+            }), {
+                parent_payment_id: actionForm.parent_payment_id,
+                amount: actionForm.amount,
+                payment_method_id: actionForm.payment_method_id,
+                card_type_id: actionForm.card_type_id,
+                is_hdm: actionForm.is_hdm,
+                is_partial_refund: actionForm.is_partial_refund,
+                is_full_refund: actionForm.is_full_refund,
+                refund_notes: actionForm.notes,
+            })
+
+            if (response.data.need_print && response.data.print_data) {
+                alert.info('Վերադարձը պահպանվել է, ՀԴՄ վերադարձի կտրոնը տպվում է։')
+                const printResult = await printHdmReceipt(
+                    response.data.print_data,
+                    props.gateway,
+                    currentLocale.value,
+                )
+
+                if (printResult.success) {
+                    alert.success('Վերադարձի ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+                } else {
+                    alert.warning(`Վերադարձը պահպանվել է, սակայն ՀԴՄ կտրոնը չի տպվել։ ${printResult.message}`)
+                }
+            } else if (response.data.print_error) {
+                alert.warning(response.data.message)
+            } else {
+                alert.success('Վերադարձը հաջողությամբ պահպանվել է։')
+            }
+
+            router.visit(response.data.redirect)
+        } catch (error) {
+            if (error.response?.status === 422 && error.response.data?.errors) {
+                Object.entries(error.response.data.errors).forEach(([field, messages]) => {
+                    actionForm.setError(field, Array.isArray(messages) ? messages[0] : messages)
+                })
+                return
+            }
+
+            alert.error(error.response?.data?.message ?? 'Չհաջողվեց պահպանել վերադարձը։')
+        } finally {
+            actionForm.processing = false
+        }
+
+        return
+    }
 
     actionForm
         .transform(data => {
@@ -256,15 +345,6 @@ const submitAction = () => {
                 is_hdm: data.is_hdm,
             }
 
-            if (isRefundMode.value) {
-                return {
-                    ...payload,
-                    is_partial_refund: data.is_partial_refund,
-                    is_full_refund: data.is_full_refund,
-                    refund_notes: data.notes,
-                }
-            }
-
             return {
                 ...payload,
                 is_partial_payment: data.is_partial_payment,
@@ -272,7 +352,7 @@ const submitAction = () => {
                 payment_notes: data.notes,
             }
         })
-        .post(route(routeName, {
+        .post(route('membership_sale.payments.store', {
             locale: currentLocale.value,
             id: props.membershipSale.id,
         }), {
@@ -433,6 +513,7 @@ const cancelMembership = async () => {
                                 <th>Կարգավիճակ</th>
                                 <th>ՀԴՄ</th>
                                 <th>Ամսաթիվ</th>
+                                <th>Գործողություն</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -448,6 +529,17 @@ const cancelMembership = async () => {
                                 <td>{{ paymentStatusLabel(transaction.status) }}</td>
                                 <td>{{ transaction.is_hdm ? 'Այո' : 'Ոչ' }}</td>
                                 <td>{{ formatDate(transaction.created_at) }}</td>
+                                <td>
+                                    <button
+                                        v-if="transaction.type === 'payment' && Number(transaction.refundable_amount || 0) > 0"
+                                        type="button"
+                                        class="btn btn-sm btn-outline-warning"
+                                        @click="actionForm.parent_payment_id = transaction.id"
+                                    >
+                                        Վերադարձնել {{ formatAmount(transaction.refundable_amount) }}-ից
+                                    </button>
+                                    <span v-else>-</span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -516,6 +608,30 @@ const cancelMembership = async () => {
                         class="card-body"
                         @submit.prevent="submitAction"
                     >
+                        <div
+                            v-if="isRefundMode"
+                            class="mb-3"
+                        >
+                            <InputLabel value="Վճարում, որից կատարվում է վերադարձը" />
+                            <select
+                                v-model="actionForm.parent_payment_id"
+                                class="form-select"
+                            >
+                                <option value="">Ընտրել վճարումը</option>
+                                <option
+                                    v-for="payment in refundablePayments"
+                                    :key="payment.id"
+                                    :value="payment.id"
+                                >
+                                    #{{ payment.id }} — {{ formatAmount(payment.amount) }} —
+                                    {{ translatedName(payment.payment_method) }} —
+                                    վերադարձի մնացորդ {{ formatAmount(payment.refundable_amount) }}
+                                    {{ payment.is_hdm ? '(ՀԴՄ)' : '' }}
+                                </option>
+                            </select>
+                            <InputError :message="actionForm.errors.parent_payment_id" />
+                        </div>
+
                         <div class="d-flex flex-wrap gap-4 mb-3">
                             <label class="form-check">
                                 <input
@@ -556,6 +672,7 @@ const cancelMembership = async () => {
                             <select
                                 v-model="actionForm.payment_method_id"
                                 class="form-select"
+                                :disabled="isRefundMode"
                             >
                                 <option value="">
                                     {{ actionText.methodPlaceholder }}
@@ -579,6 +696,7 @@ const cancelMembership = async () => {
                             <select
                                 v-model="actionForm.card_type_id"
                                 class="form-select"
+                                :disabled="isRefundMode"
                             >
                                 <option value="">
                                     Ընտրել քարտի տեսակը
@@ -634,6 +752,7 @@ const cancelMembership = async () => {
                                     v-model="actionForm.is_hdm"
                                     type="checkbox"
                                     class="form-check-input"
+                                    :disabled="isRefundMode"
                                 />
                                 <span class="form-check-label">
                                     ՀԴՄ կտրոն

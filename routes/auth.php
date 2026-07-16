@@ -18,6 +18,7 @@ use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\Hdm\HdmOperationController;
 use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Notifications\NotificationController;
@@ -366,6 +367,11 @@ Route::prefix('{locale}')
                 Route::get('/', [PurchaseController::class, 'index'])->name('index');
                 Route::get('/history', [PurchaseController::class, 'history'])->name('history');
                 Route::post('/sell', [PurchaseController::class, 'sell'])->name('sell');
+            });
+
+            // ====== sales ================
+            Route::prefix('hdm')->name('hdm.')->group(function () {
+                Route::post('/update-operation-status', [HdmOperationController::class, 'updateStatus'])->name('update_operation_status');
             });
         });
     });

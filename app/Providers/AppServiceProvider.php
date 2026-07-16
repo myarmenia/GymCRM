@@ -18,6 +18,7 @@ use App\Interfaces\MembershipPlanPayments\MembershipPlanPaymentInterface;
 use App\Interfaces\MembershipSaleDiscounts\MembershipSaleDiscountInterface;
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Interfaces\GymSchedule\GymScheduleInterface;
+use App\Interfaces\Hdm\HdmOperationInterface;
 use App\Interfaces\MeasurementUnit\MeasurementUnitInterface;
 use App\Interfaces\MembershipPlanSchedule\MembershipPlanScheduleInterface;
 use App\Interfaces\MembershipPlanTrainer\MembershipPlanTrainerInterface;
@@ -69,6 +70,7 @@ use App\Repositories\MembershipPlanPayments\MembershipPlanPaymentRepository;
 use App\Repositories\MembershipSaleDiscounts\MembershipSaleDiscountRepository;
 use App\Repositories\MembershipSales\MembershipSaleRepository;
 use App\Repositories\GymSchedule\GymScheduleRepository;
+use App\Repositories\Hdm\HdmOperationRepository;
 use App\Repositories\MeasurementUnit\MeasurementUnitRepository;
 use App\Repositories\MembershipPlanSchedule\MembershipPlanScheduleRepository;
 use App\Repositories\MembershipPlanTrainer\MembershipPlanTrainerRepository;
@@ -181,6 +183,8 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->bind(MembershipPlanTrainerInterface::class, MembershipPlanTrainerRepository::class);
         $this->app->bind(MembershipPlanScheduleInterface::class, MembershipPlanScheduleRepository::class);
+
+        $this->app->bind(HdmOperationInterface::class, HdmOperationRepository::class);
 
         $this->app->bind(PurchaseInterface::class, PurchaseRepository::class);
         $this->app->bind(PurchaseItemInterface::class, PurchaseItemRepository::class);

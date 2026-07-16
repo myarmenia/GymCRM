@@ -4,15 +4,21 @@ import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
-import { Head, useForm, usePage } from '@inertiajs/vue3'
+import axios from 'axios'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { useAlert } from '@/composables/useAlert'
+import { printHdmReceipt } from '@/composables/useHdmPrint'
 import {
     addDaysToYmd,
     addMonthsToYmd,
     todayInYerevan,
 } from '@/utils/yerevanDate'
+import { useConfirm } from '@/composables/useConfirm';
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const { confirm } = useConfirm();
+const alert = useAlert()
 
 const props = defineProps({
     membershipPlans: {
@@ -43,6 +49,13 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    gateway: {
+        type: Object,
+        default: () => ({
+            url: 'http://localhost/hdm-gateway/index.php',
+            token: 'SECRET_PROXY_TOKEN'
+        })
+    }
 })
 
 const today = todayInYerevan()
@@ -345,48 +358,70 @@ watch(() => form.amount, (value) => {
     }
 })
 
-const submit = () => {
+const submitMembershipSale = async (stayDebt = false) => {
     if (startDateRestrictionMessage.value) {
         form.setError('start_date', startDateRestrictionMessage.value)
         return
     }
 
-    form
-        .transform(data => ({
-            ...data,
-            stay_debt: false,
-        }))
-        .post(route('membership_sale.store', {
-            locale: currentLocale.value,
-            person: props.selectedPerson?.id,
-        }), {
-            onFinish: () => form.transform(data => data),
-        })
-}
+    form.clearErrors()
+    form.processing = true
 
-const submitDebt = () => {
-    if (startDateRestrictionMessage.value) {
-        form.setError('start_date', startDateRestrictionMessage.value)
-        return
-    }
-
-    form
-        .transform(data => ({
-            ...data,
-            stay_debt: true,
+    const payload = {
+        ...form.data(),
+        stay_debt: stayDebt,
+        ...(stayDebt ? {
             is_full_payment: false,
             is_partial_payment: false,
             amount: 0,
             payment_method_id: null,
             card_type_id: null,
-        }))
-        .post(route('membership_sale.store', {
+            is_hdm: false,
+        } : {}),
+    }
+
+    try {
+        const response = await axios.post(route('membership_sale.store', {
             locale: currentLocale.value,
             person: props.selectedPerson?.id,
-        }), {
-            onFinish: () => form.transform(data => data),
-        })
+        }), payload)
+
+        if (response.data.need_print && response.data.print_data) {
+            alert.info('Աբոնեմենտը ստեղծվել է, ՀԴՄ կտրոնը տպվում է։')
+            const printResult = await printHdmReceipt(
+                response.data.print_data,
+                props.gateway,
+                currentLocale.value,
+            )
+
+            if (printResult.success) {
+                alert.success('Աբոնեմենտի ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+            } else {
+                alert.warning(`Աբոնեմենտը ստեղծվել է, սակայն ՀԴՄ կտրոնը չի տպվել։ ${printResult.message}`)
+            }
+        } else if (response.data.print_error) {
+            alert.warning(response.data.message)
+        } else {
+            alert.success('Աբոնեմենտը հաջողությամբ ստեղծվել է։')
+        }
+
+        router.visit(response.data.redirect)
+    } catch (error) {
+        if (error.response?.status === 422 && error.response.data?.errors) {
+            Object.entries(error.response.data.errors).forEach(([field, messages]) => {
+                form.setError(field, Array.isArray(messages) ? messages[0] : messages)
+            })
+            return
+        }
+
+        alert.error(error.response?.data?.message ?? 'Չհաջողվեց ստեղծել աբոնեմենտը։')
+    } finally {
+        form.processing = false
+    }
 }
+
+const submit = () => submitMembershipSale(false)
+const submitDebt = () => submitMembershipSale(true)
 </script>
 
 <template>
