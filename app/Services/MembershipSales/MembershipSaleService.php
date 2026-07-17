@@ -22,6 +22,7 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\MobileNotifications\MobilePushNotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,7 @@ class MembershipSaleService
         protected MembershipPlanPaymentInterface $membershipPlanPaymentRepository,
         protected TrainerCommissionInterface $trainerCommissionRepository,
         protected SalespersonCommissionInterface $salespersonCommissionRepository,
+        protected MobilePushNotificationService $mobileNotifications,
     ) {
     }
 
@@ -590,6 +592,8 @@ class MembershipSaleService
             );
 
             DB::commit();
+
+            $this->mobileNotifications->sendMembershipPurchased($personMembership->loadMissing('person'));
 
             return $membershipSale->load([
                 'personMemberships',

@@ -4,20 +4,22 @@ namespace App\Services\MobileAuth;
 
 use App\Interfaces\MobileAuth\MobilePersonAuthInterface;
 use App\Models\Person;
+use App\Services\MobileNotifications\MobilePushNotificationService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class MobilePersonAuthService
 {
-    public function __construct(protected MobilePersonAuthInterface $people)
-    {
-    }
+    public function __construct(
+        protected MobilePersonAuthInterface $people,
+        protected MobilePushNotificationService $notifications,
+    ) {}
 
     public function login(string $email, string $password, ?string $fcmToken, ?string $deviceName): array
     {
         $person = $this->people->findActiveVisitorByEmail($email);
 
-        if (!$person || !Hash::check($password, $person->password)) {
+        if (! $person || ! Hash::check($password, $person->password)) {
             throw ValidationException::withMessages([
                 'email' => [trans('auth.failed')],
             ]);
@@ -28,6 +30,8 @@ class MobilePersonAuthService
         }
 
         $token = $person->createToken($deviceName ?: 'fittracker-mobile', ['mobile'])->plainTextToken;
+
+        $this->notifications->sendFirstLogin($person);
 
         return [
             'person' => $person,
