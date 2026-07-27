@@ -22,6 +22,7 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,7 @@ class MembershipSaleService
         protected MembershipPlanPaymentInterface $membershipPlanPaymentRepository,
         protected TrainerCommissionInterface $trainerCommissionRepository,
         protected SalespersonCommissionInterface $salespersonCommissionRepository,
+        protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
     ) {
     }
 
@@ -558,7 +560,7 @@ class MembershipSaleService
                 $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
 
-                $this->trainerCommissionRepository->create(
+                $trainerCommission = $this->trainerCommissionRepository->create(
                     $this->trainerCommissionDtoData([
                         'trainer_id' => $trainer->id,
                         'membership_sale_id' => $membershipSale->id,
@@ -570,6 +572,11 @@ class MembershipSaleService
                         'paid_at' => null,
                         'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),
                     ])
+                );
+
+                $this->trainerMonthlySalaryService->generateForCommission(
+                    $trainerCommission,
+                    $trainerCommission->created_at
                 );
             }
 

@@ -13,48 +13,22 @@ class TrainerMonthlySalaryService
         $runDate = $date instanceof Carbon
             ? $date->copy()->startOfDay()
             : Carbon::parse($date ?? today())->startOfDay();
-        $monthStart = $runDate->copy()->subMonthNoOverflow()->startOfMonth();
-        $monthEnd = $monthStart->copy()->endOfMonth();
-        $salaryMonth = $monthStart->toDateString();
+        $salaryMonth = $runDate->copy()->startOfMonth()->toDateString();
         $createdCount = 0;
         $skippedCount = 0;
 
         TrainerCommission::query()
             ->with('personMembership')
             ->whereNotNull('trainer_id')
-            ->whereHas('personMembership', function ($query) use ($monthStart, $monthEnd) {
-                $query->whereNotNull('trainer_id')
-                    ->whereDate('start_date', '<=', $monthEnd->toDateString())
-                    ->whereDate('end_date', '>=', $monthStart->toDateString());
+            ->whereHas('personMembership', function ($query) {
+                $query->whereNotNull('trainer_id');
             })
-            ->chunkById(100, function ($trainerCommissions) use ($salaryMonth, &$createdCount, &$skippedCount) {
+            ->whereDate('created_at', '<=', $runDate->toDateString())
+            ->chunkById(100, function ($trainerCommissions) use ($runDate, &$createdCount, &$skippedCount) {
                 foreach ($trainerCommissions as $trainerCommission) {
-                    $personMembership = $trainerCommission->personMembership;
+                    $monthlySalary = $this->generateForCommission($trainerCommission, $runDate);
 
-                    if (!$personMembership) {
-                        $skippedCount++;
-                        continue;
-                    }
-
-                    if ((int) $personMembership->trainer_id !== (int) $trainerCommission->trainer_id) {
-                        $skippedCount++;
-                        continue;
-                    }
-
-                    $monthlySalary = TrainerMonthlySalary::query()->firstOrCreate(
-                        [
-                            'trainer_id' => $trainerCommission->trainer_id,
-                            'person_membership_id' => $personMembership->id,
-                            'trainer_commission_id' => $trainerCommission->id,
-                            'salary_month' => $salaryMonth,
-                        ],
-                        [
-                            'price' => $this->monthlyPrice($trainerCommission, $personMembership),
-                            'status' => 'pending',
-                        ]
-                    );
-
-                    $monthlySalary->wasRecentlyCreated
+                    $monthlySalary?->wasRecentlyCreated
                         ? $createdCount++
                         : $skippedCount++;
                 }
@@ -65,6 +39,62 @@ class TrainerMonthlySalaryService
             'skipped' => $skippedCount,
             'salary_month' => $salaryMonth,
         ];
+    }
+
+    public function generateForCommission(
+        TrainerCommission $trainerCommission,
+        null|string|Carbon $date = null
+    ): ?TrainerMonthlySalary {
+        $runDate = $date instanceof Carbon
+            ? $date->copy()->startOfDay()
+            : Carbon::parse($date ?? today())->startOfDay();
+
+        $trainerCommission->loadMissing('personMembership');
+
+        $personMembership = $trainerCommission->personMembership;
+
+        if (!$personMembership || !$trainerCommission->created_at) {
+            return null;
+        }
+
+        if ((int) $personMembership->trainer_id !== (int) $trainerCommission->trainer_id) {
+            return null;
+        }
+
+        $commissionDate = Carbon::parse($trainerCommission->created_at)->startOfDay();
+        $monthOffset = (($runDate->year - $commissionDate->year) * 12)
+            + ($runDate->month - $commissionDate->month);
+        $monthCount = $this->membershipMonthCount($personMembership);
+
+        if ($monthOffset < 0 || $monthOffset >= $monthCount) {
+            return null;
+        }
+
+        // Always calculate from the original commission date. This preserves the
+        // 30th/31st anchor after February (Jan 31 -> Feb 28/29 -> Mar 31).
+        $dueDate = $this->monthlyDueDate($commissionDate, $monthOffset);
+
+        if ($runDate->lt($dueDate)) {
+            return null;
+        }
+
+        return TrainerMonthlySalary::query()->firstOrCreate(
+            [
+                'trainer_id' => $trainerCommission->trainer_id,
+                'person_membership_id' => $personMembership->id,
+                'trainer_commission_id' => $trainerCommission->id,
+                'salary_month' => $runDate->copy()->startOfMonth()->toDateString(),
+            ],
+            [
+                'price' => $this->monthlyPrice($trainerCommission, $personMembership),
+                'status' => 'pending',
+            ]
+        );
+    }
+
+    protected function monthlyDueDate(Carbon $commissionDate, int $monthOffset): Carbon
+    {
+        return $commissionDate->copy()->addMonthsNoOverflow($monthOffset);
     }
 
     protected function monthlyPrice(TrainerCommission $trainerCommission, $personMembership): float
