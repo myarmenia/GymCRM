@@ -94,7 +94,8 @@ const canTransfer = row => {
     const currentTrainerId = Number(row.membership?.trainer_id || 0)
     const salaryTrainerId = Number(row.salary?.trainer_id || 0)
 
-    return row.salary?.status !== 'transfer'
+    return payableStatuses.includes(row.salary?.status)
+        && !row.salary?.salary_payout_id
         && currentTrainerId
         && salaryTrainerId
         && currentTrainerId !== salaryTrainerId
@@ -151,6 +152,17 @@ const transferSalary = salaryId => {
                     :href="route('trainer.index', { locale: currentLocale })"
                 >
                     Վերադառնալ
+                </Link>
+                <Link
+                    class="btn btn-success"
+                    :href="route('salary-payouts.index', {
+                        locale: currentLocale,
+                        payee_id: trainer.id,
+                        type: 'trainer_monthly_salary',
+                    })"
+                >
+                    <i class="icon-base ti tabler-cash me-1"></i>
+                    Անցնել վճարման
                 </Link>
             </div>
         </template>
@@ -229,15 +241,6 @@ const transferSalary = salaryId => {
                         Ընտրված է՝ {{ selectedCount }}
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-success"
-                            :disabled="bulkForm.processing"
-                            @click="submitBulkAction('pay')"
-                        >
-                            <i class="icon-base ti tabler-check me-1"></i>
-                            Վճարել ընտրվածները
-                        </button>
                         <button
                             type="button"
                             class="btn btn-sm btn-outline-danger"

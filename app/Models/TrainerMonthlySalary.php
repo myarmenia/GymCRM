@@ -30,4 +30,14 @@ class TrainerMonthlySalary extends Model
     {
         return $this->belongsTo(TrainerCommission::class);
     }
+
+    public function payout()
+    {
+        return $this->belongsTo(SalaryPayout::class, 'salary_payout_id');
+    }
+
+    public function payoutItems()
+    {
+        return $this->hasMany(SalaryPayoutItem::class);
+    }
 }

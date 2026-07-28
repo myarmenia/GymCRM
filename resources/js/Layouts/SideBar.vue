@@ -86,6 +86,22 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'accountant'])"
+                :class="[
+                    'menu-item',
+                    route().current('salary-payouts.*') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('salary-payouts.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-cash"></i>
+                    <div>Աշխատավարձերի վճարումներ</div>
+                </Link>
+            </li>
+
+            <li
                 v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager'])"
                 :class="[
                     'menu-item',

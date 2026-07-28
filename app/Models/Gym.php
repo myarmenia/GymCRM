@@ -47,6 +47,11 @@ class Gym extends Model
         return $this->hasMany(PersonMembership::class);
     }
 
+    public function salaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class);
+    }
+
     public function languages()
     {
         return $this->belongsToMany(Lang::class, 'gym_languages')

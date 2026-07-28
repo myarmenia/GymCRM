@@ -95,6 +95,9 @@ const summaryCards = computed(() => [
     { label: 'Միջնորդավճար', value: formatAmount(props.summary.total_commission_amount), icon: 'tabler-cash', class: 'bg-label-success text-success' },
     { label: 'Վճարված միջնորդավճար', value: formatAmount(props.summary.paid_commission_amount), icon: 'tabler-check', class: 'bg-label-info text-info' },
     { label: 'Սպասող միջնորդավճար', value: formatAmount(props.summary.pending_commission_amount), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
+    { label: 'Վերադարձված', value: formatAmount(props.summary.refunded_commission_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: 'Փոխանցված մուտք', value: formatAmount(props.summary.transferred_in_amount), icon: 'tabler-arrow-down-left', class: 'bg-label-success text-success' },
+    { label: 'Փոխանցված ելք', value: formatAmount(props.summary.transferred_out_amount), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
     { label: 'Պահված միջնորդավճարներ', value: props.summary.kept_commissions_count ?? 0, icon: 'tabler-lock', class: 'bg-label-secondary text-secondary' },
 ])
 
@@ -162,12 +165,16 @@ const salaryTypeLabel = type => ({
 
 const statusLabel = status => ({
     pending: 'Սպասման մեջ',
+    partial: 'Մասնակի վճարված',
     paid: 'Վճարված',
+    transferred: 'Փոխանցված',
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
     pending: 'bg-label-warning',
+    partial: 'bg-label-info',
     paid: 'bg-label-success',
+    transferred: 'bg-label-secondary',
 }[status] ?? 'bg-label-secondary')
 </script>
 
@@ -247,7 +254,12 @@ const statusClass = status => ({
                             <th>Հաճախորդ</th>
                             <th>Միջնորդավճարի տեսակ</th>
                             <th>Միջնորդավճարի արժեք</th>
-                            <th>Միջնորդավճարի գումար</th>
+                            <th>Ընդհանուր վերագրված</th>
+                            <th>Զուտ վճարված</th>
+                            <th>Չվճարված մնացորդ</th>
+                            <th>Վերադարձված</th>
+                            <th>Փոխանցված մուտք</th>
+                            <th>Փոխանցված ելք</th>
                             <th>Կարգավիճակ</th>
                             <th>Պահված է</th>
                             <th>Ստեղծվել է</th>
@@ -264,6 +276,11 @@ const statusClass = status => ({
                             <td>{{ salaryTypeLabel(commission.salary_type) }}</td>
                             <td>{{ formatAmount(commission.salary_value) }}</td>
                             <td>{{ formatAmount(commission.salary_amount) }}</td>
+                            <td>{{ formatAmount(commission.net_paid_amount) }}</td>
+                            <td>{{ formatAmount(commission.outstanding_amount) }}</td>
+                            <td>{{ formatAmount(commission.refunded_amount) }}</td>
+                            <td>{{ formatAmount(commission.transferred_in_amount) }}</td>
+                            <td>{{ formatAmount(commission.transferred_out_amount) }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -277,7 +294,7 @@ const statusClass = status => ({
                         </tr>
                         <tr v-if="!commissions.data.length">
                             <td
-                                colspan="9"
+                                colspan="14"
                                 class="text-center text-muted py-4"
                             >
                                 Տվյալներ չկան։

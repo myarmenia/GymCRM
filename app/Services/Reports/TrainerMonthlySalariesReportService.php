@@ -3,7 +3,7 @@
 namespace App\Services\Reports;
 
 use App\Interfaces\Reports\TrainerMonthlySalariesReportRepositoryInterface;
-use App\Models\TrainerMonthlySalary;
+use App\Models\SalaryPayableAssignment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -20,7 +20,9 @@ class TrainerMonthlySalariesReportService
         $summarySalaries = $this->trainerMonthlySalariesReportRepository->salariesForSummary($user, $filters);
         $paginatedSalaries = $this->trainerMonthlySalariesReportRepository->paginatedSalaries($user, $filters);
 
-        $paginatedSalaries->getCollection()->transform(fn (TrainerMonthlySalary $salary) => $this->mapSalary($salary));
+        $paginatedSalaries->getCollection()->transform(
+            fn (SalaryPayableAssignment $assignment) => $this->mapSalary($assignment)
+        );
 
         return [
             'filters' => $filters,
@@ -35,13 +37,13 @@ class TrainerMonthlySalariesReportService
         $filters = $this->reportFilters($filters);
         $salaries = $this->trainerMonthlySalariesReportRepository
             ->salariesForExport($user, $filters)
-            ->map(fn (TrainerMonthlySalary $salary) => $this->mapSalary($salary));
+            ->map(fn (SalaryPayableAssignment $assignment) => $this->mapSalary($assignment));
 
         return [
             'rows' => $salaries,
             'columns' => $this->exportColumns(),
             'filters' => $filters,
-            'filename' => 'trainer-monthly-salaries-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
+            'filename' => 'trainer-monthly-salaries-report-'.now()->format('Y-m-d-H-i-s').'.xls',
             'title' => 'Մարզիչների աշխատավարձերի հաշվետվություն',
             'summary' => $this->exportSummary($this->summary($salaries)),
         ];
@@ -87,7 +89,7 @@ class TrainerMonthlySalariesReportService
 
     protected function parseDate(?string $value, Carbon $fallback): Carbon
     {
-        if (!$value) {
+        if (! $value) {
             return $fallback;
         }
 
@@ -109,8 +111,9 @@ class TrainerMonthlySalariesReportService
                 ->values(),
             'statuses' => [
                 ['value' => 'pending', 'label' => 'Սպասման մեջ'],
+                ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
                 ['value' => 'paid', 'label' => 'Վճարված'],
-                ['value' => 'transfer', 'label' => 'Փոխանցում'],
+                ['value' => 'transferred', 'label' => 'Փոխանցված'],
                 ['value' => 'cancel', 'label' => 'Չեղարկված'],
                 ['value' => 'reject', 'label' => 'Մերժված'],
             ],
@@ -123,7 +126,12 @@ class TrainerMonthlySalariesReportService
             ['key' => 'trainer', 'title' => 'Մարզիչ'],
             ['key' => 'membership_customer', 'title' => 'Աբոնեմենտ / հաճախորդ'],
             ['key' => 'salary_month', 'title' => 'Աշխատավարձի ամիս'],
-            ['key' => 'price', 'title' => 'Գումար'],
+            ['key' => 'price', 'title' => 'Մարզչին վերագրված'],
+            ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
+            ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
+            ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
+            ['key' => 'transferred_in_amount', 'title' => 'Փոխանցված մուտք'],
+            ['key' => 'transferred_out_amount', 'title' => 'Փոխանցված ելք'],
             ['key' => 'status', 'title' => 'Կարգավիճակ'],
             ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
         ];
@@ -131,11 +139,24 @@ class TrainerMonthlySalariesReportService
 
     protected function summary(Collection $salaries): array
     {
+        $metrics = $salaries->map(fn ($salary) => $this->salaryMetrics($salary));
+        $active = $metrics->reject(fn (array $salary) => in_array($salary['status'], ['cancel', 'reject'], true));
+
         return [
-            'salaries_count' => $salaries->count(),
-            'total_price' => round($salaries->sum(fn ($salary) => (float) (is_array($salary) ? ($salary['price'] ?? 0) : ($salary->price ?? 0))), 2),
-            'paid_price' => round($salaries->sum(fn ($salary) => $this->statusValue($salary, 'paid')), 2),
-            'pending_price' => round($salaries->sum(fn ($salary) => $this->statusValue($salary, 'pending')), 2),
+            'salaries_count' => $salaries->map(
+                fn ($salary) => is_array($salary)
+                    ? ($salary['source_salary_id'] ?? $salary['id'])
+                    : $salary->trainer_monthly_salary_id
+            )->unique()->count(),
+            'parts_count' => $salaries->count(),
+            'total_price' => round($active->sum('total_amount'), 2),
+            'paid_price' => round($active->sum('net_paid_amount'), 2),
+            'pending_price' => round($active->sum('outstanding_amount'), 2),
+            'refunded_price' => round($active->sum('refunded_amount'), 2),
+            'transferred_in_price' => round($active->sum('transferred_in_amount'), 2),
+            'transferred_out_price' => round($active->sum('transferred_out_amount'), 2),
+            'cancelled_price' => round($metrics->where('status', 'cancel')->sum('total_amount'), 2),
+            'rejected_price' => round($metrics->where('status', 'reject')->sum('total_amount'), 2),
         ];
     }
 
@@ -145,49 +166,96 @@ class TrainerMonthlySalariesReportService
             'title' => 'Ամփոփում',
             'rows' => [
                 ['label' => 'Գրանցումների քանակ', 'value' => $summary['salaries_count']],
+                ['label' => 'Մարզիչների բաժինների քանակ', 'value' => $summary['parts_count']],
                 ['label' => 'Ընդհանուր գումար', 'value' => $summary['total_price']],
                 ['label' => 'Վճարված գումար', 'value' => $summary['paid_price']],
                 ['label' => 'Սպասող գումար', 'value' => $summary['pending_price']],
+                ['label' => 'Վերադարձված գումար', 'value' => $summary['refunded_price']],
+                ['label' => 'Փոխանցված մուտք', 'value' => $summary['transferred_in_price']],
+                ['label' => 'Փոխանցված ելք', 'value' => $summary['transferred_out_price']],
+                ['label' => 'Չեղարկված գումար', 'value' => $summary['cancelled_price']],
+                ['label' => 'Մերժված գումար', 'value' => $summary['rejected_price']],
             ],
         ];
     }
 
-    protected function mapSalary(TrainerMonthlySalary $salary): array
+    protected function mapSalary(SalaryPayableAssignment $assignment): array
     {
+        $salary = $assignment->trainerMonthlySalary;
+        $metrics = $this->salaryMetrics($assignment);
+
         return [
-            'id' => $salary->id,
-            'trainer' => $this->userName($salary->trainer),
+            'id' => $assignment->id,
+            'source_salary_id' => $salary?->id,
+            'trainer' => $this->userName($assignment->payee),
             'membership_customer' => $this->membershipCustomer($salary),
-            'salary_month' => $salary->salary_month?->toDateString(),
-            'price' => (float) $salary->price,
-            'status' => $salary->status,
-            'created_at' => $salary->created_at?->toDateTimeString(),
+            'salary_month' => $salary?->salary_month?->toDateString(),
+            'price' => $metrics['total_amount'],
+            'net_paid_amount' => $metrics['net_paid_amount'],
+            'outstanding_amount' => $metrics['outstanding_amount'],
+            'refunded_amount' => $metrics['refunded_amount'],
+            'transferred_in_amount' => $metrics['transferred_in_amount'],
+            'transferred_out_amount' => $metrics['transferred_out_amount'],
+            'status' => $metrics['status'],
+            'created_at' => $assignment->created_at?->toDateTimeString(),
         ];
     }
 
-    protected function statusValue(TrainerMonthlySalary|array $salary, string $status): float
+    protected function salaryMetrics(SalaryPayableAssignment|array $salary): array
     {
-        $salaryStatus = is_array($salary) ? ($salary['status'] ?? null) : $salary->status;
-
-        if ($salaryStatus !== $status) {
-            return 0;
+        if (is_array($salary)) {
+            return [
+                'total_amount' => (float) ($salary['price'] ?? 0),
+                'net_paid_amount' => (float) ($salary['net_paid_amount'] ?? 0),
+                'outstanding_amount' => (float) ($salary['outstanding_amount'] ?? 0),
+                'refunded_amount' => (float) ($salary['refunded_amount'] ?? 0),
+                'transferred_in_amount' => (float) ($salary['transferred_in_amount'] ?? 0),
+                'transferred_out_amount' => (float) ($salary['transferred_out_amount'] ?? 0),
+                'status' => $salary['status'] ?? 'pending',
+            ];
         }
 
-        return (float) (is_array($salary) ? ($salary['price'] ?? 0) : ($salary->price ?? 0));
+        $outstanding = max(round((float) $salary->available_amount, 2), 0);
+        $payout = max(round((float) ($salary->payout_amount ?? 0), 2), 0);
+        $refunded = max(round((float) ($salary->refunded_amount ?? 0), 2), 0);
+        $netPaid = max(round($payout - $refunded, 2), 0);
+        $transferredIn = $salary->parent_assignment_id
+            ? max(round((float) $salary->amount, 2), 0)
+            : 0;
+        $transferredOut = max(round((float) ($salary->transferred_out_amount ?? 0), 2), 0);
+        $sourceStatus = $salary->trainerMonthlySalary?->status;
+
+        $status = match (true) {
+            in_array($sourceStatus, ['cancel', 'reject'], true) => $sourceStatus,
+            $outstanding > 0 && $netPaid > 0 => 'partial',
+            $outstanding <= 0 && $netPaid > 0 => 'paid',
+            $outstanding <= 0 && $transferredOut > 0 => 'transferred',
+            default => 'pending',
+        };
+
+        return [
+            'total_amount' => round($outstanding + $netPaid, 2),
+            'net_paid_amount' => $netPaid,
+            'outstanding_amount' => $outstanding,
+            'refunded_amount' => $refunded,
+            'transferred_in_amount' => $transferredIn,
+            'transferred_out_amount' => $transferredOut,
+            'status' => $status,
+        ];
     }
 
-    protected function membershipCustomer(TrainerMonthlySalary $salary): string
+    protected function membershipCustomer($salary): string
     {
-        $membership = $salary->personMembership;
+        $membership = $salary?->personMembership;
         $planName = $this->membershipPlanName($membership?->membershipPlan);
-        $customerName = trim(($membership?->person?->name ?? '') . ' ' . ($membership?->person?->surname ?? '')) ?: '-';
+        $customerName = trim(($membership?->person?->name ?? '').' '.($membership?->person?->surname ?? '')) ?: '-';
 
-        return trim(($planName ?? '-') . ' / ' . $customerName);
+        return trim(($planName ?? '-').' / '.$customerName);
     }
 
     protected function membershipPlanName($membershipPlan): ?string
     {
-        if (!$membershipPlan) {
+        if (! $membershipPlan) {
             return null;
         }
 
@@ -198,6 +266,6 @@ class TrainerMonthlySalariesReportService
 
     protected function userName(?User $user): string
     {
-        return trim(($user?->name ?? '') . ' ' . ($user?->surname ?? '')) ?: ($user?->email ?? '-');
+        return trim(($user?->name ?? '').' '.($user?->surname ?? '')) ?: ($user?->email ?? '-');
     }
 }

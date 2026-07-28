@@ -2,6 +2,7 @@
 
 namespace App\Services\TrainerMonthlySalaries;
 
+use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\TrainerMonthlySalary;
 use Carbon\Carbon;
@@ -53,7 +54,7 @@ class TrainerMonthlySalaryService
 
         $personMembership = $trainerCommission->personMembership;
 
-        if (!$personMembership || !$trainerCommission->created_at) {
+        if (! $personMembership || ! $trainerCommission->created_at) {
             return null;
         }
 
@@ -78,7 +79,24 @@ class TrainerMonthlySalaryService
             return null;
         }
 
-        return TrainerMonthlySalary::query()->firstOrCreate(
+        $existingMonthlySalary = TrainerMonthlySalary::query()
+            ->where('person_membership_id', $personMembership->id)
+            ->whereDate('salary_month', $runDate->copy()->startOfMonth()->toDateString())
+            ->first();
+
+        if ($existingMonthlySalary) {
+            return (int) $existingMonthlySalary->trainer_commission_id === (int) $trainerCommission->id
+                ? $existingMonthlySalary
+                : null;
+        }
+
+        $monthlyPrice = $this->monthlyPrice($trainerCommission, $personMembership);
+
+        if ($monthlyPrice <= 0) {
+            return null;
+        }
+
+        $monthlySalary = TrainerMonthlySalary::query()->firstOrCreate(
             [
                 'trainer_id' => $trainerCommission->trainer_id,
                 'person_membership_id' => $personMembership->id,
@@ -86,10 +104,31 @@ class TrainerMonthlySalaryService
                 'salary_month' => $runDate->copy()->startOfMonth()->toDateString(),
             ],
             [
-                'price' => $this->monthlyPrice($trainerCommission, $personMembership),
+                'price' => $monthlyPrice,
                 'status' => 'pending',
             ]
         );
+
+        SalaryPayableAssignment::query()->firstOrCreate(
+            [
+                'root_key' => "trainer:{$monthlySalary->id}",
+            ],
+            [
+                'gym_id' => $personMembership->gym_id,
+                'payee_id' => $monthlySalary->trainer_id,
+                'source_type' => 'trainer_monthly_salary',
+                'trainer_monthly_salary_id' => $monthlySalary->id,
+                'salesperson_commission_id' => null,
+                'trainer_commission_id' => $trainerCommission->id,
+                'parent_assignment_id' => null,
+                'amount' => $monthlySalary->price,
+                'available_amount' => in_array($monthlySalary->status, ['pending', 'transfer'], true)
+                    ? $monthlySalary->price
+                    : 0,
+            ],
+        );
+
+        return $monthlySalary;
     }
 
     protected function monthlyDueDate(Carbon $commissionDate, int $monthOffset): Carbon
@@ -100,13 +139,24 @@ class TrainerMonthlySalaryService
     protected function monthlyPrice(TrainerCommission $trainerCommission, $personMembership): float
     {
         $monthCount = $this->membershipMonthCount($personMembership);
+        $generatedCount = TrainerMonthlySalary::query()
+            ->where('person_membership_id', $personMembership->id)
+            ->count();
+        $outstandingGeneratedAmount = (float) SalaryPayableAssignment::query()
+            ->where('trainer_commission_id', $trainerCommission->id)
+            ->sum('available_amount');
+        $unallocatedAmount = max(
+            (float) $trainerCommission->salary_amount - $outstandingGeneratedAmount,
+            0,
+        );
+        $remainingInstallments = max($monthCount - $generatedCount, 1);
 
-        return round(((float) $trainerCommission->salary_amount) / $monthCount, 2);
+        return round($unallocatedAmount / $remainingInstallments, 2);
     }
 
     protected function membershipMonthCount($personMembership): int
     {
-        if (!$personMembership->start_date || !$personMembership->end_date) {
+        if (! $personMembership->start_date || ! $personMembership->end_date) {
             return 1;
         }
 

@@ -172,6 +172,16 @@ class User extends Authenticatable
         return $this->hasMany(SalespersonCommission::class, 'salesperson_id');
     }
 
+    public function salaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class, 'payee_id');
+    }
+
+    public function processedSalaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class, 'paid_by');
+    }
+
     public function sentNotifications()
     {
         return $this->hasMany(Notification::class, 'sender_id');
