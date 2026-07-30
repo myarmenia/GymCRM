@@ -14,6 +14,7 @@ use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\EntryReportController;
+use App\Http\Controllers\FinancialTransactionController;
 use App\Http\Controllers\Gyms\GymController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Membership\MembershipPlanController;
@@ -138,6 +139,18 @@ Route::prefix('{locale}')
                     '/assignments/{salaryPayableAssignment}/transfer',
                     [SalaryPayoutController::class, 'transfer']
                 )->name('transfer');
+            });
+
+            Route::prefix('finance')->name('finance.')->group(function () {
+                Route::get('/', [FinancialTransactionController::class, 'index'])->name('index');
+                Route::get('/export', [FinancialTransactionController::class, 'export'])->name('export');
+                Route::get('/print', [FinancialTransactionController::class, 'print'])->name('print');
+                Route::post('/transactions', [FinancialTransactionController::class, 'store'])->name('store');
+                Route::post('/categories', [FinancialTransactionController::class, 'storeCategory'])->name('categories.store');
+                Route::post(
+                    '/transactions/{financialTransaction}/reverse',
+                    [FinancialTransactionController::class, 'reverse'],
+                )->name('reverse');
             });
 
             // ====== users ================

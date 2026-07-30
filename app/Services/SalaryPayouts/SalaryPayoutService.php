@@ -13,6 +13,7 @@ use App\Models\SalespersonCommission;
 use App\Models\TrainerCommission;
 use App\Models\TrainerMonthlySalary;
 use App\Models\User;
+use App\Services\Finance\FinancialLedgerService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -23,6 +24,10 @@ use Illuminate\Validation\ValidationException;
 class SalaryPayoutService
 {
     private const MANAGER_ROLES = ['owner', 'admin', 'super_admin', 'accountant'];
+
+    public function __construct(
+        protected FinancialLedgerService $financialLedgerService,
+    ) {}
 
     public function pageData(User $actor, array $filters = []): array
     {
@@ -164,6 +169,8 @@ class SalaryPayoutService
                 $this->debitAssignmentCommission($assignment, $item['amount'], $payout->paid_at);
                 $this->refreshAssignmentSourceStatus($assignment, false, $payout->paid_at);
             }
+
+            $this->financialLedgerService->recordSalaryPayout($payout);
 
             return $payout->load([
                 'payee',
@@ -443,6 +450,8 @@ class SalaryPayoutService
                 'void_reason' => $data['reason'],
             ]);
         }
+
+        $this->financialLedgerService->recordSalaryRefund($refund);
 
         return $refund->load(['items.payoutItem', 'paymentMethod.translations', 'refundedBy']);
     }

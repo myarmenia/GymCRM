@@ -22,6 +22,10 @@ const props = defineProps({
         type: [Array, Object],
         default: () => [],
     },
+    paymentMethods: {
+        type: [Array, Object],
+        default: () => [],
+    },
 });
 
 const page = usePage();
@@ -37,7 +41,12 @@ const selectedPersonId = ref("");
 const step = ref("cart");
 const discountPercent = ref(0);
 const cashReceived = ref("");
-const paymentMethod = ref("cash");
+const cardTypeId = ref("");
+const paymentMethodId = ref(
+    (props.paymentMethods?.data ?? props.paymentMethods ?? []).find(
+        (method) => method.slug === "cash",
+    )?.id ?? "",
+);
 const errors = ref("");
 const success = ref("");
 const isSubmitting = ref(false);
@@ -70,8 +79,10 @@ watch(categoryId, () => {
     subCategoryId.value = "";
 });
 
-watch(paymentMethod, (method) => {
-    if (method === "card") {
+watch(paymentMethodId, () => {
+    cardTypeId.value = "";
+
+    if (!isCashPayment.value) {
         cashReceived.value = "";
     }
 });
@@ -92,6 +103,44 @@ const localCategories = computed(
 const localWarehouses = computed(
     () => props.warehouses?.data ?? props.warehouses ?? [],
 );
+const localPaymentMethods = computed(
+    () => props.paymentMethods?.data ?? props.paymentMethods ?? [],
+);
+const selectedPaymentMethod = computed(() =>
+    localPaymentMethods.value.find(
+        (method) => Number(method.id) === Number(paymentMethodId.value),
+    ),
+);
+const isCashPayment = computed(
+    () => selectedPaymentMethod.value?.slug === "cash",
+);
+const availableCardTypes = computed(
+    () =>
+        selectedPaymentMethod.value?.card_types ??
+        selectedPaymentMethod.value?.cardTypes ??
+        [],
+);
+const requiresCardType = computed(
+    () => availableCardTypes.value.length > 0,
+);
+
+const translatedPaymentMethodName = (method) => {
+    return (
+        method?.translations?.find(
+            (translation) => translation.locale === currentLocale,
+        )?.name ??
+        method?.name ??
+        method?.slug ??
+        "-"
+    );
+};
+
+const paymentMethodIcon = (method) => {
+    if (method?.slug === "cash") return "tabler-cash";
+    if (method?.slug === "card") return "tabler-credit-card";
+
+    return "tabler-building-bank";
+};
 
 const selectedCategory = computed(() => {
     return localCategories.value.find(
@@ -122,7 +171,7 @@ const payableTotal = computed(() => {
 });
 
 const changeAmount = computed(() => {
-    if (paymentMethod.value !== "cash") {
+    if (!isCashPayment.value) {
         return 0;
     }
 
@@ -136,8 +185,12 @@ const canFinishSale = computed(() => {
         return false;
     }
 
-    if (paymentMethod.value === "cash") {
+    if (isCashPayment.value) {
         return Number(cashReceived.value || 0) >= payableTotal.value;
+    }
+
+    if (requiresCardType.value && !cardTypeId.value) {
+        return false;
     }
 
     return true;
@@ -237,7 +290,10 @@ const resetOrderState = ({ clearSuccess = true } = {}) => {
     step.value = "cart";
     discountPercent.value = 0;
     cashReceived.value = "";
-    paymentMethod.value = "cash";
+    cardTypeId.value = "";
+    paymentMethodId.value =
+        localPaymentMethods.value.find((method) => method.slug === "cash")
+            ?.id ?? "";
     errors.value = "";
 
     if (clearSuccess) {
@@ -434,10 +490,15 @@ const finishSale = () => {
     discountPercent.value = clampDiscount(discountPercent.value);
 
     if (
-        paymentMethod.value === "cash" &&
+        isCashPayment.value &&
         Number(cashReceived.value || 0) < payableTotal.value
     ) {
         setError("Ստացված կանխիկ գումարը պետք է բավարար լինի վճարման համար");
+        return;
+    }
+
+    if (requiresCardType.value && !cardTypeId.value) {
+        setError("Ընտրեք քարտի տեսակը");
         return;
     }
 
@@ -452,16 +513,17 @@ const finishSale = () => {
         route("purchase.sell", { locale: currentLocale }),
         {
             person_id: selectedPersonId.value || null,
-            payment_method: paymentMethod.value,
+            payment_method_id: paymentMethodId.value,
+            card_type_id: cardTypeId.value || null,
             discount_percent: clampDiscount(discountPercent.value),
             subtotal: subtotal.value,
             total: payableTotal.value,
             cash_received:
-                paymentMethod.value === "cash"
+                isCashPayment.value
                     ? Number(cashReceived.value || 0)
                     : 0,
             change_amount:
-                paymentMethod.value === "cash" ? changeAmount.value : 0,
+                isCashPayment.value ? changeAmount.value : 0,
             items: soldItems,
         },
         {
@@ -974,27 +1036,48 @@ const finishSale = () => {
                                                 </label>
                                                 <div class="payment-methods">
                                                     <button
+                                                        v-for="method in localPaymentMethods"
+                                                        :key="method.id"
                                                         type="button"
                                                         class="payment-method-btn"
-                                                        :class="{ active: paymentMethod === 'cash' }"
-                                                        @click="paymentMethod = 'cash'"
+                                                        :class="{ active: Number(paymentMethodId) === Number(method.id) }"
+                                                        @click="paymentMethodId = method.id"
                                                     >
-                                                        <i class="icon-base ti tabler-cash me-1"></i>
-                                                        Կանխիկ
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="payment-method-btn"
-                                                        :class="{ active: paymentMethod === 'card' }"
-                                                        @click="paymentMethod = 'card'"
-                                                    >
-                                                        <i class="icon-base ti tabler-credit-card me-1"></i>
-                                                        Քարտ
+                                                        <i
+                                                            class="icon-base ti me-1"
+                                                            :class="paymentMethodIcon(method)"
+                                                        ></i>
+                                                        {{ translatedPaymentMethodName(method) }}
                                                     </button>
                                                 </div>
                                             </div>
 
-                                            <div v-if="paymentMethod === 'cash'" class="mb-3">
+                                            <div
+                                                v-if="requiresCardType"
+                                                class="mb-3"
+                                            >
+                                                <label class="form-label fw-semibold">
+                                                    Քարտի տեսակ
+                                                </label>
+                                                <select
+                                                    v-model="cardTypeId"
+                                                    class="form-select"
+                                                    required
+                                                >
+                                                    <option value="" disabled>
+                                                        Ընտրել քարտի տեսակը
+                                                    </option>
+                                                    <option
+                                                        v-for="cardType in availableCardTypes"
+                                                        :key="cardType.id"
+                                                        :value="cardType.id"
+                                                    >
+                                                        {{ cardType.name ?? `#${cardType.id}` }}
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div v-if="isCashPayment" class="mb-3">
                                                 <label class="form-label fw-semibold">
                                                     Ստացված գումար
                                                 </label>
@@ -1013,7 +1096,7 @@ const finishSale = () => {
 
                                             <div v-else class="info-box mb-3">
                                                 <i class="icon-base ti tabler-info-circle"></i>
-                                                <span>Քարտային վճարման դեպքում կանխիկ գումար մուտքագրել պետք չէ։</span>
+                                                <span>Անկանխիկ վճարման դեպքում կանխիկ գումար մուտքագրել պետք չէ։</span>
                                             </div>
 
                                             <div class="d-grid gap-2">

@@ -86,22 +86,6 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'accountant'])"
-                :class="[
-                    'menu-item',
-                    route().current('salary-payouts.*') ? 'active' : '',
-                ]"
-            >
-                <Link
-                    :href="route('salary-payouts.index', { locale: currentLocale })"
-                    class="menu-link"
-                >
-                    <i class="menu-icon icon-base ti tabler-cash"></i>
-                    <div>Աշխատավարձերի վճարումներ</div>
-                </Link>
-            </li>
-
-            <li
                 v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager', 'manager'])"
                 :class="[
                     'menu-item',
@@ -448,11 +432,16 @@ const { hasRole, hasAnyRole } = useAuth();
                         'owner',
                         'sales_manager',
                         'manager',
+                        'accountant',
                     ])
                 "
                 :class="[
                     'menu-item',
-                    route().current('purchase.*') ? 'active open' : '',
+                    route().current('purchase.*') ||
+                    route().current('finance.*') ||
+                    route().current('salary-payouts.*')
+                        ? 'active open'
+                        : '',
                 ]"
             >
                 <a href="javascript:void(0);" class="menu-link menu-toggle">
@@ -461,6 +450,35 @@ const { hasRole, hasAnyRole } = useAuth();
                 </a>
 
                 <ul class="menu-sub">
+                    <li
+                        :class="[
+                            'menu-item',
+                            route().current('finance.*') ? 'active' : '',
+                        ]"
+                    >
+                        <Link
+                            :href="route('finance.index', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div data-i18n="Finance">Ֆինանսական շարժեր</div>
+                        </Link>
+                    </li>
+
+                    <li
+                        v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'accountant'])"
+                        :class="[
+                            'menu-item',
+                            route().current('salary-payouts.*') ? 'active' : '',
+                        ]"
+                    >
+                        <Link
+                            :href="route('salary-payouts.index', { locale: currentLocale })"
+                            class="menu-link"
+                        >
+                            <div>Աշխատավարձերի վճարումներ</div>
+                        </Link>
+                    </li>
+
                     <li
                         :class="[
                             'menu-item',

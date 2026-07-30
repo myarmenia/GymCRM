@@ -12,4 +12,9 @@ class CardType extends Model
     {
         return $this->hasMany(MembershipPlanPayment::class);
     }
+
+    public function purchases()
+    {
+        return $this->hasMany(Purchase::class);
+    }
 }

@@ -23,6 +23,7 @@ use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\Finance\FinancialLedgerService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -39,6 +40,7 @@ class MembershipSaleService
         protected TrainerCommissionInterface $trainerCommissionRepository,
         protected SalespersonCommissionInterface $salespersonCommissionRepository,
         protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
+        protected FinancialLedgerService $financialLedgerService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -312,7 +314,7 @@ class MembershipSaleService
             $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $paymentAmount);
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
-            $this->membershipPlanPaymentRepository->create(
+            $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
                     'membership_sale_id' => $membershipSale->id,
                     'amount' => $paymentAmount,
@@ -324,6 +326,7 @@ class MembershipSaleService
                     'notes' => $data['payment_notes'] ?? null,
                 ])
             );
+            $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
 
             $membershipSale->update([
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
@@ -357,7 +360,7 @@ class MembershipSaleService
             $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $refundAmount);
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
-            $this->membershipPlanPaymentRepository->create(
+            $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
                     'membership_sale_id' => $membershipSale->id,
                     'amount' => $refundAmount,
@@ -369,6 +372,7 @@ class MembershipSaleService
                     'notes' => $data['refund_notes'] ?? null,
                 ])
             );
+            $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
 
             $membershipSale->update([
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
@@ -543,7 +547,7 @@ class MembershipSaleService
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
             if ($paymentMethodId) {
-                $this->membershipPlanPaymentRepository->create(
+                $payment = $this->membershipPlanPaymentRepository->create(
                     $this->paymentDtoData([
                         'membership_sale_id' => $membershipSale->id,
                         'amount' => $paymentAmount,
@@ -555,6 +559,10 @@ class MembershipSaleService
                         'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
                     ])
                 );
+
+                if ($paymentAmount > 0) {
+                    $this->financialLedgerService->recordMembershipPayment($payment, $user->id);
+                }
             }
 
             if (! empty($data['trainer_id'])) {

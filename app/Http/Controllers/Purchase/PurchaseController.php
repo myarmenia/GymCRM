@@ -15,6 +15,7 @@ use App\Services\Purchase\PurchaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -22,8 +23,8 @@ class PurchaseController extends Controller
 {
     public function __construct(protected CategoryService $categoryService, protected PurchaseService $purchaseService) {}
 
-    //public function index(Request $request, string $locale)
-    //{
+    // public function index(Request $request, string $locale)
+    // {
     //    $gymId = auth()->user()->gym_id ?? auth()->user()->gym?->id;
     //
     //    $search = $request->get('search');
@@ -143,7 +144,7 @@ class PurchaseController extends Controller
     //        ]),
     //        'peoples' => $peoples,
     //    ]);
-    //}
+    // }
 
     public function index(Request $request, string $locale)
     {
@@ -164,8 +165,8 @@ class PurchaseController extends Controller
         return Inertia::render('Purchase/Index', $data);
     }
 
-    //public function history(Request $request, string $locale)
-    //{
+    // public function history(Request $request, string $locale)
+    // {
     //    $gymId = auth()->user()->gym_id ?? auth()->user()->gym?->id;
     //
     //    $search = trim((string) $request->get('search', ''));
@@ -283,7 +284,7 @@ class PurchaseController extends Controller
     //        'peoples' => $peoples,
     //        'warehouses' => $warehouses,
     //    ]);
-    //}
+    // }
 
     public function history(Request $request, string $locale)
     {
@@ -296,7 +297,7 @@ class PurchaseController extends Controller
                 'search' => trim((string) $request->get('search', '')),
                 'start_date' => $request->get('start_date'),
                 'end_date' => $request->get('end_date'),
-                'payment_method' => $request->get('payment_method'),
+                'payment_method_id' => $request->get('payment_method_id'),
                 'person_id' => $request->get('person_id'),
                 'warehouse_id' => $request->get('warehouse_id'),
             ]
@@ -308,15 +309,15 @@ class PurchaseController extends Controller
                 'search',
                 'start_date',
                 'end_date',
-                'payment_method',
+                'payment_method_id',
                 'person_id',
                 'warehouse_id',
             ]),
         ]);
     }
 
-    //public function sell(Request $request, string $locale)
-    //{
+    // public function sell(Request $request, string $locale)
+    // {
     //    $validated = $request->validate([
     //        'person_id' => ['nullable', 'exists:people,id'],
     //
@@ -463,14 +464,21 @@ class PurchaseController extends Controller
     //            'sell' => 'Վաճառքը չհաջողվեց կատարել։',
     //        ]);
     //    }
-    //}
+    // }
 
     public function sell(Request $request, string $locale)
     {
         $validated = $request->validate([
             'person_id' => ['nullable', 'exists:people,id'],
 
-            'payment_method' => ['required', 'in:cash,card'],
+            'payment_method_id' => [
+                'required',
+                'integer',
+                Rule::exists('payment_methods', 'id')->where(
+                    fn ($query) => $query->where('slug', '!=', 'free')
+                ),
+            ],
+            'card_type_id' => ['nullable', 'integer', 'exists:card_types,id'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'subtotal' => ['required', 'numeric', 'min:0'],
             'total' => ['required', 'numeric', 'min:0'],
