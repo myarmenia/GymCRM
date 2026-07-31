@@ -24,6 +24,7 @@ use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\User;
 use App\Services\Finance\FinancialLedgerService;
+use App\Services\Reminders\ReminderService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -41,6 +42,7 @@ class MembershipSaleService
         protected SalespersonCommissionInterface $salespersonCommissionRepository,
         protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
         protected FinancialLedgerService $financialLedgerService,
+        protected ReminderService $reminderService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -332,6 +334,10 @@ class MembershipSaleService
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
             ]);
 
+            if ($membershipSale->fresh()->payment_status === 'paid') {
+                $this->reminderService->cancelForMembershipSale($membershipSale->id);
+            }
+
             DB::commit();
 
             return $this->getById($membershipSale->id);
@@ -339,6 +345,30 @@ class MembershipSaleService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function createPaymentReminder(int $id, array $data)
+    {
+        $membershipSale = $this->getById($id);
+        $debtAmount = $this->debtAmount($membershipSale);
+
+        if ($debtAmount <= 0) {
+            throw ValidationException::withMessages([
+                'reminder_scheduled_at' => 'Այս աբոնեմենտի համար վճարման պարտք չկա։',
+            ]);
+        }
+
+        return $this->reminderService->createForMembershipDebt(
+            Auth::user(),
+            $membershipSale->loadMissing('person'),
+            [
+                'scheduled_at' => $data['reminder_scheduled_at'],
+                'recipient_ids' => $data['reminder_recipient_ids'],
+                'title' => $data['reminder_title'] ?? null,
+                'description' => $data['reminder_description'] ?? null,
+            ],
+            $debtAmount,
+        );
     }
 
     public function storeRefund(int $id, array $data): MembershipSale
@@ -402,6 +432,8 @@ class MembershipSaleService
             'status' => 'cancelled',
         ]);
 
+        $this->reminderService->cancelForMembershipSale($membershipSale->id);
+
         return $this->getById($membershipSale->id);
     }
 
@@ -455,7 +487,20 @@ class MembershipSaleService
             ? $this->customerCurrentMemberships($personId, $user)
             : collect();
 
-        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson', 'customerMemberships');
+        $reminderUsers = $this->reminderService->usersForSelect($user);
+        $defaultReminderRecipientIds = $this->reminderService->defaultMembershipRecipients($user);
+
+        return compact(
+            'membershipPlans',
+            'people',
+            'trainers',
+            'paymentMethods',
+            'discountTypes',
+            'selectedPerson',
+            'customerMemberships',
+            'reminderUsers',
+            'defaultReminderRecipientIds',
+        );
     }
 
     public function store(array $data)
@@ -617,6 +662,36 @@ class MembershipSaleService
                 'amount' => $salespersonCommission->salary_amount,
                 'available_amount' => $salespersonCommission->salary_amount,
             ]);
+
+            $debtAmount = max($finalPrice - $paymentAmount, 0);
+
+            if ($debtAmount > 0) {
+                $reminderErrors = [];
+
+                if (empty($data['reminder_scheduled_at'])) {
+                    $reminderErrors['reminder_scheduled_at'] = 'Նշեք վճարման հիշեցման օրն ու ժամը։';
+                }
+
+                if (empty($data['reminder_recipient_ids'])) {
+                    $reminderErrors['reminder_recipient_ids'] = 'Ընտրեք առնվազն մեկ հիշեցման ստացող։';
+                }
+
+                if (! empty($reminderErrors)) {
+                    throw ValidationException::withMessages($reminderErrors);
+                }
+
+                $this->reminderService->createForMembershipDebt(
+                    $user,
+                    $membershipSale->loadMissing('person'),
+                    [
+                        'scheduled_at' => $data['reminder_scheduled_at'] ?? null,
+                        'recipient_ids' => $data['reminder_recipient_ids'] ?? [],
+                        'title' => $data['reminder_title'] ?? null,
+                        'description' => $data['reminder_description'] ?? null,
+                    ],
+                    $debtAmount,
+                );
+            }
 
             DB::commit();
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\MembershipSales;
 
 use App\Models\PaymentMethod;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,6 +31,9 @@ class StoreMembershipSaleRequest extends FormRequest
             'payment_record_status',
             'payment_notes',
             'notes',
+            'reminder_scheduled_at',
+            'reminder_title',
+            'reminder_description',
         ];
 
         $data = [];
@@ -48,11 +52,11 @@ class StoreMembershipSaleRequest extends FormRequest
             ? PaymentMethod::query()->with('cardTypes')->find($this->input('payment_method_id'))
             : null;
 
-        if ($paymentMethod && !$paymentMethod->cardTypes->count()) {
+        if ($paymentMethod && ! $paymentMethod->cardTypes->count()) {
             $data['card_type_id'] = null;
         }
 
-        if (!empty($data)) {
+        if (! empty($data)) {
             $this->merge($data);
         }
     }
@@ -82,6 +86,19 @@ class StoreMembershipSaleRequest extends FormRequest
             'payment_type' => ['nullable', Rule::in(['payment', 'refund'])],
             'payment_record_status' => ['nullable', Rule::in(['unpaid', 'pending', 'paid', 'cancelled'])],
             'payment_notes' => ['nullable', 'string'],
+            'reminder_scheduled_at' => [
+                'nullable',
+                'date',
+                'after:now',
+            ],
+            'reminder_recipient_ids' => [
+                'nullable',
+                'array',
+                'min:1',
+            ],
+            'reminder_recipient_ids.*' => ['integer', 'exists:users,id'],
+            'reminder_title' => ['nullable', 'string', 'max:255'],
+            'reminder_description' => ['nullable', 'string'],
         ];
     }
 
@@ -92,8 +109,8 @@ class StoreMembershipSaleRequest extends FormRequest
                 $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
             }
 
-            if (!$this->boolean('stay_debt')) {
-                if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
+            if (! $this->boolean('stay_debt')) {
+                if ($this->submittedPaymentAmount() > 0 && ! $this->filled('payment_method_id')) {
                     $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
                 }
 
@@ -104,25 +121,46 @@ class StoreMembershipSaleRequest extends FormRequest
                 if ($paymentMethod) {
                     $requiresCardType = $paymentMethod->cardTypes->count() > 0;
 
-                    if ($requiresCardType && !$this->filled('card_type_id')) {
+                    if ($requiresCardType && ! $this->filled('card_type_id')) {
                         $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
                     }
 
-                    if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
+                    if ($this->filled('card_type_id') && ! $paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
                         $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
                     }
                 }
             }
 
-            if (!$this->boolean('apply_discount')) {
+            $actor = $this->user();
+            $recipientIds = array_values(array_unique(array_map(
+                'intval',
+                (array) $this->input('reminder_recipient_ids', [])
+            )));
+
+            if ($actor && ! empty($recipientIds)) {
+                $hasInvalidRecipient = User::query()
+                    ->whereIn('id', $recipientIds)
+                    ->where(function ($query) use ($actor) {
+                        $query
+                            ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('name', 'owner'))
+                            ->when(! $actor->hasRole('owner'), fn ($userQuery) => $userQuery->orWhere('gym_id', '!=', $actor->gym_id));
+                    })
+                    ->exists();
+
+                if ($hasInvalidRecipient) {
+                    $validator->errors()->add('reminder_recipient_ids', 'Ընտրված հիշեցման ստացողներից մեկը հասանելի չէ։');
+                }
+            }
+
+            if (! $this->boolean('apply_discount')) {
                 return;
             }
 
-            if (!$this->filled('discount_type')) {
+            if (! $this->filled('discount_type')) {
                 $validator->errors()->add('discount_type', 'Զեղչի տեսակը պարտադիր է։');
             }
 
-            if (!$this->filled('discount_value')) {
+            if (! $this->filled('discount_value')) {
                 $validator->errors()->add('discount_value', 'Զեղչի արժեքը պարտադիր է։');
             }
 
@@ -172,6 +210,10 @@ class StoreMembershipSaleRequest extends FormRequest
             'payment_type' => 'վճարման տեսակ',
             'payment_record_status' => 'վճարման կարգավիճակ',
             'payment_notes' => 'վճարման նշումներ',
+            'reminder_scheduled_at' => 'հիշեցման օր և ժամ',
+            'reminder_recipient_ids' => 'հիշեցման ստացողներ',
+            'reminder_title' => 'հիշեցման վերնագիր',
+            'reminder_description' => 'հիշեցման նկարագրություն',
         ];
     }
 
@@ -194,7 +236,7 @@ class StoreMembershipSaleRequest extends FormRequest
             base_path('database/migrations/2026_06_08_000004_create_membership_sales_table.php')
         );
 
-        if (!preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
+        if (! preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
             return [];
         }
 

@@ -25,6 +25,7 @@ use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Purchase\PurchaseController;
+use App\Http\Controllers\Reminders\ReminderController;
 use App\Http\Controllers\Reports\CommissionsReportController;
 use App\Http\Controllers\Reports\EntryExitReportController;
 use App\Http\Controllers\Reports\MembershipSalesReportController;
@@ -101,6 +102,12 @@ Route::prefix('{locale}')
                 Route::post('/', [NotificationController::class, 'store'])->name('store');
                 Route::delete('/all', [NotificationController::class, 'destroyAll'])->name('destroy-all');
                 Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::prefix('reminders')->name('reminders.')->group(function () {
+                Route::get('/', [ReminderController::class, 'index'])->name('index');
+                Route::post('/', [ReminderController::class, 'store'])->name('store');
+                Route::patch('/{reminder}/cancel', [ReminderController::class, 'cancel'])->name('cancel');
             });
 
             Route::prefix('reports')->name('reports.')->group(function () {
@@ -304,6 +311,7 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
                     Route::post('/payments/{id}', [MembershipSaleController::class, 'storePayment'])->name('payments.store');
+                    Route::post('/reminders/{id}', [MembershipSaleController::class, 'storeReminder'])->name('reminders.store');
                     Route::get('/guests/{id}', [MembershipSaleController::class, 'guests'])->name('guests');
                     Route::get('/guests/{id}/lookup', [MembershipSaleController::class, 'lookupGuest'])->name('guests.lookup');
                     Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
