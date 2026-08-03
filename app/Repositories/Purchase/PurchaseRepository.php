@@ -5,16 +5,9 @@ namespace App\Repositories\Purchase;
 use App\Interfaces\Purchase\PurchaseInterface;
 use App\Models\Purchase;
 use App\Repositories\BaseRepository;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
-use Illuminate\Database\Eloquent\Model;
-
-
-
 
 class PurchaseRepository extends BaseRepository implements PurchaseInterface
 {
-
     public function __construct(Purchase $model)
     {
         parent::__construct($model);
@@ -26,7 +19,7 @@ class PurchaseRepository extends BaseRepository implements PurchaseInterface
         ?string $search = null,
         ?string $startDate = null,
         ?string $endDate = null,
-        ?string $paymentMethod = null,
+        ?int $paymentMethodId = null,
         ?int $personId = null,
         ?int $warehouseId = null,
         int $perPage = 10
@@ -35,6 +28,8 @@ class PurchaseRepository extends BaseRepository implements PurchaseInterface
             ->with([
                 'person:id,name,surname',
                 'warehouse:id,name',
+                'paymentMethod.translations',
+                'cardType:id,name',
                 'items.product.translations' => function ($query) use ($locale) {
                     $query->where('locale', $locale);
                 },
@@ -65,8 +60,8 @@ class PurchaseRepository extends BaseRepository implements PurchaseInterface
             ->when($endDate, function ($query) use ($endDate) {
                 $query->whereDate('created_at', '<=', $endDate);
             })
-            ->when($paymentMethod, function ($query) use ($paymentMethod) {
-                $query->where('payment_method', $paymentMethod);
+            ->when($paymentMethodId, function ($query) use ($paymentMethodId) {
+                $query->where('payment_method_id', $paymentMethodId);
             })
             ->when($personId, function ($query) use ($personId) {
                 $query->where('people_id', $personId);

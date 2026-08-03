@@ -94,7 +94,10 @@ const summaryCards = computed(() => [
     { label: 'Գրանցումների քանակ', value: props.summary.commissions_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
     { label: 'Վաճառքների գումար', value: formatAmount(props.summary.total_sale_amount), icon: 'tabler-receipt', class: 'bg-label-info text-info' },
     { label: 'Միջնորդավճար', value: formatAmount(props.summary.total_commission_amount), icon: 'tabler-cash', class: 'bg-label-success text-success' },
+    { label: 'Զուտ վճարված', value: formatAmount(props.summary.paid_commission_amount), icon: 'tabler-check', class: 'bg-label-success text-success' },
     { label: 'Սպասող միջնորդավճար', value: formatAmount(props.summary.pending_commission_amount), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
+    { label: 'Վերադարձված', value: formatAmount(props.summary.refunded_commission_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: 'Չեղարկված', value: formatAmount(props.summary.cancelled_commission_amount), icon: 'tabler-ban', class: 'bg-label-secondary text-secondary' },
 ])
 
 const updateFilters = payload => {
@@ -161,12 +164,14 @@ const salaryTypeLabel = type => ({
 
 const statusLabel = status => ({
     pending: 'Սպասման մեջ',
+    partial: 'Մասնակի վճարված',
     paid: 'Վճարված',
     cancelled: 'Չեղարկված',
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
     pending: 'bg-label-warning',
+    partial: 'bg-label-info',
     paid: 'bg-label-success',
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
@@ -249,6 +254,9 @@ const statusClass = status => ({
                             <th>Միջնորդավճարի տեսակ</th>
                             <th>Միջնորդավճարի արժեք</th>
                             <th>Միջնորդավճարի գումար</th>
+                            <th>Զուտ վճարված</th>
+                            <th>Չվճարված մնացորդ</th>
+                            <th>Վերադարձված</th>
                             <th>Կարգավիճակ</th>
                             <th>Ստեղծվել է</th>
                         </tr>
@@ -264,6 +272,9 @@ const statusClass = status => ({
                             <td>{{ salaryTypeLabel(commission.salary_type) }}</td>
                             <td>{{ formatAmount(commission.salary_value) }}</td>
                             <td>{{ formatAmount(commission.salary_amount) }}</td>
+                            <td>{{ formatAmount(commission.net_paid_amount) }}</td>
+                            <td>{{ formatAmount(commission.outstanding_amount) }}</td>
+                            <td>{{ formatAmount(commission.refunded_amount) }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -276,7 +287,7 @@ const statusClass = status => ({
                         </tr>
                         <tr v-if="!commissions.data.length">
                             <td
-                                colspan="8"
+                                colspan="11"
                                 class="text-center text-muted py-4"
                             >
                                 Տվյալներ չկան։

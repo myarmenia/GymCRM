@@ -63,7 +63,6 @@ function findingDurationType(value) {
                     </span>
                 </Link>
             </div>
-            <h5 class="card-header">Աղյուսակ</h5>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered">

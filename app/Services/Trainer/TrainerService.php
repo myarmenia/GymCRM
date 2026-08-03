@@ -7,13 +7,14 @@ use App\Interfaces\Trainer\TrainerInterface;
 use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
 use App\Interfaces\TrainerSessionDuration\TrainerSessionDurationInterface;
 use App\Interfaces\TrainerSessionDurationSlot\TrainerSessionDurationSlotInterface;
-use App\Models\TrainerCommission;
 use App\Models\PersonMembership;
+use App\Models\SalaryPayableAssignment;
+use App\Models\TrainerMonthlySalary;
 use App\Models\TrainerSchedule;
 use App\Models\TrainerSessionDuration;
-use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\EntryCodes\EntryCodeService;
+use App\Services\SalaryPayouts\SalaryPayoutService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,6 +28,7 @@ class TrainerService
         protected GymScheduleInterface $gymScheduleRepository,
         protected TrainerSessionDurationInterface $trainerSessionDurationRepository,
         protected TrainerSessionDurationSlotInterface $trainerSessionDurationSlotRepository,
+        protected SalaryPayoutService $salaryPayoutService,
     ) {}
 
     public function getAllPaginated(array $filters = [])
@@ -68,7 +70,7 @@ class TrainerService
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
@@ -101,7 +103,7 @@ class TrainerService
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
@@ -138,7 +140,7 @@ class TrainerService
             }
 
             $allowedStatuses = ['pending', 'transfer'];
-            $invalidStatusExists = $salaries->contains(fn ($salary) => !in_array($salary->status, $allowedStatuses, true));
+            $invalidStatusExists = $salaries->contains(fn ($salary) => ! in_array($salary->status, $allowedStatuses, true));
 
             if ($invalidStatusExists) {
                 throw ValidationException::withMessages([
@@ -148,11 +150,9 @@ class TrainerService
                 ]);
             }
 
-            $newStatus = $action === 'pay' ? 'paid' : 'cancel';
-
             TrainerMonthlySalary::query()
                 ->whereIn('id', $salaryIds)
-                ->update(['status' => $newStatus]);
+                ->update(['status' => 'cancel']);
         });
     }
 
@@ -173,15 +173,17 @@ class TrainerService
                 ]);
             }
 
-            if ($salary->status === 'transfer') {
+            if (
+                ! in_array($salary->status, ['pending', 'transfer'], true)
+            ) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Այս աշխատավարձն արդեն փոխանցված է։',
+                    'salary_id' => 'Միայն չվճարված աշխատավարձը կարող է փոխանցվել այլ մարզչի։',
                 ]);
             }
 
             $personMembership = $salary->personMembership;
 
-            if (!$personMembership || !$personMembership->trainer_id) {
+            if (! $personMembership || ! $personMembership->trainer_id) {
                 throw ValidationException::withMessages([
                     'salary_id' => 'Աբոնեմենտի ընթացիկ մարզիչը չի գտնվել։',
                 ]);
@@ -195,60 +197,29 @@ class TrainerService
                 ]);
             }
 
-            $oldCommission = TrainerCommission::query()
-                ->whereKey($salary->trainer_commission_id)
+            $assignments = SalaryPayableAssignment::query()
+                ->where('trainer_monthly_salary_id', $salary->id)
+                ->where('payee_id', $trainerId)
+                ->where('available_amount', '>', 0)
                 ->lockForUpdate()
-                ->first();
+                ->get();
 
-            if (!$oldCommission) {
+            if ($assignments->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Հին մարզչի կոմիսիան չի գտնվել։',
+                    'salary_id' => 'Փոխանցման ենթակա չվճարված մնացորդ չկա։',
                 ]);
             }
 
-            $newCommission = TrainerCommission::query()
-                ->where('trainer_id', $newTrainerId)
-                ->where('membership_sale_id', $oldCommission->membership_sale_id)
-                ->where('person_membership_id', $personMembership->id)
-                ->latest('id')
-                ->lockForUpdate()
-                ->first();
-
-            if (!$newCommission) {
-                throw ValidationException::withMessages([
-                    'salary_id' => 'Նոր մարզչի կոմիսիան չի գտնվել։',
-                ]);
+            foreach ($assignments as $assignment) {
+                $this->salaryPayoutService->transfer(
+                    Auth::user(),
+                    $assignment,
+                    [
+                        'amount' => (float) $assignment->available_amount,
+                        'reason' => 'Փոխանցվել է մարզչի աշխատավարձերի էջից։',
+                    ],
+                );
             }
-
-            $targetSalaryExists = TrainerMonthlySalary::query()
-                ->where('trainer_id', $newTrainerId)
-                ->where('person_membership_id', $personMembership->id)
-                ->where('trainer_commission_id', $newCommission->id)
-                ->whereDate('salary_month', $salary->salary_month)
-                ->whereKeyNot($salary->id)
-                ->exists();
-
-            if ($targetSalaryExists) {
-                throw ValidationException::withMessages([
-                    'salary_id' => 'Այս ամսվա աշխատավարձն արդեն գոյություն ունի նոր մարզչի համար։',
-                ]);
-            }
-
-            $amount = (float) $salary->price;
-
-            $oldCommission->update([
-                'salary_amount' => max((float) $oldCommission->salary_amount - $amount, 0),
-            ]);
-
-            $newCommission->update([
-                'salary_amount' => (float) $newCommission->salary_amount + $amount,
-            ]);
-
-            $salary->update([
-                'trainer_id' => $newTrainerId,
-                'trainer_commission_id' => $newCommission->id,
-                'status' => 'transfer',
-            ]);
         });
     }
 
@@ -294,7 +265,7 @@ class TrainerService
             foreach ($data['session_durations'] ?? [] as $durationData) {
                 $scheduleNameId = (int) ($durationData['schedule_name_id'] ?? 0);
 
-                if (!$scheduleNameId) {
+                if (! $scheduleNameId) {
                     continue;
                 }
 
@@ -304,7 +275,7 @@ class TrainerService
                         $scheduleNameId
                     );
 
-                if (!empty($durationData['id'])) {
+                if (! empty($durationData['id'])) {
                     $duration = TrainerSessionDuration::query()
                         ->with('trainerSchedule:id,schedule_name_id')
                         ->whereKey((int) $durationData['id'])
@@ -422,7 +393,7 @@ class TrainerService
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->firstOrFail();
@@ -456,7 +427,7 @@ class TrainerService
                         $q->whereNotIn('schedule_name_id', $lockedScheduleIds);
                     });
             })
-            ->when(!empty($keptDurationIds), function ($query) use ($keptDurationIds) {
+            ->when(! empty($keptDurationIds), function ($query) use ($keptDurationIds) {
                 $query->whereNotIn('id', $keptDurationIds);
             })
             ->delete();

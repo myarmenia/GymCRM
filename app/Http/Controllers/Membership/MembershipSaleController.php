@@ -8,6 +8,7 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleFreezeRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleGuestRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleReminderRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Services\MembershipSales\MembershipSaleFreezeService;
@@ -137,6 +138,13 @@ class MembershipSaleController extends Controller
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
             ->with('success', 'Payment saved successfully.');
+    }
+
+    public function storeReminder(StoreMembershipSaleReminderRequest $request, $locale, $id)
+    {
+        $this->membershipSaleService->createPaymentReminder((int) $id, $request->validated());
+
+        return back()->with('success', 'Հիշեցումը պլանավորվել է։');
     }
 
     public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)

@@ -40,4 +40,14 @@ class SalespersonCommission extends Model
     {
         return $this->belongsTo(MembershipPlan::class);
     }
+
+    public function payout()
+    {
+        return $this->belongsTo(SalaryPayout::class, 'salary_payout_id');
+    }
+
+    public function payoutItems()
+    {
+        return $this->hasMany(SalaryPayoutItem::class);
+    }
 }

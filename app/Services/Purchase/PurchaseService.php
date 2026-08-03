@@ -9,7 +9,9 @@ use App\Interfaces\Purchase\PurchaseInterface;
 use App\Interfaces\PurchaseItem\PurchaseItemInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
+use App\Models\PaymentMethod;
 use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
+use App\Services\Finance\FinancialLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -17,7 +19,6 @@ use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
-
     public function __construct(
         protected CategoryInterface $categoryRepository,
         protected CategoryTranslationsRepository $categoryTranslationsRepository,
@@ -26,9 +27,9 @@ class PurchaseService
         protected WarehouseStockInterface $warehouseStockRepository,
         protected PersonInterface $personRepository,
         protected PurchaseInterface $purchaseRepository,
-        protected PurchaseItemInterface $purchaseItemRepository
+        protected PurchaseItemInterface $purchaseItemRepository,
+        protected FinancialLedgerService $financialLedgerService,
     ) {}
-
 
     public function getIndexData(Request $request, string $locale, int $gymId): array
     {
@@ -38,7 +39,7 @@ class PurchaseService
 
         $cashierWarehouse = $this->warehouseRepository->getCashierWarehouseByGymId($gymId);
 
-        if (!$cashierWarehouse) {
+        if (! $cashierWarehouse) {
             return [
                 'error' => 'Cashier պահեստը գտնված չէ։',
             ];
@@ -70,6 +71,7 @@ class PurchaseService
         $categories = $this->categoryRepository->getParentCategoriesWithChildren($locale);
 
         $peoples = $this->personRepository->getPeopleByGymId($gymId);
+        $paymentMethods = $this->availablePaymentMethods();
 
         return [
             'products' => $products,
@@ -82,6 +84,7 @@ class PurchaseService
                 'warehouse_id',
             ]),
             'peoples' => $peoples,
+            'paymentMethods' => $paymentMethods,
         ];
     }
 
@@ -96,7 +99,9 @@ class PurchaseService
             search: $filters['search'] ?? null,
             startDate: $filters['start_date'] ?? null,
             endDate: $filters['end_date'] ?? null,
-            paymentMethod: $filters['payment_method'] ?? null,
+            paymentMethodId: isset($filters['payment_method_id'])
+                ? (int) $filters['payment_method_id']
+                : null,
             personId: $filters['person_id'] ?? null,
             warehouseId: $filters['warehouse_id'] ?? null,
             perPage: 10
@@ -119,7 +124,10 @@ class PurchaseService
                     'name' => $purchase->warehouse->name,
                 ] : null,
 
-                'payment_method' => $purchase->payment_method,
+                'payment_method_id' => (int) $purchase->payment_method_id,
+                'payment_method' => $purchase->paymentMethod,
+                'card_type_id' => $purchase->card_type_id ? (int) $purchase->card_type_id : null,
+                'card_type' => $purchase->cardType,
                 'subtotal' => (float) $purchase->subtotal,
                 'discount' => (float) $purchase->discount,
                 'discount_percent' => (float) ($purchase->discount_percent ?? 0),
@@ -152,6 +160,7 @@ class PurchaseService
             'purchases' => $purchases,
             'peoples' => $peoples,
             'warehouses' => $warehouses,
+            'paymentMethods' => $this->availablePaymentMethods(),
         ];
     }
 
@@ -186,13 +195,43 @@ class PurchaseService
     {
         $cashierWarehouse = $this->warehouseRepository->getCashierWarehouseByGymId($gymId);
 
-        if (!$cashierWarehouse) {
+        if (! $cashierWarehouse) {
             throw ValidationException::withMessages([
                 'sell' => 'Դրամարկղի պահեստը գտնված չէ։',
             ]);
         }
 
         DB::transaction(function () use ($validated, $gymId, $userId, $cashierWarehouse) {
+            $paymentMethod = PaymentMethod::query()
+                ->with('cardTypes')
+                ->whereKey($validated['payment_method_id'])
+                ->where('slug', '!=', 'free')
+                ->first();
+
+            if (! $paymentMethod) {
+                throw ValidationException::withMessages([
+                    'payment_method_id' => 'Ընտրված վճարման եղանակը հասանելի չէ ապրանքի վաճառքի համար։',
+                ]);
+            }
+
+            $cardTypeId = null;
+
+            if ($paymentMethod->cardTypes->isNotEmpty()) {
+                if (empty($validated['card_type_id'])) {
+                    throw ValidationException::withMessages([
+                        'card_type_id' => 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։',
+                    ]);
+                }
+
+                $cardTypeId = (int) $validated['card_type_id'];
+
+                if (! $paymentMethod->cardTypes->contains('id', $cardTypeId)) {
+                    throw ValidationException::withMessages([
+                        'card_type_id' => 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։',
+                    ]);
+                }
+            }
+
             $discountPercent = (float) ($validated['discount_percent'] ?? 0);
             $subtotal = 0;
             $purchaseItems = [];
@@ -203,7 +242,7 @@ class PurchaseService
                     productId: (int) $item['product_id']
                 );
 
-                if (!$product) {
+                if (! $product) {
                     throw ValidationException::withMessages([
                         'product_id' => 'Ապրանքը գտնված չէ։',
                     ]);
@@ -214,7 +253,7 @@ class PurchaseService
                     warehouseId: $cashierWarehouse->id
                 );
 
-                if (!$warehouseStock) {
+                if (! $warehouseStock) {
                     throw ValidationException::withMessages([
                         'quantity' => 'Այս ապրանքը դրամարկղի պահեստում առկա չէ։',
                     ]);
@@ -256,17 +295,17 @@ class PurchaseService
 
             $cashReceived = (float) ($validated['cash_received'] ?? 0);
 
-            if ($validated['payment_method'] === 'cash' && $cashReceived < $total) {
+            if ($paymentMethod->slug === 'cash' && $cashReceived < $total) {
                 throw ValidationException::withMessages([
                     'cash_received' => 'Ստացված կանխիկ գումարը պետք է բավարար լինի վճարման համար։',
                 ]);
             }
 
-            if ($validated['payment_method'] === 'card') {
+            if ($paymentMethod->slug !== 'cash') {
                 $cashReceived = 0;
             }
 
-            $changeAmount = $validated['payment_method'] === 'cash'
+            $changeAmount = $paymentMethod->slug === 'cash'
                 ? max(round($cashReceived - $total, 2), 0)
                 : 0;
 
@@ -287,7 +326,8 @@ class PurchaseService
                 'cash_received' => $cashReceived,
                 'change_amount' => $changeAmount,
                 'status' => 'completed',
-                'payment_method' => $validated['payment_method'],
+                'payment_method_id' => $paymentMethod->id,
+                'card_type_id' => $cardTypeId,
             ]);
 
             foreach ($purchaseItems as $purchaseItem) {
@@ -302,6 +342,17 @@ class PurchaseService
                     'final_price' => $purchaseItem['final_price'],
                 ]);
             }
+
+            $this->financialLedgerService->recordProductSale($purchase);
         });
+    }
+
+    protected function availablePaymentMethods()
+    {
+        return PaymentMethod::query()
+            ->with(['translations', 'cardTypes'])
+            ->where('slug', '!=', 'free')
+            ->orderBy('id')
+            ->get();
     }
 }

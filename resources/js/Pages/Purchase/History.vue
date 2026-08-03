@@ -21,6 +21,10 @@ const props = defineProps({
         type: [Array, Object],
         default: () => [],
     },
+    paymentMethods: {
+        type: [Array, Object],
+        default: () => [],
+    },
 });
 
 const page = usePage();
@@ -29,7 +33,7 @@ const currentLocale = page.props.locale ?? "en";
 const search = ref(props.filters?.search ?? "");
 const startDate = ref(props.filters?.start_date ?? "");
 const endDate = ref(props.filters?.end_date ?? "");
-const paymentMethod = ref(props.filters?.payment_method ?? "");
+const paymentMethodId = ref(props.filters?.payment_method_id ?? "");
 const personId = ref(props.filters?.person_id ?? "");
 const warehouseId = ref(props.filters?.warehouse_id ?? "");
 const expandedPurchaseIds = ref([]);
@@ -37,6 +41,9 @@ const expandedPurchaseIds = ref([]);
 const localPeople = computed(() => props.peoples?.data ?? props.peoples ?? []);
 const localWarehouses = computed(
     () => props.warehouses?.data ?? props.warehouses ?? [],
+);
+const localPaymentMethods = computed(
+    () => props.paymentMethods?.data ?? props.paymentMethods ?? [],
 );
 
 const formatMoney = (value) => {
@@ -52,15 +59,14 @@ const getPersonName = (person) => {
 };
 
 const getPaymentMethodLabel = (method) => {
-    if (method === "cash") {
-        return "Կանխիկ";
-    }
-
-    if (method === "card") {
-        return "Քարտ";
-    }
-
-    return method ?? "-";
+    return (
+        method?.translations?.find(
+            (translation) => translation.locale === currentLocale,
+        )?.name ??
+        method?.name ??
+        method?.slug ??
+        "-"
+    );
 };
 
 const isExpanded = (purchaseId) => {
@@ -84,7 +90,9 @@ const buildParams = () => {
     if (search.value?.trim()) params.search = search.value.trim();
     if (startDate.value) params.start_date = startDate.value;
     if (endDate.value) params.end_date = endDate.value;
-    if (paymentMethod.value) params.payment_method = paymentMethod.value;
+    if (paymentMethodId.value) {
+        params.payment_method_id = paymentMethodId.value;
+    }
     if (personId.value) params.person_id = personId.value;
     if (warehouseId.value) params.warehouse_id = warehouseId.value;
 
@@ -107,7 +115,7 @@ const resetFilters = () => {
     search.value = "";
     startDate.value = "";
     endDate.value = "";
-    paymentMethod.value = "";
+    paymentMethodId.value = "";
     personId.value = "";
     warehouseId.value = "";
 
@@ -181,10 +189,15 @@ const resetFilters = () => {
 
                     <div class="col-lg-2 col-md-6">
                         <label class="form-label">Վճարում</label>
-                        <select v-model="paymentMethod" class="form-select">
+                        <select v-model="paymentMethodId" class="form-select">
                             <option value="">Բոլորը</option>
-                            <option value="cash">Կանխիկ</option>
-                            <option value="card">Քարտ</option>
+                            <option
+                                v-for="method in localPaymentMethods"
+                                :key="method.id"
+                                :value="method.id"
+                            >
+                                {{ getPaymentMethodLabel(method) }}
+                            </option>
                         </select>
                     </div>
 
@@ -260,7 +273,7 @@ const resetFilters = () => {
                                         <span
                                             class="badge"
                                             :class="
-                                                purchase.payment_method === 'cash'
+                                                purchase.payment_method?.slug === 'cash'
                                                     ? 'bg-label-success'
                                                     : 'bg-label-primary'
                                             "
@@ -270,6 +283,12 @@ const resetFilters = () => {
                                                     purchase.payment_method,
                                                 )
                                             }}
+                                            <span
+                                                v-if="purchase.card_type"
+                                                class="d-block small mt-1"
+                                            >
+                                                {{ purchase.card_type.name }}
+                                            </span>
                                         </span>
                                     </td>
                                     <td>{{ formatMoney(purchase.subtotal) }}</td>

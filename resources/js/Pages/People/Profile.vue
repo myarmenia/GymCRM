@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import { todayInYerevan } from '@/utils/yerevanDate'
 
 const page = usePage()
@@ -13,9 +14,25 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    reminderUsers: {
+        type: Array,
+        default: () => [],
+    },
+    defaultReminderRecipientIds: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const activeTab = ref('memberships')
+const reminderModalOpen = ref(false)
+const selectedReminderMembership = ref(null)
+const reminderForm = useForm({
+    reminder_scheduled_at: '',
+    reminder_recipient_ids: [...props.defaultReminderRecipientIds],
+    reminder_title: 'Աբոնեմենտի վճարման հիշեցում',
+    reminder_description: '',
+})
 
 const memberships = computed(() => props.person?.memberships ?? [])
 const sales = computed(() => props.person?.membership_sales ?? [])
@@ -163,6 +180,48 @@ const membershipPaymentStatusClass = membership => ({
     unpaid: 'bg-label-danger',
 }[membershipPaymentStatus(membership)] ?? 'bg-label-secondary')
 const membershipHasDebt = membership => saleDebtAmount(saleForMembership(membership)) > 0
+const selectedReminderDebt = computed(() => saleDebtAmount(saleForMembership(selectedReminderMembership.value)))
+
+const openPaymentReminder = membership => {
+    selectedReminderMembership.value = membership
+    reminderForm.clearErrors()
+    reminderForm.reminder_scheduled_at = ''
+    reminderForm.reminder_recipient_ids = [...props.defaultReminderRecipientIds]
+    reminderForm.reminder_title = 'Աբոնեմենտի վճարման հիշեցում'
+    reminderForm.reminder_description = ''
+    reminderModalOpen.value = true
+}
+
+const closePaymentReminder = () => {
+    reminderModalOpen.value = false
+}
+
+const submitPaymentReminder = () => {
+    reminderForm.clearErrors()
+
+    if (!reminderForm.reminder_scheduled_at) {
+        reminderForm.setError('reminder_scheduled_at', 'Նշեք վճարման հիշեցման օրն ու ժամը։')
+    }
+
+    if (!reminderForm.reminder_recipient_ids.length) {
+        reminderForm.setError('reminder_recipient_ids', 'Ընտրեք առնվազն մեկ ստացող։')
+    }
+
+    if (reminderForm.errors.reminder_scheduled_at || reminderForm.errors.reminder_recipient_ids) {
+        return
+    }
+
+    reminderForm.post(route('membership_sale.reminders.store', {
+        locale: currentLocale.value,
+        id: membershipSaleId(selectedReminderMembership.value),
+    }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            reminderModalOpen.value = false
+            selectedReminderMembership.value = null
+        },
+    })
+}
 
 const paidAmount = computed(() => transactions.value
     .filter(payment => payment.type === 'payment' && payment.status === 'paid')
@@ -426,6 +485,15 @@ const secondaryInfoItems = computed(() => [
                                             <i class="icon-base ti tabler-cash me-1"></i>
                                             Վճարումներ
                                         </Link>
+                                        <button
+                                            v-if="membershipPaymentStatus(membership) === 'partial'"
+                                            type="button"
+                                            class="btn btn-sm btn-outline-warning"
+                                            @click="openPaymentReminder(membership)"
+                                        >
+                                            <i class="icon-base ti tabler-calendar-plus me-1"></i>
+                                            Ավելացնել հիշեցում
+                                        </button>
                                     </div>
                                     <div
                                         v-if="membershipHasDebt(membership)"
@@ -711,6 +779,22 @@ const secondaryInfoItems = computed(() => [
                 </div>
             </div>
         </div>
+
+        <PaymentReminderModal
+            v-model:scheduled-at="reminderForm.reminder_scheduled_at"
+            v-model:recipient-ids="reminderForm.reminder_recipient_ids"
+            v-model:title="reminderForm.reminder_title"
+            v-model:description="reminderForm.reminder_description"
+            :show="reminderModalOpen"
+            :person-name="fullName(person)"
+            :debt-amount="selectedReminderDebt"
+            :users="reminderUsers"
+            :errors="reminderForm.errors"
+            :processing="reminderForm.processing"
+            confirm-text="Պլանավորել հիշեցումը"
+            @close="closePaymentReminder"
+            @confirm="submitPaymentReminder"
+        />
     </Index>
 </template>
 

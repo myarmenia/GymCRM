@@ -32,6 +32,11 @@ class PaymentMethod extends Model
         return $this->hasMany(MembershipPlanPayment::class);
     }
 
+    public function salaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class);
+    }
+
     public function getNameAttribute()
     {
         return $this->translations

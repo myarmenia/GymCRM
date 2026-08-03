@@ -1,8 +1,9 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
+import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
 import {
@@ -43,6 +44,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    reminderUsers: {
+        type: Array,
+        default: () => [],
+    },
+    defaultReminderRecipientIds: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const today = todayInYerevan()
@@ -66,7 +75,14 @@ const form = useForm({
     payment_method_id: '',
     card_type_id: '',
     payment_notes: '',
+    reminder_scheduled_at: '',
+    reminder_recipient_ids: [...props.defaultReminderRecipientIds],
+    reminder_title: 'Աբոնեմենտի վճարման հիշեցում',
+    reminder_description: '',
 })
+
+const reminderModalOpen = ref(false)
+const pendingSaleMode = ref('regular')
 
 const planName = plan => {
     return plan?.translations?.find(item => item.locale === currentLocale.value)?.name
@@ -345,23 +361,73 @@ watch(() => form.amount, (value) => {
     }
 })
 
+const postSale = stayDebt => {
+    form
+        .transform(data => ({
+            ...data,
+            stay_debt: stayDebt,
+            ...(stayDebt ? {
+                is_full_payment: false,
+                is_partial_payment: false,
+                amount: 0,
+                payment_method_id: null,
+                card_type_id: null,
+            } : {}),
+        }))
+        .post(route('membership_sale.store', {
+            locale: currentLocale.value,
+            person: props.selectedPerson?.id,
+        }), {
+            onError: errors => {
+                if (Object.keys(errors).some(key => key.startsWith('reminder_'))) {
+                    reminderModalOpen.value = true
+                }
+            },
+            onFinish: () => form.transform(data => data),
+        })
+}
+
+const openReminderModal = mode => {
+    pendingSaleMode.value = mode
+    reminderModalOpen.value = true
+}
+
+const confirmReminder = () => {
+    form.clearErrors(
+        'reminder_scheduled_at',
+        'reminder_recipient_ids',
+        'reminder_title',
+        'reminder_description',
+    )
+
+    if (!form.reminder_scheduled_at) {
+        form.setError('reminder_scheduled_at', 'Նշեք վճարման հիշեցման օրն ու ժամը։')
+    }
+
+    if (!form.reminder_recipient_ids.length) {
+        form.setError('reminder_recipient_ids', 'Ընտրեք առնվազն մեկ ստացող։')
+    }
+
+    if (form.errors.reminder_scheduled_at || form.errors.reminder_recipient_ids) {
+        return
+    }
+
+    reminderModalOpen.value = false
+    postSale(pendingSaleMode.value === 'debt')
+}
+
 const submit = () => {
     if (startDateRestrictionMessage.value) {
         form.setError('start_date', startDateRestrictionMessage.value)
         return
     }
 
-    form
-        .transform(data => ({
-            ...data,
-            stay_debt: false,
-        }))
-        .post(route('membership_sale.store', {
-            locale: currentLocale.value,
-            person: props.selectedPerson?.id,
-        }), {
-            onFinish: () => form.transform(data => data),
-        })
+    if (remaining.value > 0) {
+        openReminderModal('regular')
+        return
+    }
+
+    postSale(false)
 }
 
 const submitDebt = () => {
@@ -370,22 +436,7 @@ const submitDebt = () => {
         return
     }
 
-    form
-        .transform(data => ({
-            ...data,
-            stay_debt: true,
-            is_full_payment: false,
-            is_partial_payment: false,
-            amount: 0,
-            payment_method_id: null,
-            card_type_id: null,
-        }))
-        .post(route('membership_sale.store', {
-            locale: currentLocale.value,
-            person: props.selectedPerson?.id,
-        }), {
-            onFinish: () => form.transform(data => data),
-        })
+    openReminderModal('debt')
 }
 </script>
 
@@ -909,6 +960,22 @@ const submitDebt = () => {
                 </div>
             </form>
         </div>
+
+        <PaymentReminderModal
+            v-model:scheduled-at="form.reminder_scheduled_at"
+            v-model:recipient-ids="form.reminder_recipient_ids"
+            v-model:title="form.reminder_title"
+            v-model:description="form.reminder_description"
+            :show="reminderModalOpen"
+            :person-name="props.selectedPerson ? formatPerson(props.selectedPerson) : ''"
+            :debt-amount="pendingSaleMode === 'debt' ? finalTotal : remaining"
+            :users="reminderUsers"
+            :errors="form.errors"
+            :processing="form.processing"
+            confirm-text="Պլանավորել և պահպանել վաճառքը"
+            @close="reminderModalOpen = false"
+            @confirm="confirmReminder"
+        />
     </Index>
 </template>
 
@@ -971,4 +1038,5 @@ const submitDebt = () => {
     border: 2px solid #0d9394;
     background: rgba(13, 147, 148, 0.08);
 }
+
 </style>
