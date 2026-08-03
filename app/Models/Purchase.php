@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Purchase extends Model
 {
     public $timestamps = true;
+
     protected $guarded = [];
+
     protected $fillable = [
         'user_id',
         'gym_id',
@@ -23,7 +25,8 @@ class Purchase extends Model
         'cash_received',
         'change_amount',
         'status',
-        'payment_method',
+        'payment_method_id',
+        'card_type_id',
     ];
 
     public function items()
@@ -49,5 +52,15 @@ class Purchase extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function paymentMethod()
+    {
+        return $this->belongsTo(PaymentMethod::class);
+    }
+
+    public function cardType()
+    {
+        return $this->belongsTo(CardType::class);
     }
 }

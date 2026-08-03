@@ -42,6 +42,13 @@ const tabLinks = computed(() => [
             tab: 'sent',
         }),
     },
+    {
+        key: 'reminders',
+        label: 'Հիշեցումներ',
+        href: route('reminders.index', {
+            locale: currentLocale.value,
+        }),
+    },
 ])
 const pageTitle = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ' : 'Իմ ուղարկած notification-ները')
 const emptyText = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ չկան։' : 'Ուղարկած notification-ներ չկան։')

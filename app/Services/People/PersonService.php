@@ -8,6 +8,7 @@ use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\FileUploadService;
+use App\Services\Reminders\ReminderService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -20,6 +21,7 @@ class PersonService
         protected PersonInterface $personRepository,
         protected EntryCodeService $entryCodeService,
         protected FileUploadService $fileUploadService,
+        protected ReminderService $reminderService,
     ) {}
 
     public function getAllPaginated(array $filters = [])
@@ -74,6 +76,8 @@ class PersonService
         return [
             'person' => $person,
             'entryCode' => $entryPermission?->entryCode,
+            'reminderUsers' => $this->reminderService->usersForSelect($user),
+            'defaultReminderRecipientIds' => $this->reminderService->defaultMembershipRecipients($user),
         ];
     }
 

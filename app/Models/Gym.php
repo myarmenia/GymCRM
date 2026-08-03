@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Gym extends Model
 {
@@ -27,6 +27,7 @@ class Gym extends Model
     {
         return $this->hasMany(GymWorkingDayTime::class);
     }
+
     public function entryCodes()
     {
         return $this->hasMany(EntryCode::class, 'gym_id');
@@ -42,9 +43,19 @@ class Gym extends Model
         return $this->hasMany(MembershipSale::class);
     }
 
+    public function reminders()
+    {
+        return $this->hasMany(Reminder::class);
+    }
+
     public function personMemberships()
     {
         return $this->hasMany(PersonMembership::class);
+    }
+
+    public function salaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class);
     }
 
     public function languages()
@@ -74,5 +85,4 @@ class Gym extends Model
             }
         });
     }
-
 }

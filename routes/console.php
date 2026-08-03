@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('memberships:update-freeze-statuses')->dailyAt('02:00');
 // Schedule::command('trainer-monthly-salaries:generate')->monthlyOn(2, '02:00');
 Schedule::command('trainer-monthly-salaries:generate')->everyMinute();
+Schedule::command('reminders:send')->everyMinute()->withoutOverlapping();

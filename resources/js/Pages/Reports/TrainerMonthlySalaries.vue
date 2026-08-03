@@ -84,9 +84,13 @@ const filterValues = computed(() => ({
 
 const summaryCards = computed(() => [
     { label: 'Գրանցումների քանակ', value: props.summary.salaries_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
+    { label: 'Մարզիչների բաժիններ', value: props.summary.parts_count ?? 0, icon: 'tabler-arrows-split', class: 'bg-label-secondary text-secondary' },
     { label: 'Ընդհանուր գումար', value: formatAmount(props.summary.total_price), icon: 'tabler-cash', class: 'bg-label-info text-info' },
     { label: 'Վճարված գումար', value: formatAmount(props.summary.paid_price), icon: 'tabler-check', class: 'bg-label-success text-success' },
     { label: 'Սպասող գումար', value: formatAmount(props.summary.pending_price), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
+    { label: 'Վերադարձված գումար', value: formatAmount(props.summary.refunded_price), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: 'Փոխանցված մուտք', value: formatAmount(props.summary.transferred_in_price), icon: 'tabler-arrow-down-left', class: 'bg-label-info text-info' },
+    { label: 'Փոխանցված ելք', value: formatAmount(props.summary.transferred_out_price), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
 ])
 
 const updateFilters = payload => {
@@ -146,16 +150,18 @@ const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
 const statusLabel = status => ({
     pending: 'Սպասման մեջ',
+    partial: 'Մասնակի վճարված',
     paid: 'Վճարված',
-    transfer: 'Փոխանցում',
+    transferred: 'Փոխանցված',
     cancel: 'Չեղարկված',
     reject: 'Մերժված',
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
     pending: 'bg-label-warning',
+    partial: 'bg-label-info',
     paid: 'bg-label-success',
-    transfer: 'bg-label-info',
+    transferred: 'bg-label-secondary',
     cancel: 'bg-label-danger',
     reject: 'bg-label-secondary',
 }[status] ?? 'bg-label-secondary')
@@ -235,7 +241,12 @@ const statusClass = status => ({
                             <th>Մարզիչ</th>
                             <th>Աբոնեմենտ / հաճախորդ</th>
                             <th>Աշխատավարձի ամիս</th>
-                            <th>Գումար</th>
+                            <th>Վերագրված գումար</th>
+                            <th>Զուտ վճարված</th>
+                            <th>Չվճարված մնացորդ</th>
+                            <th>Վերադարձված</th>
+                            <th>Փոխանցված մուտք</th>
+                            <th>Փոխանցված ելք</th>
                             <th>Կարգավիճակ</th>
                             <th>Ստեղծվել է</th>
                         </tr>
@@ -249,6 +260,11 @@ const statusClass = status => ({
                             <td>{{ salary.membership_customer }}</td>
                             <td>{{ formatDate(salary.salary_month) }}</td>
                             <td>{{ formatAmount(salary.price) }}</td>
+                            <td>{{ formatAmount(salary.net_paid_amount) }}</td>
+                            <td>{{ formatAmount(salary.outstanding_amount) }}</td>
+                            <td>{{ formatAmount(salary.refunded_amount) }}</td>
+                            <td>{{ formatAmount(salary.transferred_in_amount) }}</td>
+                            <td>{{ formatAmount(salary.transferred_out_amount) }}</td>
                             <td>
                                 <span
                                     class="badge"
@@ -261,7 +277,7 @@ const statusClass = status => ({
                         </tr>
                         <tr v-if="!salaries.data.length">
                             <td
-                                colspan="6"
+                                colspan="11"
                                 class="text-center text-muted py-4"
                             >
                                 Տվյալներ չկան։

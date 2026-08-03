@@ -14,28 +14,30 @@ use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\EntryReportController;
+use App\Http\Controllers\FinancialTransactionController;
+use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
-use App\Http\Controllers\Users\UserController;
-use App\Http\Controllers\Gyms\GymController;
-use App\Http\Controllers\MeasurementUnit\MeasurementUnitController;
-use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Notifications\NotificationController;
-use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Partners\PartnerController;
+use App\Http\Controllers\People\PersonController;
+use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Products\ProductsController;
+use App\Http\Controllers\Purchase\PurchaseController;
+use App\Http\Controllers\Reminders\ReminderController;
 use App\Http\Controllers\Reports\CommissionsReportController;
 use App\Http\Controllers\Reports\EntryExitReportController;
 use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Reports\SalespersonCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerMonthlySalariesReportController;
+use App\Http\Controllers\SalaryPayoutController;
 use App\Http\Controllers\Schedule\ScheduleController;
-use App\Http\Controllers\People\PersonController;
-use App\Http\Controllers\Purchase\PurchaseController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
 use App\Http\Controllers\Trainer\TrainerController;
+use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Warehouses\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
@@ -102,6 +104,12 @@ Route::prefix('{locale}')
                 Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
             });
 
+            Route::prefix('reminders')->name('reminders.')->group(function () {
+                Route::get('/', [ReminderController::class, 'index'])->name('index');
+                Route::post('/', [ReminderController::class, 'store'])->name('store');
+                Route::patch('/{reminder}/cancel', [ReminderController::class, 'cancel'])->name('cancel');
+            });
+
             Route::prefix('reports')->name('reports.')->group(function () {
                 Route::get('/membership-sales', [MembershipSalesReportController::class, 'index'])
                     ->name('membership-sales');
@@ -129,6 +137,28 @@ Route::prefix('{locale}')
                     ->name('salesperson-commissions.export');
             });
 
+            Route::prefix('salary-payouts')->name('salary-payouts.')->group(function () {
+                Route::get('/', [SalaryPayoutController::class, 'index'])->name('index');
+                Route::post('/', [SalaryPayoutController::class, 'store'])->name('store');
+                Route::patch('/{salaryPayout}/void', [SalaryPayoutController::class, 'void'])->name('void');
+                Route::post('/{salaryPayout}/refund', [SalaryPayoutController::class, 'refund'])->name('refund');
+                Route::post(
+                    '/assignments/{salaryPayableAssignment}/transfer',
+                    [SalaryPayoutController::class, 'transfer']
+                )->name('transfer');
+            });
+
+            Route::prefix('finance')->name('finance.')->group(function () {
+                Route::get('/', [FinancialTransactionController::class, 'index'])->name('index');
+                Route::get('/export', [FinancialTransactionController::class, 'export'])->name('export');
+                Route::get('/print', [FinancialTransactionController::class, 'print'])->name('print');
+                Route::post('/transactions', [FinancialTransactionController::class, 'store'])->name('store');
+                Route::post('/categories', [FinancialTransactionController::class, 'storeCategory'])->name('categories.store');
+                Route::post(
+                    '/transactions/{financialTransaction}/reverse',
+                    [FinancialTransactionController::class, 'reverse'],
+                )->name('reverse');
+            });
 
             // ====== users ================
             Route::prefix('user')->name('user.')->group(function () {
@@ -157,7 +187,6 @@ Route::prefix('{locale}')
                 Route::patch('/update/{id}', [PersonController::class, 'update'])->name('update');
                 // });
             });
-
 
             // ====== gym ================
             Route::prefix('gym')->name('gym.')->group(function () {
@@ -223,7 +252,6 @@ Route::prefix('{locale}')
                 });
             });
 
-
             // ====== Membership Category ================
             Route::prefix('membership-category')->name('membership-category.')->group(function () {
                 Route::get('/', [MembershipCategoryController::class, 'list'])->name('list');
@@ -263,7 +291,6 @@ Route::prefix('{locale}')
                 });
             });
 
-
             // ====== users ================
             Route::prefix('membership-plan')->name('membership_plan.')->group(function () {
                 Route::get('/list', [MembershipPlanController::class, 'list'])->name('list');
@@ -284,6 +311,7 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
                     Route::post('/payments/{id}', [MembershipSaleController::class, 'storePayment'])->name('payments.store');
+                    Route::post('/reminders/{id}', [MembershipSaleController::class, 'storeReminder'])->name('reminders.store');
                     Route::get('/guests/{id}', [MembershipSaleController::class, 'guests'])->name('guests');
                     Route::get('/guests/{id}/lookup', [MembershipSaleController::class, 'lookupGuest'])->name('guests.lookup');
                     Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
@@ -298,7 +326,6 @@ Route::prefix('{locale}')
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
             });
-
 
             Route::prefix('products')->name('products.')->group(function () {
                 Route::get('/', [ProductsController::class, 'index'])->name('index');
@@ -318,11 +345,11 @@ Route::prefix('{locale}')
                 Route::get('/create', [ScheduleController::class, 'create'])->name('create');
                 Route::post('/', [ScheduleController::class, 'store'])->name('store');
 
-                //Route::middleware('check.gym:ScheduleName,id')->group(function () {
+                // Route::middleware('check.gym:ScheduleName,id')->group(function () {
                 Route::get('/edit/{id}', [ScheduleController::class, 'edit'])->name('edit');
                 Route::put('/{id}', [ScheduleController::class, 'update'])->name('update');
                 Route::delete('/{id}', [ScheduleController::class, 'destroy'])->name('destroy');
-                //});
+                // });
             });
 
             Route::prefix('product-consumptions')->name('product-consumptions.')->group(function () {
@@ -360,7 +387,6 @@ Route::prefix('{locale}')
                 Route::post('/{id}', [TrainerController::class, 'store'])->name('store');
                 Route::put('/{id}', [TrainerController::class, 'update'])->name('update');
             });
-
 
             Route::prefix('purchase')->name('purchase.')->group(function () {
                 Route::get('/', [PurchaseController::class, 'index'])->name('index');

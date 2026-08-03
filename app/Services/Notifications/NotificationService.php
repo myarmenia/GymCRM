@@ -21,11 +21,11 @@ class NotificationService
         $notifications = $this->notificationRepository->receivedForUser($user);
 
         $unreadIds = $notifications->getCollection()
-            ->filter(fn (Notification $notification) => !$notification->seen)
+            ->filter(fn (Notification $notification) => ! $notification->seen)
             ->pluck('id');
 
         $notifications->getCollection()->transform(function (Notification $notification) {
-            $notification->setAttribute('was_unread', !$notification->seen);
+            $notification->setAttribute('was_unread', ! $notification->seen);
 
             return $notification;
         });
@@ -65,6 +65,17 @@ class NotificationService
     public function create(User $sender, array $data): int
     {
         $recipientIds = $this->resolveRecipientIds($sender, $data);
+
+        return $this->createForRecipientIds($sender, $data, $recipientIds);
+    }
+
+    public function createForRecipientIds(User $sender, array $data, Collection $recipientIds): int
+    {
+        $recipientIds = $recipientIds
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
 
         if ($recipientIds->isEmpty()) {
             return 0;
@@ -127,7 +138,7 @@ class NotificationService
 
     protected function resolveRecipientIds(User $sender, array $data): Collection
     {
-        if (!empty($data['send_to_all'])) {
+        if (! empty($data['send_to_all'])) {
             return $this->notificationRepository
                 ->userIdsExcept($sender->id)
                 ->unique()

@@ -41,7 +41,7 @@ class SalespersonCommissionsReportService
             'rows' => $commissions,
             'columns' => $this->exportColumns(),
             'filters' => $filters,
-            'filename' => 'salesperson-commissions-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
+            'filename' => 'salesperson-commissions-report-'.now()->format('Y-m-d-H-i-s').'.xls',
             'title' => 'Վաճառողների միջնորդավճարների հաշվետվություն',
             'summary' => $this->exportSummary($this->summary($commissions)),
         ];
@@ -87,7 +87,7 @@ class SalespersonCommissionsReportService
 
     protected function parseDate(?string $value, Carbon $fallback): Carbon
     {
-        if (!$value) {
+        if (! $value) {
             return $fallback;
         }
 
@@ -104,7 +104,7 @@ class SalespersonCommissionsReportService
             'membershipPlans' => $this->salespersonCommissionsReportRepository->membershipPlanOptions($user)
                 ->map(fn ($membershipPlan) => [
                     'value' => $membershipPlan->id,
-                    'label' => $this->membershipPlanName($membershipPlan) ?? ('#' . $membershipPlan->id),
+                    'label' => $this->membershipPlanName($membershipPlan) ?? ('#'.$membershipPlan->id),
                 ])
                 ->values(),
             'salespeople' => $this->salespersonCommissionsReportRepository->salespersonOptions($user)
@@ -115,6 +115,7 @@ class SalespersonCommissionsReportService
                 ->values(),
             'statuses' => [
                 ['value' => 'pending', 'label' => 'Սպասման մեջ'],
+                ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
                 ['value' => 'paid', 'label' => 'Վճարված'],
                 ['value' => 'cancelled', 'label' => 'Չեղարկված'],
             ],
@@ -130,6 +131,9 @@ class SalespersonCommissionsReportService
             ['key' => 'salary_type', 'title' => 'Միջնորդավճարի տեսակ'],
             ['key' => 'salary_value', 'title' => 'Միջնորդավճարի արժեք'],
             ['key' => 'salary_amount', 'title' => 'Միջնորդավճարի գումար'],
+            ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
+            ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
+            ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
             ['key' => 'status', 'title' => 'Կարգավիճակ'],
             ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
         ];
@@ -137,12 +141,17 @@ class SalespersonCommissionsReportService
 
     protected function summary(Collection $commissions): array
     {
+        $metrics = $commissions->map(fn ($commission) => $this->commissionMetrics($commission));
+        $active = $metrics->reject(fn (array $commission) => $commission['status'] === 'cancelled');
+
         return [
             'commissions_count' => $commissions->count(),
-            'total_sale_amount' => round($commissions->sum(fn ($commission) => (float) (is_array($commission) ? ($commission['sale_amount'] ?? 0) : ($commission->sale_amount ?? 0))), 2),
-            'total_commission_amount' => round($commissions->sum(fn ($commission) => (float) (is_array($commission) ? ($commission['salary_amount'] ?? 0) : ($commission->salary_amount ?? 0))), 2),
-            'paid_commission_amount' => round($commissions->sum(fn ($commission) => $this->statusAmount($commission, 'paid')), 2),
-            'pending_commission_amount' => round($commissions->sum(fn ($commission) => $this->statusAmount($commission, 'pending')), 2),
+            'total_sale_amount' => round($active->sum('sale_amount'), 2),
+            'total_commission_amount' => round($active->sum('salary_amount'), 2),
+            'paid_commission_amount' => round($active->sum('net_paid_amount'), 2),
+            'pending_commission_amount' => round($active->sum('outstanding_amount'), 2),
+            'refunded_commission_amount' => round($active->sum('refunded_amount'), 2),
+            'cancelled_commission_amount' => round($metrics->where('status', 'cancelled')->sum('salary_amount'), 2),
         ];
     }
 
@@ -156,12 +165,16 @@ class SalespersonCommissionsReportService
                 ['label' => 'Միջնորդավճարի ընդհանուր գումար', 'value' => $summary['total_commission_amount']],
                 ['label' => 'Վճարված միջնորդավճար', 'value' => $summary['paid_commission_amount']],
                 ['label' => 'Սպասող միջնորդավճար', 'value' => $summary['pending_commission_amount']],
+                ['label' => 'Վերադարձված միջնորդավճար', 'value' => $summary['refunded_commission_amount']],
+                ['label' => 'Չեղարկված միջնորդավճար', 'value' => $summary['cancelled_commission_amount']],
             ],
         ];
     }
 
     protected function mapCommission(SalespersonCommission $commission): array
     {
+        $metrics = $this->commissionMetrics($commission);
+
         return [
             'id' => $commission->id,
             'salesperson' => $this->userName($commission->salesperson),
@@ -169,22 +182,50 @@ class SalespersonCommissionsReportService
             'customer' => $this->customerName($commission),
             'salary_type' => $commission->salary_type,
             'salary_value' => (float) $commission->salary_value,
-            'salary_amount' => (float) $commission->salary_amount,
+            'salary_amount' => $metrics['salary_amount'],
             'sale_amount' => (float) $commission->sale_amount,
-            'status' => $commission->status,
+            'net_paid_amount' => $metrics['net_paid_amount'],
+            'outstanding_amount' => $metrics['outstanding_amount'],
+            'refunded_amount' => $metrics['refunded_amount'],
+            'status' => $metrics['status'],
             'created_at' => $commission->created_at?->toDateTimeString(),
         ];
     }
 
-    protected function statusAmount(SalespersonCommission|array $commission, string $status): float
+    protected function commissionMetrics(SalespersonCommission|array $commission): array
     {
-        $commissionStatus = is_array($commission) ? ($commission['status'] ?? null) : $commission->status;
-
-        if ($commissionStatus !== $status) {
-            return 0;
+        if (is_array($commission)) {
+            return [
+                'sale_amount' => (float) ($commission['sale_amount'] ?? 0),
+                'salary_amount' => (float) ($commission['salary_amount'] ?? 0),
+                'net_paid_amount' => (float) ($commission['net_paid_amount'] ?? 0),
+                'outstanding_amount' => (float) ($commission['outstanding_amount'] ?? 0),
+                'refunded_amount' => (float) ($commission['refunded_amount'] ?? 0),
+                'status' => $commission['status'] ?? 'pending',
+            ];
         }
 
-        return (float) (is_array($commission) ? ($commission['salary_amount'] ?? 0) : ($commission->salary_amount ?? 0));
+        $salaryAmount = max(round((float) $commission->salary_amount, 2), 0);
+        $outstanding = max(round((float) ($commission->outstanding_amount ?? 0), 2), 0);
+        $payout = max(round((float) ($commission->payout_amount ?? 0), 2), 0);
+        $refunded = max(round((float) ($commission->refunded_amount ?? 0), 2), 0);
+        $netPaid = max(round($payout - $refunded, 2), 0);
+
+        $status = match (true) {
+            $commission->status === 'cancelled' => 'cancelled',
+            $outstanding > 0 && $netPaid > 0 => 'partial',
+            $outstanding <= 0 && $netPaid > 0 => 'paid',
+            default => 'pending',
+        };
+
+        return [
+            'sale_amount' => round((float) $commission->sale_amount, 2),
+            'salary_amount' => $salaryAmount,
+            'net_paid_amount' => $netPaid,
+            'outstanding_amount' => $outstanding,
+            'refunded_amount' => $refunded,
+            'status' => $status,
+        ];
     }
 
     protected function membershipSaleName(SalespersonCommission $commission): string
@@ -193,19 +234,19 @@ class SalespersonCommissionsReportService
             ?? $this->membershipPlanName($commission->personMembership?->membershipPlan)
             ?? $this->membershipPlanName($commission->membershipSale?->membershipPlan);
 
-        return '#' . $commission->membership_sale_id . ' - ' . ($planName ?? '-');
+        return '#'.$commission->membership_sale_id.' - '.($planName ?? '-');
     }
 
     protected function customerName(SalespersonCommission $commission): string
     {
         $person = $commission->personMembership?->person ?? $commission->membershipSale?->person;
 
-        return trim(($person?->name ?? '') . ' ' . ($person?->surname ?? '')) ?: '-';
+        return trim(($person?->name ?? '').' '.($person?->surname ?? '')) ?: '-';
     }
 
     protected function membershipPlanName($membershipPlan): ?string
     {
-        if (!$membershipPlan) {
+        if (! $membershipPlan) {
             return null;
         }
 
@@ -216,6 +257,6 @@ class SalespersonCommissionsReportService
 
     protected function userName(?User $user): string
     {
-        return trim(($user?->name ?? '') . ' ' . ($user?->surname ?? '')) ?: ($user?->email ?? '-');
+        return trim(($user?->name ?? '').' '.($user?->surname ?? '')) ?: ($user?->email ?? '-');
     }
 }
