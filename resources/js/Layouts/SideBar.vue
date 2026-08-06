@@ -220,6 +220,22 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
+                :class="[
+                    'menu-item',
+                    route().current('logs.*') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('logs.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-history"></i>
+                    <div data-i18n="Logs">Մատյաններ</div>
+                </Link>
+            </li>
+
+            <li
                 v-if="
                     hasAnyRole([
                         'owner',

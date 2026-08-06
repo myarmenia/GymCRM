@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -95,6 +96,11 @@ Route::prefix('{locale}')
 
             Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
                 ->name('logout');
+
+            Route::prefix('logs')->name('logs.')->group(function () {
+                Route::get('/', [ActivityLogController::class, 'index'])->name('index');
+                Route::get('/{log}', [ActivityLogController::class, 'show'])->name('show');
+            });
 
             Route::prefix('notifications')->name('notifications.')->group(function () {
                 Route::get('/', [NotificationController::class, 'index'])->name('index');

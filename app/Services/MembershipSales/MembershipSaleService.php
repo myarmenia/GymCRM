@@ -23,6 +23,7 @@ use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
 use App\Services\Reminders\ReminderService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
@@ -43,6 +44,7 @@ class MembershipSaleService
         protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
         protected FinancialLedgerService $financialLedgerService,
         protected ReminderService $reminderService,
+        protected MembershipSaleAuditService $membershipSaleAuditService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -207,6 +209,7 @@ class MembershipSaleService
                 })
                 ->lockForUpdate()
                 ->findOrFail($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
             $personMembership = $membershipSale
                 ->personMemberships()
@@ -289,6 +292,13 @@ class MembershipSaleService
                 'trainer_id' => $newTrainer->id,
             ]);
 
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.trainer_changed',
+                "Membership sale #{$membershipSale->id} trainer changed",
+            );
+
             DB::commit();
 
             return $this->getById($membershipSale->id);
@@ -304,6 +314,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $debtAmount = $this->debtAmount($membershipSale);
             $paymentAmount = $this->resolveAdditionalPaymentAmount($data, $debtAmount);
 
@@ -337,6 +348,13 @@ class MembershipSaleService
             if ($membershipSale->fresh()->payment_status === 'paid') {
                 $this->reminderService->cancelForMembershipSale($membershipSale->id);
             }
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.payment_added',
+                "Payment added to membership sale #{$membershipSale->id}",
+            );
 
             DB::commit();
 
@@ -377,6 +395,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
             if ($this->paidAmount($membershipSale) <= 0) {
                 throw ValidationException::withMessages([
@@ -408,6 +427,13 @@ class MembershipSaleService
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
             ]);
 
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.refund_added',
+                "Refund added to membership sale #{$membershipSale->id}",
+            );
+
             DB::commit();
 
             return $this->getById($membershipSale->id);
@@ -419,22 +445,39 @@ class MembershipSaleService
 
     public function cancelMembership(int $id): MembershipSale
     {
-        $membershipSale = $this->getById($id);
-        $personMembership = $membershipSale->personMemberships->first();
+        DB::beginTransaction();
 
-        if (! $personMembership) {
-            throw ValidationException::withMessages([
-                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+        try {
+            $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
+            $personMembership = $membershipSale->personMemberships->first();
+
+            if (! $personMembership) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                ]);
+            }
+
+            $personMembership->update([
+                'status' => 'cancelled',
             ]);
+
+            $this->reminderService->cancelForMembershipSale($membershipSale->id);
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.cancelled',
+                "Membership sale #{$membershipSale->id} cancelled",
+            );
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
         }
-
-        $personMembership->update([
-            'status' => 'cancelled',
-        ]);
-
-        $this->reminderService->cancelForMembershipSale($membershipSale->id);
-
-        return $this->getById($membershipSale->id);
     }
 
     public function formOptions(?int $personId = null): array
@@ -693,6 +736,8 @@ class MembershipSaleService
                 );
             }
 
+            $this->membershipSaleAuditService->afterCreated($membershipSale);
+
             DB::commit();
 
             return $membershipSale->load([
@@ -714,6 +759,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $membershipPlan = $membershipSale->membershipPlan;
             $existingDiscountRecords = $membershipSale->discounts()->orderBy('id')->get();
             $existingDiscountIds = $existingDiscountRecords->pluck('discount_id')->map(fn ($id) => (int) $id)->all();
@@ -779,6 +825,13 @@ class MembershipSaleService
                     'discount_amount' => $membershipDiscountData['amount'],
                 ]));
             }
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.updated',
+                "Membership sale #{$membershipSale->id} updated",
+            );
 
             DB::commit();
 

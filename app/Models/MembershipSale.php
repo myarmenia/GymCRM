@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\FilterTrait;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MembershipSale extends Model
@@ -90,6 +91,7 @@ class MembershipSale extends Model
     {
         if ($value === 'with') {
             $query->where('discount_amount', '>', 0);
+
             return;
         }
 
@@ -151,5 +153,10 @@ class MembershipSale extends Model
     public function salespersonCommissions()
     {
         return $this->hasMany(SalespersonCommission::class);
+    }
+
+    public function activityLogs(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'loggable');
     }
 }
