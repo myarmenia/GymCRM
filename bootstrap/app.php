@@ -40,6 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'my_guest' => MyGuest::class,
             'setLocale' => SetLocale::class,
             'check.gym' => CheckGymAccess::class,
+            'mobile.person' => \App\Http\Middleware\EnsureMobilePerson::class,
 
         ]);
         $middleware->validateCsrfTokens(except: [

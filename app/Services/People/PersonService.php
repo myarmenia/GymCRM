@@ -6,11 +6,13 @@ use App\Interfaces\People\PersonInterface;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
+use App\Services\Audit\PersonAuditService;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\FileUploadService;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +24,7 @@ class PersonService
         protected EntryCodeService $entryCodeService,
         protected FileUploadService $fileUploadService,
         protected ReminderService $reminderService,
+        protected PersonAuditService $personAuditService,
     ) {}
 
     public function getAllPaginated(array $filters = [])
@@ -61,7 +64,7 @@ class PersonService
                 'membershipSales.payments.cardType',
                 'membershipSales.discounts.discount.translations',
             ])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('gyms', function ($q) use ($user) {
                     $q->where('gyms.id', $user->gym_id);
                 });
@@ -83,23 +86,27 @@ class PersonService
 
     public function store($data)
     {
-        $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
-        $dataStore = $this->dataToArray($data);
-        $person = $this->personRepository->create($dataStore);
+        return DB::transaction(function () use ($data) {
+            $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
+            $dataStore = $this->dataToArray($data);
+            $person = $this->personRepository->create($dataStore);
 
-        // Attach gyms based on current user's role (sales_manager auto-assign)
-        $this->syncGyms($person);
+            // Attach gyms based on current user's role (sales_manager auto-assign)
+            $this->syncGyms($person);
 
-        // Entry code association
-        EntryPermission::create([
-            'entry_code_id' => $entryCode->id,
-            'relation_type' => Person::class,
-            'relation_id'   => $person->id,
-            'status'        => 1,
-        ]);
-        $this->entryCodeService->activateEntryCode($entryCode->id, true);
+            // Entry code association
+            EntryPermission::create([
+                'entry_code_id' => $entryCode->id,
+                'relation_type' => Person::class,
+                'relation_id' => $person->id,
+                'status' => 1,
+            ]);
+            $this->entryCodeService->activateEntryCode($entryCode->id, true);
 
-        return $person;
+            $this->personAuditService->afterCreated($person);
+
+            return $person;
+        });
     }
 
     public function update($id, $data)
@@ -122,12 +129,12 @@ class PersonService
         // Remove existing permissions
         $person->entryPermissions()->delete();
 
-        if (!empty($data->entry_code_id)) {
+        if (! empty($data->entry_code_id)) {
             EntryPermission::create([
                 'entry_code_id' => $data->entry_code_id,
                 'relation_type' => Person::class,
-                'relation_id'   => $person->id,
-                'status'        => 1,
+                'relation_id' => $person->id,
+                'status' => 1,
             ]);
             $this->entryCodeService->activateEntryCode($data->entry_code_id, true);
         }
@@ -150,7 +157,7 @@ class PersonService
         }
 
         // Hash password if present
-        if (!empty($array['password'])) {
+        if (! empty($array['password'])) {
             $array['password'] = Hash::make($array['password']);
         } else {
             unset($array['password']);
@@ -166,12 +173,12 @@ class PersonService
             ->where('id', $entryCodeId)
             ->where('status', true)
             ->where('activation', false)
-            ->when(!$user->hasRole('owner') && $user->gym_id, function ($query) use ($user) {
+            ->when(! $user->hasRole('owner') && $user->gym_id, function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->first();
 
-        if (!$entryCode) {
+        if (! $entryCode) {
             throw ValidationException::withMessages([
                 'entry_code_id' => 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր',
             ]);
