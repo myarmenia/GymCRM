@@ -17,7 +17,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles, SoftDeletes, BelongsToGym, FilterTrait;
+    use BelongsToGym, FilterTrait, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -71,7 +71,6 @@ class User extends Authenticatable
         });
     }
 
-
     public function documents()
     {
         return $this->morphMany(Document::class, 'owner');
@@ -110,7 +109,6 @@ class User extends Authenticatable
         return $this->morphMany(EntryPermission::class, 'relation');
     }
 
-
     // Օժանդակ մեթոդ՝ ստուգելու, արդյոք user-ն ունի կոնկրետ entry code
     public function hasEntryCode(EntryCode $entryCode): bool
     {
@@ -127,7 +125,6 @@ class User extends Authenticatable
                 $q->where('type', 'face_id');
             });
     }
-
 
     public function rfIds()
     {
@@ -172,6 +169,16 @@ class User extends Authenticatable
         return $this->hasMany(SalespersonCommission::class, 'salesperson_id');
     }
 
+    public function salaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class, 'payee_id');
+    }
+
+    public function processedSalaryPayouts()
+    {
+        return $this->hasMany(SalaryPayout::class, 'paid_by');
+    }
+
     public function sentNotifications()
     {
         return $this->hasMany(Notification::class, 'sender_id');
@@ -182,6 +189,17 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class, 'recipient_id');
     }
 
+    public function createdReminders()
+    {
+        return $this->hasMany(Reminder::class, 'created_by');
+    }
+
+    public function reminders()
+    {
+        return $this->belongsToMany(Reminder::class, 'reminder_recipients')
+            ->withPivot(['status', 'sent_at', 'error_message'])
+            ->withTimestamps();
+    }
 
     public function getEntryCodesAttribute()
     {
@@ -193,12 +211,12 @@ class User extends Authenticatable
             ->filter();
     }
 
-    //public function trainerSchedule()
-    //{
-    //   
+    // public function trainerSchedule()
+    // {
+    //
     //    return $this->hasOne(TrainerSchedule::class, 'user_id');
     //
-    //}
+    // }
 
     public function trainerSchedules()
     {

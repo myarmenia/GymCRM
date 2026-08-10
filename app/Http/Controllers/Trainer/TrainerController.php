@@ -73,7 +73,7 @@ class TrainerController extends Controller
         $validated = $request->validate([
             'salary_ids' => ['required', 'array', 'min:1'],
             'salary_ids.*' => ['integer', 'exists:trainer_monthly_salaries,id'],
-            'action' => ['required', 'in:pay,cancel'],
+            'action' => ['required', 'in:cancel'],
         ], [
             'salary_ids.required' => 'Ընտրեք առնվազն մեկ աշխատավարձ։',
             'salary_ids.array' => 'Ընտրված աշխատավարձերի տվյալները սխալ են։',

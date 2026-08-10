@@ -15,16 +15,27 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    reminderUsers: {
+        type: Array,
+        default: () => [],
+    },
     people: {
+        type: Array,
+        default: () => [],
+    },
+    reminderCategories: {
         type: Array,
         default: () => [],
     },
 })
 
 const form = useForm({
+    delivery_mode: 'now',
     send_to_all: false,
     recipient_ids: [],
     about_id: '',
+    category_id: '',
+    scheduled_at: '',
     title: '',
     description: '',
 })
@@ -38,7 +49,26 @@ watch(
     },
 )
 
+watch(
+    () => form.delivery_mode,
+    value => {
+        form.recipient_ids = []
+
+        if (value === 'scheduled') {
+            form.send_to_all = false
+        } else {
+            form.category_id = ''
+            form.scheduled_at = ''
+        }
+    },
+)
+
 const submit = () => {
+    if (form.delivery_mode === 'scheduled') {
+        form.post(route('reminders.store', { locale: currentLocale.value }))
+        return
+    }
+
     form
         .transform(data => ({
             ...data,
@@ -72,12 +102,37 @@ const submit = () => {
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12">
+                        <label class="form-label">Ուղարկման տեսակ</label>
+                        <div class="d-flex gap-4">
+                            <label class="form-check">
+                                <input
+                                    v-model="form.delivery_mode"
+                                    class="form-check-input"
+                                    type="radio"
+                                    value="now"
+                                >
+                                <span class="form-check-label">Ուղարկել հիմա</span>
+                            </label>
+                            <label class="form-check">
+                                <input
+                                    v-model="form.delivery_mode"
+                                    class="form-check-input"
+                                    type="radio"
+                                    value="scheduled"
+                                >
+                                <span class="form-check-label">Պլանավորել որպես հիշեցում</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
                         <div class="form-check">
                             <input
                                 id="send_to_all"
                                 v-model="form.send_to_all"
                                 class="form-check-input"
                                 type="checkbox"
+                                :disabled="form.delivery_mode === 'scheduled'"
                             >
                             <label
                                 class="form-check-label"
@@ -89,13 +144,47 @@ const submit = () => {
                     </div>
 
                     <div
+                        v-if="form.delivery_mode === 'scheduled'"
+                        class="col-md-6"
+                    >
+                        <label class="form-label">Կատեգորիա</label>
+                        <select
+                            v-model="form.category_id"
+                            class="form-select"
+                        >
+                            <option value="" disabled>Ընտրեք կատեգորիան</option>
+                            <option
+                                v-for="category in reminderCategories"
+                                :key="category.value"
+                                :value="category.value"
+                            >
+                                {{ category.label }}
+                            </option>
+                        </select>
+                        <InputError :message="form.errors.category_id" />
+                    </div>
+
+                    <div
+                        v-if="form.delivery_mode === 'scheduled'"
+                        class="col-md-6"
+                    >
+                        <label class="form-label">Ուղարկման օր և ժամ</label>
+                        <input
+                            v-model="form.scheduled_at"
+                            type="datetime-local"
+                            class="form-control"
+                        >
+                        <InputError :message="form.errors.scheduled_at" />
+                    </div>
+
+                    <div
                         v-if="!form.send_to_all"
                         class="col-12"
                     >
                         <label class="form-label">Ստացող օգտատերեր</label>
                         <MultiSelect
                             v-model="form.recipient_ids"
-                            :options="users"
+                            :options="form.delivery_mode === 'scheduled' ? reminderUsers : users"
                             placeholder="Ընտրեք օգտատերերին"
                         />
                         <InputError :message="form.errors.recipient_ids || form.errors['recipient_ids.0']" />
@@ -152,7 +241,7 @@ const submit = () => {
                         Չեղարկել
                     </Link>
                     <PrimaryButton :disabled="form.processing">
-                        Ուղարկել
+                        {{ form.delivery_mode === 'scheduled' ? 'Պլանավորել' : 'Ուղարկել' }}
                     </PrimaryButton>
                 </div>
             </div>

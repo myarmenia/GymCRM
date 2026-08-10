@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Traits\FilterTrait;
-use Dom\Attr;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -18,7 +17,8 @@ class Person extends Authenticatable
 {
     use HasApiTokens, HasFactory, SoftDeletes, FilterTrait;
 
-    protected $guarded =[];
+    protected $guarded = [];
+
     protected $table = 'people';
 
     protected $hidden = [
@@ -86,8 +86,6 @@ class Person extends Authenticatable
         });
     }
 
-
-    
     public function entryPermissions()
     {
         return $this->morphMany(EntryPermission::class, 'relation');
@@ -95,15 +93,13 @@ class Person extends Authenticatable
 
     public function attendance_sheets(): HasMany
     {
-        return $this->hasMany(AttendanceSheet::class,'people_id');
+        return $this->hasMany(AttendanceSheet::class, 'people_id');
     }
 
     public function attendanceSheets()
     {
         return $this->morphMany(AttendanceSheet::class, 'relation');
     }
-
-
 
     public function memberships()
     {
@@ -118,6 +114,11 @@ class Person extends Authenticatable
     public function membershipSales()
     {
         return $this->hasMany(MembershipSale::class);
+    }
+
+    public function reminders()
+    {
+        return $this->hasMany(Reminder::class, 'about_id');
     }
 
     public function activeMemberships()
@@ -137,6 +138,11 @@ class Person extends Authenticatable
 
     }
 
+    public function activityLogs(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'loggable');
+    }
+
     // public function activated_code_connected_person(): HasOne{
     //     return $this->hasOne(EntryPermission::class)->where('status',1);
     // }
@@ -151,10 +157,5 @@ class Person extends Authenticatable
 
     //     return $this->hasMany(Absence::class);
     // }
-
-
-
-
-
 
 }

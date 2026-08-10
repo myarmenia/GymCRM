@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Notifications;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Notifications\StoreNotificationRequest;
 use App\Services\Notifications\NotificationService;
+use App\Services\Reminders\ReminderService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,6 +13,7 @@ class NotificationController extends Controller
 {
     public function __construct(
         protected NotificationService $notificationService,
+        protected ReminderService $reminderService,
     ) {}
 
     public function index(Request $request)
@@ -32,7 +34,9 @@ class NotificationController extends Controller
 
         return Inertia::render('Notifications/Create', [
             'users' => $this->notificationService->usersForSelect($user),
+            'reminderUsers' => $this->reminderService->usersForSelect($user),
             'people' => $this->notificationService->peopleForSelect(),
+            'reminderCategories' => $this->reminderService->categoriesForSelect(),
         ]);
     }
 

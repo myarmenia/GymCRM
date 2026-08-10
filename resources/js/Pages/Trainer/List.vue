@@ -82,7 +82,6 @@ const resetFilters = () => {
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Մարզիչների ցուցակ</h5>
             </div>
-            <h5 class="card-header">Մարզիչների աղյուսակ</h5>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
                     <table class="table table-bordered">

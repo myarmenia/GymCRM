@@ -20,9 +20,14 @@ use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
 use App\Models\PersonMembership;
+use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\User;
 use App\Services\MobileNotifications\MobilePushNotificationService;
+use App\Services\Audit\MembershipSaleAuditService;
+use App\Services\Finance\FinancialLedgerService;
+use App\Services\Reminders\ReminderService;
+use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +43,11 @@ class MembershipSaleService
         protected TrainerCommissionInterface $trainerCommissionRepository,
         protected SalespersonCommissionInterface $salespersonCommissionRepository,
         protected MobilePushNotificationService $mobileNotifications,
-    ) {
-    }
+        protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
+        protected FinancialLedgerService $financialLedgerService,
+        protected ReminderService $reminderService,
+        protected MembershipSaleAuditService $membershipSaleAuditService,
+    ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
     {
@@ -58,7 +66,7 @@ class MembershipSaleService
                 'payments.cardType',
                 'salespersonCommissions.salesperson',
             ])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->filter($this->normalizeFilters($filters))
@@ -74,14 +82,14 @@ class MembershipSaleService
 
         $membershipPlans = MembershipPlan::query()
             ->with('translations')
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderBy('id', 'desc')
             ->get();
 
         $people = Person::query()
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('gyms', function ($q) use ($user) {
                     $q->where('gyms.id', $user->gym_id);
                 });
@@ -95,7 +103,7 @@ class MembershipSaleService
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderBy('name')
@@ -104,7 +112,7 @@ class MembershipSaleService
         $discounts = Discount::query()
             ->with('translations')
             ->whereHas('membershipPlans', function ($query) use ($user) {
-                if (!$user->hasRole('owner')) {
+                if (! $user->hasRole('owner')) {
                     $query->where('membership_plans.gym_id', $user->gym_id);
                 }
             })
@@ -135,7 +143,7 @@ class MembershipSaleService
                 'trainerCommissions.monthlySalaries',
                 'salespersonCommissions.salesperson',
             ])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
@@ -165,13 +173,13 @@ class MembershipSaleService
         $membershipSale = $this->getById($id);
         $personMembership = $membershipSale->personMemberships->first();
 
-        if (!$personMembership) {
+        if (! $personMembership) {
             throw ValidationException::withMessages([
                 'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
             ]);
         }
 
-        if (!$personMembership->trainer_id) {
+        if (! $personMembership->trainer_id) {
             throw ValidationException::withMessages([
                 'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
             ]);
@@ -198,11 +206,12 @@ class MembershipSaleService
                     'personMemberships.trainer',
                     'payments.paymentMethod',
                 ])
-                ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+                ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                     $query->where('gym_id', $user->gym_id);
                 })
                 ->lockForUpdate()
                 ->findOrFail($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
             $personMembership = $membershipSale
                 ->personMemberships()
@@ -210,13 +219,13 @@ class MembershipSaleService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$personMembership) {
+            if (! $personMembership) {
                 throw ValidationException::withMessages([
                     'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
                 ]);
             }
 
-            if (!$personMembership->trainer_id) {
+            if (! $personMembership->trainer_id) {
                 throw ValidationException::withMessages([
                     'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
                 ]);
@@ -245,43 +254,52 @@ class MembershipSaleService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$oldTrainerCommission) {
+            if (! $oldTrainerCommission) {
                 throw ValidationException::withMessages([
                     'trainer_id' => 'Գործող մարզչի կոմիսիան չի գտնվել։',
                 ]);
             }
 
-            $oldOriginalSalaryAmount = (float) $oldTrainerCommission->salary_amount;
-            $generatedSalaryAmount = (float) $oldTrainerCommission
-                ->monthlySalaries()
-                ->sum('price');
-            $remainingAmount = max($oldOriginalSalaryAmount - $generatedSalaryAmount, 0);
+            $oldRemainingAmount = (float) $oldTrainerCommission->salary_amount;
+            $outstandingGeneratedAmount = (float) SalaryPayableAssignment::query()
+                ->where('trainer_commission_id', $oldTrainerCommission->id)
+                ->sum('available_amount');
+            $remainingAmount = max($oldRemainingAmount - $outstandingGeneratedAmount, 0);
 
             $oldTrainerCommission->update([
-                'salary_amount' => $generatedSalaryAmount,
+                'salary_amount' => $outstandingGeneratedAmount,
+                'status' => $outstandingGeneratedAmount > 0 ? 'pending' : 'paid',
+                'paid_at' => $outstandingGeneratedAmount > 0
+                    ? null
+                    : $oldTrainerCommission->paid_at,
             ]);
 
-            if ($remainingAmount > 0) {
-                $commissionData = $this->calculateTrainerCommission($newTrainer, (float) $membershipSale->final_price, []);
+            $commissionData = $this->calculateTrainerCommission($newTrainer, (float) $membershipSale->final_price, []);
 
-                $this->trainerCommissionRepository->create(
-                    $this->trainerCommissionDtoData([
-                        'trainer_id' => $newTrainer->id,
-                        'membership_sale_id' => $membershipSale->id,
-                        'person_membership_id' => $personMembership->id,
-                        'salary_type' => $commissionData['type'],
-                        'salary_value' => $commissionData['value'],
-                        'salary_amount' => $remainingAmount,
-                        'status' => 'pending',
-                        'paid_at' => null,
-                        'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
-                    ])
-                );
-            }
+            $this->trainerCommissionRepository->create(
+                $this->trainerCommissionDtoData([
+                    'trainer_id' => $newTrainer->id,
+                    'membership_sale_id' => $membershipSale->id,
+                    'person_membership_id' => $personMembership->id,
+                    'salary_type' => $commissionData['type'],
+                    'salary_value' => $commissionData['value'],
+                    'salary_amount' => $remainingAmount,
+                    'status' => 'pending',
+                    'paid_at' => null,
+                    'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
+                ])
+            );
 
             $personMembership->update([
                 'trainer_id' => $newTrainer->id,
             ]);
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.trainer_changed',
+                "Membership sale #{$membershipSale->id} trainer changed",
+            );
 
             DB::commit();
 
@@ -292,13 +310,13 @@ class MembershipSaleService
         }
     }
 
-
     public function storePayment(int $id, array $data): MembershipSale
     {
         DB::beginTransaction();
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $debtAmount = $this->debtAmount($membershipSale);
             $paymentAmount = $this->resolveAdditionalPaymentAmount($data, $debtAmount);
 
@@ -311,7 +329,7 @@ class MembershipSaleService
             $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $paymentAmount);
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
-            $this->membershipPlanPaymentRepository->create(
+            $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
                     'membership_sale_id' => $membershipSale->id,
                     'amount' => $paymentAmount,
@@ -323,10 +341,22 @@ class MembershipSaleService
                     'notes' => $data['payment_notes'] ?? null,
                 ])
             );
+            $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
 
             $membershipSale->update([
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
             ]);
+
+            if ($membershipSale->fresh()->payment_status === 'paid') {
+                $this->reminderService->cancelForMembershipSale($membershipSale->id);
+            }
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.payment_added',
+                "Payment added to membership sale #{$membershipSale->id}",
+            );
 
             DB::commit();
 
@@ -337,12 +367,37 @@ class MembershipSaleService
         }
     }
 
+    public function createPaymentReminder(int $id, array $data)
+    {
+        $membershipSale = $this->getById($id);
+        $debtAmount = $this->debtAmount($membershipSale);
+
+        if ($debtAmount <= 0) {
+            throw ValidationException::withMessages([
+                'reminder_scheduled_at' => 'Այս աբոնեմենտի համար վճարման պարտք չկա։',
+            ]);
+        }
+
+        return $this->reminderService->createForMembershipDebt(
+            Auth::user(),
+            $membershipSale->loadMissing('person'),
+            [
+                'scheduled_at' => $data['reminder_scheduled_at'],
+                'recipient_ids' => $data['reminder_recipient_ids'],
+                'title' => $data['reminder_title'] ?? null,
+                'description' => $data['reminder_description'] ?? null,
+            ],
+            $debtAmount,
+        );
+    }
+
     public function storeRefund(int $id, array $data): MembershipSale
     {
         DB::beginTransaction();
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
             if ($this->paidAmount($membershipSale) <= 0) {
                 throw ValidationException::withMessages([
@@ -356,7 +411,7 @@ class MembershipSaleService
             $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $refundAmount);
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
-            $this->membershipPlanPaymentRepository->create(
+            $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
                     'membership_sale_id' => $membershipSale->id,
                     'amount' => $refundAmount,
@@ -368,10 +423,18 @@ class MembershipSaleService
                     'notes' => $data['refund_notes'] ?? null,
                 ])
             );
+            $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
 
             $membershipSale->update([
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
             ]);
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.refund_added',
+                "Refund added to membership sale #{$membershipSale->id}",
+            );
 
             DB::commit();
 
@@ -384,20 +447,39 @@ class MembershipSaleService
 
     public function cancelMembership(int $id): MembershipSale
     {
-        $membershipSale = $this->getById($id);
-        $personMembership = $membershipSale->personMemberships->first();
+        DB::beginTransaction();
 
-        if (!$personMembership) {
-            throw ValidationException::withMessages([
-                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+        try {
+            $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
+            $personMembership = $membershipSale->personMemberships->first();
+
+            if (! $personMembership) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                ]);
+            }
+
+            $personMembership->update([
+                'status' => 'cancelled',
             ]);
+
+            $this->reminderService->cancelForMembershipSale($membershipSale->id);
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.cancelled',
+                "Membership sale #{$membershipSale->id} cancelled",
+            );
+
+            DB::commit();
+
+            return $this->getById($membershipSale->id);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
         }
-
-        $personMembership->update([
-            'status' => 'cancelled',
-        ]);
-
-        return $this->getById($membershipSale->id);
     }
 
     public function formOptions(?int $personId = null): array
@@ -412,7 +494,7 @@ class MembershipSaleService
                 'trainers',
             ])
             ->where('active', true)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderBy('id', 'desc')
@@ -420,7 +502,7 @@ class MembershipSaleService
 
         $people = Person::query()
             ->with('gyms')
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('gyms', function ($q) use ($user) {
                     $q->where('gyms.id', $user->gym_id);
                 });
@@ -433,7 +515,7 @@ class MembershipSaleService
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderBy('name')
@@ -450,7 +532,20 @@ class MembershipSaleService
             ? $this->customerCurrentMemberships($personId, $user)
             : collect();
 
-        return compact('membershipPlans', 'people', 'trainers', 'paymentMethods', 'discountTypes', 'selectedPerson', 'customerMemberships');
+        $reminderUsers = $this->reminderService->usersForSelect($user);
+        $defaultReminderRecipientIds = $this->reminderService->defaultMembershipRecipients($user);
+
+        return compact(
+            'membershipPlans',
+            'people',
+            'trainers',
+            'paymentMethods',
+            'discountTypes',
+            'selectedPerson',
+            'customerMemberships',
+            'reminderUsers',
+            'defaultReminderRecipientIds',
+        );
     }
 
     public function store(array $data)
@@ -542,7 +637,7 @@ class MembershipSaleService
             $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
 
             if ($paymentMethodId) {
-                $this->membershipPlanPaymentRepository->create(
+                $payment = $this->membershipPlanPaymentRepository->create(
                     $this->paymentDtoData([
                         'membership_sale_id' => $membershipSale->id,
                         'amount' => $paymentAmount,
@@ -554,13 +649,17 @@ class MembershipSaleService
                         'notes' => $data['payment_notes'] ?? $data['notes'] ?? null,
                     ])
                 );
+
+                if ($paymentAmount > 0) {
+                    $this->financialLedgerService->recordMembershipPayment($payment, $user->id);
+                }
             }
 
-            if (!empty($data['trainer_id'])) {
+            if (! empty($data['trainer_id'])) {
                 $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
 
-                $this->trainerCommissionRepository->create(
+                $trainerCommission = $this->trainerCommissionRepository->create(
                     $this->trainerCommissionDtoData([
                         'trainer_id' => $trainer->id,
                         'membership_sale_id' => $membershipSale->id,
@@ -573,10 +672,15 @@ class MembershipSaleService
                         'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),
                     ])
                 );
+
+                $this->trainerMonthlySalaryService->generateForCommission(
+                    $trainerCommission,
+                    $trainerCommission->created_at
+                );
             }
 
             $salespersonCommissionData = $this->calculateSalespersonCommission($membershipPlan, $finalPrice);
-            $this->salespersonCommissionRepository->create(
+            $salespersonCommission = $this->salespersonCommissionRepository->create(
                 $this->salespersonCommissionDtoData([
                     'salesperson_id' => $user->id,
                     'membership_sale_id' => $membershipSale->id,
@@ -590,6 +694,51 @@ class MembershipSaleService
                     'paid_at' => null,
                 ])
             );
+
+            SalaryPayableAssignment::query()->create([
+                'gym_id' => $gymId,
+                'payee_id' => $salespersonCommission->salesperson_id,
+                'source_type' => 'salesperson_commission',
+                'trainer_monthly_salary_id' => null,
+                'salesperson_commission_id' => $salespersonCommission->id,
+                'trainer_commission_id' => null,
+                'parent_assignment_id' => null,
+                'root_key' => "salesperson:{$salespersonCommission->id}",
+                'amount' => $salespersonCommission->salary_amount,
+                'available_amount' => $salespersonCommission->salary_amount,
+            ]);
+
+            $debtAmount = max($finalPrice - $paymentAmount, 0);
+
+            if ($debtAmount > 0) {
+                $reminderErrors = [];
+
+                if (empty($data['reminder_scheduled_at'])) {
+                    $reminderErrors['reminder_scheduled_at'] = 'Նշեք վճարման հիշեցման օրն ու ժամը։';
+                }
+
+                if (empty($data['reminder_recipient_ids'])) {
+                    $reminderErrors['reminder_recipient_ids'] = 'Ընտրեք առնվազն մեկ հիշեցման ստացող։';
+                }
+
+                if (! empty($reminderErrors)) {
+                    throw ValidationException::withMessages($reminderErrors);
+                }
+
+                $this->reminderService->createForMembershipDebt(
+                    $user,
+                    $membershipSale->loadMissing('person'),
+                    [
+                        'scheduled_at' => $data['reminder_scheduled_at'] ?? null,
+                        'recipient_ids' => $data['reminder_recipient_ids'] ?? [],
+                        'title' => $data['reminder_title'] ?? null,
+                        'description' => $data['reminder_description'] ?? null,
+                    ],
+                    $debtAmount,
+                );
+            }
+
+            $this->membershipSaleAuditService->afterCreated($membershipSale);
 
             DB::commit();
 
@@ -614,6 +763,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $membershipPlan = $membershipSale->membershipPlan;
             $existingDiscountRecords = $membershipSale->discounts()->orderBy('id')->get();
             $existingDiscountIds = $existingDiscountRecords->pluck('discount_id')->map(fn ($id) => (int) $id)->all();
@@ -680,6 +830,13 @@ class MembershipSaleService
                 ]));
             }
 
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.updated',
+                "Membership sale #{$membershipSale->id} updated",
+            );
+
             DB::commit();
 
             return $this->getById($membershipSale->id);
@@ -698,7 +855,7 @@ class MembershipSaleService
     {
         $query = MembershipPlan::with('discounts')->where('active', true);
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $query->where('gym_id', $user->gym_id);
         }
 
@@ -717,12 +874,12 @@ class MembershipSaleService
         $dateField = $filters['date_field'] ?? null;
 
         if ($dateField && isset($dateFieldMap[$dateField])) {
-            if (!empty($filters['date_from'])) {
-                $filters[$dateFieldMap[$dateField] . '_from'] = $filters['date_from'];
+            if (! empty($filters['date_from'])) {
+                $filters[$dateFieldMap[$dateField].'_from'] = $filters['date_from'];
             }
 
-            if (!empty($filters['date_to'])) {
-                $filters[$dateFieldMap[$dateField] . '_to'] = $filters['date_to'];
+            if (! empty($filters['date_to'])) {
+                $filters[$dateFieldMap[$dateField].'_to'] = $filters['date_to'];
             }
         }
 
@@ -746,10 +903,10 @@ class MembershipSaleService
     {
         $person = Person::with('gyms')->findOrFail($id);
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $hasGym = $person->gyms->contains('id', $user->gym_id);
 
-            if (!$hasGym || (int) $membershipPlan->gym_id !== (int) $user->gym_id) {
+            if (! $hasGym || (int) $membershipPlan->gym_id !== (int) $user->gym_id) {
                 throw ValidationException::withMessages([
                     'person_id' => 'Ընտրված հաճախորդը չի պատկանում ձեր մարզասրահին։',
                 ]);
@@ -763,7 +920,7 @@ class MembershipSaleService
     {
         $query = Person::query()->with('gyms');
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $query->whereHas('gyms', function ($q) use ($user) {
                 $q->where('gyms.id', $user->gym_id);
             });
@@ -778,7 +935,7 @@ class MembershipSaleService
             ? ($membershipPlan->gym_id ?? $person->gyms->first()?->id ?? $user->gym_id)
             : $user->gym_id;
 
-        if (!$gymId) {
+        if (! $gymId) {
             throw ValidationException::withMessages([
                 'gym_id' => 'Մարզասրահը պարտադիր է։',
             ]);
@@ -797,7 +954,7 @@ class MembershipSaleService
             return $plan->end_date ? Carbon::parse($plan->end_date)->startOfDay() : null;
         }
 
-        if (!$plan->duration_value) {
+        if (! $plan->duration_value) {
             return null;
         }
 
@@ -865,7 +1022,7 @@ class MembershipSaleService
         $manualValue = null;
         $manualAmount = 0;
 
-        if (!empty($data['apply_discount']) && !empty($data['discount_type'])) {
+        if (! empty($data['apply_discount']) && ! empty($data['discount_type'])) {
             $manualType = $data['discount_type'];
             $manualValue = (float) ($data['discount_value'] ?? 0);
             $manualAmount = $this->calculateDiscountAmount($manualType, $manualValue, $priceAfterMembershipDiscount);
@@ -887,7 +1044,7 @@ class MembershipSaleService
 
     protected function calculateDiscountAmount(?string $type, float $value, float $basePrice): float
     {
-        if (!$type || $basePrice <= 0 || $value <= 0) {
+        if (! $type || $basePrice <= 0 || $value <= 0) {
             return 0;
         }
 
@@ -979,7 +1136,7 @@ class MembershipSaleService
             ])
             ->where('person_id', $personId)
             ->whereIn('status', ['active', 'waiting', 'frozen'])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderByDesc('id')
@@ -1000,7 +1157,7 @@ class MembershipSaleService
 
     protected function ensureMembershipStartDateIsAllowed(?PersonMembership $previousMatchingMembership, Carbon $startDate): void
     {
-        if (!$previousMatchingMembership || !$previousMatchingMembership->valid_at) {
+        if (! $previousMatchingMembership || ! $previousMatchingMembership->valid_at) {
             return;
         }
 
@@ -1028,11 +1185,11 @@ class MembershipSaleService
 
     protected function resolvePaymentAmount(array $data, float $finalPrice): float
     {
-        if (!empty($data['stay_debt'])) {
+        if (! empty($data['stay_debt'])) {
             return 0;
         }
 
-        if (!empty($data['is_full_payment'])) {
+        if (! empty($data['is_full_payment'])) {
             return $finalPrice;
         }
 
@@ -1051,7 +1208,7 @@ class MembershipSaleService
             ]);
         }
 
-        if (!empty($data['is_full_payment'])) {
+        if (! empty($data['is_full_payment'])) {
             return $debtAmount;
         }
 
@@ -1074,7 +1231,7 @@ class MembershipSaleService
             ]);
         }
 
-        $refundAmount = !empty($data['is_full_refund'])
+        $refundAmount = ! empty($data['is_full_refund'])
             ? $availableRefundAmount
             : (float) ($data['amount'] ?? 0);
 
@@ -1101,7 +1258,7 @@ class MembershipSaleService
 
     protected function resolvePaymentMethod(?int $paymentMethodId, float $paymentAmount): ?PaymentMethod
     {
-        if (!$paymentMethodId) {
+        if (! $paymentMethodId) {
             if ($paymentAmount > 0) {
                 throw ValidationException::withMessages([
                     'payment_method_id' => 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։',
@@ -1115,7 +1272,7 @@ class MembershipSaleService
             ->with('cardTypes')
             ->find($paymentMethodId);
 
-        if (!$paymentMethod) {
+        if (! $paymentMethod) {
             throw ValidationException::withMessages([
                 'payment_method_id' => 'Ընտրված վճարման եղանակը անվավեր է։',
             ]);
@@ -1126,21 +1283,21 @@ class MembershipSaleService
 
     protected function resolveCardTypeId(?PaymentMethod $paymentMethod, mixed $cardTypeId): ?int
     {
-        if (!$paymentMethod) {
+        if (! $paymentMethod) {
             return null;
         }
 
-        if (!$paymentMethod->cardTypes->count()) {
+        if (! $paymentMethod->cardTypes->count()) {
             return null;
         }
 
-        if (!$cardTypeId) {
+        if (! $cardTypeId) {
             throw ValidationException::withMessages([
                 'card_type_id' => 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։',
             ]);
         }
 
-        if (!$paymentMethod->cardTypes->contains('id', (int) $cardTypeId)) {
+        if (! $paymentMethod->cardTypes->contains('id', (int) $cardTypeId)) {
             throw ValidationException::withMessages([
                 'card_type_id' => 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։',
             ]);
@@ -1162,7 +1319,7 @@ class MembershipSaleService
             $query->where('users.gym_id', $membershipPlan->gym_id);
         }
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $query->where('users.gym_id', $gymId);
         }
 
@@ -1199,7 +1356,7 @@ class MembershipSaleService
 
     protected function shouldKeepTrainerCommission(float $paymentAmount, float $finalPrice, ?int $paymentMethodId): bool
     {
-        if (!$paymentMethodId || $finalPrice <= 0 || $paymentAmount < $finalPrice) {
+        if (! $paymentMethodId || $finalPrice <= 0 || $paymentAmount < $finalPrice) {
             return false;
         }
 
@@ -1263,7 +1420,7 @@ class MembershipSaleService
             base_path('database/migrations/2026_06_08_000004_create_membership_sales_table.php')
         );
 
-        if (!preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
+        if (! preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
             return [];
         }
 
