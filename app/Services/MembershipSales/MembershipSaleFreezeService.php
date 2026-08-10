@@ -6,6 +6,7 @@ use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Models\MembershipSale;
 use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
+use App\Services\Audit\MembershipSaleAuditService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,15 +16,15 @@ class MembershipSaleFreezeService
 {
     public function __construct(
         protected MembershipSaleInterface $membershipSaleRepository,
-    ) {
-    }
+        protected MembershipSaleAuditService $membershipSaleAuditService,
+    ) {}
 
     public function freezePageData(int $id): array
     {
         $membershipSale = $this->getById($id);
         $personMembership = $this->personMembershipForFreezePage($membershipSale);
 
-        if (!$personMembership) {
+        if (! $personMembership) {
             throw ValidationException::withMessages([
                 'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
             ]);
@@ -49,9 +50,10 @@ class MembershipSaleFreezeService
 
         try {
             $membershipSale = $this->getById($id);
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $activePersonMembership = $this->activePersonMembershipForFreezes($membershipSale);
 
-            if (!$activePersonMembership) {
+            if (! $activePersonMembership) {
                 throw ValidationException::withMessages([
                     'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
                 ]);
@@ -62,7 +64,7 @@ class MembershipSaleFreezeService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (!$this->isActiveValidPersonMembership($personMembership)) {
+            if (! $this->isActiveValidPersonMembership($personMembership)) {
                 throw ValidationException::withMessages([
                     'person_membership_id' => $this->freezeRequiresActiveMembershipMessage(),
                 ]);
@@ -109,6 +111,13 @@ class MembershipSaleFreezeService
             $personMembership->update($personMembershipUpdateData);
             $this->shiftNextMembershipAfterFreeze($personMembership, $extendedValidAt);
 
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.frozen',
+                "Membership sale #{$membershipSale->id} frozen",
+            );
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -122,7 +131,7 @@ class MembershipSaleFreezeService
 
         return $this->membershipSaleRepository
             ->query()
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
@@ -164,7 +173,7 @@ class MembershipSaleFreezeService
     {
         $today = today();
 
-        if (!in_array($personMembership->status, ['waiting', 'active', 'frozen'], true)) {
+        if (! in_array($personMembership->status, ['waiting', 'active', 'frozen'], true)) {
             return false;
         }
 
@@ -190,7 +199,7 @@ class MembershipSaleFreezeService
 
     protected function shiftNextMembershipAfterFreeze(PersonMembership $personMembership, ?Carbon $extendedValidAt): void
     {
-        if (!$personMembership->next_membership_id || !$extendedValidAt) {
+        if (! $personMembership->next_membership_id || ! $extendedValidAt) {
             return;
         }
 
@@ -199,7 +208,7 @@ class MembershipSaleFreezeService
             ->lockForUpdate()
             ->first();
 
-        if (!$nextMembership || !$nextMembership->start_date) {
+        if (! $nextMembership || ! $nextMembership->start_date) {
             return;
         }
 
