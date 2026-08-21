@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Traits\BelongsToGym;
 use App\Traits\FilterTrait;
+use App\Traits\HasUuidAndVersion;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToGym, FilterTrait, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use BelongsToGym, FilterTrait, HasFactory, HasRoles, HasUuidAndVersion, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -84,6 +85,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'version',
     ];
 
     /**
@@ -96,6 +98,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'version' => 'integer',
         ];
     }
 
