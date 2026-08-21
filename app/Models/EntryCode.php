@@ -3,17 +3,28 @@
 namespace App\Models;
 
 use App\Traits\FilterTrait;
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EntryCode extends Model
 {
-    use HasFactory, SoftDeletes, FilterTrait;
+    use FilterTrait, HasFactory, HasUuidAndVersion, SoftDeletes;
 
     protected $guarded = [];
+    protected $hidden = [
+        'version',
+    ];
     public $timestamps = true;
     protected $table = "entry_codes";
+
+    protected function casts(): array
+    {
+        return [
+            'version' => 'integer',
+        ];
+    }
 
     protected array $filterConfig = [
         'type' => [
