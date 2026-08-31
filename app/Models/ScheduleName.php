@@ -46,7 +46,7 @@ class ScheduleName extends Model
             'trainer_schedules',
             'schedule_name_id',
             'user_id'
-        );
+        )->wherePivotNull('deleted_at');
     }
 
     public function trainerSchedules()
