@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class WarehouseStock extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'gym_id',
         'warehouse_id',
@@ -20,7 +23,6 @@ class WarehouseStock extends Model
         'reserved_quantity' => 'float',
         'average_cost' => 'float',
     ];
-
 
     public function warehouse()
     {

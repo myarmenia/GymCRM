@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('entry_permissions', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('entry_code_id')->constrained()->onDelete('cascade');
             $table->morphs('relation');
             $table->boolean('status')->default(1);

@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('discounts', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('type');
             $table->decimal('value', 10, 2);
             $table->dateTime('start_date')->nullable();

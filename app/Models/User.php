@@ -200,7 +200,8 @@ class User extends Authenticatable
     public function reminders()
     {
         return $this->belongsToMany(Reminder::class, 'reminder_recipients')
-            ->withPivot(['status', 'sent_at', 'error_message'])
+            ->using(ReminderRecipient::class)
+            ->withPivot(['status', 'sent_at', 'error_message', 'uuid', 'version'])
             ->withTimestamps();
     }
 

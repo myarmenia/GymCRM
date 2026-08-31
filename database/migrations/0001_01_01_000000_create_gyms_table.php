@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('gyms', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('name');
             $table->string('address')->nullable();
             $table->string('phone')->nullable();

@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('person_positions', function (Blueprint $table) {
             $table->id();
-            $table->string("name");
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
+            $table->string('name');
             $table->timestamps();
         });
     }

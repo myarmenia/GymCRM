@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('membership_plan_trainers', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
 
             $table->foreignId('membership_plan_id')
                 ->constrained('membership_plans')

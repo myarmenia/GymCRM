@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('gym_id')->nullable()->constrained()->cascadeOnDelete();
             $table->morphs('owner'); // создаст owner_id и owner_type
             $table->string('type'); // passport, id_card, contract и т.д.

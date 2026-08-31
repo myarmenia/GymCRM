@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('guests', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('guest_id')->constrained('people')->cascadeOnDelete();
             $table->foreignId('person_id')->constrained('people')->cascadeOnDelete();
             $table->foreignId('person_membership_id')->constrained()->cascadeOnDelete();

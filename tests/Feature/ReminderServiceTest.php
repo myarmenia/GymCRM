@@ -10,6 +10,7 @@ use App\Models\MembershipSale;
 use App\Models\Notification;
 use App\Models\Person;
 use App\Models\ReminderCategory;
+use App\Models\ReminderRecipient;
 use App\Models\User;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,6 +49,14 @@ class ReminderServiceTest extends TestCase
             'scheduled_at' => now()->subMinute(),
         ]);
 
+        $recipientRows = ReminderRecipient::query()
+            ->where('reminder_id', $reminder->id)
+            ->get();
+
+        $this->assertCount(2, $recipientRows);
+        $this->assertTrue($recipientRows->every(fn (ReminderRecipient $recipient) => $recipient->uuid !== null));
+        $this->assertTrue($recipientRows->every(fn (ReminderRecipient $recipient) => $recipient->version === 1));
+
         $this->assertSame(1, app(ReminderService::class)->sendDue());
         $this->assertSame(0, app(ReminderService::class)->sendDue());
 
@@ -63,6 +72,12 @@ class ReminderServiceTest extends TestCase
         $this->assertSame(
             2,
             $reminder->recipients()->wherePivot('status', 'sent')->count(),
+        );
+        $this->assertTrue(
+            ReminderRecipient::query()
+                ->where('reminder_id', $reminder->id)
+                ->get()
+                ->every(fn (ReminderRecipient $recipient) => $recipient->version === 2),
         );
     }
 
@@ -84,6 +99,7 @@ class ReminderServiceTest extends TestCase
 
         $this->assertSame(1, app(ReminderService::class)->cancelForMembershipSale(123));
         $this->assertSame('cancelled', $reminder->fresh()->status);
+        $this->assertSame(2, $reminder->fresh()->version);
         $this->assertNotNull($reminder->fresh()->cancelled_at);
     }
 

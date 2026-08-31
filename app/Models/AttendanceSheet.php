@@ -3,9 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\MyHelper;
-use App\Traits\ReportFilterTrait;
-use App\Traits\ReportTrait;
-use Carbon\Carbon;
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,11 +12,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AttendanceSheet extends Model
 {
     use HasFactory;
+    use HasUuidAndVersion;
 
-    protected $guarded =[];
+    protected $guarded = [];
+
     protected $table = 'attendance_sheets';
+
     // protected $filterFields = ['people_id','date'];
     protected $filterFieldsInRelation = ['name'];
+
     protected $appends = ['schedule_name_id', 'department_id'];
 
     public function relation()
@@ -33,13 +35,13 @@ class AttendanceSheet extends Model
 
     // accesors
 
-
     public function getScheduleNameIdAttribute()
     {
         return $this->relation && $this->relation->schedule_department_people?->isNotEmpty()
             ? $this->relation->schedule_department_people->first()->schedule_name_id
             : null;
     }
+
     public function getScheduleDetailsAttribute()
     {
         return $this->relation && $this->relation->schedule_department_people?->isNotEmpty()
@@ -76,13 +78,10 @@ class AttendanceSheet extends Model
             ->with(['relation.schedule_department_people']);
     }
 
-
     public static function forPersonOnDate($relationId, $date)
     {
         return self::where('relation_id', $relationId)
             ->whereDate('date', $date)
             ->get();
     }
-
-
 }

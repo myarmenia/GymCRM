@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('membership_plan_payments', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_sale_id')->constrained()->cascadeOnDelete();
             $table->decimal('amount', 10, 2)->default(0);
             $table->foreignId('payment_method_id')->constrained()->cascadeOnDelete();

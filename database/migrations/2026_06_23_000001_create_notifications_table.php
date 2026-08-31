@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('sender_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('recipient_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('about_id')->nullable()->constrained('people')->nullOnDelete();

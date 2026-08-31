@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('membership_plan_translations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_plan_id')->constrained()->cascadeOnDelete();
 
             $table->string('locale', 5);
@@ -20,7 +22,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->unique([
                 'membership_plan_id',
-                'locale'
+                'locale',
             ]);
             $table->timestamps();
         });

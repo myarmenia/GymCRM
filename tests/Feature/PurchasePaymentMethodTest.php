@@ -126,6 +126,8 @@ class PurchasePaymentMethodTest extends TestCase
         $migration->down();
 
         $purchaseId = DB::table('purchases')->insertGetId([
+            'uuid' => (string) Str::uuid(),
+            'version' => 1,
             'gym_id' => $gym->id,
             'token' => (string) Str::uuid(),
             'subtotal' => 3000,

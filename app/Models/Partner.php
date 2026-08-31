@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Partner extends Model
 {
+    use HasUuidAndVersion;
     use SoftDeletes;
 
     protected $fillable = [
@@ -19,16 +21,15 @@ class Partner extends Model
         'email',
         'contact_full_name',
         'contact_phone',
-        'status'
+        'status',
     ];
-
 
     public function documents()
     {
         return $this->morphMany(Document::class, 'owner');
     }
 
-     public function gym()
+    public function gym()
     {
         return $this->belongsTo(Gym::class);
     }

@@ -688,6 +688,7 @@ class SalaryPayoutService
             TrainerMonthlySalary::query()->whereKey($sourceId)->update([
                 'status' => $available <= 0 ? 'paid' : ($hasTransfer ? 'transfer' : 'pending'),
                 'salary_payout_id' => null,
+                'version' => DB::raw('version + 1'),
             ]);
 
             return;
@@ -697,6 +698,7 @@ class SalaryPayoutService
             'status' => $available <= 0 ? 'paid' : 'pending',
             'paid_at' => $available <= 0 ? ($settledAt ?? now()) : null,
             'salary_payout_id' => null,
+            'version' => DB::raw('version + 1'),
         ]);
     }
 

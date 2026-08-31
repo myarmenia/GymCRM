@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Lang;
+use App\Support\StableUuid;
+use Illuminate\Database\Seeder;
 
 class LangSeeder extends Seeder
 {
@@ -19,7 +20,10 @@ class LangSeeder extends Seeder
         ];
 
         foreach ($langs as $lang) {
-            Lang::updateOrCreate(['code' => $lang['code']], $lang);
+            Lang::updateOrCreate(['code' => $lang['code']], [
+                ...$lang,
+                ...StableUuid::seedIdentity('langs', $lang['code']),
+            ]);
         }
     }
 }

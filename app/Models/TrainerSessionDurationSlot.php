@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class TrainerSessionDurationSlot extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'session_duration_id',
         'week_day',

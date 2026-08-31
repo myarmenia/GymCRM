@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('person_membership_freezes', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('person_membership_id')->constrained()->cascadeOnDelete();
             $table->date('start_date');
             $table->date('end_date');

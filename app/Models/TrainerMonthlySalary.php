@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class TrainerMonthlySalary extends Model
 {
+    use HasUuidAndVersion;
+
     protected $guarded = [];
 
     protected function casts(): array

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EntryReport extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'client_id',
         'entry_code',
@@ -55,7 +58,7 @@ class EntryReport extends Model
         $owner = $this->owner;
 
         return $owner
-            ? trim(($owner->name ?? '') . ' ' . ($owner->surname ?? ''))
+            ? trim(($owner->name ?? '').' '.($owner->surname ?? ''))
             : null;
     }
 

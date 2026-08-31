@@ -5,8 +5,6 @@ namespace App\Repositories\EntryCodes;
 use App\Interfaces\EntryCodes\EntryCodeInterface;
 use App\Models\EntryCode;
 use App\Models\Staff;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class EntryCodeRepository implements EntryCodeInterface
 {
@@ -20,7 +18,7 @@ class EntryCodeRepository implements EntryCodeInterface
         $user = auth()->user();
         $query = EntryCode::orderBy('id', 'desc');
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $userGymId = $user->gym_id ?? null;
             if ($userGymId) {
                 $query->where('gym_id', $userGymId);
@@ -60,12 +58,14 @@ class EntryCodeRepository implements EntryCodeInterface
     {
         $entryCode = $this->find($id);
         $entryCode->update($data);
+
         return $entryCode;
     }
 
     public function delete(int $id)
     {
         $entryCode = $this->find($id);
+
         return $entryCode->delete();
     }
 
@@ -98,6 +98,6 @@ class EntryCodeRepository implements EntryCodeInterface
 
     public function activate(int $entryCodeId, bool $active = true): void
     {
-        EntryCode::where('id', $entryCodeId)->update(['activation' => $active ? 1 : 0]);
+        EntryCode::query()->findOrFail($entryCodeId)->update(['activation' => $active ? 1 : 0]);
     }
 }

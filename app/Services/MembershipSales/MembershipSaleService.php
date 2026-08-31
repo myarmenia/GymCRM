@@ -16,6 +16,7 @@ use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
 use App\Models\MembershipPlan;
+use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
@@ -23,9 +24,9 @@ use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\User;
-use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
+use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Reminders\ReminderService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
@@ -152,6 +153,23 @@ class MembershipSaleService
     public function paymentPageData(int $id): array
     {
         $membershipSale = $this->getById($id);
+        $membershipSale->payments->each(function (MembershipPlanPayment $payment): void {
+            $refundedAmount = $payment->type === 'payment'
+                ? (float) $payment->refunds()->where('status', 'paid')->sum('amount')
+                : 0;
+
+            $payment->setAttribute('refunded_amount', $refundedAmount);
+            $payment->setAttribute('refundable_amount', $payment->type === 'payment'
+                ? max((float) $payment->amount - $refundedAmount, 0)
+                : 0);
+            $payment->setAttribute('has_successful_hdm_operation', $payment->type === 'payment'
+                && $payment->hdmOperations()
+                    ->where('transaction_type', 'sale')
+                    ->where('status', 'success')
+                    ->whereNotNull('crn')
+                    ->whereNotNull('rseq')
+                    ->exists());
+        });
         $paymentMethods = PaymentMethod::query()
             ->with(['translations', 'cardTypes'])
             ->orderBy('id')
@@ -391,7 +409,7 @@ class MembershipSaleService
         );
     }
 
-    public function storeRefund(int $id, array $data): MembershipSale
+    public function storeRefund(int $id, array $data): MembershipPlanPayment
     {
         DB::beginTransaction();
 
@@ -408,8 +426,13 @@ class MembershipSaleService
             $availableRefundAmount = $this->availableRefundAmount($membershipSale);
             $refundAmount = $this->resolveRefundAmount($data, $availableRefundAmount);
 
-            $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $refundAmount);
-            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
+            $originalPayment = $this->resolveOriginalPaymentForRefund(
+                $membershipSale,
+                (int) $data['parent_payment_id'],
+                $refundAmount,
+            );
+            $paymentMethod = $this->resolvePaymentMethod($originalPayment->payment_method_id, $refundAmount);
+            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $originalPayment->card_type_id);
 
             $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
@@ -419,8 +442,9 @@ class MembershipSaleService
                     'card_type_id' => $cardTypeId,
                     'status' => 'paid',
                     'type' => 'refund',
-                    'is_hdm' => $data['is_hdm'] ?? false,
+                    'is_hdm' => $originalPayment->is_hdm,
                     'notes' => $data['refund_notes'] ?? null,
+                    'parent_payment_id' => $originalPayment->id,
                 ])
             );
             $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
@@ -438,7 +462,10 @@ class MembershipSaleService
 
             DB::commit();
 
-            return $this->getById($membershipSale->id);
+            return $payment->load([
+                'membershipSale.membershipPlan.translations',
+                'originalPayment',
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
@@ -1116,6 +1143,30 @@ class MembershipSaleService
         $overpaidAmount = max($paidAmount - (float) $membershipSale->final_price, 0);
 
         return max($overpaidAmount - $refundedAmount, 0);
+    }
+
+    protected function resolveOriginalPaymentForRefund(
+        MembershipSale $membershipSale,
+        int $paymentId,
+        float $refundAmount,
+    ): MembershipPlanPayment {
+        $payment = MembershipPlanPayment::query()
+            ->where('membership_sale_id', $membershipSale->id)
+            ->whereKey($paymentId)
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->withSum([
+                'refunds as refunded_amount' => fn ($query) => $query->where('status', 'paid'),
+            ], 'amount')
+            ->first();
+
+        if (! $payment || (float) $payment->amount - (float) ($payment->refunded_amount ?? 0) < $refundAmount) {
+            throw ValidationException::withMessages([
+                'parent_payment_id' => 'Ընտրված վճարումը չունի բավարար վերադարձվող մնացորդ։',
+            ]);
+        }
+
+        return $payment;
     }
 
     protected function isMembershipCancelled(MembershipSale $membershipSale): bool

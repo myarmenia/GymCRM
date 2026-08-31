@@ -5,6 +5,7 @@ namespace App\Services\Reminders;
 use App\Models\MembershipSale;
 use App\Models\Reminder;
 use App\Models\ReminderCategory;
+use App\Models\ReminderRecipient;
 use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -169,6 +170,7 @@ class ReminderService
             ->update([
                 'status' => 'cancelled',
                 'cancelled_at' => now(),
+                'version' => DB::raw('version + 1'),
             ]);
     }
 
@@ -225,12 +227,12 @@ class ReminderService
 
             DB::transaction(function () use ($reminder) {
                 $now = now();
-                DB::table('reminder_recipients')
+                ReminderRecipient::query()
                     ->where('reminder_id', $reminder->id)
-                    ->update([
+                    ->get()
+                    ->each->update([
                         'status' => 'sent',
                         'sent_at' => $now,
-                        'updated_at' => $now,
                     ]);
                 $reminder->update([
                     'status' => 'sent',

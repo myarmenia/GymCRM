@@ -152,7 +152,10 @@ class TrainerService
 
             TrainerMonthlySalary::query()
                 ->whereIn('id', $salaryIds)
-                ->update(['status' => 'cancel']);
+                ->update([
+                    'status' => 'cancel',
+                    'version' => DB::raw('version + 1'),
+                ]);
         });
     }
 

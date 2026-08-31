@@ -19,15 +19,14 @@ class MembershipSaleGuestService
 {
     public function __construct(
         protected MembershipSaleInterface $membershipSaleRepository,
-    ) {
-    }
+    ) {}
 
     public function guestPageData(int $id): array
     {
         $membershipSale = $this->getById($id);
         $personMembership = $this->activePersonMembershipForGuests($membershipSale);
 
-        if (!$personMembership) {
+        if (! $personMembership) {
             throw ValidationException::withMessages([
                 'person_membership_id' => $this->guestRequiresActiveMembershipMessage(),
             ]);
@@ -52,7 +51,7 @@ class MembershipSaleGuestService
 
     public function storeGuest(int $id, array $data): void
     {
-        $phoneLock = Cache::lock('membership-sale-guest-phone:' . sha1((string) $data['phone']), 10);
+        $phoneLock = Cache::lock('membership-sale-guest-phone:'.sha1((string) $data['phone']), 10);
         $phoneLock->block(5);
 
         DB::beginTransaction();
@@ -61,7 +60,7 @@ class MembershipSaleGuestService
             $membershipSale = $this->getById($id);
             $personMembership = $this->activePersonMembershipForGuests($membershipSale);
 
-            if (!$personMembership) {
+            if (! $personMembership) {
                 throw ValidationException::withMessages([
                     'person_membership_id' => $this->guestRequiresActiveMembershipMessage(),
                 ]);
@@ -111,7 +110,7 @@ class MembershipSaleGuestService
             ->where('phone', $phone)
             ->first();
 
-        if (!$person) {
+        if (! $person) {
             return [
                 'person' => null,
                 'error' => null,
@@ -153,7 +152,7 @@ class MembershipSaleGuestService
 
         return $this->membershipSaleRepository
             ->query()
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->findOrFail($id);
@@ -205,7 +204,7 @@ class MembershipSaleGuestService
                 ]);
             }
 
-            if (!empty($data['email'])) {
+            if (! empty($data['email'])) {
                 $emailExists = Person::query()
                     ->where('email', $data['email'])
                     ->where('id', '!=', $guest->id)
@@ -228,7 +227,7 @@ class MembershipSaleGuestService
 
             $this->syncGuestEntryCode($guest, (int) $data['entry_code_id'], $membershipSale->gym_id);
         } else {
-            if (!empty($data['email']) && Person::query()->where('email', $data['email'])->exists()) {
+            if (! empty($data['email']) && Person::query()->where('email', $data['email'])->exists()) {
                 throw ValidationException::withMessages([
                     'email' => $this->duplicatePersonEmailMessage(),
                 ]);
@@ -237,7 +236,7 @@ class MembershipSaleGuestService
             $guest = Person::query()->create([
                 'name' => $data['name'],
                 'surname' => $data['surname'] ?? null,
-                'email' => $data['email'] ?? 'guest-' . Str::uuid() . '@guest.local',
+                'email' => $data['email'] ?? 'guest-'.Str::uuid().'@guest.local',
                 'password' => Hash::make(Str::random(16)),
                 'phone' => $data['phone'],
                 'type' => 'guest',
@@ -277,7 +276,7 @@ class MembershipSaleGuestService
         $entryPermission = $this->currentPersonEntryPermission($person);
         $entryCode = $entryPermission?->entryCode;
 
-        if (!$entryCode) {
+        if (! $entryCode) {
             return null;
         }
 
@@ -306,8 +305,8 @@ class MembershipSaleGuestService
 
         if ($currentEntryCodeId) {
             EntryCode::query()
-                ->whereKey($currentEntryCodeId)
-                ->update(['activation' => false]);
+                ->find($currentEntryCodeId)
+                ?->update(['activation' => false]);
         }
 
         $guest->entryPermissions()->delete();
@@ -342,7 +341,7 @@ class MembershipSaleGuestService
             ->where('activation', false)
             ->first();
 
-        if (!$entryCode) {
+        if (! $entryCode) {
             throw ValidationException::withMessages([
                 'entry_code_id' => $this->entryCodeUnavailableMessage(),
             ]);

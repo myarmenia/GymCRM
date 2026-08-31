@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('trainer_commissions', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('trainer_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('membership_sale_id')->constrained()->cascadeOnDelete();
             $table->foreignId('person_membership_id')->constrained()->cascadeOnDelete();

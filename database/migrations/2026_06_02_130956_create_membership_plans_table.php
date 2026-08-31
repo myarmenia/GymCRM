@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('membership_plans', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_category_id')->constrained()->cascadeOnDelete();
             $table->foreignId('gym_id')->nullable()->constrained()->cascadeOnDelete();
             $table->decimal('price', 10, 2)->default(0);

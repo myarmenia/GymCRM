@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ScheduleName extends Model
 {
+    use HasUuidAndVersion, SoftDeletes;
+
     protected $table = 'schedule_names';
+
     protected $appends = [
         'is_locked',
         'lock_reason',
@@ -20,16 +25,19 @@ class ScheduleName extends Model
 
     protected $casts = [
         'status' => 'boolean',
+        'version' => 'integer',
+        'deleted_at' => 'datetime',
     ];
+
     public function schedule_details()
     {
         return $this->hasMany(ScheduleDetail::class, 'schedule_name_id');
     }
 
-    //public function trainers()
-    //{
+    // public function trainers()
+    // {
     //    return $this->hasMany(TrainerSchedule::class, 'schedule_name_id');
-    //}
+    // }
 
     public function trainers()
     {
