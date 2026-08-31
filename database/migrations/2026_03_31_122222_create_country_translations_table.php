@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('country_translations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('country_id')->constrained()->cascadeOnDelete();
             $table->string('locale'); // en, ru, hy
             $table->string('name');

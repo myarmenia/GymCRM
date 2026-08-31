@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class Purchase extends Model
 {
+    use HasUuidAndVersion;
+
     public $timestamps = true;
 
     protected $guarded = [];

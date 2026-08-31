@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('person_biometrics', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('person_id')->unique()->constrained('people')->cascadeOnDelete();
             $table->unsignedSmallInteger('height')->nullable();
             $table->decimal('weight', 5, 2)->nullable();

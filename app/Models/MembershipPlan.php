@@ -3,19 +3,23 @@
 namespace App\Models;
 
 use App\Traits\BelongsToGym;
+use App\Traits\HasUuidAndVersion;
 use App\Traits\ModelTranslationTrait;
 use Illuminate\Database\Eloquent\Model;
 
 class MembershipPlan extends Model
 {
-    use  BelongsToGym, ModelTranslationTrait;
+    use BelongsToGym, ModelTranslationTrait;
+    use HasUuidAndVersion;
+
     protected $guarded = [];
+
     protected $appends = ['is_locked', 'lock_reason', 'name'];
+
     public function MembershipCategory()
     {
         return $this->belongsTo(MembershipCategory::class, 'membership_category_id');
     }
-
 
     public function gym()
     {
@@ -32,13 +36,10 @@ class MembershipPlan extends Model
         return $this->hasMany(MembershipSale::class);
     }
 
-
-
     public function translations()
     {
         return $this->hasMany(MembershipPlanTranslation::class);
     }
-
 
     // проверка "план уже используется"
     public function discounts()
@@ -71,10 +72,12 @@ class MembershipPlan extends Model
             'membership_plan_trainers',
             'membership_plan_id',
             'trainer_id'
-        )->withPivot([
+        )->using(MembershipPlanTrainer::class)->withPivot([
             'price_type',
             'price_value',
             'total_price',
+            'uuid',
+            'version',
         ]);
     }
 

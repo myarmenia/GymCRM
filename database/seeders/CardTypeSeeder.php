@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\CardType;
+use App\Support\StableUuid;
+use Illuminate\Database\Seeder;
 
 class CardTypeSeeder extends Seeder
 {
@@ -20,7 +21,8 @@ class CardTypeSeeder extends Seeder
 
         foreach ($cards as $card) {
             CardType::create([
-                'name' => $card
+                'name' => $card,
+                ...StableUuid::seedIdentity('card-types', mb_strtolower($card)),
             ]);
         }
     }

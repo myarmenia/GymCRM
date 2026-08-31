@@ -17,6 +17,7 @@ use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\EntryReportController;
 use App\Http\Controllers\FinancialTransactionController;
 use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\Hdm\HdmOperationController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
@@ -331,6 +332,11 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
+            });
+
+            Route::prefix('hdm')->name('hdm.')->group(function () {
+                Route::post('/update-operation-status', [HdmOperationController::class, 'updateStatus'])
+                    ->name('update_operation_status');
             });
 
             Route::prefix('products')->name('products.')->group(function () {

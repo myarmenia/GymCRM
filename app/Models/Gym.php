@@ -73,7 +73,8 @@ class Gym extends Model
     public function languages()
     {
         return $this->belongsToMany(Lang::class, 'gym_languages')
-            ->withPivot('active');
+            ->using(GymLanguage::class)
+            ->withPivot(['active', 'uuid', 'version']);
 
     }
 

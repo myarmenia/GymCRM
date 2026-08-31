@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('entry_reports', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('client_id')->nullable()->index();
             $table->string('entry_code')->nullable()->index();
             $table->enum('owner_type', ['user', 'person'])->nullable()->index();

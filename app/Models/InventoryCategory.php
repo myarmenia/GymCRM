@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class InventoryCategory extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'gym_id',
         'parent_id',

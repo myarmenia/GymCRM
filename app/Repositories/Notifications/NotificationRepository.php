@@ -37,12 +37,13 @@ class NotificationRepository implements NotificationRepositoryInterface
 
         Notification::query()
             ->whereIn('id', $ids)
-            ->update(['seen' => true]);
+            ->get()
+            ->each->update(['seen' => true]);
     }
 
     public function insertMany(array $rows): void
     {
-        Notification::query()->insert($rows);
+        collect($rows)->each(fn (array $row) => Notification::query()->create($row));
     }
 
     public function idsForInsertedRows(User $sender, Collection $recipientIds, ?string $title, ?string $description, $createdAt): Collection
@@ -114,7 +115,7 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->get(['id', 'name', 'surname', 'phone'])
             ->map(fn (Person $person) => [
                 'value' => $person->id,
-                'label' => trim("{$person->name} {$person->surname}") . ($person->phone ? " ({$person->phone})" : ''),
+                'label' => trim("{$person->name} {$person->surname}").($person->phone ? " ({$person->phone})" : ''),
             ]);
     }
 

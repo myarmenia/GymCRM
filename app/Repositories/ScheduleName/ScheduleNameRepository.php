@@ -3,15 +3,12 @@
 namespace App\Repositories\ScheduleName;
 
 use App\Helpers\MyHelper;
-use App\Interfaces\Schedule\ScheduleInterface;
 use App\Interfaces\ScheduleName\ScheduleNameInterface;
-use App\Models\GymSchedule;
 use App\Models\ScheduleName;
 use App\Repositories\BaseRepository;
 
 class ScheduleNameRepository extends BaseRepository implements ScheduleNameInterface
 {
-
     public function __construct(ScheduleName $model)
     {
         parent::__construct($model);
@@ -20,7 +17,8 @@ class ScheduleNameRepository extends BaseRepository implements ScheduleNameInter
     public function getAllWithTrainerByGym()
     {
         $gymId = MyHelper::find_auth_user_client();
-        return $this->model::query()
+
+        return $this->query()
             ->whereHas('gymSchedules', function ($query) use ($gymId) {
                 $query->where('gym_id', $gymId);
             })
@@ -39,22 +37,31 @@ class ScheduleNameRepository extends BaseRepository implements ScheduleNameInter
     public function createScheduleName(string $name, int $status): ScheduleName
     {
 
-        return $this->model::create(['name' => $name, 'status' => $status]);
+        return $this->query()->create(['name' => $name, 'status' => $status]);
     }
+
     public function edit($id): ScheduleName
     {
 
-        $data = $this->model::with('schedule_details')->findOrFail($id);
+        $data = $this->query()->with('schedule_details')->findOrFail($id);
 
         return $data;
     }
 
     public function updateScheduleName(int $scheduleId, string $name, int $status): void
     {
-        $this->model::where('id', $scheduleId)
-            ->update([
-                'name' => $name,
-                'status' => $status,
-            ]);
+        $schedule = $this->findOrFail($scheduleId);
+        $schedule->fill([
+            'name' => $name,
+            'status' => $status,
+        ]);
+
+        // Schedule details belong to this aggregate. Editing only the
+        // working hours must still advance the parent version.
+        if (! $schedule->isDirty()) {
+            $schedule->version = (int) $schedule->version + 1;
+        }
+
+        $schedule->save();
     }
 }

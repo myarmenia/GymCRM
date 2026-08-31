@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('partners', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
 
             $table->foreignId('gym_id')->constrained()->onDelete('cascade');
 

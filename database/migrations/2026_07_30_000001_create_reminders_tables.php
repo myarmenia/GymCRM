@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\StableUuid;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ return new class extends Migration
     {
         Schema::create('reminder_categories', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('slug')->unique();
             $table->string('name');
             $table->boolean('active')->default(true);
@@ -22,6 +25,7 @@ return new class extends Migration
         DB::table('reminder_categories')->insert([
             [
                 'slug' => 'general',
+                ...StableUuid::seedIdentity('reminder-categories', 'general'),
                 'name' => 'Ընդհանուր հիշեցում',
                 'active' => true,
                 'created_at' => $now,
@@ -29,6 +33,7 @@ return new class extends Migration
             ],
             [
                 'slug' => 'membership_payment_due',
+                ...StableUuid::seedIdentity('reminder-categories', 'membership_payment_due'),
                 'name' => 'Աբոնեմենտի վճարման օր',
                 'active' => true,
                 'created_at' => $now,
@@ -38,6 +43,8 @@ return new class extends Migration
 
         Schema::create('reminders', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('gym_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('category_id')->constrained('reminder_categories')->restrictOnDelete();
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
@@ -61,6 +68,8 @@ return new class extends Migration
 
         Schema::create('reminder_recipients', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('reminder_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->enum('status', ['pending', 'sent', 'failed'])->default('pending');

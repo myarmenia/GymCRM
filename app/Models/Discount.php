@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\FilterTrait;
+use App\Traits\HasUuidAndVersion;
 use App\Traits\ModelTranslationTrait;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,8 +12,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Discount extends Model
 {
     use FilterTrait, ModelTranslationTrait, SoftDeletes;
+    use HasUuidAndVersion;
 
     protected $guarded = [];
+
     protected $appends = ['name'];
 
     protected array $filterConfig = [

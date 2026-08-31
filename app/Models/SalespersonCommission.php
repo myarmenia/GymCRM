@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SalespersonCommission extends Model
 {
+    use HasUuidAndVersion;
     use SoftDeletes;
 
     protected $guarded = [];

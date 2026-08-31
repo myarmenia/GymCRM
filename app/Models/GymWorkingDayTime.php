@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GymWorkingDayTime extends Model
 {
+    use HasUuidAndVersion;
+
     protected $table = 'gym_working_day_times';
+
     protected $fillable = [
         'gym_id',
         'week_day',

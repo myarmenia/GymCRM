@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('membership_sale_discounts', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_sale_id')->constrained()->cascadeOnDelete();
             $table->foreignId('discount_id')->constrained()->cascadeOnDelete();
             $table->enum('discount_type', ['fixed', 'percent']);

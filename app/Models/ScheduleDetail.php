@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class ScheduleDetail extends Model
 {
+    use HasUuidAndVersion;
+
     protected $table = 'schedule_details';
+
     protected $fillable = [
         'schedule_name_id',
         'week_day',

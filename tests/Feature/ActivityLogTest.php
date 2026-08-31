@@ -175,6 +175,8 @@ class ActivityLogTest extends TestCase
 
     public function test_membership_sale_menu_mutations_create_before_and_after_logs(): void
     {
+        $this->travelTo('2026-08-03 09:00:00');
+
         $gym = Gym::query()->create(['name' => 'Main gym']);
         $actor = $this->userWithRole($gym, 'super_admin');
         $person = $this->person('Membership Customer');
@@ -228,10 +230,14 @@ class ActivityLogTest extends TestCase
             'membership_discount_ids' => [$discount->id],
         ]);
         $service->cancelMembership($sale->id);
+        $parentPaymentId = $sale->payments()
+            ->whereNull('parent_payment_id')
+            ->oldest('id')
+            ->value('id');
         $service->storeRefund($sale->id, [
             'is_partial_refund' => true,
+            'parent_payment_id' => $parentPaymentId,
             'amount' => 2500,
-            'payment_method_id' => $paymentMethod->id,
         ]);
 
         $logs = ActivityLog::query()->orderBy('id')->get();

@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('salary_payouts', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('gym_id')->constrained()->restrictOnDelete();
             $table->foreignId('payee_id')->constrained('users')->restrictOnDelete();
             $table->foreignId('payment_method_id')->constrained()->restrictOnDelete();
@@ -31,6 +33,8 @@ return new class extends Migration
 
         Schema::create('salary_payout_items', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('salary_payout_id')->constrained()->cascadeOnDelete();
             $table->enum('source_type', ['trainer_monthly_salary', 'salesperson_commission']);
             $table->foreignId('trainer_monthly_salary_id')

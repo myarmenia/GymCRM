@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\FilterTrait;
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class MembershipSale extends Model
 {
     use FilterTrait, SoftDeletes;
+    use HasUuidAndVersion;
 
     protected $guarded = [];
 
