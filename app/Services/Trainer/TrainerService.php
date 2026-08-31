@@ -238,6 +238,7 @@ class TrainerService
             $lockedScheduleIds = $this->lockedScheduleIdsForTrainer($trainerId);
             $existingScheduleIds = TrainerSchedule::query()
                 ->where('user_id', $trainerId)
+                ->lockForUpdate()
                 ->pluck('schedule_name_id')
                 ->map(fn ($id) => (int) $id);
 
@@ -339,6 +340,18 @@ class TrainerService
                 $keptDurationIds,
                 $lockedScheduleIds
             );
+
+            TrainerSchedule::query()
+                ->where('user_id', $trainerId)
+                ->whereIn(
+                    'schedule_name_id',
+                    $scheduleIds->intersect($existingScheduleIds)->all(),
+                )
+                ->get()
+                ->each(function (TrainerSchedule $trainerSchedule): void {
+                    $trainerSchedule->version = (int) $trainerSchedule->version + 1;
+                    $trainerSchedule->save();
+                });
         });
     }
 

@@ -234,6 +234,6 @@ class User extends Authenticatable
             'trainer_schedules',
             'user_id',
             'schedule_name_id'
-        );
+        )->wherePivotNull('deleted_at');
     }
 }
