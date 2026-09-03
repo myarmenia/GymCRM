@@ -39,6 +39,8 @@ class HdmPrintService extends HdmBaseService
             $entity->loadMissing([
                 'membershipSale.membershipPlan.translations',
                 'membershipSale.discounts',
+                'membershipSale.payments.refunds',
+                'membershipSale.payments.hdmOperations',
                 'paymentMethod',
             ]);
 
@@ -68,11 +70,31 @@ class HdmPrintService extends HdmBaseService
 
             $amount = (float) $entity->amount;
             $paymentType = $this->getPaymentType($entity->payment_method_id);
-            $receiptData = $this->buildReceiptData(
-                items: [$this->buildMembershipPlanItem($entity)],
-                totalAmount: $amount,
-                paymentMethodId: $entity->payment_method_id,
-            );
+            $prePaymentAmount = $this->paidBefore($entity);
+            $isFinalPayment = round($prePaymentAmount + $amount, 2) >= round((float) $sale->final_price, 2);
+
+            if ($isFinalPayment) {
+                $prepaymentError = $this->validatePrintedPrepayments($entity, $prePaymentAmount);
+
+                if ($prepaymentError) {
+                    return $prepaymentError;
+                }
+            }
+
+            $receiptData = $isFinalPayment
+                ? $this->buildReceiptData(
+                    items: [$this->buildMembershipPlanItem($entity)],
+                    totalAmount: $amount,
+                    paymentMethodId: $entity->payment_method_id,
+                    mode: 2,
+                    prePaymentAmount: $prePaymentAmount,
+                )
+                : $this->buildReceiptData(
+                    items: null,
+                    totalAmount: $amount,
+                    paymentMethodId: $entity->payment_method_id,
+                    mode: 3,
+                );
 
             $operation = $this->createOperation(
                 deviceId: $device->id,
@@ -86,6 +108,7 @@ class HdmPrintService extends HdmBaseService
                     'method' => $this->operationPaymentMethod($paymentType),
                     'amount' => $amount,
                 ]],
+                request: $receiptData,
             );
 
             return $this->formatResponse($operation, $device, $cashier, $receiptData, [
@@ -120,23 +143,11 @@ class HdmPrintService extends HdmBaseService
             ?? $plan?->translations?->first()?->name
             ?? ('Membership plan #'.($plan?->id ?? $payment->membership_sale_id));
 
-        $paymentAmount = round((float) $payment->amount, 2);
         $totalPrice = (float) $sale->total_price;
-        $finalPrice = (float) $sale->final_price;
-        $totalDiscount = round(max(0, $totalPrice - $finalPrice), 2);
-
-        $grossAmount = $paymentAmount;
-        $paymentDiscount = 0.0;
-
-        if ($totalDiscount > 0 && $finalPrice > 0) {
-            $paymentRatio = min(1, $paymentAmount / $finalPrice);
-            $grossAmount = round($totalPrice * $paymentRatio, 2);
-            $paymentDiscount = round(max(0, $grossAmount - $paymentAmount), 2);
-        }
 
         $item = [
             'qty' => 1,
-            'price' => $grossAmount,
+            'price' => round($totalPrice, 2),
             'productCode' => str_pad((string) ($plan?->id ?? 0), 3, '0', STR_PAD_LEFT),
             'productName' => $name,
             'dep' => 1,
@@ -144,41 +155,126 @@ class HdmPrintService extends HdmBaseService
             'unit' => $plan?->armenian_unit ?? 'հատ',
         ];
 
-        if ($paymentDiscount <= 0) {
-            return $item;
-        }
-
-        if ($this->hasOnlyPercentDiscounts($sale)) {
-            $item['additionalDiscount'] = round(($paymentDiscount / $grossAmount) * 100, 2);
-            $item['additionalDiscountType'] = 8;
-        } else {
-            $item['additionalDiscount'] = $paymentDiscount;
-            $item['additionalDiscountType'] = 16;
-        }
+        $this->applyMembershipPlanDiscount($item, $sale);
+        $this->applyManualDiscount($item, $sale);
 
         return $item;
     }
 
-    private function hasOnlyPercentDiscounts($sale): bool
+    private function applyMembershipPlanDiscount(array &$item, $sale): void
     {
-        $types = collect();
+        $discounts = $sale->discounts
+            ->filter(fn ($discount) => (float) $discount->discount_amount > 0)
+            ->values();
 
-        if ((float) $sale->discount_amount > 0 && $sale->discount_type) {
-            $types->push($sale->discount_type);
+        if ($discounts->isEmpty()) {
+            return;
         }
 
-        foreach ($sale->discounts as $discount) {
-            if ((float) $discount->discount_amount > 0) {
-                $types->push($discount->discount_type);
-            }
+        if ($discounts->count() === 1 && $discounts->first()->discount_type === 'percent') {
+            $item['discount'] = round((float) $discounts->first()->discount_value, 2);
+            $item['discountType'] = 1;
+
+            return;
         }
 
-        return $types->isNotEmpty() && $types->every(fn ($type) => $type === 'percent');
+        $discountAmount = round((float) $sale->discount_membership_amount, 2);
+
+        if ($discountAmount > 0) {
+            $item['discount'] = $discountAmount;
+            $item['discountType'] = 4;
+        }
+    }
+
+    private function applyManualDiscount(array &$item, $sale): void
+    {
+        if ((float) $sale->discount_amount <= 0 || ! $sale->discount_type) {
+            return;
+        }
+
+        if ($sale->discount_type === 'percent') {
+            $item['additionalDiscount'] = round((float) $sale->discount_value, 2);
+            $item['additionalDiscountType'] = 8;
+
+            return;
+        }
+
+        $discountAmount = round((float) $sale->discount_amount, 2);
+
+        if ($discountAmount > 0) {
+            $item['additionalDiscount'] = $discountAmount;
+            $item['additionalDiscountType'] = 16;
+        }
     }
 
     private function operationPaymentMethod(string $paymentType): string
     {
         return $paymentType === 'cash' ? 'cash' : 'card';
+    }
+
+    private function paidBefore(MembershipPlanPayment $payment): float
+    {
+        $payments = $payment->membershipSale->payments
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->where('id', '<', $payment->id);
+
+        $paid = $payments->sum(fn (MembershipPlanPayment $previousPayment) => (float) $previousPayment->amount);
+        $refunded = $payments->sum(fn (MembershipPlanPayment $previousPayment) => $previousPayment->refunds
+            ->where('status', 'paid')
+            ->sum(fn (MembershipPlanPayment $refund) => (float) $refund->amount));
+
+        return round(max($paid - $refunded, 0), 2);
+    }
+
+    private function validatePrintedPrepayments(MembershipPlanPayment $payment, float $expectedAmount): ?array
+    {
+        if ($expectedAmount <= 0) {
+            return null;
+        }
+
+        $hdmOperations = $payment->membershipSale->payments->flatMap->hdmOperations;
+        $returnedFinalPaymentId = $hdmOperations
+            ->where('transaction_type', 'sale')
+            ->where('status', 'success')
+            ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                && $hdmOperations->contains(fn ($refundOperation) => $refundOperation->transaction_type === 'refund'
+                    && $refundOperation->status === 'success'
+                    && (int) $refundOperation->parent_operation_id === (int) $operation->id))
+            ->max('operationable_id');
+
+        $printedAmount = $payment->membershipSale->payments
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->where('id', '<', $payment->id)
+            ->when($returnedFinalPaymentId, fn ($payments) => $payments->where('id', '>', $returnedFinalPaymentId))
+            ->sum(function (MembershipPlanPayment $previousPayment): float {
+                $hasSuccessfulPrepayment = $previousPayment->is_hdm
+                    && $previousPayment->hdmOperations->contains(fn ($operation) => $operation->transaction_type === 'sale'
+                        && $operation->status === 'success'
+                        && (int) data_get($operation->request, 'mode') === 3
+                        && $operation->crn
+                        && $operation->rseq);
+
+                if (! $hasSuccessfulPrepayment) {
+                    return 0;
+                }
+
+                $refunded = $previousPayment->refunds
+                    ->where('status', 'paid')
+                    ->sum(fn (MembershipPlanPayment $refund) => (float) $refund->amount);
+
+                return max((float) $previousPayment->amount - $refunded, 0);
+            });
+
+        if (round($printedAmount, 2) !== round($expectedAmount, 2)) {
+            return [
+                'success' => false,
+                'message' => 'All previous payments must have successful HDM prepayment receipts before printing the final receipt.',
+            ];
+        }
+
+        return null;
     }
 
     private function unsupportedEntityResponse($entity): array

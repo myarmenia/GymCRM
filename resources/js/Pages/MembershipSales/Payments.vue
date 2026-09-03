@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -70,30 +70,51 @@ const paid = computed(() => Number(props.paidAmount || 0))
 const refunded = computed(() => Number(props.refundedAmount || 0))
 const netPaid = computed(() => Number(props.netPaidAmount || 0))
 const availableRefund = computed(() => Number(props.availableRefundAmount || 0))
+const selectedActionMode = ref(null)
 const refundablePayments = computed(() => transactions.value.filter(transaction => (
     transaction.type === 'payment'
     && transaction.status === 'paid'
+    && !transaction.hdm_prepayment_consumed
+    && !transaction.hdm_payment_closed_by_return
     && Number(transaction.refundable_amount || 0) > 0
 )))
 const selectedOriginalPayment = computed(() => refundablePayments.value.find(payment => (
     Number(payment.id) === Number(actionForm.parent_payment_id)
 )) ?? null)
+const requiresFullHdmRefund = computed(() => Boolean(selectedOriginalPayment.value?.is_final_hdm_payment))
 
 const actionMode = computed(() => {
-    if (availableRefund.value > 0) {
-        return 'refund'
+    if (selectedActionMode.value === 'refund' && availableRefund.value > 0) {
+        return selectedActionMode.value
+    }
+
+    if (selectedActionMode.value === 'payment' && debt.value > 0) {
+        return selectedActionMode.value
     }
 
     if (debt.value > 0) {
         return 'payment'
     }
 
+    if (availableRefund.value > 0) {
+        return 'refund'
+    }
+
     return null
 })
 
-const actionLimit = computed(() => actionMode.value === 'refund'
-    ? Math.min(availableRefund.value, Number(selectedOriginalPayment.value?.refundable_amount || 0))
-    : debt.value)
+const actionLimit = computed(() => {
+    if (actionMode.value !== 'refund') {
+        return debt.value
+    }
+
+    const isFullFinalHdmRefund = actionForm.is_full_refund
+        && selectedOriginalPayment.value?.is_final_hdm_payment
+
+    return isFullFinalHdmRefund
+        ? availableRefund.value
+        : Math.min(availableRefund.value, Number(selectedOriginalPayment.value?.refundable_amount || 0))
+})
 const isRefundMode = computed(() => actionMode.value === 'refund')
 const isPaymentMode = computed(() => actionMode.value === 'payment')
 const isMembershipCancelled = computed(() => membership.value?.status === 'cancelled')
@@ -129,6 +150,9 @@ const actionText = computed(() => {
 })
 
 const formatAmount = value => Number(value || 0).toFixed(2)
+const transactionRefundableAmount = transaction => transaction?.is_final_hdm_payment
+    ? availableRefund.value
+    : Math.min(availableRefund.value, Number(transaction?.refundable_amount || 0))
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const personName = person => `${person?.name ?? ''} ${person?.surname ?? ''}`.trim() || '-'
 const userName = user => `${user?.name ?? ''} ${user?.surname ?? ''}`.trim() || '-'
@@ -180,6 +204,17 @@ const resetActionFormForMode = () => {
     actionForm.is_partial_refund = false
 }
 
+const selectActionMode = mode => {
+    selectedActionMode.value = mode
+}
+
+const selectRefundPayment = paymentId => {
+    selectedActionMode.value = 'refund'
+    nextTick(() => {
+        actionForm.parent_payment_id = paymentId
+    })
+}
+
 watch(actionMode, resetActionFormForMode, { immediate: true })
 
 watch(() => actionForm.payment_method_id, () => {
@@ -199,7 +234,7 @@ watch(() => actionForm.parent_payment_id, () => {
     actionForm.payment_method_id = payment?.payment_method_id ?? ''
     actionForm.card_type_id = payment?.card_type_id ?? ''
     actionForm.is_hdm = Boolean(payment?.is_hdm)
-    actionForm.amount = Number(payment?.refundable_amount || 0)
+    actionForm.amount = transactionRefundableAmount(payment)
     actionForm.is_full_refund = Boolean(payment)
     actionForm.is_partial_refund = false
 })
@@ -234,7 +269,11 @@ watch(() => actionForm.is_full_refund, enabled => {
         return
     }
 
-    if (enabled) {
+    if (!enabled && requiresFullHdmRefund.value) {
+        actionForm.is_full_refund = true
+        actionForm.is_partial_refund = false
+        actionForm.amount = actionLimit.value
+    } else if (enabled) {
         actionForm.is_partial_refund = false
         actionForm.amount = actionLimit.value
     } else if (!actionForm.is_partial_refund) {
@@ -247,7 +286,11 @@ watch(() => actionForm.is_partial_refund, enabled => {
         return
     }
 
-    if (enabled) {
+    if (enabled && requiresFullHdmRefund.value) {
+        actionForm.is_partial_refund = false
+        actionForm.is_full_refund = true
+        actionForm.amount = actionLimit.value
+    } else if (enabled) {
         actionForm.is_full_refund = false
     } else if (!actionForm.is_full_refund) {
         actionForm.amount = 0
@@ -521,13 +564,25 @@ const cancelMembership = async () => {
                                 <td>{{ transaction.is_hdm ? 'Այո' : 'Ոչ' }}</td>
                                 <td>{{ formatDate(transaction.created_at) }}</td>
                                 <td>
+                                    <span
+                                        v-if="transaction.type === 'payment' && transaction.hdm_payment_closed_by_return"
+                                        class="badge bg-label-secondary"
+                                    >
+                                        ՀԴՄ կտրոնն ամբողջությամբ վերադարձված է
+                                    </span>
+                                    <span
+                                        v-else-if="transaction.type === 'payment' && transaction.hdm_prepayment_consumed"
+                                        class="badge bg-label-info"
+                                    >
+                                        Ներառված է վերջնական ՀԴՄ կտրոնում
+                                    </span>
                                     <button
-                                        v-if="transaction.type === 'payment' && Number(transaction.refundable_amount || 0) > 0"
+                                        v-else-if="transaction.type === 'payment' && Number(transaction.refundable_amount || 0) > 0"
                                         type="button"
                                         class="btn btn-sm btn-outline-warning"
-                                        @click="actionForm.parent_payment_id = transaction.id"
+                                        @click="selectRefundPayment(transaction.id)"
                                     >
-                                        Վերադարձնել {{ formatAmount(transaction.refundable_amount) }}-ից
+                                        Վերադարձնել {{ formatAmount(transactionRefundableAmount(transaction)) }}-ից
                                     </button>
                                     <span v-else>-</span>
                                 </td>
@@ -592,8 +647,29 @@ const cancelMembership = async () => {
                 class="col-lg-5 mb-4"
             >
                 <div class="card h-100">
-                    <div class="card-header">
+                    <div class="card-header d-flex align-items-center justify-content-between gap-2">
                         <h5 class="mb-0">{{ actionText.title }}</h5>
+                        <div
+                            v-if="debt > 0 && availableRefund > 0"
+                            class="btn-group btn-group-sm"
+                        >
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="isPaymentMode ? 'btn-primary' : 'btn-outline-primary'"
+                                @click="selectActionMode('payment')"
+                            >
+                                Վճարում
+                            </button>
+                            <button
+                                type="button"
+                                class="btn"
+                                :class="isRefundMode ? 'btn-warning' : 'btn-outline-warning'"
+                                @click="selectActionMode('refund')"
+                            >
+                                Վերադարձ
+                            </button>
+                        </div>
                     </div>
                     <form
                         class="card-body"
@@ -616,7 +692,7 @@ const cancelMembership = async () => {
                                 >
                                     #{{ payment.id }} — {{ formatAmount(payment.amount) }} —
                                     {{ translatedName(payment.payment_method) }} —
-                                    վերադարձի մնացորդ {{ formatAmount(payment.refundable_amount) }}
+                                    վերադարձի մնացորդ {{ formatAmount(transactionRefundableAmount(payment)) }}
                                     {{ payment.is_hdm ? '(ՀԴՄ)' : '' }}
                                 </option>
                             </select>
@@ -630,6 +706,7 @@ const cancelMembership = async () => {
                                     v-model="actionForm.is_full_refund"
                                     type="checkbox"
                                     class="form-check-input"
+                                    :disabled="requiresFullHdmRefund"
                                 />
                                 <input
                                     v-else
@@ -639,7 +716,10 @@ const cancelMembership = async () => {
                                 />
                                 <span class="form-check-label">{{ actionText.full }}</span>
                             </label>
-                            <label class="form-check">
+                            <label
+                                v-if="!isRefundMode || !requiresFullHdmRefund"
+                                class="form-check"
+                            >
                                 <input
                                     v-if="isRefundMode"
                                     v-model="actionForm.is_partial_refund"
@@ -654,6 +734,12 @@ const cancelMembership = async () => {
                                 />
                                 <span class="form-check-label">{{ actionText.partial }}</span>
                             </label>
+                        </div>
+                        <div
+                            v-if="isRefundMode && requiresFullHdmRefund"
+                            class="alert alert-info py-2"
+                        >
+                            Վերջնական ՀԴՄ կտրոնը ներառում է աբոնեմենտի բոլոր վճարումները և վերադարձվում է միայն ամբողջությամբ։
                         </div>
                         <InputError :message="actionForm.errors.is_full_payment || actionForm.errors.is_full_refund" />
                         <InputError :message="actionForm.errors.is_partial_payment || actionForm.errors.is_partial_refund" />
