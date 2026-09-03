@@ -217,15 +217,30 @@ class MembershipSaleGuestService
                 }
             }
 
-            $guest->update([
+            $startingVersion = (int) $guest->version;
+            $guest->fill([
                 'name' => $data['name'],
                 'surname' => $data['surname'] ?? null,
                 'email' => $data['email'] ?? $guest->email,
                 'birth_date' => $data['birth_date'] ?? null,
                 'gender' => $data['gender'] ?? null,
             ]);
-
-            $this->syncGuestEntryCode($guest, (int) $data['entry_code_id'], $membershipSale->gym_id);
+            $aggregateChanged = $guest->isDirty();
+            $aggregateChanged = $this->syncGuestEntryCode(
+                $guest,
+                (int) $data['entry_code_id'],
+                $membershipSale->gym_id,
+            ) || $aggregateChanged;
+            if ($membershipSale->gym_id) {
+                $gymChanges = $guest->gyms()->syncWithoutDetaching([$membershipSale->gym_id]);
+                $aggregateChanged = $gymChanges['attached'] !== []
+                    || $gymChanges['updated'] !== []
+                    || $aggregateChanged;
+            }
+            if ($aggregateChanged) {
+                $guest->version = $startingVersion + 1;
+                $guest->save();
+            }
         } else {
             if (! empty($data['email']) && Person::query()->where('email', $data['email'])->exists()) {
                 throw ValidationException::withMessages([
@@ -249,7 +264,7 @@ class MembershipSaleGuestService
             $this->syncGuestEntryCode($guest, (int) $data['entry_code_id'], $membershipSale->gym_id);
         }
 
-        if ($membershipSale->gym_id) {
+        if ($guest->wasRecentlyCreated && $membershipSale->gym_id) {
             $guest->gyms()->syncWithoutDetaching([$membershipSale->gym_id]);
         }
 
@@ -292,22 +307,16 @@ class MembershipSaleGuestService
         ];
     }
 
-    protected function syncGuestEntryCode(Person $guest, int $entryCodeId, ?int $gymId): void
+    protected function syncGuestEntryCode(Person $guest, int $entryCodeId, ?int $gymId): bool
     {
         $currentEntryPermission = $this->currentPersonEntryPermission($guest);
         $currentEntryCodeId = $currentEntryPermission?->entry_code_id;
 
         if ((int) $currentEntryCodeId === $entryCodeId) {
-            return;
+            return false;
         }
 
         $entryCode = $this->availableEntryCode($entryCodeId, $gymId);
-
-        if ($currentEntryCodeId) {
-            EntryCode::query()
-                ->find($currentEntryCodeId)
-                ?->update(['activation' => false]);
-        }
 
         $guest->entryPermissions()->delete();
 
@@ -319,6 +328,21 @@ class MembershipSaleGuestService
         ]);
 
         $entryCode->update(['activation' => true]);
+
+        if ($currentEntryCodeId) {
+            $stillUsed = EntryPermission::query()
+                ->where('entry_code_id', $currentEntryCodeId)
+                ->where('status', true)
+                ->whereNull('deleted_at')
+                ->exists();
+            if (! $stillUsed) {
+                EntryCode::query()
+                    ->whereKey($currentEntryCodeId)
+                    ->update(['activation' => false]);
+            }
+        }
+
+        return true;
     }
 
     protected function availableEntryCodes(?int $gymId)
@@ -339,6 +363,7 @@ class MembershipSaleGuestService
             ->where('gym_id', $gymId)
             ->where('status', true)
             ->where('activation', false)
+            ->lockForUpdate()
             ->first();
 
         if (! $entryCode) {

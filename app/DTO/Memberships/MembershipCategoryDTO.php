@@ -9,6 +9,7 @@ class MembershipCategoryDTO
         public bool $active,
         public string $slug,
         public array $translations, // ['en' => ['name' => '', 'description' => ''], ...]
+        public bool $gym_id_provided = true,
     ) {}
 
     public static function fromArray(array $data): self
@@ -25,6 +26,7 @@ class MembershipCategoryDTO
             active: (bool) ($data['active'] ?? true),
             slug: $data['slug'] ?? '',
             translations: $translations,
+            gym_id_provided: array_key_exists('gym_id', $data),
         );
     }
 }
