@@ -35,6 +35,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    discountsLocked: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const membership = computed(() => props.membershipSale.person_memberships?.[0] ?? null)
@@ -177,6 +181,10 @@ const existingMembershipDiscounts = computed(() => {
     })
 })
 const availableMembershipDiscounts = computed(() => {
+    if (props.discountsLocked) {
+        return []
+    }
+
     return membershipDiscounts.value.filter(discount => !existingMembershipDiscountIds.value.includes(Number(discount.id)))
 })
 
@@ -236,14 +244,24 @@ const manualDiscountAmount = computed(() => {
 })
 const discountAmount = computed(() => membershipDiscountAmount.value + manualDiscountAmount.value)
 const finalTotal = computed(() => Math.max(planPrice.value - discountAmount.value, 0))
-const numericPaymentAmount = computed(() => Number(payment.value?.amount ?? 0))
-const remaining = computed(() => Math.max(finalTotal.value - numericPaymentAmount.value, 0))
+const paidAmount = computed(() => (props.membershipSale.payments ?? [])
+    .filter(item => item.type === 'payment' && item.status === 'paid')
+    .reduce((total, item) => total + Number(item.amount || 0), 0))
+const refundedAmount = computed(() => (props.membershipSale.payments ?? [])
+    .filter(item => item.type === 'refund' && item.status === 'paid')
+    .reduce((total, item) => total + Number(item.amount || 0), 0))
+const netPaidAmount = computed(() => Math.max(paidAmount.value - refundedAmount.value, 0))
+const remaining = computed(() => Math.max(finalTotal.value - netPaidAmount.value, 0))
 const calculatedSaleStatus = computed(() => {
-    if (numericPaymentAmount.value >= finalTotal.value && finalTotal.value > 0) {
+    if (paidAmount.value > 0 && refundedAmount.value >= paidAmount.value) {
+        return 'refunded'
+    }
+
+    if (netPaidAmount.value >= finalTotal.value && finalTotal.value > 0) {
         return 'paid'
     }
 
-    if (numericPaymentAmount.value > 0) {
+    if (netPaidAmount.value > 0) {
         return 'partial'
     }
 
@@ -256,6 +274,10 @@ const membershipDiscountRowAmount = discount => {
 }
 
 const toggleMembershipDiscount = discountId => {
+    if (props.discountsLocked) {
+        return
+    }
+
     const id = Number(discountId)
     const selectedIds = form.membership_discount_ids.map(item => Number(item))
 
@@ -265,7 +287,7 @@ const toggleMembershipDiscount = discountId => {
 }
 
 watch(() => form.apply_discount, (enabled) => {
-    if (hasExistingManualDiscount.value) {
+    if (hasExistingManualDiscount.value || props.discountsLocked) {
         return
     }
 
@@ -276,7 +298,7 @@ watch(() => form.apply_discount, (enabled) => {
 })
 
 watch(() => form.discount_type, () => {
-    if (hasExistingManualDiscount.value) {
+    if (hasExistingManualDiscount.value || props.discountsLocked) {
         return
     }
 
@@ -284,7 +306,7 @@ watch(() => form.discount_type, () => {
 })
 
 watch(() => form.discount_value, (value) => {
-    if (hasExistingManualDiscount.value) {
+    if (hasExistingManualDiscount.value || props.discountsLocked) {
         return
     }
 
@@ -306,7 +328,7 @@ watch(() => form.discount_value, (value) => {
 const submit = () => {
     form
         .transform(data => {
-            if (!hasExistingManualDiscount.value) {
+            if (!hasExistingManualDiscount.value && !props.discountsLocked) {
                 return data
             }
 
@@ -524,6 +546,13 @@ const submit = () => {
                     </h5>
 
                     <div
+                        v-if="discountsLocked"
+                        class="alert alert-warning"
+                    >
+                        Վերջնական վճարումն արդեն կատարված է։ Այս վաճառքի զեղչերը հնարավոր չէ ավելացնել կամ փոփոխել։
+                    </div>
+
+                    <div
                         v-if="existingMembershipDiscounts.length"
                         class="mb-4"
                     >
@@ -631,7 +660,7 @@ const submit = () => {
                     </div>
 
                     <label
-                        v-else
+                        v-else-if="!discountsLocked"
                         class="form-check mt-2"
                     >
                         <input
@@ -643,10 +672,16 @@ const submit = () => {
                             Կիրառել ձեռքով զեղչ
                         </span>
                     </label>
+                    <div
+                        v-else
+                        class="alert alert-warning mt-3 mb-0"
+                    >
+                        Վերջնական վճարումից հետո ձեռքով զեղչ ավելացնել հնարավոր չէ։
+                    </div>
                     <InputError :message="form.errors.apply_discount" />
 
                     <div
-                        v-if="!hasExistingManualDiscount && form.apply_discount"
+                        v-if="!discountsLocked && !hasExistingManualDiscount && form.apply_discount"
                         class="mt-4"
                     >
                         <div class="row">
@@ -717,8 +752,16 @@ const submit = () => {
                                 <strong>{{ paymentStatusLabel(payment?.status) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարված գումար</span>
-                                <strong>{{ numericPaymentAmount.toFixed(2) }}</strong>
+                                <span>Ընդհանուր վճարված</span>
+                                <strong>{{ paidAmount.toFixed(2) }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Ընդհանուր վերադարձված</span>
+                                <strong>{{ refundedAmount.toFixed(2) }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Զուտ վճարված</span>
+                                <strong>{{ netPaidAmount.toFixed(2) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>ՀԴՄ</span>
@@ -770,8 +813,16 @@ const submit = () => {
                                 <span class="text-primary">{{ finalTotal.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարված</span>
-                                <span class="text-success">- {{ numericPaymentAmount.toFixed(2) }}</span>
+                                <span>Ընդհանուր վճարված</span>
+                                <span class="text-success">{{ paidAmount.toFixed(2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-danger">
+                                <span>Ընդհանուր վերադարձված</span>
+                                <span>- {{ refundedAmount.toFixed(2) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Զուտ վճարված</span>
+                                <span>{{ netPaidAmount.toFixed(2) }}</span>
                             </div>
                             <div class="alert alert-success mt-3 mb-3 py-3">
                                 <div class="d-flex justify-content-between align-items-center">

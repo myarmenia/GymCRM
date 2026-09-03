@@ -42,15 +42,16 @@ class HdmReturnService extends HdmBaseService
                 ];
             }
 
-            if ($refund->status !== 'paid' || (float) $refund->amount <= 0) {
+            if (! in_array($refund->status, ['pending', 'paid'], true) || (float) $refund->amount <= 0) {
                 return [
                     'success' => false,
-                    'message' => 'Only a completed refund with a positive amount can be printed.',
+                    'message' => 'Only a pending refund with a positive amount can be printed.',
                 ];
             }
 
             $refund->loadMissing([
                 'membershipSale.membershipPlan.translations',
+                'membershipSale.payments.hdmOperations',
                 'originalPayment.hdmOperations',
             ]);
 
@@ -62,7 +63,7 @@ class HdmReturnService extends HdmBaseService
                 ];
             }
 
-            $originalOperation = $originalPayment->hdmOperations()
+            $paymentOperation = $originalPayment->hdmOperations()
                 ->where('transaction_type', 'sale')
                 ->where('status', 'success')
                 ->whereNotNull('crn')
@@ -70,12 +71,31 @@ class HdmReturnService extends HdmBaseService
                 ->latest('id')
                 ->first();
 
-            if (! $originalOperation) {
+            if (! $paymentOperation) {
                 return [
                     'success' => false,
                     'message' => 'Original successful HDM operation was not found.',
                 ];
             }
+
+            $hdmOperations = $refund->membershipSale->payments->flatMap->hdmOperations;
+            $returnedOperationIds = $hdmOperations
+                ->where('transaction_type', 'refund')
+                ->where('status', 'success')
+                ->pluck('parent_operation_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id);
+            $finalOperation = $hdmOperations
+                ->where('transaction_type', 'sale')
+                ->where('status', 'success')
+                ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                    && $operation->crn
+                    && $operation->rseq
+                    && ! $returnedOperationIds->contains((int) $operation->id))
+                ->sortByDesc('id')
+                ->first();
+
+            $originalOperation = $finalOperation ?? $paymentOperation;
 
             $alreadyRefunded = (float) $originalPayment->refunds()
                 ->where('status', 'paid')
@@ -83,8 +103,11 @@ class HdmReturnService extends HdmBaseService
                 ->sum('amount');
             $availableAmount = max(0, (float) $originalPayment->amount - $alreadyRefunded);
             $refundAmount = (float) $refund->amount;
+            $isFullReceiptReturn = ($finalOperation
+                && round($refundAmount, 2) === round((float) $refund->membershipSale->final_price, 2))
+                || (! $finalOperation && round($refundAmount, 2) === round($availableAmount, 2));
 
-            if ($refundAmount > $availableAmount) {
+            if (! $isFullReceiptReturn && $refundAmount > $availableAmount) {
                 return [
                     'success' => false,
                     'message' => 'Refund amount exceeds the available amount of the original HDM payment.',
@@ -109,17 +132,31 @@ class HdmReturnService extends HdmBaseService
             }
 
             $paymentType = $this->getPaymentType($refund->payment_method_id);
+            $isPrepaymentReceipt = (int) data_get($originalOperation->request, 'mode') === 3;
+            $isUsedPrepayment = $finalOperation
+                && (int) $finalOperation->operationable_id !== (int) $originalPayment->id;
             $returnData = [
                 'crn' => $originalOperation->crn,
                 'returnTicketId' => (int) $originalOperation->rseq,
-                'cashAmountForReturn' => $paymentType === 'cash' ? round($refundAmount, 2) : 0,
-                'cardAmountForReturn' => $paymentType === 'cash' ? 0 : round($refundAmount, 2),
-                'prePaymentAmountForReturn' => 0,
-                'returnItemList' => [[
-                    'rpid' => 0,
-                    'quantity' => number_format($refundAmount / (float) $originalPayment->amount, 3, '.', ''),
-                ]],
             ];
+
+            if (! $isFullReceiptReturn) {
+                $returnData['cashAmountForReturn'] = ! $isUsedPrepayment && $paymentType === 'cash'
+                    ? round($refundAmount, 2)
+                    : 0;
+                $returnData['cardAmountForReturn'] = ! $isUsedPrepayment && $paymentType !== 'cash'
+                    ? round($refundAmount, 2)
+                    : 0;
+                $returnData['prePaymentAmountForReturn'] = $isUsedPrepayment ? round($refundAmount, 2) : 0;
+            }
+
+            if (! $isFullReceiptReturn && ! $isPrepaymentReceipt) {
+                $finalPrice = max((float) $refund->membershipSale->final_price, 0.01);
+                $returnData['returnItemList'] = [[
+                    'rpid' => 0,
+                    'quantity' => number_format(min($refundAmount / $finalPrice, 1), 3, '.', ''),
+                ]];
+            }
 
             $operation = $this->operationRepository->createWithPayments([
                 'hdm_config_id' => $device->id,
@@ -142,11 +179,18 @@ class HdmReturnService extends HdmBaseService
                 $refund->update(['parent_payment_id' => $originalPayment->id]);
             }
 
-            return $this->formatResponse($operation, $device, $cashier, $returnData, [
-                'id' => $refund->id,
-                'number' => $sale?->id ?? $refund->membership_sale_id,
-                'total' => $refundAmount,
-            ]);
+            return $this->formatResponse(
+                operation: $operation,
+                device: $device,
+                cashier: $cashier,
+                receiptData: $returnData,
+                entityData: [
+                    'id' => $refund->id,
+                    'number' => $sale?->id ?? $refund->membership_sale_id,
+                    'total' => $refundAmount,
+                ],
+                gatewayOperation: 'return',
+            );
         } catch (\Throwable $e) {
             Log::error('HDM: Failed to prepare membership refund data.', [
                 'refund_payment_id' => $refund->id,

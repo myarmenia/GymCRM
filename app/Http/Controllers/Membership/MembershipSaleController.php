@@ -56,11 +56,10 @@ class MembershipSaleController extends Controller
             $payment = $membershipSale->payments
                 ->where('type', 'payment')
                 ->where('status', 'paid')
-                ->where('is_hdm', true)
                 ->filter(fn ($payment) => (float) $payment->amount > 0)
                 ->sortByDesc('id')
                 ->first();
-            $printResult = $payment
+            $printResult = $payment?->is_hdm
                 ? $this->hdmPrintService->preparePrintData($payment)
                 : ['success' => true, 'need_print' => false];
 
@@ -88,6 +87,7 @@ class MembershipSaleController extends Controller
 
         return Inertia::render('MembershipSales/Edit', [
             'membershipSale' => $membershipSale,
+            'discountsLocked' => $this->membershipSaleService->discountsLocked($membershipSale),
             ...$this->membershipSaleService->formOptions((int) $membershipSale->person_id),
         ]);
     }
@@ -167,17 +167,10 @@ class MembershipSaleController extends Controller
 
     public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)
     {
-        $membershipSale = $this->membershipSaleService->storePayment((int) $id, $request->validated());
+        $payment = $this->membershipSaleService->storePayment((int) $id, $request->validated());
 
         if ($request->expectsJson()) {
-            $payment = $membershipSale->payments
-                ->where('type', 'payment')
-                ->where('status', 'paid')
-                ->where('is_hdm', true)
-                ->filter(fn ($payment) => (float) $payment->amount > 0)
-                ->sortByDesc('id')
-                ->first();
-            $printResult = $payment
+            $printResult = $payment->is_hdm
                 ? $this->hdmPrintService->preparePrintData($payment)
                 : ['success' => true, 'need_print' => false];
 
