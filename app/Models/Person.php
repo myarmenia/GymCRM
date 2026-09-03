@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\FilterTrait;
 use App\Traits\HasUuidAndVersion;
+use App\Traits\ReleasesEntryCodesOnDelete;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,12 +16,17 @@ use Laravel\Sanctum\HasApiTokens;
 
 class Person extends Authenticatable
 {
-    use FilterTrait, HasApiTokens, HasFactory, SoftDeletes;
+    use FilterTrait, HasApiTokens, HasFactory, ReleasesEntryCodesOnDelete, SoftDeletes;
     use HasUuidAndVersion;
 
     protected $guarded = [];
 
     protected $table = 'people';
+
+    protected function versionIgnoredAttributes(): array
+    {
+        return ['image', 'mobile_deleted', 'fcm_token'];
+    }
 
     protected $hidden = [
         'password',

@@ -22,11 +22,18 @@ class StorePersonRequest extends FormRequest
             'password' => 'required|string|min:6',
             'phone' => ['required', 'string', 'max:50', Rule::unique('people', 'phone')],
             'type' => 'required|in:visitor,guest',
-            'entry_code_id' => 'required|exists:entry_codes,id',
+            'entry_code_id' => [
+                'required',
+                Rule::exists('entry_codes', 'id')->where(function ($query): void {
+                    $query->where('status', true)->where('activation', false);
+
+                    if ($this->user()?->gym_id) {
+                        $query->where('gym_id', $this->user()->gym_id);
+                    }
+                }),
+            ],
             'birth_date' => 'required|date',
-            'gender' => 'nullable|string|in:male,female,other',
-            'mobile_deleted' => 'sometimes|boolean',
-            'fcm_token' => 'nullable|string|max:255',
+            'gender' => 'nullable|string|in:male,female',
         ];
     }
 
