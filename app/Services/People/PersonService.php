@@ -7,7 +7,6 @@ use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\Audit\PersonAuditService;
-use App\Services\EntryCodes\EntryCodeService;
 use App\Services\FileUploadService;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\UploadedFile;
@@ -16,12 +15,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class PersonService
 {
     public function __construct(
         protected PersonInterface $personRepository,
-        protected EntryCodeService $entryCodeService,
         protected FileUploadService $fileUploadService,
         protected ReminderService $reminderService,
         protected PersonAuditService $personAuditService,
@@ -86,57 +85,82 @@ class PersonService
 
     public function store($data)
     {
-        return DB::transaction(function () use ($data) {
-            $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
-            $dataStore = $this->dataToArray($data);
-            $person = $this->personRepository->create($dataStore);
+        $dataStore = $this->dataToArray($data);
+        $uploadedImage = $data->image instanceof UploadedFile
+            ? ($dataStore['image'] ?? null)
+            : null;
 
-            // Attach gyms based on current user's role (sales_manager auto-assign)
-            $this->syncGyms($person);
+        try {
+            return DB::transaction(function () use ($data, $dataStore) {
+                $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
+                $person = $this->personRepository->create($dataStore);
 
-            // Entry code association
-            EntryPermission::create([
-                'entry_code_id' => $entryCode->id,
-                'relation_type' => Person::class,
-                'relation_id' => $person->id,
-                'status' => 1,
-            ]);
-            $this->entryCodeService->activateEntryCode($entryCode->id, true);
+                $this->syncGyms($person);
+                EntryPermission::query()->create([
+                    'entry_code_id' => $entryCode->id,
+                    'relation_type' => Person::class,
+                    'relation_id' => $person->id,
+                    'status' => true,
+                ]);
+                $entryCode->update(['activation' => true]);
+                $this->personAuditService->afterCreated($person);
 
-            $this->personAuditService->afterCreated($person);
+                return $person;
+            });
+        } catch (Throwable $exception) {
+            $this->deleteUploadedImage($uploadedImage);
 
-            return $person;
-        });
+            throw $exception;
+        }
     }
 
     public function update($id, $data)
     {
-        $person = $this->personRepository->findOrFail((int) $id, ['gyms']);
+        $existing = $this->personRepository->findOrFail((int) $id, ['gyms']);
+        $dataUpdate = $this->dataToArray($data, $existing);
+        $uploadedImage = $data->image instanceof UploadedFile
+            ? ($dataUpdate['image'] ?? null)
+            : null;
 
-        $dataUpdate = $this->dataToArray($data, $person);
-        $person = $this->personRepository->update((int) $id, $dataUpdate);
+        try {
+            [$person, $oldImage] = DB::transaction(function () use ($id, $data, $dataUpdate) {
+                /** @var Person $person */
+                $person = Person::query()
+                    ->with('gyms')
+                    ->lockForUpdate()
+                    ->findOrFail((int) $id);
+                $startingVersion = (int) $person->version;
+                $oldImage = $person->image;
 
-        // Sync gyms (sales_manager forces his own gym)
-        $this->syncGyms($person);
+                $person->fill($dataUpdate);
+                $sharedRootChanged = array_diff(
+                    array_keys($person->getDirty()),
+                    ['image', 'mobile_deleted', 'fcm_token', 'version', 'updated_at'],
+                ) !== [];
+                $gymChanged = $this->syncGyms($person);
+                $permissionChanged = $this->syncEntryPermission(
+                    $person,
+                    $data->entry_code_id === null ? null : (int) $data->entry_code_id,
+                );
 
-        // Handle entry code changes
-        $oldEntryCodeId = $person->entryPermissions()->first()?->entry_code_id;
+                if ($sharedRootChanged || $gymChanged || $permissionChanged) {
+                    $person->version = $startingVersion + 1;
+                }
 
-        if ($oldEntryCodeId) {
-            $this->entryCodeService->activateEntryCode($oldEntryCodeId, false);
+                if ($person->isDirty()) {
+                    $person->save();
+                }
+
+                return [$person, $oldImage];
+            });
+        } catch (Throwable $exception) {
+            $this->deleteUploadedImage($uploadedImage);
+
+            throw $exception;
         }
 
-        // Remove existing permissions
-        $person->entryPermissions()->delete();
-
-        if (! empty($data->entry_code_id)) {
-            EntryPermission::create([
-                'entry_code_id' => $data->entry_code_id,
-                'relation_type' => Person::class,
-                'relation_id' => $person->id,
-                'status' => 1,
-            ]);
-            $this->entryCodeService->activateEntryCode($data->entry_code_id, true);
+        if ($uploadedImage !== null && $oldImage !== $uploadedImage) {
+            $this->deleteUploadedImage($oldImage);
         }
 
         return $person;
@@ -147,10 +171,6 @@ class PersonService
         $array = $data->toArray();
 
         if (($array['image'] ?? null) instanceof UploadedFile) {
-            if ($person?->image && Storage::disk('public')->exists($person->image)) {
-                Storage::disk('public')->delete($person->image);
-            }
-
             $array['image'] = $this->fileUploadService->upload($array['image'], 'people/images');
         } elseif ($person) {
             $array['image'] = $array['image'] ?? $person->image;
@@ -166,19 +186,42 @@ class PersonService
         return $array;
     }
 
-    protected function availableEntryCode(int $entryCodeId): EntryCode
+    protected function availableEntryCode(int $entryCodeId, ?Person $person = null): EntryCode
     {
         $user = Auth::user();
         $entryCode = EntryCode::query()
             ->where('id', $entryCodeId)
             ->where('status', true)
-            ->where('activation', false)
-            ->when(! $user->hasRole('owner') && $user->gym_id, function ($query) use ($user) {
+            ->when($user->gym_id, function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
+            ->lockForUpdate()
             ->first();
 
-        if (! $entryCode) {
+        $assignedElsewhere = $entryCode !== null
+            && EntryPermission::query()
+                ->where('entry_code_id', $entryCodeId)
+                ->where('status', true)
+                ->whereNull('deleted_at')
+                ->when($person !== null, function ($query) use ($person): void {
+                    $query->where(function ($other) use ($person): void {
+                        $other
+                            ->where('relation_type', '<>', $person->getMorphClass())
+                            ->orWhere('relation_id', '<>', $person->id);
+                    });
+                })
+                ->exists();
+        $currentPersonOwnsCode = $entryCode !== null
+            && $person !== null
+            && EntryPermission::query()
+                ->where('entry_code_id', $entryCodeId)
+                ->where('relation_type', $person->getMorphClass())
+                ->where('relation_id', $person->id)
+                ->where('status', true)
+                ->whereNull('deleted_at')
+                ->exists();
+
+        if (! $entryCode || $assignedElsewhere || ((bool) $entryCode->activation && ! $currentPersonOwnsCode)) {
             throw ValidationException::withMessages([
                 'entry_code_id' => 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր',
             ]);
@@ -192,15 +235,76 @@ class PersonService
      * - sales_manager: force person to belong to his own gym (user->gym_id)
      * - other roles: do nothing (leave current gyms unchanged)
      */
-    protected function syncGyms($person)
+    protected function syncGyms(Person $person): bool
     {
         $user = Auth::user();
 
         if ($user->hasAnyRole(['sales_manager', 'super_admin']) && $user->gym_id) {
-            // Attach only the sales_manager's own gym (many-to-many)
-            $person->gyms()->sync([(int) $user->gym_id]);
+            $changes = $person->gyms()->syncWithoutDetaching([(int) $user->gym_id]);
+
+            return $changes['attached'] !== [] || $changes['updated'] !== [];
         }
-        // For other roles (admin/owner) we do not modify gym assignments automatically.
-        // If you want them to be able to assign gyms, you would need to send gym_ids from frontend.
+
+        return false;
+    }
+
+    protected function syncEntryPermission(Person $person, ?int $entryCodeId): bool
+    {
+        $permissions = $person->entryPermissions()
+            ->whereNull('deleted_at')
+            ->get();
+        if (
+            $entryCodeId !== null
+            && $permissions->count() === 1
+            && (int) $permissions->first()->entry_code_id === $entryCodeId
+            && (bool) $permissions->first()->status
+        ) {
+            return false;
+        }
+
+        $entryCode = $entryCodeId === null
+            ? null
+            : $this->availableEntryCode($entryCodeId, $person);
+        $oldEntryCodeIds = $permissions
+            ->pluck('entry_code_id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+
+        $person->entryPermissions()->delete();
+        if ($entryCode !== null) {
+            EntryPermission::query()->create([
+                'entry_code_id' => $entryCode->id,
+                'relation_type' => $person->getMorphClass(),
+                'relation_id' => $person->id,
+                'status' => true,
+            ]);
+            $entryCode->update(['activation' => true]);
+        }
+
+        foreach (array_diff($oldEntryCodeIds, $entryCodeId === null ? [] : [$entryCodeId]) as $oldId) {
+            $this->releaseEntryCodeIfUnused($oldId);
+        }
+
+        return $permissions->isNotEmpty() || $entryCode !== null;
+    }
+
+    protected function releaseEntryCodeIfUnused(int $entryCodeId): void
+    {
+        $stillUsed = EntryPermission::query()
+            ->where('entry_code_id', $entryCodeId)
+            ->where('status', true)
+            ->whereNull('deleted_at')
+            ->exists();
+
+        if (! $stillUsed) {
+            EntryCode::query()->whereKey($entryCodeId)->update(['activation' => false]);
+        }
+    }
+
+    protected function deleteUploadedImage(?string $path): void
+    {
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 }

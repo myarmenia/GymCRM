@@ -13,7 +13,10 @@ const { hasRole, hasAnyRole } = useAuth();
 <template>
     <aside id="layout-menu" class="layout-menu menu-vertical menu">
         <div class="app-brand demo">
-            <a href="index.html" class="app-brand-link">
+            <Link
+                :href="route('dashboard', { locale: currentLocale })"
+                class="app-brand-link"
+            >
                 <span class="app-brand-logo demo">
                     <span class="text-primary">
                         <svg
@@ -55,7 +58,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 <span class="app-brand-text demo menu-text fw-bold ms-3"
                     >Vuexy</span
                 >
-            </a>
+            </Link>
             <a
                 href="javascript:void(0);"
                 class="layout-menu-toggle menu-link text-large ms-auto"
@@ -322,7 +325,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasAnyRole(['admin', 'super_admin', 'owner', 'sales_manager', 'manager'])"
+                v-if="hasAnyRole(['admin', 'super_admin', 'sales_manager', 'manager'])"
                 :class="[
                     'menu-item',
                     route().current('membership-category.list') ? 'active' : '',
@@ -342,7 +345,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasAnyRole(['admin', 'super_admin', 'owner', 'sales_manager', 'manager'])"
+                v-if="hasAnyRole(['admin', 'super_admin', 'sales_manager', 'manager'])"
                 :class="[
                     'menu-item',
                     route().current('discount.list') ? 'active' : '',

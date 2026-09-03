@@ -39,9 +39,13 @@ class MembershipCategoryRepository extends BaseRepository implements MembershipC
 
     public function createWithTranslations(array $categoryData, array $translations): MembershipCategory
     {
-        DB::beginTransaction();
-        try {
+        return DB::connection($this->model->getConnectionName())->transaction(function () use (
+            $categoryData,
+            $translations,
+        ): MembershipCategory {
+            /** @var MembershipCategory $category */
             $category = $this->create($categoryData);
+
             foreach ($translations as $locale => $data) {
                 $category->translations()->create([
                     'locale' => $locale,
@@ -49,34 +53,46 @@ class MembershipCategoryRepository extends BaseRepository implements MembershipC
                     'description' => $data['description'] ?? null,
                 ]);
             }
-            DB::commit();
-            return $category;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+
+            return $category->load('translations');
+        });
     }
 
     public function updateWithTranslations(int $id, array $categoryData, array $translations): MembershipCategory
     {
-        DB::beginTransaction();
-        try {
-            $category = $this->update($id, $categoryData);
+        return DB::connection($this->model->getConnectionName())->transaction(function () use (
+            $id,
+            $categoryData,
+            $translations,
+        ): MembershipCategory {
+            /** @var MembershipCategory $category */
+            $category = $this->query()->lockForUpdate()->findOrFail($id);
+            $startingVersion = (int) $category->version;
+            $category->fill($categoryData);
+            $aggregateChanged = $category->isDirty();
+
             foreach ($translations as $locale => $data) {
-                $category->translations()->updateOrCreate(
-                    ['locale' => $locale],
-                    [
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? null,
-                    ]
-                );
+                $translation = $category->translations()->firstOrNew([
+                    'locale' => $locale,
+                ]);
+                $translation->fill([
+                    'name' => $data['name'],
+                    'description' => $data['description'] ?? null,
+                ]);
+
+                if (! $translation->exists || $translation->isDirty()) {
+                    $translation->save();
+                    $aggregateChanged = true;
+                }
             }
-            DB::commit();
-            return $category;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+
+            if ($aggregateChanged) {
+                $category->version = $startingVersion + 1;
+                $category->save();
+            }
+
+            return $category->fresh('translations');
+        });
     }
 
     public function getWithTranslations($id)

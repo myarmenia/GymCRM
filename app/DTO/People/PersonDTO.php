@@ -51,8 +51,6 @@ class PersonDTO
             'type' => $this->type,
             'birth_date' => $this->birth_date,
             'gender' => $this->gender,
-            'mobile_deleted' => $this->mobile_deleted,
-            'fcm_token' => $this->fcm_token,
         ];
     }
 }

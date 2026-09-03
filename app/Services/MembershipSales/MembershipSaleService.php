@@ -26,6 +26,7 @@ use App\Models\TrainerCommission;
 use App\Models\User;
 use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
+use App\Services\Memberships\MembershipSalaryCalculator;
 use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Reminders\ReminderService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
@@ -48,6 +49,7 @@ class MembershipSaleService
         protected FinancialLedgerService $financialLedgerService,
         protected ReminderService $reminderService,
         protected MembershipSaleAuditService $membershipSaleAuditService,
+        protected MembershipSalaryCalculator $salaryCalculator,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -1379,29 +1381,27 @@ class MembershipSaleService
 
     protected function calculateTrainerCommission(User $trainer, float $finalPrice, array $data): array
     {
-        $type = $trainer->pivot?->price_type ?? 'fixed';
-        $value = (float) ($trainer->pivot?->price_value ?? 0);
-        $amount = (float) ($trainer->pivot?->total_price ?? 0);
+        $value = $this->salaryCalculator->normalizePercentage(
+            $trainer->pivot?->price_value ?? 0,
+        );
 
         return [
-            'type' => $type === 'percent' ? 'percent' : 'fixed',
+            'type' => 'percent',
             'value' => $value,
-            'amount' => $amount,
+            'amount' => $this->salaryCalculator->amount($finalPrice, $value),
         ];
     }
 
     protected function calculateSalespersonCommission(MembershipPlan $membershipPlan, float $finalPrice): array
     {
-        $type = $membershipPlan->price_type === 'percent' ? 'percent' : 'fixed';
-        $value = (float) ($membershipPlan->price_value ?? 0);
-        $amount = $type === 'percent'
-            ? ($finalPrice * $value / 100)
-            : $value;
+        $value = $this->salaryCalculator->normalizePercentage(
+            $membershipPlan->price_value ?? 0,
+        );
 
         return [
-            'type' => $type,
+            'type' => 'percent',
             'value' => $value,
-            'amount' => $amount,
+            'amount' => $this->salaryCalculator->amount($finalPrice, $value),
         ];
     }
 

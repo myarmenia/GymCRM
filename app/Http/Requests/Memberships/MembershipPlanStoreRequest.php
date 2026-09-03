@@ -25,8 +25,8 @@ class MembershipPlanStoreRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
-            'price_type' => ['nullable', Rule::in(['fixed', 'percent'])],
-            'price_value' => ['nullable', 'numeric', 'min:0'],
+            'price_type' => ['required', Rule::in(['percent'])],
+            'price_value' => ['required', 'numeric', 'min:0', 'max:100'],
 
             'duration_type' => [
                 'required',
@@ -92,12 +92,14 @@ class MembershipPlanStoreRequest extends FormRequest
             'trainers' => [
                 'nullable',
                 'array',
-                'min:1',
             ],
+            'trainers.*.trainer_id' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'trainers.*.price_type' => ['required', Rule::in(['percent'])],
+            'trainers.*.price_value' => ['required', 'numeric', 'min:0', 'max:100'],
             'schedule_name_id' => [
-                'nullable',
+                'required',
                 'integer',
-                'min:0',
+                'exists:schedule_names,id',
             ],
         ];
     }
@@ -112,7 +114,7 @@ class MembershipPlanStoreRequest extends FormRequest
                 case 'month':
                 case 'year':
 
-                    if (!$this->duration_value) {
+                    if (! $this->duration_value) {
                         $validator->errors()->add(
                             'duration_value',
                             __('membership.duration_value_required')
@@ -123,14 +125,14 @@ class MembershipPlanStoreRequest extends FormRequest
 
                 case 'visit':
 
-                    if (!$this->visits_limit) {
+                    if (! $this->visits_limit) {
                         $validator->errors()->add(
                             'visits_limit',
                             __('membership.visits_limit_required')
                         );
                     }
 
-                    if (!$this->duration_value) {
+                    if (! $this->duration_value) {
                         $validator->errors()->add(
                             'duration_value',
                             __('membership.membership_period_required')
@@ -141,14 +143,14 @@ class MembershipPlanStoreRequest extends FormRequest
 
                 case 'period':
 
-                    if (!$this->start_date) {
+                    if (! $this->start_date) {
                         $validator->errors()->add(
                             'start_date',
                             __('membership.start_date_required')
                         );
                     }
 
-                    if (!$this->end_date) {
+                    if (! $this->end_date) {
                         $validator->errors()->add(
                             'end_date',
                             __('membership.end_date_required')
@@ -176,6 +178,7 @@ class MembershipPlanStoreRequest extends FormRequest
             'in' => 'Ընտրված :attribute-ը անվավեր է։',
             'string' => ':attribute դաշտը պետք է լինի տեքստ։',
             'max.string' => ':attribute դաշտը չի կարող գերազանցել :max նիշը։',
+            'max.numeric' => ':attribute դաշտը չի կարող գերազանցել :max-ը։',
         ];
     }
 
@@ -184,6 +187,8 @@ class MembershipPlanStoreRequest extends FormRequest
         return [
             'membership_category_id' => 'աբոնեմենտի կատեգորիա',
             'price' => 'գին',
+            'price_type' => 'աշխատավարձի տեսակ',
+            'price_value' => 'աշխատավարձի տոկոս',
             'duration_type' => 'տևողության տեսակ',
             'duration_value' => 'տևողություն',
             'visits_limit' => 'այցելությունների քանակ',
@@ -196,6 +201,10 @@ class MembershipPlanStoreRequest extends FormRequest
             'translations.*.name' => 'անուն',
             'translations.*.description' => 'նկարագրություն',
             'trainers' => 'մարզիչներ',
+            'schedule_name_id' => 'գրաֆիկ',
+            'trainers.*.trainer_id' => 'մարզիչ',
+            'trainers.*.price_type' => 'մարզչի աշխատավարձի տեսակ',
+            'trainers.*.price_value' => 'մարզչի աշխատավարձի տոկոս',
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToGym;
 use App\Traits\FilterTrait;
 use App\Traits\HasUuidAndVersion;
 use App\Traits\ModelTranslationTrait;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Discount extends Model
 {
+    use BelongsToGym;
     use FilterTrait, ModelTranslationTrait, SoftDeletes;
     use HasUuidAndVersion;
 
