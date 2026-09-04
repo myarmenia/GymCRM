@@ -60,6 +60,18 @@ use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Interfaces\Users\UserInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
+use App\Models\Guest;
+use App\Models\HdmCashier;
+use App\Models\HdmConfig;
+use App\Models\HdmOperation;
+use App\Models\HdmOperationPayment;
+use App\Models\MembershipPlanPayment;
+use App\Models\MembershipSaleDiscount;
+use App\Models\PersonMembership;
+use App\Models\PersonMembershipFreeze;
+use App\Models\SalespersonCommission;
+use App\Models\TrainerCommission;
+use App\Observers\MembershipSaleAggregateObserver;
 use App\Repositories\AttendanceSheets\AttendanceSheetsRepository;
 use App\Repositories\CardTypes\CardTypeRepository;
 use App\Repositories\Category\CategoryRepository;
@@ -205,6 +217,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach ([
+            MembershipPlanPayment::class,
+            MembershipSaleDiscount::class,
+            PersonMembership::class,
+            PersonMembershipFreeze::class,
+            Guest::class,
+            TrainerCommission::class,
+            SalespersonCommission::class,
+            HdmConfig::class,
+            HdmCashier::class,
+            HdmOperation::class,
+            HdmOperationPayment::class,
+        ] as $model) {
+            $model::observe(MembershipSaleAggregateObserver::class);
+        }
+
         Vite::prefetch(concurrency: 3);
 
         Inertia::share([

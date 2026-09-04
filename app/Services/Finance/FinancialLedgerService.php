@@ -24,10 +24,36 @@ class FinancialLedgerService
 
     public function recordMembershipPayment(MembershipPlanPayment $payment, ?int $createdBy = null): FinancialTransaction
     {
-        $membershipSale = MembershipSale::query()
+        $connectionName = $payment->getConnectionName();
+        $membershipSale = (new MembershipSale)
+            ->setConnection($connectionName)
+            ->newQuery()
             ->withTrashed()
             ->findOrFail($payment->membership_sale_id);
         $isRefund = $payment->type === 'refund';
+        $idempotencyKey = "membership-plan-payment:{$payment->uuid}";
+        $legacyKey = "membership-plan-payment:{$payment->id}";
+        $transactionQuery = (new FinancialTransaction)
+            ->setConnection($connectionName)
+            ->newQuery();
+
+        $existing = (clone $transactionQuery)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $legacy = (clone $transactionQuery)
+            ->where('idempotency_key', $legacyKey)
+            ->where('source_type', 'membership_plan_payment')
+            ->where('source_id', $payment->id)
+            ->first();
+        if ($legacy !== null) {
+            $legacy->update(['idempotency_key' => $idempotencyKey]);
+
+            return $legacy;
+        }
 
         return $this->record([
             'gym_id' => $membershipSale->gym_id,
@@ -41,8 +67,8 @@ class FinancialLedgerService
             'occurred_at' => $payment->created_at ?? now(),
             'created_by' => $createdBy,
             'description' => 'Աբոնեմենտի '.($isRefund ? 'վերադարձ' : 'վճարում')." #{$payment->membership_sale_id}",
-            'idempotency_key' => "membership-plan-payment:{$payment->id}",
-        ]);
+            'idempotency_key' => $idempotencyKey,
+        ], $connectionName);
     }
 
     public function recordProductSale(Purchase $purchase): FinancialTransaction
@@ -386,37 +412,44 @@ class FinancialLedgerService
         return $count;
     }
 
-    protected function record(array $data): FinancialTransaction
+    protected function record(array $data, ?string $connectionName = null): FinancialTransaction
     {
         $categoryId = $data['category_id']
-            ?? FinancialCategory::query()->where('code', $data['category_code'])->value('id');
+            ?? (new FinancialCategory)
+                ->setConnection($connectionName)
+                ->newQuery()
+                ->where('code', $data['category_code'])
+                ->value('id');
 
         if (! $categoryId || (float) $data['amount'] <= 0) {
             throw new \InvalidArgumentException('Financial transaction category and positive amount are required.');
         }
 
-        return FinancialTransaction::query()->firstOrCreate(
-            ['idempotency_key' => $data['idempotency_key']],
-            [
-                'gym_id' => $data['gym_id'],
-                'financial_category_id' => $categoryId,
-                'payment_method_id' => $data['payment_method_id'],
-                'card_type_id' => $data['card_type_id'] ?? null,
-                'direction' => $data['direction'],
-                'amount' => round((float) $data['amount'], 2),
-                'currency' => 'AMD',
-                'source_type' => $data['source_type'] ?? null,
-                'source_id' => $data['source_id'] ?? null,
-                'transaction_group_id' => $data['transaction_group_id'] ?? null,
-                'reversal_of_id' => $data['reversal_of_id'] ?? null,
-                'status' => 'posted',
-                'occurred_at' => $data['occurred_at'],
-                'created_by' => $data['created_by'] ?? null,
-                'description' => $data['description'] ?? null,
-                'reference' => $data['reference'] ?? null,
-                'metadata' => $data['metadata'] ?? null,
-            ],
-        );
+        return (new FinancialTransaction)
+            ->setConnection($connectionName)
+            ->newQuery()
+            ->firstOrCreate(
+                ['idempotency_key' => $data['idempotency_key']],
+                [
+                    'gym_id' => $data['gym_id'],
+                    'financial_category_id' => $categoryId,
+                    'payment_method_id' => $data['payment_method_id'],
+                    'card_type_id' => $data['card_type_id'] ?? null,
+                    'direction' => $data['direction'],
+                    'amount' => round((float) $data['amount'], 2),
+                    'currency' => 'AMD',
+                    'source_type' => $data['source_type'] ?? null,
+                    'source_id' => $data['source_id'] ?? null,
+                    'transaction_group_id' => $data['transaction_group_id'] ?? null,
+                    'reversal_of_id' => $data['reversal_of_id'] ?? null,
+                    'status' => 'posted',
+                    'occurred_at' => $data['occurred_at'],
+                    'created_by' => $data['created_by'] ?? null,
+                    'description' => $data['description'] ?? null,
+                    'reference' => $data['reference'] ?? null,
+                    'metadata' => $data['metadata'] ?? null,
+                ],
+            );
     }
 
     protected function applyFilters(Builder $query, array $filters): Builder
