@@ -21,6 +21,14 @@ class MembershipPlanTrainer extends Pivot
         'total_price',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'price_value' => 'decimal:6',
+            'total_price' => 'decimal:2',
+        ];
+    }
+
     public function membershipPlan()
     {
         return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');

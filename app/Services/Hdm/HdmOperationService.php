@@ -7,13 +7,16 @@ namespace App\Services\Hdm;
 use App\Interfaces\Hdm\HdmOperationInterface;
 use App\Models\HdmCashier;
 use App\Models\HdmOperation;
+use App\Models\MembershipPlanPayment;
+use App\Services\Finance\FinancialLedgerService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class HdmOperationService
 {
     public function __construct(
-        private HdmOperationInterface $operationRepository
+        private HdmOperationInterface $operationRepository,
+        private FinancialLedgerService $financialLedgerService,
     ) {}
 
     /**
@@ -34,6 +37,22 @@ class HdmOperationService
                     'rseq' => $data['rseq'] ?? null,
                     'error_message' => $data['status'] === 'failed' ? json_encode($data['response'] ?? null) : null,
                 ]);
+
+                if ($operation?->transaction_type === 'refund'
+                    && $operation->operationable instanceof MembershipPlanPayment) {
+                    $refund = $operation->operationable;
+
+                    if ($data['status'] === 'success' && $refund->status === 'pending') {
+                        $refund->update(['status' => 'paid']);
+                        $this->financialLedgerService->recordMembershipPayment($refund, $operation->user_id);
+                    }
+
+                    if ($data['status'] === 'failed' && $refund->status === 'pending') {
+                        $refund->update(['status' => 'cancelled']);
+                    }
+
+                    $this->recalculateMembershipSalePaymentStatus($refund);
+                }
 
                 // 2. Gateway can return a fresh cashier key even for DECRYPT_FAILED.
                 // Store it so the next retry/check starts synchronized with the HDM device.
@@ -99,5 +118,25 @@ class HdmOperationService
                 'message' => 'Ошибка обновления операции: '.$e->getMessage(),
             ];
         }
+    }
+
+    private function recalculateMembershipSalePaymentStatus(MembershipPlanPayment $refund): void
+    {
+        $sale = $refund->membershipSale;
+        if (! $sale) {
+            return;
+        }
+
+        $paid = (float) $sale->payments()->where('type', 'payment')->where('status', 'paid')->sum('amount');
+        $refunded = (float) $sale->payments()->where('type', 'refund')->where('status', 'paid')->sum('amount');
+        $netPaid = max($paid - $refunded, 0);
+
+        $status = $paid > 0 && $refunded >= $paid
+            ? 'refunded'
+            : ($netPaid >= (float) $sale->final_price && (float) $sale->final_price > 0
+                ? 'paid'
+                : ($netPaid > 0 ? 'partial' : 'unpaid'));
+
+        $sale->update(['payment_status' => $status]);
     }
 }

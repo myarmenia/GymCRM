@@ -15,7 +15,15 @@ trait HasUuidAndVersion
         });
 
         static::updating(function (Model $model): void {
-            if (! $model->isDirty('version')) {
+            $ignored = method_exists($model, 'versionIgnoredAttributes')
+                ? $model->versionIgnoredAttributes()
+                : [];
+            $versionedChanges = array_diff(
+                array_keys($model->getDirty()),
+                [...$ignored, 'version', 'updated_at'],
+            );
+
+            if (! $model->isDirty('version') && $versionedChanges !== []) {
                 $model->version = ((int) $model->getOriginal('version')) + 1;
             }
         });

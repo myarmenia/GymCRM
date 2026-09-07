@@ -16,7 +16,7 @@ class SalespersonCommission extends Model
     protected function casts(): array
     {
         return [
-            'salary_value' => 'decimal:2',
+            'salary_value' => 'decimal:6',
             'salary_amount' => 'decimal:2',
             'sale_amount' => 'decimal:2',
             'paid_at' => 'datetime',

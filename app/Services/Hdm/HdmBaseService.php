@@ -78,9 +78,10 @@ abstract class HdmBaseService
         int $operationableId,
         string $transactionType,
         string $cashierNumber,
-        array $payments
+        array $payments,
+        ?array $request = null,
     ) {
-        return $this->operationRepository->createWithPayments([
+        $operationData = [
             'hdm_config_id' => $deviceId,
             'hdm_cashier_id' => $cashierId,
             'user_id' => $userId,
@@ -89,14 +90,26 @@ abstract class HdmBaseService
             'transaction_type' => $transactionType,
             'cashier_number' => $cashierNumber,
             'status' => 'pending',
-        ], $payments);
+        ];
+
+        if ($request !== null) {
+            $operationData['request'] = $request;
+        }
+
+        return $this->operationRepository->createWithPayments($operationData, $payments);
     }
 
     /**
      * Форматировать ответ для фронта
      */
-    protected function formatResponse($operation, $device, $cashier, array $receiptData, array $entityData): array
-    {
+    protected function formatResponse(
+        $operation,
+        $device,
+        $cashier,
+        array $receiptData,
+        array $entityData,
+        string $gatewayOperation = 'print',
+    ): array {
         Log::info('HDM: Данные для печати подготовлены', [
             'operation_id' => $operation->id,
             'entity_id' => $entityData['id'],
@@ -119,6 +132,7 @@ abstract class HdmBaseService
             'need_print' => true,
             'data' => [
                 'operation_id' => $operation->id,
+                'gateway_operation' => $gatewayOperation,
                 'device' => [
                     'id' => $device->id,
                     'ip' => $device->ip,
@@ -142,9 +156,11 @@ abstract class HdmBaseService
      * Построить данные для чека с учетом предоплаты
      */
     protected function buildReceiptData(
-        array $items,
+        ?array $items,
         float $totalAmount,
-        ?int $paymentMethodId = null
+        ?int $paymentMethodId = null,
+        int $mode = 2,
+        float $prePaymentAmount = 0,
     ): array {
         $paymentType = $this->getPaymentType($paymentMethodId);
 
@@ -160,8 +176,8 @@ abstract class HdmBaseService
             'paidAmount' => round($paidAmount, 2),
             'paidAmountCard' => round($paidAmountCard, 2),
             'partialAmount' => 0,
-            'prePaymentAmount' => 0,
-            'mode' => 2,
+            'prePaymentAmount' => round($prePaymentAmount, 2),
+            'mode' => $mode,
             'items' => $items,
         ];
 

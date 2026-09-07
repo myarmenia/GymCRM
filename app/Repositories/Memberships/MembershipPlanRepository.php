@@ -6,18 +6,14 @@ use App\Helpers\MyHelper;
 use App\Interfaces\Memberships\MembershipPlanInterface;
 use App\Models\MembershipCategory;
 use App\Models\MembershipPlan;
-use App\Models\User;
 use App\Repositories\BaseRepository;
-use Illuminate\Support\Facades\DB;
 
 class MembershipPlanRepository extends BaseRepository implements MembershipPlanInterface
 {
-
-    public function __construct(MembershipPlan $model)
+    public function __construct(MembershipPlan $model, ?string $connection = null)
     {
-        parent::__construct($model);
+        parent::__construct($model, $connection);
     }
-
 
     public function getCreateData()
     {
@@ -27,14 +23,14 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             ->where('gym_id', $gymId)
             ->with('translations')
             ->get()
-            ->map(fn($category) => [
+            ->map(fn ($category) => [
                 'id' => $category->id,
                 'name' => $category->translations
                     ->where('locale', app()->getLocale())
                     ->first()?->name,
             ]);
 
-        //'trainers' => User::query()
+        // 'trainers' => User::query()
         //    ->where('gym_id', $gymId)
         //    ->whereHas('roles', fn($q) => $q->where('id', 7))
         //    ->with('scheduleNames:id,name')
@@ -44,50 +40,20 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
 
     public function store(array $data)
     {
-        return DB::transaction(function () use ($data) {
-            $plan = $this->model::create([
-                'membership_category_id' => $data['membership_category_id'],
-                'price' => $data['price'],
-                'price_type' => $data['price_type'],
-                'price_value' => $data['price_value'],
-                'duration_type' => $data['duration_type'],
-                'duration_value' => $data['duration_value'] ?? null,
-                'visits_limit' => $data['visits_limit'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'end_date' => $data['end_date'] ?? null,
-                'guest_limit' => $data['guest_limit'] ?? 0,
-                'freeze_limit' => $data['freeze_limit'] ?? 0,
-                'active' => $data['active'] ?? true,
-            ]);
-
-            foreach ($data['translations'] ?? [] as $locale => $translation) {
-                $plan->translations()->create([
-                    'locale' => $locale,
-                    'name' => $translation['name'],
-                    'description' => $translation['description'] ?? null,
-                ]);
-            }
-
-            $trainerIds = collect($data['trainers'] ?? [])
-                ->pluck('trainer_id')
-                ->filter()
-                ->unique()
-                ->values()
-                ->toArray();
-
-            $scheduleIds = collect($data['trainers'] ?? [])
-                ->pluck('schedule_ids')
-                ->flatten()
-                ->filter()
-                ->unique()
-                ->values()
-                ->toArray();
-
-            $plan->trainers()->sync($trainerIds);
-            $plan->schedules()->sync($scheduleIds);
-
-            return $plan;
-        });
+        return $this->query()->create([
+            'membership_category_id' => $data['membership_category_id'],
+            'price' => $data['price'],
+            'price_type' => $data['price_type'] ?? 'percent',
+            'price_value' => $data['price_value'] ?? 0,
+            'duration_type' => $data['duration_type'],
+            'duration_value' => $data['duration_value'] ?? null,
+            'visits_limit' => $data['visits_limit'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
+            'guest_limit' => $data['guest_limit'] ?? 0,
+            'freeze_limit' => $data['freeze_limit'] ?? 0,
+            'active' => $data['active'] ?? true,
+        ]);
     }
 
     public function edit(int $id)
@@ -107,8 +73,8 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
         ]);
     }
 
-    //public function updateMembership(int $id, array $data)
-    //{
+    // public function updateMembership(int $id, array $data)
+    // {
     //    return DB::transaction(function () use ($id, $data) {
     //        $plan = $this->model::findOrFail($id);
 
@@ -155,7 +121,7 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
 
     //        return $plan;
     //    });
-    //}
+    // }
     public function findForEdit(int $id, string $locale): array
     {
         $membershipPlan = $this->model::query()
@@ -171,7 +137,8 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             ->first();
 
         $schedule = $membershipPlan->schedules->first();
-       // dd($membershipPlan->trainers);
+
+        // dd($membershipPlan->trainers);
         return [
             'id' => $membershipPlan->id,
             'is_locked' => $membershipPlan->is_locked,

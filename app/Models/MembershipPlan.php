@@ -6,15 +6,29 @@ use App\Traits\BelongsToGym;
 use App\Traits\HasUuidAndVersion;
 use App\Traits\ModelTranslationTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MembershipPlan extends Model
 {
     use BelongsToGym, ModelTranslationTrait;
     use HasUuidAndVersion;
+    use SoftDeletes;
 
     protected $guarded = [];
 
     protected $appends = ['is_locked', 'lock_reason', 'name'];
+
+    protected $casts = [
+        'gym_id' => 'integer',
+        'membership_category_id' => 'integer',
+        'price' => 'decimal:2',
+        'price_value' => 'decimal:6',
+        'active' => 'boolean',
+        'version' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'deleted_at' => 'datetime',
+    ];
 
     public function MembershipCategory()
     {

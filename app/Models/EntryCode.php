@@ -13,11 +13,19 @@ class EntryCode extends Model
     use FilterTrait, HasFactory, HasUuidAndVersion, SoftDeletes;
 
     protected $guarded = [];
+
     protected $hidden = [
         'version',
     ];
+
     public $timestamps = true;
-    protected $table = "entry_codes";
+
+    protected $table = 'entry_codes';
+
+    protected function versionIgnoredAttributes(): array
+    {
+        return ['activation'];
+    }
 
     protected function casts(): array
     {
@@ -43,7 +51,6 @@ class EntryCode extends Model
         return $this->belongsTo(Gym::class, 'gym_id');
     }
 
-
     public function entryPermissions()
     {
         return $this->hasMany(EntryPermission::class);
@@ -55,7 +62,7 @@ class EntryCode extends Model
             ->with('relation')
             ->get()
             ->pluck('relation')
-            ->filter(fn($item) => $item instanceof User);
+            ->filter(fn ($item) => $item instanceof User);
     }
 
     public function getPeopleAttribute()
@@ -64,6 +71,6 @@ class EntryCode extends Model
             ->with('relation')
             ->get()
             ->pluck('relation')
-            ->filter(fn($item) => $item instanceof Person);
+            ->filter(fn ($item) => $item instanceof Person);
     }
 }

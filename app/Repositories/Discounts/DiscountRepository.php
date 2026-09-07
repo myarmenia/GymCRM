@@ -18,6 +18,7 @@ class DiscountRepository extends BaseRepository implements DiscountInterface
     {
         return $this->query()
             ->with(['translations', 'membershipPlans.translations'])
+            ->when(! $user->hasRole('owner'), fn ($query) => $query->where('gym_id', $user->gym_id))
             ->filter($this->normalizeFilters($filters))
             ->orderBy('id', 'desc')
             ->paginate($perPage)
@@ -30,15 +31,15 @@ class DiscountRepository extends BaseRepository implements DiscountInterface
 
         $dateField = $filters['date_field'] ?? 'start_date';
 
-        if (!in_array($dateField, ['start_date', 'end_date'], true)) {
+        if (! in_array($dateField, ['start_date', 'end_date'], true)) {
             $dateField = 'start_date';
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $filters["{$dateField}_from"] = $filters['date_from'];
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $filters["{$dateField}_to"] = $filters['date_to'];
         }
 
@@ -56,9 +57,12 @@ class DiscountRepository extends BaseRepository implements DiscountInterface
 
     public function createWithRelations(array $discountData, array $translations, array $membershipPlanIds): Discount
     {
-        DB::beginTransaction();
-
-        try {
+        return DB::connection($this->model->getConnectionName())->transaction(function () use (
+            $discountData,
+            $translations,
+            $membershipPlanIds,
+        ): Discount {
+            /** @var Discount $discount */
             $discount = $this->create($discountData);
 
             foreach ($translations as $locale => $data) {
@@ -71,41 +75,50 @@ class DiscountRepository extends BaseRepository implements DiscountInterface
 
             $discount->membershipPlans()->sync($membershipPlanIds);
 
-            DB::commit();
-
-            return $discount;
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            return $discount->load(['translations', 'membershipPlans']);
+        });
     }
 
     public function updateWithRelations(int $id, array $discountData, array $translations, array $membershipPlanIds): Discount
     {
-        DB::beginTransaction();
-
-        try {
-            $discount = $this->update($id, $discountData);
+        return DB::connection($this->model->getConnectionName())->transaction(function () use (
+            $id,
+            $discountData,
+            $translations,
+            $membershipPlanIds,
+        ): Discount {
+            /** @var Discount $discount */
+            $discount = $this->query()->lockForUpdate()->findOrFail($id);
+            $startingVersion = (int) $discount->version;
+            $discount->fill($discountData);
+            $aggregateChanged = $discount->isDirty(array_keys($discountData));
 
             foreach ($translations as $locale => $data) {
-                $discount->translations()->updateOrCreate(
-                    ['locale' => $locale],
-                    [
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? null,
-                    ],
-                );
+                $translation = $discount->translations()->firstOrNew(['locale' => $locale]);
+                $translation->fill([
+                    'name' => $data['name'],
+                    'description' => $data['description'] ?? null,
+                ]);
+
+                if ($translation->isDirty()) {
+                    $translation->save();
+                    $aggregateChanged = true;
+                }
             }
 
-            $discount->membershipPlans()->sync($membershipPlanIds);
+            $membershipPlanChanges = $discount->membershipPlans()->sync($membershipPlanIds);
+            $aggregateChanged = $aggregateChanged
+                || $membershipPlanChanges['attached'] !== []
+                || $membershipPlanChanges['detached'] !== []
+                || $membershipPlanChanges['updated'] !== [];
 
-            DB::commit();
+            if ($aggregateChanged) {
+                $discount->version = $startingVersion + 1;
+                $discount->save();
+            }
 
-            return $discount;
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            return $discount->fresh(['translations', 'membershipPlans']);
+        });
     }
 
     public function getWithRelations($id)

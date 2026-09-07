@@ -5,31 +5,30 @@ const isDecryptFailed = result => JSON.stringify(result?.result ?? result ?? {})
     .includes('decrypt_failed')
 
 export const printHdmReceipt = async (printData, gateway, locale) => {
-    try {
-        const gatewayUrl = `${gateway.url}?token=${gateway.token}`
-        const updateUrl = route('hdm.update_operation_status', { locale })
-
-        const updateOperation = async result => {
-            const responsePayload = result.result ?? result
-            const updateData = {
-                operation_id: printData.operation_id,
-                status: result.success ? 'success' : 'failed',
-                response: responsePayload,
-                crn: responsePayload?.crn ?? result.crn ?? null,
-                rseq: responsePayload?.rseq ?? result.rseq ?? null,
-            }
-
-            if (result.new_session_key && result.cashier_id) {
-                updateData.cashier_id = result.cashier_id
-                updateData.new_session_key = result.new_session_key
-            }
-
-            await axios.post(updateUrl, updateData)
+    const gatewayUrl = `${gateway.url}?token=${gateway.token}`
+    const updateUrl = route('hdm.update_operation_status', { locale })
+    const updateOperation = async result => {
+        const responsePayload = result.result ?? result
+        const updateData = {
+            operation_id: printData.operation_id,
+            status: result.success ? 'success' : 'failed',
+            response: responsePayload,
+            crn: responsePayload?.crn ?? result.crn ?? null,
+            rseq: responsePayload?.rseq ?? result.rseq ?? null,
         }
 
+        if (result.new_session_key && result.cashier_id) {
+            updateData.cashier_id = result.cashier_id
+            updateData.new_session_key = result.new_session_key
+        }
+
+        await axios.post(updateUrl, updateData)
+    }
+
+    try {
         const sendPrint = async (forceLogin = false) => {
             const response = await axios.post(gatewayUrl, {
-                op: 'print',
+                op: printData.gateway_operation ?? 'print',
                 device_id: printData.device.id,
                 device_ip: printData.device.ip,
                 device_port: printData.device.port,
@@ -48,7 +47,6 @@ export const printHdmReceipt = async (printData, gateway, locale) => {
         let result = await sendPrint(false)
 
         if (!result.success && isDecryptFailed(result)) {
-            await updateOperation(result)
             result = await sendPrint(true)
         }
 
@@ -58,10 +56,23 @@ export const printHdmReceipt = async (printData, gateway, locale) => {
             ? { success: true, result }
             : { success: false, message: result.message ?? 'HDM printing failed.', result }
     } catch (error) {
+        const message = error.response?.data?.message ?? error.message ?? 'HDM gateway connection failed.'
+
+        try {
+            await updateOperation({
+                success: false,
+                result: {
+                    error: 'GATEWAY_CONNECTION_FAILED',
+                    message,
+                },
+            })
+        } catch {
+            // Preserve the original gateway error when status synchronization also fails.
+        }
+
         return {
             success: false,
-            message: error.response?.data?.message ?? error.message ?? 'HDM gateway connection failed.',
+            message,
         }
     }
 }
-
