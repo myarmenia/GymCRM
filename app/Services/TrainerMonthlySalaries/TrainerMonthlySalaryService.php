@@ -46,6 +46,7 @@ class TrainerMonthlySalaryService
         TrainerCommission $trainerCommission,
         null|string|Carbon $date = null
     ): ?TrainerMonthlySalary {
+        $connectionName = $trainerCommission->getConnectionName();
         $runDate = $date instanceof Carbon
             ? $date->copy()->startOfDay()
             : Carbon::parse($date ?? today())->startOfDay();
@@ -79,7 +80,10 @@ class TrainerMonthlySalaryService
             return null;
         }
 
-        $existingMonthlySalary = TrainerMonthlySalary::query()
+        $monthlySalaryQuery = (new TrainerMonthlySalary)
+            ->setConnection($connectionName)
+            ->newQuery();
+        $existingMonthlySalary = (clone $monthlySalaryQuery)
             ->where('person_membership_id', $personMembership->id)
             ->whereDate('salary_month', $runDate->copy()->startOfMonth()->toDateString())
             ->first();
@@ -90,13 +94,17 @@ class TrainerMonthlySalaryService
                 : null;
         }
 
-        $monthlyPrice = $this->monthlyPrice($trainerCommission, $personMembership);
+        $monthlyPrice = $this->monthlyPrice(
+            $trainerCommission,
+            $personMembership,
+            $connectionName,
+        );
 
         if ($monthlyPrice <= 0) {
             return null;
         }
 
-        $monthlySalary = TrainerMonthlySalary::query()->firstOrCreate(
+        $monthlySalary = $monthlySalaryQuery->firstOrCreate(
             [
                 'trainer_id' => $trainerCommission->trainer_id,
                 'person_membership_id' => $personMembership->id,
@@ -109,24 +117,27 @@ class TrainerMonthlySalaryService
             ]
         );
 
-        SalaryPayableAssignment::query()->firstOrCreate(
-            [
-                'root_key' => "trainer:{$monthlySalary->id}",
-            ],
-            [
-                'gym_id' => $personMembership->gym_id,
-                'payee_id' => $monthlySalary->trainer_id,
-                'source_type' => 'trainer_monthly_salary',
-                'trainer_monthly_salary_id' => $monthlySalary->id,
-                'salesperson_commission_id' => null,
-                'trainer_commission_id' => $trainerCommission->id,
-                'parent_assignment_id' => null,
-                'amount' => $monthlySalary->price,
-                'available_amount' => in_array($monthlySalary->status, ['pending', 'transfer'], true)
-                    ? $monthlySalary->price
-                    : 0,
-            ],
-        );
+        (new SalaryPayableAssignment)
+            ->setConnection($connectionName)
+            ->newQuery()
+            ->firstOrCreate(
+                [
+                    'root_key' => "trainer:{$monthlySalary->id}",
+                ],
+                [
+                    'gym_id' => $personMembership->gym_id,
+                    'payee_id' => $monthlySalary->trainer_id,
+                    'source_type' => 'trainer_monthly_salary',
+                    'trainer_monthly_salary_id' => $monthlySalary->id,
+                    'salesperson_commission_id' => null,
+                    'trainer_commission_id' => $trainerCommission->id,
+                    'parent_assignment_id' => null,
+                    'amount' => $monthlySalary->price,
+                    'available_amount' => in_array($monthlySalary->status, ['pending', 'transfer'], true)
+                        ? $monthlySalary->price
+                        : 0,
+                ],
+            );
 
         return $monthlySalary;
     }
@@ -136,13 +147,20 @@ class TrainerMonthlySalaryService
         return $commissionDate->copy()->addMonthsNoOverflow($monthOffset);
     }
 
-    protected function monthlyPrice(TrainerCommission $trainerCommission, $personMembership): float
-    {
+    protected function monthlyPrice(
+        TrainerCommission $trainerCommission,
+        $personMembership,
+        ?string $connectionName = null,
+    ): float {
         $monthCount = $this->membershipMonthCount($personMembership);
-        $generatedCount = TrainerMonthlySalary::query()
+        $generatedCount = (new TrainerMonthlySalary)
+            ->setConnection($connectionName)
+            ->newQuery()
             ->where('person_membership_id', $personMembership->id)
             ->count();
-        $outstandingGeneratedAmount = (float) SalaryPayableAssignment::query()
+        $outstandingGeneratedAmount = (float) (new SalaryPayableAssignment)
+            ->setConnection($connectionName)
+            ->newQuery()
             ->where('trainer_commission_id', $trainerCommission->id)
             ->sum('available_amount');
         $unallocatedAmount = max(
