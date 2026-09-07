@@ -3,7 +3,9 @@
 namespace App\Services\Category;
 
 use App\Interfaces\Category\CategoryInterface;
+use App\Models\InventoryCategory;
 use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
+use Illuminate\Support\Facades\DB;
 
 class CategoryService
 {
@@ -149,7 +151,21 @@ class CategoryService
 
     public function delete(int $id)
     {
-        return $this->categoryRepository->delete($id);
+        return DB::transaction(function () use ($id): bool {
+            $this->deleteCategoryTree($id);
+
+            return true;
+        });
+    }
+
+    private function deleteCategoryTree(int $id): void
+    {
+        InventoryCategory::query()
+            ->where('parent_id', $id)
+            ->pluck('id')
+            ->each(fn (int $childId) => $this->deleteCategoryTree($childId));
+
+        $this->categoryRepository->delete($id);
     }
 
     public function getParentCategories(string $locale)

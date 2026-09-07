@@ -171,6 +171,7 @@ class PersonService
         $array = $data->toArray();
 
         if (($array['image'] ?? null) instanceof UploadedFile) {
+
             $array['image'] = $this->fileUploadService->upload($array['image'], 'people/images');
         } elseif ($person) {
             $array['image'] = $array['image'] ?? $person->image;

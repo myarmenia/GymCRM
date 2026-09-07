@@ -136,7 +136,14 @@ const gymOptions = computed(() => {
 });
 
 const submit = () => {
-    form.patch(route('user.update', { id: props.user.id, locale: currentLocale }), {
+    // PHP does not parse multipart bodies submitted with PATCH.  Sending a POST
+    // with Laravel's method override preserves every populated field (including
+    // the roles array and an optional image).
+    form.transform((data) => ({
+        ...data,
+        _method: 'patch',
+        roles: Array.isArray(data.roles) ? data.roles.filter(Boolean) : [],
+    })).post(route('user.update', { id: props.user.id, locale: currentLocale }), {
         forceFormData: true,
         onError: () => {
             if (form.errors.password || form.errors.password_confirmation) {

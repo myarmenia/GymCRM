@@ -28,7 +28,7 @@ class DocumentService
 
         $owner = $this->modelService->find($ownerType, $ownerId);
 
-        $folder = 'documents/' . strtolower(class_basename($owner)) . '/' . $owner->id;
+        $folder = 'documents/' . strtolower(class_basename($owner)) . '/' . $owner->uuid;
 
         return collect($dtos)->map(function ($dto) use ($owner, $folder) {
 

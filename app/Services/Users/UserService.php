@@ -40,6 +40,12 @@ class UserService
     {
         $dataStore = $this->dataToArray($data);
         $user = $this->userRepository->create($dataStore);
+
+        if ($data->image instanceof UploadedFile) {
+            $user->update([
+                'image' => $this->storeProfileImage($data->image, $user->uuid, 'users'),
+            ]);
+        }
         $user->assignRole($data->roles);
 
         Log::info('User created with ID: ' . $user->id);
@@ -115,13 +121,22 @@ class UserService
                 Storage::disk('public')->delete($existingUser->image);
             }
 
-            $array['image'] = $this->fileUploadService->upload($array['image'], 'users/images');
+            if ($existingUser !== null) {
+                $array['image'] = $this->storeProfileImage($array['image'], $existingUser->uuid, 'users');
+            } else {
+                unset($array['image']);
+            }
         } elseif ($existingUser) {
             $array['image'] = $array['image'] ?? $existingUser->image;
         }
 
         return $array;
 
+    }
+
+    private function storeProfileImage(UploadedFile $image, string $uuid, string $ownerType): string
+    {
+        return $image->store("{$ownerType}/{$uuid}", 'public');
     }
 
     public function getTrainers()
