@@ -91,6 +91,12 @@ class PersonService
             $dataStore = $this->dataToArray($data);
             $person = $this->personRepository->create($dataStore);
 
+            if ($data->image instanceof UploadedFile) {
+                $person->update([
+                    'image' => $this->storeProfileImage($data->image, $person->uuid, 'people'),
+                ]);
+            }
+
             // Attach gyms based on current user's role (sales_manager auto-assign)
             $this->syncGyms($person);
 
@@ -151,7 +157,11 @@ class PersonService
                 Storage::disk('public')->delete($person->image);
             }
 
-            $array['image'] = $this->fileUploadService->upload($array['image'], 'people/images');
+            if ($person !== null) {
+                $array['image'] = $this->storeProfileImage($array['image'], $person->uuid, 'people');
+            } else {
+                unset($array['image']);
+            }
         } elseif ($person) {
             $array['image'] = $array['image'] ?? $person->image;
         }
@@ -164,6 +174,11 @@ class PersonService
         }
 
         return $array;
+    }
+
+    private function storeProfileImage(UploadedFile $image, string $uuid, string $ownerType): string
+    {
+        return $image->store("{$ownerType}/{$uuid}", 'public');
     }
 
     protected function availableEntryCode(int $entryCodeId): EntryCode
