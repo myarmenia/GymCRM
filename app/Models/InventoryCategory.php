@@ -4,10 +4,11 @@ namespace App\Models;
 
 use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryCategory extends Model
 {
-    use HasUuidAndVersion;
+    use HasUuidAndVersion, SoftDeletes;
 
     protected static function booted(): void
     {
