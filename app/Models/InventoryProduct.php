@@ -4,10 +4,11 @@ namespace App\Models;
 
 use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryProduct extends Model
 {
-    use HasUuidAndVersion;
+    use HasUuidAndVersion, SoftDeletes;
 
     protected $fillable = [
         'gym_id',
