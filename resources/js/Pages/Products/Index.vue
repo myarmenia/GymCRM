@@ -453,9 +453,8 @@ console.log(props.products.data);
                                             <div v-if="canManageInventory" @click.stop>
                                                 <DeleteButton
                                                     prefix="tables"
-                                                    model="inventoryproduct"
+                                                    model="inventory-product"
                                                     :model-id="product.id"
-                                                    :locale="currentLocale"
                                                     @deleted="removeProduct"
                                                     @delete-error="
                                                         showDeleteError

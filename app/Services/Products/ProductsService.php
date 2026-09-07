@@ -56,15 +56,6 @@ class ProductsService
     {
         return DB::transaction(function () use ($data) {
             $hotelId = auth()->user()->gym_id;
-            if (isset($data['image'])) {
-
-                $imagePath = $data['image']->store(
-                    'products',
-                    'public'
-                );
-
-                $data['image'] = $imagePath;
-            }
             $product = $this->productRepository->create([
                 'gym_id' => $hotelId,
                 'category_id' => $data['category_id'],
@@ -75,9 +66,13 @@ class ProductsService
                 'default_purchase_price' => $data['default_purchase_price'] ?? 0,
                 'default_sale_price' => $data['default_sale_price'] ?? 0,
                 'min_stock_alert' => $data['min_stock_alert'] ?? 0,
-                'image' => $data['image'] ?? null,
+                'image' => null,
                 'status' => $data['status'] ?? true,
             ]);
+
+            if (isset($data['image'])) {
+                $product->update(['image' => $this->storeImage($data['image'], $product->uuid)]);
+            }
 
             $translations = [];
 
@@ -141,13 +136,7 @@ class ProductsService
             $imagePath = $product->image;
 
             if (isset($data['image'])) {
-
-                $imagePath = $data['image']->store(
-                    'products',
-                    'public'
-                );
-
-                $data['image'] = $imagePath;
+                $imagePath = $this->storeImage($data['image'], $product->uuid);
             }
 
             $product->update([
@@ -187,6 +176,13 @@ class ProductsService
                 );
             }
 
+            // Translations and stock are stored separately.  When those are the
+            // only edited values, bump the product version so SEV reconciliation
+            // can detect the SPITAK-side change.
+            if (! $product->wasChanged()) {
+                $product->touch();
+            }
+
             return $product;
         });
     }
@@ -204,5 +200,10 @@ class ProductsService
     public function getAllTypes()
     {
         return $this->productRepository->getAll(['translation', 'extraPrices']);
+    }
+
+    private function storeImage(mixed $image, string $productUuid): string
+    {
+        return $image->store("products/{$productUuid}", 'public');
     }
 }
