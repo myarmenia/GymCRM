@@ -257,15 +257,18 @@ class TrainerSalaryAccrualModeTest extends TestCase
 
     private function attendance(PersonMembership $membership, string $date): AttendanceSheet
     {
-        return AttendanceSheet::query()->create([
+        $attendance = AttendanceSheet::query()->create([
             'relation_type' => Person::class,
             'relation_id' => $membership->person_id,
-            'membership_plan_id' => $membership->membership_plan_id,
-            'person_membership_id' => $membership->id,
+            'gym_id' => $membership->gym_id,
             'date' => $date,
             'direction' => 'entry',
             'type' => 'manual',
             'online' => true,
         ]);
+
+        $attendance->personMemberships()->attach($membership->id);
+
+        return $attendance;
     }
 }

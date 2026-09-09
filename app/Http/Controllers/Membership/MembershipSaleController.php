@@ -268,10 +268,15 @@ class MembershipSaleController extends Controller
             'online' => ['nullable'],
             'local_ip' => ['nullable', 'string'],
             'mac' => ['nullable', 'string'],
+            'membership_ids' => ['nullable', 'array', 'min:1'],
+            'membership_ids.*' => ['integer', 'distinct'],
         ]);
 
+        $membershipIds = $context['membership_ids'] ?? [(int) $id];
+        unset($context['membership_ids']);
+
         return response()->json(
-            $this->entryExitSystemService->finalizeTurnstileMembershipSelection((int) $id, auth()->user(), $context)
+            $this->entryExitSystemService->finalizeTurnstileMembershipSelection($membershipIds, auth()->user(), $context)
         );
     }
 

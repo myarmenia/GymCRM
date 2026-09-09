@@ -1,6 +1,6 @@
 <script setup>
 import Index from '@/Layouts/Index.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputLabel from '@/Components/InputLabel.vue';
 
 const page = usePage();
@@ -10,7 +10,30 @@ const props = defineProps({
     user: Object,
     roles: Array,
     selectedEntryCodeId: Number,
+    lastAttendance: Object,
 });
+
+const localDateTime = () => {
+    const date = new Date();
+    date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+
+    return date.toISOString().slice(0, 16);
+};
+
+const staffAttendanceForm = useForm({
+    action: 'entry',
+    manual_datetime: localDateTime(),
+});
+
+const staffInside = () => props.lastAttendance?.direction === 'entry';
+
+const recordAttendance = (action) => {
+    staffAttendanceForm.action = action;
+    staffAttendanceForm.post(route('user.attendance.store', {
+        locale: currentLocale,
+        id: props.user.id,
+    }), { preserveScroll: true });
+};
 </script>
 
 <template>
@@ -63,7 +86,36 @@ const props = defineProps({
                 </div>
             </div>
             <div class="card-footer">
-                
+                <div class="border rounded p-3 mb-3">
+                    <div class="fw-semibold mb-2">Անձնակազմի մուտք / ելք</div>
+                    <input
+                        v-model="staffAttendanceForm.manual_datetime"
+                        type="datetime-local"
+                        class="form-control mb-2"
+                    >
+                    <div v-if="staffAttendanceForm.errors.action" class="text-danger small mb-2">
+                        {{ staffAttendanceForm.errors.action }}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-success"
+                            :disabled="staffAttendanceForm.processing || staffInside()"
+                            @click="recordAttendance('entry')"
+                        >
+                            Ֆիքսել մուտք
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            :disabled="staffAttendanceForm.processing || !staffInside()"
+                            @click="recordAttendance('exit')"
+                        >
+                            Ֆիքսել ելք
+                        </button>
+                    </div>
+                </div>
+
                 <Link :href="route('user.list', { locale: currentLocale })" class="btn btn-secondary">
                     Վերադառնալ ցուցակ
                 </Link>

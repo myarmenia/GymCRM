@@ -400,12 +400,8 @@ class TrainerMonthlySalaryService
             ->where('direction', 'entry')
             ->where('date', '>=', $period['start']->copy()->startOfDay())
             ->where('date', '<', $period['end_exclusive']->copy()->startOfDay())
-            ->where(function ($query) use ($personMembership) {
-                $query->where('person_membership_id', $personMembership->id)
-                    ->orWhere(function ($legacyQuery) use ($personMembership) {
-                        $legacyQuery->whereNull('person_membership_id')
-                            ->where('membership_plan_id', $personMembership->membership_plan_id);
-                    });
+            ->whereHas('personMemberships', function ($query) use ($personMembership) {
+                $query->where('person_memberships.id', $personMembership->id);
             })
             ->pluck('date');
 

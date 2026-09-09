@@ -3,7 +3,7 @@
 namespace App\Repositories\Reports;
 
 use App\Interfaces\Reports\EntryExitReportRepositoryInterface;
-use App\Models\EntryReport;
+use App\Models\AttendanceSheet;
 use App\Models\Person;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -15,7 +15,7 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
     public function paginatedEntries(User $user, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         return $this->entriesQuery($user, $filters)
-            ->latest('detected_at')
+            ->latest('date')
             ->latest('id')
             ->paginate($perPage)
             ->withQueryString();
@@ -24,7 +24,7 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
     public function entriesForSummary(User $user, array $filters = []): Collection
     {
         return $this->entriesQuery($user, $filters)
-            ->oldest('detected_at')
+            ->oldest('date')
             ->oldest('id')
             ->get();
     }
@@ -32,7 +32,7 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
     public function entriesForExport(User $user, array $filters = []): Collection
     {
         return $this->entriesQuery($user, $filters)
-            ->latest('detected_at')
+            ->latest('date')
             ->latest('id')
             ->get();
     }
@@ -42,27 +42,26 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
         return $this->baseQuery($user, $filters);
     }
 
-    public function nextExitForEntry(EntryReport $entry): ?EntryReport
+    public function nextExitForEntry(AttendanceSheet $entry): ?AttendanceSheet
     {
-        if (!$entry->owner_type || !$entry->owner_id || !$entry->client_id || !$entry->detected_at) {
+        if (!$entry->relation_type || !$entry->relation_id || !$entry->gym_id || !$entry->date) {
             return null;
         }
 
-        return EntryReport::query()
-            ->where('client_id', $entry->client_id)
-            ->where('owner_type', $entry->owner_type)
-            ->where('owner_id', $entry->owner_id)
-            ->where('status', 'success')
-            ->where('action', 'exit')
+        return AttendanceSheet::query()
+            ->where('gym_id', $entry->gym_id)
+            ->where('relation_type', $entry->relation_type)
+            ->where('relation_id', $entry->relation_id)
+            ->where('direction', 'exit')
             ->where(function (Builder $query) use ($entry) {
-                $query->where('detected_at', '>', $entry->detected_at)
+                $query->where('date', '>', $entry->date)
                     ->orWhere(function (Builder $sameTimeQuery) use ($entry) {
                         $sameTimeQuery
-                            ->where('detected_at', $entry->detected_at)
+                            ->where('date', $entry->date)
                             ->where('id', '>', $entry->id);
                     });
             })
-            ->oldest('detected_at')
+            ->oldest('date')
             ->oldest('id')
             ->first();
     }
@@ -70,31 +69,29 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
     public function currentInsideReports(User $user, array $filters = []): Collection
     {
         return $this->baseQuery($user, $this->currentStateFilters($filters))
-            ->where('status', 'success')
-            ->whereIn('action', ['entry', 'exit'])
-            ->latest('detected_at')
+            ->whereIn('direction', ['entry', 'exit'])
+            ->latest('date')
             ->latest('id')
             ->get()
-            ->unique(fn (EntryReport $report) => $this->ownerKey($report))
-            ->filter(fn (EntryReport $report) => $report->action === 'entry')
+            ->unique(fn (AttendanceSheet $report) => $this->ownerKey($report))
+            ->filter(fn (AttendanceSheet $report) => $report->direction === 'entry')
             ->values();
     }
 
     protected function entriesQuery(User $user, array $filters = []): Builder
     {
         return $this->baseQuery($user, $filters)
-            ->where('status', 'success')
-            ->where('action', 'entry');
+            ->where('direction', 'entry');
     }
 
     protected function baseQuery(User $user, array $filters = []): Builder
     {
-        return EntryReport::query()
-            ->when(!$user->hasRole('owner'), fn (Builder $query) => $query->where('client_id', $user->gym_id))
-            ->when($user->hasRole('owner') && !empty($filters['client_id']), fn (Builder $query) => $query->where('client_id', $filters['client_id']))
-            ->when($filters['start_date'] ?? null, fn (Builder $query, $startDate) => $query->whereDate('detected_at', '>=', $startDate))
-            ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->whereDate('detected_at', '<=', $endDate))
-            ->when($filters['owner_type'] ?? null, fn (Builder $query, $ownerType) => $query->where('owner_type', $ownerType))
+        return AttendanceSheet::query()
+            ->when(!$user->hasRole('owner'), fn (Builder $query) => $query->where('gym_id', $user->gym_id))
+            ->when($user->hasRole('owner') && !empty($filters['client_id']), fn (Builder $query) => $query->where('gym_id', $filters['client_id']))
+            ->when($filters['start_date'] ?? null, fn (Builder $query, $startDate) => $query->whereDate('date', '>=', $startDate))
+            ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->whereDate('date', '<=', $endDate))
+            ->when($filters['owner_type'] ?? null, fn (Builder $query, $ownerType) => $query->where('relation_type', $ownerType === 'user' ? User::class : Person::class))
             ->when($filters['person_type'] ?? null, fn (Builder $query, $personType) => $this->wherePersonType($query, $personType))
             ->when($filters['search'] ?? null, fn (Builder $query, $search) => $this->applySearch($query, trim((string) $search)));
     }
@@ -105,8 +102,8 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
             ->where('type', $personType)
             ->pluck('id');
 
-        $query->where('owner_type', 'person')
-            ->whereIn('owner_id', $personIds);
+        $query->where('relation_type', Person::class)
+            ->whereIn('relation_id', $personIds);
     }
 
     protected function applySearch(Builder $query, string $search): void
@@ -134,15 +131,15 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
 
             if ($userIds->isNotEmpty()) {
                 $query->orWhere(function (Builder $ownerQuery) use ($userIds) {
-                    $ownerQuery->where('owner_type', 'user')
-                        ->whereIn('owner_id', $userIds);
+                    $ownerQuery->where('relation_type', User::class)
+                        ->whereIn('relation_id', $userIds);
                 });
             }
 
             if ($personIds->isNotEmpty()) {
                 $query->orWhere(function (Builder $ownerQuery) use ($personIds) {
-                    $ownerQuery->where('owner_type', 'person')
-                        ->whereIn('owner_id', $personIds);
+                    $ownerQuery->where('relation_type', Person::class)
+                        ->whereIn('relation_id', $personIds);
                 });
             }
         });
@@ -155,12 +152,12 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
             ->all();
     }
 
-    protected function ownerKey(EntryReport $report): string
+    protected function ownerKey(AttendanceSheet $report): string
     {
         return implode(':', [
-            $report->client_id,
-            $report->owner_type,
-            $report->owner_id,
+            $report->gym_id,
+            $report->relation_type,
+            $report->relation_id,
         ]);
     }
 }

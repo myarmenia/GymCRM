@@ -177,6 +177,7 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
                     Route::patch('/update/{id}', [UserController::class, 'update'])->name('update');
                     Route::get('/show/{id}', [UserController::class, 'show'])->name('show');
+                    Route::post('/show/{id}/attendance', [UserController::class, 'storeAttendance'])->name('attendance.store');
                 });
             });
 
@@ -228,7 +229,7 @@ Route::prefix('{locale}')
             Route::prefix('entry-reports')->name('entry-reports.')->group(function () {
                 Route::get('/', [EntryReportController::class, 'index'])->name('index');
                 Route::get('/export', [EntryReportController::class, 'export'])->name('export');
-                Route::get('/{entryReport}', [EntryReportController::class, 'show'])->name('show');
+                Route::get('/{attendance}', [EntryReportController::class, 'show'])->name('show');
             });
 
             Route::prefix('partner')->name('partner.')->group(function () {
@@ -314,6 +315,9 @@ Route::prefix('{locale}')
                 Route::get('/list', [MembershipSaleController::class, 'list'])->name('list');
                 Route::get('/create/{person}', [MembershipSaleController::class, 'create'])->name('create');
                 Route::post('/store/{person}', [MembershipSaleController::class, 'store'])->name('store');
+                Route::post('/activate-waiting/{id}', [MembershipSaleController::class, 'activateWaitingMembership'])
+                    ->middleware('check.gym:PersonMembership,id')
+                    ->name('activate_waiting');
                 Route::middleware('check.gym:MembershipSale,id')->group(function () {
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
@@ -328,7 +332,6 @@ Route::prefix('{locale}')
                     Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
-                    Route::post('/activate-waiting/{id}', [MembershipSaleController::class, 'activateWaitingMembership'])->name('activate_waiting');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
