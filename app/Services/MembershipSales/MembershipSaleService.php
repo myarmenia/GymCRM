@@ -26,6 +26,7 @@ use App\Models\TrainerCommission;
 use App\Models\User;
 use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
+use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Memberships\MembershipSalaryCalculator;
 use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Reminders\ReminderService;
@@ -50,6 +51,7 @@ class MembershipSaleService
         protected ReminderService $reminderService,
         protected MembershipSaleAuditService $membershipSaleAuditService,
         protected MembershipSalaryCalculator $salaryCalculator,
+        protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -184,6 +186,13 @@ class MembershipSaleService
             $isClosedByReturnedReceipt = $payment->type === 'payment'
                 && $lastReturnedFinalPaymentId
                 && (int) $payment->id <= (int) $lastReturnedFinalPaymentId;
+            $saleOperations = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->sortByDesc('id');
+            $latestSaleOperation = $saleOperations->first();
+            $successfulSaleOperation = $saleOperations->first(fn ($operation) => $operation->status === 'success'
+                && $operation->crn
+                && $operation->rseq);
 
             $payment->setAttribute('refunded_amount', $refundedAmount);
             $payment->setAttribute('refundable_amount', $payment->type === 'payment' && ! $isClosedByReturnedReceipt
@@ -191,12 +200,13 @@ class MembershipSaleService
                 : 0);
             $payment->setAttribute('hdm_payment_closed_by_return', (bool) $isClosedByReturnedReceipt);
             $payment->setAttribute('has_successful_hdm_operation', $payment->type === 'payment'
-                && $payment->hdmOperations()
-                    ->where('transaction_type', 'sale')
-                    ->where('status', 'success')
-                    ->whereNotNull('crn')
-                    ->whereNotNull('rseq')
-                    ->exists());
+                && $successfulSaleOperation !== null);
+            $payment->setAttribute('hdm_print_status', $latestSaleOperation?->status);
+            $payment->setAttribute('can_retry_hdm_receipt', $payment->type === 'payment'
+                && $payment->status === 'paid'
+                && $payment->is_hdm
+                && $successfulSaleOperation === null
+                && ($latestSaleOperation === null || $latestSaleOperation->status === 'failed'));
         });
         $membershipSale->payments->each(function (MembershipPlanPayment $payment) use ($finalHdmOperation): void {
             $isFinalHdmPayment = $finalHdmOperation
@@ -377,6 +387,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $data['is_hdm'] = $this->paymentHdmMode($membershipSale, $data);
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $debtAmount = $this->debtAmount($membershipSale);
             $paymentAmount = $this->resolveAdditionalPaymentAmount($data, $debtAmount);
@@ -465,6 +476,7 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $this->paymentHdmMode($membershipSale, $data);
             $membershipSale->loadMissing('payments.hdmOperations');
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
@@ -587,6 +599,13 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $termination = $this->hdmPrepaymentTerminationService->pageData($membershipSale);
+            if ($termination['requires_workflow']) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => $termination['reason']
+                        ?? 'ՀԴՄ կանխավճարով վաճառքը պետք է խզել կանխավճարի վերադարձի բաժնից։',
+                ]);
+            }
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $personMembership = $membershipSale->personMemberships->first();
 
@@ -686,6 +705,12 @@ class MembershipSaleService
 
     public function store(array $data)
     {
+        if (! empty($data['apply_discount']) && ($data['discount_type'] ?? null) !== 'percent') {
+            throw ValidationException::withMessages([
+                'discount_type' => 'Թույլատրվում է միայն տոկոսային զեղչ։',
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
@@ -725,6 +750,7 @@ class MembershipSaleService
                     'notes' => $data['notes'] ?? null,
                     'discount_membership_amount' => $discountData['membership_amount'],
                     'sold_at' => now()->toDateTimeString(),
+                    'is_hdm' => (bool) ($data['is_hdm'] ?? false),
                 ])
             );
 
@@ -959,6 +985,7 @@ class MembershipSaleService
                 'notes' => $membershipSale->notes,
                 'discount_membership_amount' => $discountData['membership_amount'],
                 'sold_at' => $membershipSale->sold_at?->toDateTimeString() ?? now()->toDateTimeString(),
+                'is_hdm' => $membershipSale->is_hdm,
             ]));
 
             foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
@@ -1291,7 +1318,12 @@ class MembershipSaleService
         }
 
         if ($this->isMembershipCancelled($membershipSale)) {
-            return max($paidAmount - $refundedAmount, 0);
+            return max(
+                $paidAmount
+                    - $refundedAmount
+                    - $this->hdmPrepaymentTerminationService->settledServiceAmount($membershipSale),
+                0,
+            );
         }
 
         $overpaidAmount = max($paidAmount - (float) $membershipSale->final_price, 0);
@@ -1394,6 +1426,17 @@ class MembershipSaleService
             return 0;
         }
 
+        if (! empty($data['is_partial_payment'])) {
+            $amount = round((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), 2);
+            if (! empty($data['is_full_payment']) || $amount <= 0 || $amount >= round($finalPrice, 2)) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։',
+                ]);
+            }
+
+            return $amount;
+        }
+
         if (! empty($data['is_full_payment'])) {
             return $finalPrice;
         }
@@ -1403,6 +1446,24 @@ class MembershipSaleService
         }
 
         return min((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), $finalPrice);
+    }
+
+    private function paymentHdmMode(MembershipSale $sale, array $data): bool
+    {
+        if ($sale->is_hdm === null) {
+            throw ValidationException::withMessages([
+                'is_hdm' => 'Այս հին վաճառքի ՀԴՄ ռեժիմը որոշված չէ։ Անհրաժեշտ է ստուգել վճարումների պատմությունը։',
+            ]);
+        }
+
+        if ((array_key_exists('is_hdm', $data) && (bool) $data['is_hdm'] !== $sale->is_hdm)
+            || $sale->payments()->withTrashed()->where('is_hdm', '!=', $sale->is_hdm)->exists()) {
+            throw ValidationException::withMessages([
+                'is_hdm' => 'Վճարման ՀԴՄ ռեժիմը պետք է համապատասխանի վաճառքի ՀԴՄ ռեժիմին։',
+            ]);
+        }
+
+        return $sale->is_hdm;
     }
 
     protected function resolveAdditionalPaymentAmount(array $data, float $debtAmount): float
@@ -1418,6 +1479,18 @@ class MembershipSaleService
         }
 
         $paymentAmount = (float) ($data['payment_amount'] ?? $data['amount'] ?? 0);
+
+        if (! empty($data['is_partial_payment'])) {
+            $paymentAmount = round($paymentAmount, 2);
+
+            if ($paymentAmount <= 0 || $paymentAmount >= round($debtAmount, 2)) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և մնացած պարտքից փոքր։',
+                ]);
+            }
+
+            return $paymentAmount;
+        }
 
         if ($paymentAmount > $debtAmount) {
             throw ValidationException::withMessages([

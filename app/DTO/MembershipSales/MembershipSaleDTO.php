@@ -18,6 +18,7 @@ class MembershipSaleDTO
         public ?string $notes,
         public float $discount_membership_amount,
         public ?string $sold_at,
+        public ?bool $is_hdm = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -36,6 +37,7 @@ class MembershipSaleDTO
             notes: $data['notes'] ?? null,
             discount_membership_amount: (float) ($data['discount_membership_amount'] ?? 0),
             sold_at: $data['sold_at'] ?? null,
+            is_hdm: isset($data['is_hdm']) ? (bool) $data['is_hdm'] : null,
         );
     }
 
@@ -55,6 +57,7 @@ class MembershipSaleDTO
             'notes' => $this->notes,
             'discount_membership_amount' => $this->discount_membership_amount,
             'sold_at' => $this->sold_at,
+            'is_hdm' => $this->is_hdm,
         ];
     }
 }

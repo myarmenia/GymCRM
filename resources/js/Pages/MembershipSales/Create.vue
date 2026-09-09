@@ -74,7 +74,7 @@ const form = useForm({
     start_date: today,
     end_date: '',
     apply_discount: false,
-    discount_type: props.discountTypes[0] ?? '',
+    discount_type: 'percent',
     discount_value: null,
     is_hdm: false,
     notes: '',
@@ -205,6 +205,16 @@ const manualDiscountAmount = computed(() => {
 })
 const discountAmount = computed(() => membershipDiscountAmount.value + manualDiscountAmount.value)
 const finalTotal = computed(() => Math.max(planPrice.value - discountAmount.value, 0))
+const partialPaymentError = computed(() => {
+    if (!form.is_partial_payment) return ''
+
+    const amount = Math.round(Number(form.amount || 0) * 100)
+    const total = Math.round(finalTotal.value * 100)
+
+    return amount <= 0 || amount >= total
+        ? 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։'
+        : ''
+})
 const numericPaymentAmount = computed(() => form.is_full_payment ? finalTotal.value : Number(form.amount) || 0)
 const remaining = computed(() => Math.max(finalTotal.value - numericPaymentAmount.value, 0))
 const calculatedSaleStatus = computed(() => {
@@ -257,7 +267,7 @@ const calculateEndDate = () => {
 watch(() => form.membership_plan_id, () => {
     form.membership_discount_ids = []
     form.apply_discount = false
-    form.discount_type = props.discountTypes[0] ?? ''
+    form.discount_type = 'percent'
     form.discount_value = null
     form.trainer_id = ''
     calculateEndDate()
@@ -302,7 +312,7 @@ const membershipDiscountRowAmount = discount => {
 
 watch(() => form.apply_discount, (enabled) => {
     if (!enabled) {
-        form.discount_type = props.discountTypes[0] ?? ''
+        form.discount_type = 'percent'
         form.discount_value = null
     }
 })
@@ -355,7 +365,7 @@ watch(finalTotal, (total) => {
         form.amount = total
     }
 
-    if (form.amount > total) {
+    if (!form.is_partial_payment && form.amount > total) {
         form.amount = total
     }
 })
@@ -367,13 +377,17 @@ watch(() => form.amount, (value) => {
         form.amount = 0
     }
 
-    if (finalTotal.value > 0 && amount > finalTotal.value) {
+    if (!form.is_partial_payment && finalTotal.value > 0 && amount > finalTotal.value) {
         form.amount = finalTotal.value
     }
 })
 
 const postSale = async stayDebt => {
     form.clearErrors()
+    if (!stayDebt && partialPaymentError.value) {
+        form.setError('amount', partialPaymentError.value)
+        return
+    }
     form.processing = true
 
     const payload = {
@@ -385,7 +399,6 @@ const postSale = async stayDebt => {
             amount: 0,
             payment_method_id: null,
             card_type_id: null,
-            is_hdm: false,
         } : {}),
     }
 
@@ -464,6 +477,11 @@ const confirmReminder = () => {
 }
 
 const submit = () => {
+    if (partialPaymentError.value) {
+        form.setError('amount', partialPaymentError.value)
+        return
+    }
+
     if (startDateRestrictionMessage.value) {
         form.setError('start_date', startDateRestrictionMessage.value)
         return
@@ -777,7 +795,7 @@ const submitDebt = () => {
                                     class="form-select"
                                 >
                                     <option
-                                        v-for="type in discountTypes"
+                                        v-for="type in ['percent']"
                                         :key="type"
                                         :value="type"
                                     >
@@ -894,7 +912,7 @@ const submitDebt = () => {
                                     min="0"
                                     class="form-control"
                                 />
-                                <InputError :message="form.errors.amount" />
+                                <InputError :message="partialPaymentError || form.errors.amount" />
                             </div>
 
                             <div class="mb-3">

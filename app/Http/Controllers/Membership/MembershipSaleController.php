@@ -10,7 +10,9 @@ use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleReminderRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
+use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
 use App\Services\Hdm\HdmReturnService;
 use App\Services\MembershipSales\MembershipSaleFreezeService;
@@ -30,6 +32,7 @@ class MembershipSaleController extends Controller
         protected EntryExitSystemService $entryExitSystemService,
         protected HdmPrintService $hdmPrintService,
         protected HdmReturnService $hdmReturnService,
+        protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
     ) {}
 
     public function list(Request $request)
@@ -94,8 +97,12 @@ class MembershipSaleController extends Controller
 
     public function payments($locale, $id)
     {
+        $pageData = $this->membershipSaleService->paymentPageData((int) $id);
+
         return Inertia::render('MembershipSales/Payments', [
-            ...$this->membershipSaleService->paymentPageData((int) $id),
+            ...$pageData,
+            'prepaymentTermination' => $this->hdmPrepaymentTerminationService
+                ->pageData($pageData['membershipSale']),
             'gateway' => $this->hdmGateway(),
         ]);
     }
@@ -194,6 +201,25 @@ class MembershipSaleController extends Controller
             ->with('success', 'Payment saved successfully.');
     }
 
+    public function retryPaymentHdmReceipt($locale, $id, $payment)
+    {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $membershipPayment = $sale->payments()
+            ->whereKey((int) $payment)
+            ->where('type', 'payment')
+            ->firstOrFail();
+        $result = $this->hdmPrintService->prepareRetryData($membershipPayment);
+
+        return response()->json([
+            ...$result,
+            'print_data' => $result['data'] ?? null,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ], ($result['success'] ?? false) ? 200 : 422);
+    }
+
     public function storeReminder(StoreMembershipSaleReminderRequest $request, $locale, $id)
     {
         $this->membershipSaleService->createPaymentReminder((int) $id, $request->validated());
@@ -229,6 +255,37 @@ class MembershipSaleController extends Controller
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
             ->with('success', 'Refund saved successfully.');
+    }
+
+    public function terminateWithPrepaymentRefund(
+        StoreMembershipSaleTerminationRequest $request,
+        $locale,
+        $id,
+    ) {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $result = $this->hdmPrepaymentTerminationService->start($sale, $request->validated());
+
+        return response()->json([
+            ...$result,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ], 201);
+    }
+
+    public function resumePrepaymentTermination($locale, $id)
+    {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $result = $this->hdmPrepaymentTerminationService->resume($sale);
+
+        return response()->json([
+            ...$result,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ]);
     }
 
     public function cancel($locale, $id)
