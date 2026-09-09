@@ -45,6 +45,11 @@ const translatedName = (item) =>
 
 const membershipPlanName = (membership) => translatedName(membership?.membership_plan);
 const membershipCategoryName = (membership) => translatedName(membership?.membership_plan?.membership_category);
+const attendanceMembershipNames = (attendance) =>
+    (attendance?.person_memberships ?? [])
+        .map(membershipPlanName)
+        .filter((name) => name && name !== "-")
+        .join(", ") || "-";
 
 const membershipStatusLabel = (status) => ({
     waiting: "Սպասման մեջ",
@@ -396,7 +401,7 @@ const submitExit = () => {
                                             </span>
                                         </td>
                                         <td>
-                                            {{ attendance.membership_plan ? translatedName(attendance.membership_plan) : "-" }}
+                                            {{ attendanceMembershipNames(attendance) }}
                                         </td>
                                     </tr>
                                 </tbody>

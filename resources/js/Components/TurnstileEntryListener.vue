@@ -63,6 +63,7 @@ const isManager = computed(
 const showEntryModal = ref(false);
 const entryData = ref(null);
 const activatingMembershipId = ref(null);
+const selectedMembershipIds = ref([]);
 
 let subscribedChannelName = null;
 
@@ -171,26 +172,25 @@ const closeModal = () => {
     showEntryModal.value = false;
     entryData.value = null;
     activatingMembershipId.value = null;
+    selectedMembershipIds.value = [];
 };
 
-const selectMembership = async (membership) => {
-    if (!membership?.id || activatingMembershipId.value) {
+const selectMembership = async () => {
+    if (!selectedMembershipIds.value.length || activatingMembershipId.value) {
         return;
     }
 
-    if (!["waiting", "active"].includes(membership.status)) {
-        return;
-    }
-
-    activatingMembershipId.value = membership.id;
+    const membershipId = selectedMembershipIds.value[0];
+    activatingMembershipId.value = "multiple";
 
     try {
-        const response = await axios.post(
+        const { data } = await axios.post(
             route("membership_sale.activate_waiting", {
                 locale: currentLocale.value,
-                id: membership.id,
+                id: membershipId,
             }),
             {
+                membership_ids: selectedMembershipIds.value,
                 action: entryData.value?.action,
                 detected_at: entryData.value?.detected_at ?? entryData.value?.date,
                 entry_code: entryData.value?.entry_code,
@@ -201,39 +201,11 @@ const selectMembership = async (membership) => {
             },
         );
 
-        const activatedMembership = response.data?.membership;
-        const attendanceId = response.data?.attendance_id;
-
-        if (!activatedMembership || !entryData.value?.membership_activation_context) {
-            return;
+        if (!data?.attendance_id) {
+            throw new Error("Entry was not recorded.");
         }
 
-        const updatedSelectableMemberships = selectableMemberships.value.map(
-            (item) => (item.id === membership.id ? activatedMembership : item),
-        );
-
-        const updatedWaitingMemberships = waitingMemberships.value.filter(
-            (item) => item.id !== membership.id,
-        );
-
-        const updatedActiveMemberships = [
-            activatedMembership,
-            ...activeMemberships.value.filter((item) => item.id !== membership.id),
-        ];
-
-        entryData.value = {
-            ...entryData.value,
-            attendance_id: attendanceId ?? entryData.value?.attendance_id,
-            membership_activation_context: {
-                ...entryData.value.membership_activation_context,
-                active_memberships: updatedActiveMemberships,
-                waiting_memberships: updatedWaitingMemberships,
-                selectable_memberships: updatedSelectableMemberships,
-                requires_manager_selection: false,
-            },
-        };
-
-        toast.success("Մուտքը ֆիքսվեց ընտրված աբոնեմենտի համար");
+        toast.success("Մուտքը ֆիքսվեց ընտրված աբոնեմենտների համար");
         closeModal();
     } catch (error) {
         toast.error(
@@ -467,16 +439,28 @@ onBeforeUnmount(() => {
                                                 </div>
                                             </div>
 
+                                            <label
+                                                class="membership-select"
+                                                :class="{ 'is-disabled': activatingMembershipId }"
+                                            >
+                                                <input
+                                                    v-model="selectedMembershipIds"
+                                                    type="checkbox"
+                                                    :value="membership.id"
+                                                    :disabled="activatingMembershipId"
+                                                >
+                                                <span class="membership-select__box" aria-hidden="true"></span>
+                                            </label>
                                             <button
                                                 type="button"
-                                                class="btn btn-sm"
+                                                class="btn btn-sm d-none"
                                                 :class="
                                                     membership.status === 'active'
                                                         ? 'btn-outline-success'
                                                         : 'btn-primary'
                                                 "
-                                                :disabled="activatingMembershipId === membership.id"
-                                                @click="selectMembership(membership)"
+                                                :disabled="activatingMembershipId"
+                                                @click="selectedMembershipIds = selectedMembershipIds.includes(membership.id) ? selectedMembershipIds.filter((id) => id !== membership.id) : [...selectedMembershipIds, membership.id]"
                                             >
                                                 {{
                                                     activatingMembershipId === membership.id
@@ -495,6 +479,9 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="modal-footer">
+                    <button class="btn btn-primary" :disabled="!selectedMembershipIds.length || activatingMembershipId" @click="selectMembership">
+                        Ֆիքսել մուտքը ընտրված աբոնեմենտների համար
+                    </button>
                     <button class="btn btn-secondary" @click="closeModal">
                         Փակել
                     </button>
@@ -503,3 +490,59 @@ onBeforeUnmount(() => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.membership-select {
+    align-items: center;
+    cursor: pointer;
+    display: inline-flex;
+    height: 24px;
+    justify-content: center;
+    margin: 0;
+    width: 24px;
+}
+
+.membership-select.is-disabled {
+    cursor: not-allowed;
+    opacity: .6;
+}
+
+.membership-select input {
+    opacity: 0;
+    position: absolute;
+}
+
+.membership-select__box {
+    background: #fff;
+    border: 1px solid #d9dee7;
+    border-radius: 5px;
+    box-shadow: 0 1px 2px rgba(25, 42, 70, .08);
+    display: block;
+    height: 20px;
+    position: relative;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    width: 20px;
+}
+
+.membership-select input:checked + .membership-select__box {
+    background: #2f6fed;
+    border-color: #2f6fed;
+    box-shadow: 0 2px 5px rgba(47, 111, 237, .3);
+}
+
+.membership-select input:checked + .membership-select__box::after {
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    content: "";
+    height: 9px;
+    left: 7px;
+    position: absolute;
+    top: 3px;
+    transform: rotate(45deg);
+    width: 5px;
+}
+
+.membership-select input:focus-visible + .membership-select__box {
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, .24);
+}
+</style>
