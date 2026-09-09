@@ -15,6 +15,7 @@ use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
+use App\Models\Gym;
 use App\Models\MembershipPlan;
 use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
@@ -23,6 +24,7 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
+use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
@@ -326,6 +328,13 @@ class MembershipSaleService
                 ->where('trainer_commission_id', $oldTrainerCommission->id)
                 ->sum('available_amount');
             $remainingAmount = max($oldRemainingAmount - $outstandingGeneratedAmount, 0);
+            $membershipInstallmentCount = $this->trainerMonthlySalaryService
+                ->installmentCountForMembership($personMembership);
+            $lastProcessedInstallment = (int) TrainerMonthlySalary::query()
+                ->where('person_membership_id', $personMembership->id)
+                ->max('installment_number');
+            $nextInstallment = max($lastProcessedInstallment + 1, 1);
+            $remainingInstallments = max($membershipInstallmentCount - $nextInstallment + 1, 0);
 
             $oldTrainerCommission->update([
                 'salary_amount' => $outstandingGeneratedAmount,
@@ -345,6 +354,11 @@ class MembershipSaleService
                     'salary_type' => $commissionData['type'],
                     'salary_value' => $commissionData['value'],
                     'salary_amount' => $remainingAmount,
+                    'initial_salary_amount' => $remainingAmount,
+                    'calculation_mode' => $oldTrainerCommission->calculation_mode
+                        ?? Gym::TRAINER_SALARY_MODE_PREPAID,
+                    'salary_start_installment' => $nextInstallment,
+                    'salary_installment_count' => $remainingInstallments,
                     'status' => 'pending',
                     'paid_at' => null,
                     'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
@@ -628,6 +642,7 @@ class MembershipSaleService
                 'translations',
                 'discounts' => fn ($query) => $this->activeDiscountQuery($query)->with('translations'),
                 'trainers',
+                'gym:id,name,trainer_salary_mode',
             ])
             ->where('active', true)
             ->when(! $user->hasRole('owner'), function ($query) use ($user) {
@@ -794,6 +809,11 @@ class MembershipSaleService
             if (! empty($data['trainer_id'])) {
                 $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
+                $salaryInstallmentCount = $this->trainerMonthlySalaryService
+                    ->installmentCountForMembership($personMembership);
+                $salaryMode = Gym::query()
+                    ->whereKey($gymId)
+                    ->value('trainer_salary_mode') ?? Gym::TRAINER_SALARY_MODE_PREPAID;
 
                 $trainerCommission = $this->trainerCommissionRepository->create(
                     $this->trainerCommissionDtoData([
@@ -803,6 +823,10 @@ class MembershipSaleService
                         'salary_type' => $commissionData['type'],
                         'salary_value' => $commissionData['value'],
                         'salary_amount' => $commissionData['amount'],
+                        'initial_salary_amount' => $commissionData['amount'],
+                        'calculation_mode' => $salaryMode,
+                        'salary_start_installment' => 1,
+                        'salary_installment_count' => $salaryInstallmentCount,
                         'status' => 'pending',
                         'paid_at' => null,
                         'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),

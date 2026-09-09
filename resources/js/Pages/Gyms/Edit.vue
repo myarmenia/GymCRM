@@ -18,7 +18,8 @@ const form = useForm({
     address: props.gym.address,
     phone: props.gym.phone,
     email: props.gym.email,
-    logo: null
+    logo: null,
+    trainer_salary_mode: props.gym.trainer_salary_mode ?? 'prepaid',
 });
 
 const submit = () => {
@@ -96,6 +97,26 @@ const cancel = () => {
                             v-model="form.address"
                         />
                         <InputError class="mt-2" :message="form.errors.address" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <InputLabel
+                            for="trainer_salary_mode"
+                            class="form-label"
+                            value="Մարզչի աշխատավարձի հաշվարկ"
+                        />
+                        <select
+                            id="trainer_salary_mode"
+                            v-model="form.trainer_salary_mode"
+                            class="form-select"
+                        >
+                            <option value="prepaid">Կանխավճարային</option>
+                            <option value="postpaid">Հետվճարային</option>
+                        </select>
+                        <div class="form-text">
+                            Փոփոխությունը կկիրառվի միայն նոր վաճառվող աբոնեմենտների վրա։
+                        </div>
+                        <InputError class="mt-2" :message="form.errors.trainer_salary_mode" />
                     </div>
 
                     <div class="col-md-6">

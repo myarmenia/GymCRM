@@ -18,6 +18,9 @@ class TrainerCommission extends Model
         return [
             'salary_value' => 'decimal:6',
             'salary_amount' => 'decimal:2',
+            'initial_salary_amount' => 'decimal:2',
+            'salary_start_installment' => 'integer',
+            'salary_installment_count' => 'integer',
             'paid_at' => 'datetime',
             'is_kept' => 'boolean',
         ];

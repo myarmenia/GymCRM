@@ -102,6 +102,10 @@ const planName = plan => {
 }
 
 const selectedPlan = computed(() => props.membershipPlans.find(item => Number(item.id) === Number(form.membership_plan_id)))
+const trainerSalaryModeLabel = computed(() => ({
+    prepaid: 'Կանխավճարային',
+    postpaid: 'Հետվճարային',
+}[selectedPlan.value?.gym?.trainer_salary_mode] ?? '-'))
 const matchingCustomerMemberships = computed(() => {
     if (!selectedPlan.value) {
         return []
@@ -611,6 +615,10 @@ const submitDebt = () => {
                         >
                             <span class="text-muted d-block">Սառեցումների քանակ</span>
                             <strong>{{ selectedPlan.freeze_limit }}</strong>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <span class="text-muted d-block">Մարզչի աշխատավարձի հաշվարկ</span>
+                            <strong>{{ trainerSalaryModeLabel }}</strong>
                         </div>
                     </div>
                 </div>

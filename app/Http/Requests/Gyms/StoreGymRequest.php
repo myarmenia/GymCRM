@@ -3,10 +3,10 @@
 namespace App\Http\Requests\Gyms;
 
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class StoreGymRequest extends FormRequest
 {
@@ -17,6 +17,7 @@ class StoreGymRequest extends FormRequest
     {
         // Լոգ ենք անում, որպեսզի տեսնենք՝ հարցումը ընդհանրապես հասա՞վ այստեղ, թե ոչ
         Log::info('1. StoreGymRequest authorized checking...', $this->all());
+
         return true;
     }
 
@@ -38,6 +39,7 @@ class StoreGymRequest extends FormRequest
                 'email',
                 'max:255',
             ],
+            'trainer_salary_mode' => ['required', Rule::in(['prepaid', 'postpaid'])],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
         ];
     }
@@ -52,6 +54,8 @@ class StoreGymRequest extends FormRequest
             'address.required' => 'The gym address is required.',
             'phone.regex' => 'The phone number format is invalid. It should only contain numbers, spaces, plus, and minus signs.',
             'email.email' => 'Please enter a valid email address.',
+            'trainer_salary_mode.required' => 'Ընտրեք մարզչի աշխատավարձի հաշվարկման եղանակը։',
+            'trainer_salary_mode.in' => 'Մարզչի աշխատավարձի հաշվարկման եղանակը սխալ է։',
         ];
     }
 

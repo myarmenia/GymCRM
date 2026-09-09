@@ -31,7 +31,7 @@ class EntryExitSystemService
     {
         $clientId = $this->turnstileRepository->getClientId($data->mac);
 
-        if (!$clientId) {
+        if (! $clientId) {
             Log::info('ees_invalid_mac', ['mac' => $data->mac ?? null]);
 
             $this->createEntryReport([
@@ -67,7 +67,7 @@ class EntryExitSystemService
             $data->auto_add ?? 0
         );
 
-        if (!$resolved) {
+        if (! $resolved) {
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
                 'access_allowed' => false,
@@ -108,7 +108,7 @@ class EntryExitSystemService
         if (
             $ownerType === 'person' &&
             $action === 'entry' &&
-            !$this->hasActiveSubscription($owner, (int) $clientId, $detectedAt)
+            ! $this->hasActiveSubscription($owner, (int) $clientId, $detectedAt)
         ) {
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
@@ -220,6 +220,7 @@ class EntryExitSystemService
             'relation_id' => $owner->id,
             'relation_type' => get_class($owner),
             'membership_plan_id' => $selectedMembership?->membership_plan_id,
+            'person_membership_id' => $selectedMembership?->id,
             'entry_code' => $entryCode,
             'date' => $detectedAt,
             'type' => $data->type ?? null,
@@ -299,7 +300,7 @@ class EntryExitSystemService
 
     private function normalizeEntryCode($code, $type): ?string
     {
-        if (!$code) {
+        if (! $code) {
             return null;
         }
 
@@ -310,7 +311,7 @@ class EntryExitSystemService
 
     private function resolveDeviceTime(mixed $timestamp): ?Carbon
     {
-        if (!$timestamp) {
+        if (! $timestamp) {
             return null;
         }
 
@@ -332,14 +333,14 @@ class EntryExitSystemService
 
     private function resolveEntryCodeOwner(?string $entryCode, int $clientId, ?string $type, mixed $autoAdd): ?array
     {
-        if (!$entryCode) {
+        if (! $entryCode) {
             return null;
         }
 
         $check = $this->checkEntryCodeRepository
             ->checkEntryCode($entryCode, $clientId, $type, $autoAdd);
 
-        if (!$check->result) {
+        if (! $check->result) {
             return null;
         }
 
@@ -351,7 +352,7 @@ class EntryExitSystemService
 
         $owner = $permission?->relation;
 
-        if (!$owner) {
+        if (! $owner) {
             return null;
         }
 
@@ -395,7 +396,7 @@ class EntryExitSystemService
             ])
             ->findOrFail($membershipId);
 
-        if (!$user->hasRole('owner') && (int) $membership->gym_id !== (int) $user->gym_id) {
+        if (! $user->hasRole('owner') && (int) $membership->gym_id !== (int) $user->gym_id) {
             abort(403, 'You are not allowed to activate this membership.');
         }
 
@@ -407,7 +408,7 @@ class EntryExitSystemService
             ]);
         }
 
-        if (!in_array($membership->status, ['waiting', 'active'], true)) {
+        if (! in_array($membership->status, ['waiting', 'active'], true)) {
             throw ValidationException::withMessages([
                 'membership' => 'Only waiting or active memberships can be selected from turnstile.',
             ]);
@@ -434,6 +435,7 @@ class EntryExitSystemService
             'relation_id' => $membership->person_id,
             'relation_type' => Person::class,
             'membership_plan_id' => $membership->membership_plan_id,
+            'person_membership_id' => $membership->id,
             'entry_code' => $context['entry_code'] ?? null,
             'date' => $detectedAt,
             'type' => $context['scan_type'] ?? null,
@@ -479,7 +481,7 @@ class EntryExitSystemService
 
     private function detectNextAction(?string $ownerType, ?int $ownerId, int $clientId): string
     {
-        if (!$ownerType || !$ownerId) {
+        if (! $ownerType || ! $ownerId) {
             return 'unknown';
         }
 
@@ -664,7 +666,7 @@ class EntryExitSystemService
 
         $membership = $selectionMemberships->first();
 
-        if (!$membership) {
+        if (! $membership) {
             return null;
         }
 
@@ -697,17 +699,25 @@ class EntryExitSystemService
             ->latest('id')
             ->first();
 
-        if (!$lastEntryAttendance?->membership_plan_id) {
+        if (! $lastEntryAttendance?->membership_plan_id) {
             return null;
         }
 
-        return PersonMembership::query()
+        $membershipQuery = PersonMembership::query()
             ->with([
                 'membershipPlan.translations',
                 'membershipPlan.MembershipCategory.translations',
             ])
             ->where('person_id', $person->id)
-            ->where('gym_id', $clientId)
+            ->where('gym_id', $clientId);
+
+        if ($lastEntryAttendance->person_membership_id) {
+            return $membershipQuery
+                ->whereKey($lastEntryAttendance->person_membership_id)
+                ->first();
+        }
+
+        return $membershipQuery
             ->where('membership_plan_id', $lastEntryAttendance->membership_plan_id)
             ->whereIn('status', ['active', 'waiting'])
             ->latest('id')

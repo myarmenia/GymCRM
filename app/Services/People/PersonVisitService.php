@@ -30,7 +30,7 @@ class PersonVisitService
             ])
             ->where('person_id', $person->id)
             ->whereIn('status', ['waiting', 'active'])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderByDesc('id')
@@ -40,7 +40,7 @@ class PersonVisitService
             ->with('membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
                     $membershipPlanQuery->where('gym_id', $user->gym_id);
                 });
@@ -54,7 +54,7 @@ class PersonVisitService
             ->with('membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
                     $membershipPlanQuery->where('gym_id', $user->gym_id);
                 });
@@ -74,10 +74,9 @@ class PersonVisitService
     public function storeManualVisit(
         int $personId,
         string $action,
-        ?int $membershipId = null,
+        ?int $membershipId,
         string $manualDateTime,
-    ): AttendanceSheet
-    {
+    ): AttendanceSheet {
         $user = Auth::user();
         $person = $this->personQueryForUser($user)->findOrFail($personId);
         $now = Carbon::createFromFormat('Y-m-d\TH:i', $manualDateTime, self::LOCAL_TIMEZONE);
@@ -91,6 +90,7 @@ class PersonVisitService
                 'relation_id' => $person->id,
                 'relation_type' => Person::class,
                 'membership_plan_id' => $membership->membership_plan_id,
+                'person_membership_id' => $membership->id,
                 'entry_code' => 'manual',
                 'date' => $now,
                 'type' => 'manual',
@@ -112,7 +112,7 @@ class PersonVisitService
         $lastAttendanceBeforeOrAt = $this->lastAttendanceBeforeOrAt($person, $now);
         $lastEntry = $this->lastEntryAttendance($person, $now);
 
-        if (!$lastEntry) {
+        if (! $lastEntry) {
             throw ValidationException::withMessages([
                 'action' => 'Exit cannot be added because no previous entry was found.',
             ]);
@@ -124,18 +124,19 @@ class PersonVisitService
             ]);
         }
 
+        $membership = $this->membershipForAttendancePlan($person, $lastEntry->membership_plan_id, $user);
+
         $attendance = AttendanceSheet::create([
             'relation_id' => $person->id,
             'relation_type' => Person::class,
             'membership_plan_id' => $lastEntry->membership_plan_id,
+            'person_membership_id' => $lastEntry->person_membership_id ?? $membership?->id,
             'entry_code' => 'manual',
             'date' => $now,
             'type' => 'manual',
             'direction' => 'exit',
             'online' => 1,
         ]);
-
-        $membership = $this->membershipForAttendancePlan($person, $lastEntry->membership_plan_id, $user);
 
         $this->createManualEntryReport(
             person: $person,
@@ -150,7 +151,7 @@ class PersonVisitService
 
     protected function personQueryForUser(User $user)
     {
-        return Person::query()->when(!$user->hasRole('owner'), function ($query) use ($user) {
+        return Person::query()->when(! $user->hasRole('owner'), function ($query) use ($user) {
             $query->whereHas('gyms', function ($gymQuery) use ($user) {
                 $gymQuery->where('gyms.id', $user->gym_id);
             });
@@ -159,7 +160,7 @@ class PersonVisitService
 
     protected function entryMembership(Person $person, User $user, ?int $membershipId, Carbon $now): PersonMembership
     {
-        if (!$membershipId) {
+        if (! $membershipId) {
             throw ValidationException::withMessages([
                 'membership_id' => 'Membership selection is required for manual entry.',
             ]);
@@ -173,12 +174,12 @@ class PersonVisitService
             ->where('id', $membershipId)
             ->where('person_id', $person->id)
             ->whereIn('status', ['waiting', 'active'])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->first();
 
-        if (!$membership) {
+        if (! $membership) {
             throw ValidationException::withMessages([
                 'membership_id' => 'Selected membership is not available for this person.',
             ]);
@@ -256,7 +257,7 @@ class PersonVisitService
         return AttendanceSheet::query()
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
                     $membershipPlanQuery->where('gym_id', $user->gym_id);
                 });
@@ -274,7 +275,7 @@ class PersonVisitService
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->where('date', '<=', $beforeOrAt)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
                     $membershipPlanQuery->where('gym_id', $user->gym_id);
                 });
@@ -296,7 +297,7 @@ class PersonVisitService
             ->when($beforeOrAt, function ($query) use ($beforeOrAt) {
                 $query->where('date', '<=', $beforeOrAt);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
                     $membershipPlanQuery->where('gym_id', $user->gym_id);
                 });
@@ -308,7 +309,7 @@ class PersonVisitService
 
     protected function membershipForAttendancePlan(Person $person, ?int $membershipPlanId, User $user): ?PersonMembership
     {
-        if (!$membershipPlanId) {
+        if (! $membershipPlanId) {
             return null;
         }
 
@@ -319,7 +320,7 @@ class PersonVisitService
             ])
             ->where('person_id', $person->id)
             ->where('membership_plan_id', $membershipPlanId)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('id')

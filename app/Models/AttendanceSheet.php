@@ -33,6 +33,11 @@ class AttendanceSheet extends Model
         return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
     }
 
+    public function personMembership(): BelongsTo
+    {
+        return $this->belongsTo(PersonMembership::class);
+    }
+
     // accesors
 
     public function getScheduleNameIdAttribute()
