@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\People;
 
+use App\Models\Person;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class UpdatePersonRequest extends FormRequest
@@ -15,6 +17,12 @@ class UpdatePersonRequest extends FormRequest
     public function rules(): array
     {
         $personId = $this->route('id');
+        $currentEntryCodeId = DB::table('entry_permissions')
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $personId)
+            ->whereNull('deleted_at')
+            ->latest('id')
+            ->value('entry_code_id');
 
         return [
             'name' => 'sometimes|required|string|max:255',
@@ -36,11 +44,25 @@ class UpdatePersonRequest extends FormRequest
                 Rule::unique('people', 'phone')->ignore($personId),
             ],
             'type' => 'sometimes|required|in:visitor,guest',
-            'entry_code_id' => 'nullable|exists:entry_codes,id',
+            'entry_code_id' => [
+                'nullable',
+                Rule::exists('entry_codes', 'id')->where(function ($query) use ($currentEntryCodeId): void {
+                    $query
+                        ->where('status', true)
+                        ->where(function ($available) use ($currentEntryCodeId): void {
+                            $available->where('activation', false);
+                            if ($currentEntryCodeId !== null) {
+                                $available->orWhere('id', $currentEntryCodeId);
+                            }
+                        });
+
+                    if ($this->user()?->gym_id) {
+                        $query->where('gym_id', $this->user()->gym_id);
+                    }
+                }),
+            ],
             'birth_date' => 'sometimes|required|date',
-            'gender' => 'nullable|string|in:male,female,other',
-            'mobile_deleted' => 'sometimes|boolean',
-            'fcm_token' => 'nullable|string|max:255',
+            'gender' => 'nullable|string|in:male,female',
         ];
     }
 

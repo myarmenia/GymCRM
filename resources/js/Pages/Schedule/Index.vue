@@ -23,6 +23,9 @@ console.log("props.data",props.data);
 const page = usePage();
 
 const currentLocale = computed(() => page.props.locale ?? props.locale);
+const visibleData = computed(() =>
+    props.data.filter((item) => item?.schedule_name),
+);
 
 const roleNames = computed(() => {
     return props.authUserRoles.map((role) => {
@@ -119,6 +122,10 @@ const changeStatus = (item) => {
 };
 
 const deleteSchedule = (item) => {
+    if (!item.schedule_name) {
+        return;
+    }
+
     if (item.schedule_name?.is_locked) {
         alert(
             item.schedule_name?.lock_reason ||
@@ -215,7 +222,7 @@ const deleteSchedule = (item) => {
 
                                             <tbody>
                                                 <tr
-                                                    v-for="item in data"
+                                                    v-for="item in visibleData"
                                                     :key="item.id"
                                                     class="align-middle"
                                                 >
@@ -353,7 +360,7 @@ const deleteSchedule = (item) => {
                                                             </Link>
 
                                                             <Link
-                                                                v-if="canEdit && !item.schedule_name?.is_locked"
+                                                                v-if="canEdit && item.schedule_name && !item.schedule_name.is_locked"
                                                                 class="btn btn-sm btn-outline-primary"
                                                                 :href="
                                                                     route(
@@ -389,7 +396,7 @@ const deleteSchedule = (item) => {
                                                             </button>
 
                                                             <button
-                                                                v-if="canEdit && !item.schedule_name?.is_locked"
+                                                                v-if="canEdit && item.schedule_name && !item.schedule_name.is_locked"
                                                                 type="button"
                                                                 class="btn btn-sm btn-outline-danger"
                                                                 @click="
@@ -406,7 +413,7 @@ const deleteSchedule = (item) => {
                                                     </td>
                                                 </tr>
 
-                                                <tr v-if="!data.length">
+                                                <tr v-if="!visibleData.length">
                                                     <td
                                                         colspan="5"
                                                         class="text-center py-4"

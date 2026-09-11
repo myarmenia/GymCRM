@@ -3,6 +3,7 @@
 namespace App\Services\MembershipSales;
 
 use App\Models\PersonMembership;
+use Illuminate\Support\Facades\DB;
 
 class MembershipFreezeStatusService
 {
@@ -19,7 +20,10 @@ class MembershipFreezeStatusService
                 $query->whereDate('start_date', '<=', $today)
                     ->whereDate('end_date', '>=', $today);
             })
-            ->update(['status' => 'active']);
+            ->update([
+                'status' => 'active',
+                'version' => DB::raw('version + 1'),
+            ]);
 
         $frozenCount = PersonMembership::query()
             ->whereNotIn('status', ['cancelled', 'expired', 'deleted', 'frozen'])
@@ -27,7 +31,10 @@ class MembershipFreezeStatusService
                 $query->whereDate('start_date', '<=', $today)
                     ->whereDate('end_date', '>=', $today);
             })
-            ->update(['status' => 'frozen']);
+            ->update([
+                'status' => 'frozen',
+                'version' => DB::raw('version + 1'),
+            ]);
 
         return [
             'frozen' => $frozenCount,

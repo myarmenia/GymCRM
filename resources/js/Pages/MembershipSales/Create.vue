@@ -5,7 +5,10 @@ import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
-import { Head, useForm, usePage } from '@inertiajs/vue3'
+import { useAlert } from '@/composables/useAlert'
+import { printHdmReceipt } from '@/composables/useHdmPrint'
+import axios from 'axios'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import {
     addDaysToYmd,
     addMonthsToYmd,
@@ -14,6 +17,7 @@ import {
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const alert = useAlert()
 
 const props = defineProps({
     membershipPlans: {
@@ -52,6 +56,13 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    gateway: {
+        type: Object,
+        default: () => ({
+            url: 'http://localhost/hdm-gateway/index.php',
+            token: '',
+        }),
+    },
 })
 
 const today = todayInYerevan()
@@ -63,7 +74,7 @@ const form = useForm({
     start_date: today,
     end_date: '',
     apply_discount: false,
-    discount_type: props.discountTypes[0] ?? '',
+    discount_type: 'percent',
     discount_value: null,
     is_hdm: false,
     notes: '',
@@ -91,6 +102,10 @@ const planName = plan => {
 }
 
 const selectedPlan = computed(() => props.membershipPlans.find(item => Number(item.id) === Number(form.membership_plan_id)))
+const trainerSalaryModeLabel = computed(() => ({
+    prepaid: 'Կանխավճարային',
+    postpaid: 'Հետվճարային',
+}[selectedPlan.value?.gym?.trainer_salary_mode] ?? '-'))
 const matchingCustomerMemberships = computed(() => {
     if (!selectedPlan.value) {
         return []
@@ -194,6 +209,16 @@ const manualDiscountAmount = computed(() => {
 })
 const discountAmount = computed(() => membershipDiscountAmount.value + manualDiscountAmount.value)
 const finalTotal = computed(() => Math.max(planPrice.value - discountAmount.value, 0))
+const partialPaymentError = computed(() => {
+    if (!form.is_partial_payment) return ''
+
+    const amount = Math.round(Number(form.amount || 0) * 100)
+    const total = Math.round(finalTotal.value * 100)
+
+    return amount <= 0 || amount >= total
+        ? 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։'
+        : ''
+})
 const numericPaymentAmount = computed(() => form.is_full_payment ? finalTotal.value : Number(form.amount) || 0)
 const remaining = computed(() => Math.max(finalTotal.value - numericPaymentAmount.value, 0))
 const calculatedSaleStatus = computed(() => {
@@ -246,7 +271,7 @@ const calculateEndDate = () => {
 watch(() => form.membership_plan_id, () => {
     form.membership_discount_ids = []
     form.apply_discount = false
-    form.discount_type = props.discountTypes[0] ?? ''
+    form.discount_type = 'percent'
     form.discount_value = null
     form.trainer_id = ''
     calculateEndDate()
@@ -291,7 +316,7 @@ const membershipDiscountRowAmount = discount => {
 
 watch(() => form.apply_discount, (enabled) => {
     if (!enabled) {
-        form.discount_type = props.discountTypes[0] ?? ''
+        form.discount_type = 'percent'
         form.discount_value = null
     }
 })
@@ -344,7 +369,7 @@ watch(finalTotal, (total) => {
         form.amount = total
     }
 
-    if (form.amount > total) {
+    if (!form.is_partial_payment && form.amount > total) {
         form.amount = total
     }
 })
@@ -356,35 +381,74 @@ watch(() => form.amount, (value) => {
         form.amount = 0
     }
 
-    if (finalTotal.value > 0 && amount > finalTotal.value) {
+    if (!form.is_partial_payment && finalTotal.value > 0 && amount > finalTotal.value) {
         form.amount = finalTotal.value
     }
 })
 
-const postSale = stayDebt => {
-    form
-        .transform(data => ({
-            ...data,
-            stay_debt: stayDebt,
-            ...(stayDebt ? {
-                is_full_payment: false,
-                is_partial_payment: false,
-                amount: 0,
-                payment_method_id: null,
-                card_type_id: null,
-            } : {}),
-        }))
-        .post(route('membership_sale.store', {
+const postSale = async stayDebt => {
+    form.clearErrors()
+    if (!stayDebt && partialPaymentError.value) {
+        form.setError('amount', partialPaymentError.value)
+        return
+    }
+    form.processing = true
+
+    const payload = {
+        ...form.data(),
+        stay_debt: stayDebt,
+        ...(stayDebt ? {
+            is_full_payment: false,
+            is_partial_payment: false,
+            amount: 0,
+            payment_method_id: null,
+            card_type_id: null,
+        } : {}),
+    }
+
+    try {
+        const response = await axios.post(route('membership_sale.store', {
             locale: currentLocale.value,
             person: props.selectedPerson?.id,
-        }), {
-            onError: errors => {
-                if (Object.keys(errors).some(key => key.startsWith('reminder_'))) {
-                    reminderModalOpen.value = true
-                }
-            },
-            onFinish: () => form.transform(data => data),
-        })
+        }), payload)
+
+        if (response.data.need_print && response.data.print_data) {
+            alert.info('Աբոնեմենտը ստեղծվել է, ՀԴՄ կտրոնը տպվում է։')
+            const printResult = await printHdmReceipt(
+                response.data.print_data,
+                props.gateway,
+                currentLocale.value,
+            )
+
+            if (printResult.success) {
+                alert.success('Աբոնեմենտի ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+            } else {
+                alert.warning(`Աբոնեմենտը ստեղծվել է, սակայն ՀԴՄ կտրոնը չի տպվել։ ${printResult.message}`)
+            }
+        } else if (response.data.print_error) {
+            alert.warning(response.data.message)
+        } else {
+            alert.success('Աբոնեմենտը հաջողությամբ ստեղծվել է։')
+        }
+
+        router.visit(response.data.redirect)
+    } catch (error) {
+        if (error.response?.status === 422 && error.response.data?.errors) {
+            Object.entries(error.response.data.errors).forEach(([field, messages]) => {
+                form.setError(field, Array.isArray(messages) ? messages[0] : messages)
+            })
+
+            if (Object.keys(error.response.data.errors).some(key => key.startsWith('reminder_'))) {
+                reminderModalOpen.value = true
+            }
+
+            return
+        }
+
+        alert.error(error.response?.data?.message ?? 'Չհաջողվեց ստեղծել աբոնեմենտը։')
+    } finally {
+        form.processing = false
+    }
 }
 
 const openReminderModal = mode => {
@@ -417,6 +481,11 @@ const confirmReminder = () => {
 }
 
 const submit = () => {
+    if (partialPaymentError.value) {
+        form.setError('amount', partialPaymentError.value)
+        return
+    }
+
     if (startDateRestrictionMessage.value) {
         form.setError('start_date', startDateRestrictionMessage.value)
         return
@@ -564,6 +633,10 @@ const submitDebt = () => {
                         >
                             <span class="text-muted d-block">Սառեցումների քանակ</span>
                             <strong>{{ selectedPlan.freeze_limit }}</strong>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <span class="text-muted d-block">Մարզչի աշխատավարձի հաշվարկ</span>
+                            <strong>{{ trainerSalaryModeLabel }}</strong>
                         </div>
                     </div>
                 </div>
@@ -730,7 +803,7 @@ const submitDebt = () => {
                                     class="form-select"
                                 >
                                     <option
-                                        v-for="type in discountTypes"
+                                        v-for="type in ['percent']"
                                         :key="type"
                                         :value="type"
                                     >
@@ -847,7 +920,7 @@ const submitDebt = () => {
                                     min="0"
                                     class="form-control"
                                 />
-                                <InputError :message="form.errors.amount" />
+                                <InputError :message="partialPaymentError || form.errors.amount" />
                             </div>
 
                             <div class="mb-3">

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PersonBiometric extends Model
 {
+    use HasUuidAndVersion;
+
     protected $guarded = [];
 
     protected function casts(): array

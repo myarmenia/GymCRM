@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class Reminder extends Model
 {
+    use HasUuidAndVersion;
+
     protected $guarded = [];
 
     protected function casts(): array
@@ -40,7 +43,8 @@ class Reminder extends Model
     public function recipients()
     {
         return $this->belongsToMany(User::class, 'reminder_recipients')
-            ->withPivot(['status', 'sent_at', 'error_message'])
+            ->using(ReminderRecipient::class)
+            ->withPivot(['status', 'sent_at', 'error_message', 'uuid', 'version'])
             ->withTimestamps();
     }
 }

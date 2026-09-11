@@ -3,179 +3,59 @@
 namespace App\Services\Memberships;
 
 use App\Interfaces\Memberships\MembershipPlanInterface;
-use App\Interfaces\MembershipPlanSchedule\MembershipPlanScheduleInterface;
-use App\Interfaces\MembershipPlanTrainer\MembershipPlanTrainerInterface;
+use App\Models\MembershipPlan;
 use App\Repositories\Memberships\MembershipCategoryRepository;
 use App\Repositories\ScheduleName\ScheduleNameRepository;
 use Illuminate\Support\Facades\DB;
 
 class MembershipPlanService
 {
-
     public function __construct(
         protected MembershipPlanInterface $membershipPlanRepository,
-        protected MembershipPlanTrainerInterface $membershipPlanTrainerRepository,
-        protected MembershipPlanScheduleInterface $membershipPlanScheduleRepository,
         protected ScheduleNameRepository $scheduleNameRepository,
-        protected MembershipCategoryRepository $membershipCategoryRepository
+        protected MembershipCategoryRepository $membershipCategoryRepository,
+        protected MembershipSalaryCalculator $salaryCalculator,
     ) {}
-
 
     public function getAllPaginated()
     {
-        $user = auth()->user();
-
-        return $this->membershipPlanRepository->paginate(10, ['gym_id' => $user->gym_id], ['translations', 'MembershipCategory']);
-    }
-    //
-    //
-    //public function getById($id)
-    //{
-    //    return $this->membershipPlanRepository->findOrFail($id, ['translations']);
-    //}
-    //
-    //public function store($dto)
-    //{
-    //    DB::beginTransaction();
-    //
-    //    try {
-    //
-    //        $dto->prepare();
-    //
-    //        $membershipPlan = $this->membershipPlanRepository->create(
-    //            $dto->toArray()
-    //        );
-    //
-    //        foreach ($dto->translations as $locale => $translation) {
-    //
-    //            $membershipPlan->translations()->create([
-    //                'locale' => $locale,
-    //                'name' => $translation['name'],
-    //                'description' => $translation['description'] ?? null,
-    //            ]);
-    //        }
-    //
-    //        DB::commit();
-    //
-    //        return $membershipPlan;
-    //
-    //    } catch (\Throwable $e) {
-    //
-    //        DB::rollBack();
-    //
-    //        throw $e;
-    //    }
-    //}
-    //
-    //public function update($id, $dto)
-    //{
-    //    DB::beginTransaction();
-    //    try {
-    //
-    //        $dto->prepare();
-    //
-    //        $membershipPlan = $this->membershipPlanRepository->update($id, $dto->toArray());
-    //
-    //        foreach ($dto->translations as $locale => $translation) {
-    //
-    //            $membershipPlan->translations()->updateOrCreate(
-    //                ['locale' => $locale],
-    //                [
-    //                    'name' => $translation['name'],
-    //                    'description' => $translation['description'] ?? null,
-    //                ]
-    //            );
-    //        }
-    //
-    //        DB::commit();
-    //
-    //        return $membershipPlan;
-    //
-    //    } catch (\Throwable $e) {
-    //
-    //        DB::rollBack();
-    //
-    //        throw $e;
-    //    }
-    //
-    //}
-
-    public function getCreateData()
-    {
-        $scheduls = $this->scheduleNameRepository->getAllWithTrainerByGym();
-        //dd($scheduls);
-        return ['membershipCategories' => $this->membershipPlanRepository->getCreateData(), 'scheduleNames' => $scheduls]; //$this->membershipPlanRepository->getCreateData();
+        return $this->membershipPlanRepository->paginate(
+            10,
+            ['gym_id' => auth()->user()->gym_id],
+            ['translations', 'MembershipCategory'],
+        );
     }
 
-    //public function store(array $data)
-    //{
-    //    return $this->membershipPlanRepository->store($data);
-    //}
-
-    public function store(array $data)
+    /** @return array<string, mixed> */
+    public function getCreateData(): array
     {
-        return DB::transaction(function () use ($data) {
+        return [
+            'membershipCategories' => $this->membershipPlanRepository->getCreateData(),
+            'scheduleNames' => $this->scheduleNameRepository->getAllWithTrainerByGym(),
+        ];
+    }
+
+    public function store(array $data): MembershipPlan
+    {
+        $data = $this->normalizeSalaryData($data);
+
+        return DB::transaction(function () use ($data): MembershipPlan {
+            /** @var MembershipPlan $membershipPlan */
             $membershipPlan = $this->membershipPlanRepository->store($data);
 
-            //foreach ($data['translations'] ?? [] as $locale => $translation) {
-            //    //$this->translationRepository->store([
-            //    //    'membership_plan_id' => $membershipPlan->id,
-            //    //    'locale' => $locale,
-            //    //    'name' => $translation['name'] ?? null,
-            //    //    'description' => $translation['description'] ?? null,
-            //    //]);
-            //    $membershipPlan->translations()->create([
-            //        'locale' => $locale,
-            //        'name' => $translation['name'],
-            //        'description' => $translation['description'] ?? null,
-            //    ]);
-            //}
-            foreach ($data['translations'] as $locale => $translation) {
-                $membershipPlan->translations()->updateOrCreate(
-                    [
-                        'membership_plan_id' => $membershipPlan->id,
-                        'locale' => $locale,
-                    ],
-                    [
-                        'name' => $translation['name'],
-                        'description' => $translation['description'] ?? null,
-                    ]
-                );
-            }
+            $this->syncTranslations($membershipPlan, $data['translations']);
+            $this->syncSchedule($membershipPlan, $data['schedule_name_id'] ?? null);
+            $this->syncTrainers($membershipPlan, $data['trainers'] ?? []);
 
-            foreach ($data['trainers'] ?? [] as $trainerItem) {
-                if (empty($trainerItem['trainer_id'])) {
-                    continue;
-                }
-
-                $this->membershipPlanTrainerRepository->store([
-                    'membership_plan_id' => $membershipPlan->id ?? null,
-                    'trainer_id' => $trainerItem['trainer_id'] ?? null,
-                    'price_type' => $trainerItem['price_type'] ?? null,
-                    'price_value' => $trainerItem['price_value'] ?? null,
-                    'total_price' => $trainerItem['total_price'] ?? null,
-                ]);
-
-                //foreach ($trainerItem['schedule_ids'] ?? [] as $scheduleId) {
-                $this->membershipPlanScheduleRepository->store([
-                    'membership_plan_id' => $membershipPlan->id ?? null,
-                    'schedule_id' => $data['schedule_name_id'] ?? null,
-                ]);
-                //}
-            }
-
-
-
-            return $membershipPlan;
+            return $membershipPlan->fresh(['translations', 'schedules', 'trainers']);
         });
     }
 
-    public function edit(string $locale, int $id)
+    /** @return array<string, mixed> */
+    public function edit(string $locale, int $id): array
     {
-        $membershipPlan = $this->membershipPlanRepository->findForEdit($id, $locale);
-
         return [
-            'membershipPlan' => $membershipPlan,
+            'membershipPlan' => $this->membershipPlanRepository->findForEdit($id, $locale),
             'membershipCategories' => $this->membershipCategoryRepository->getAllForSelectByGymId(),
             'scheduleNames' => $this->scheduleNameRepository->getAllWithTrainerByGym(),
         ];
@@ -183,80 +63,165 @@ class MembershipPlanService
 
     public function update(int $id, array $data): void
     {
-        //dd($data);
-        DB::transaction(function () use ($id, $data) {
-            $existingMembershipPlan = $this->membershipPlanRepository->findOrFail($id);
+        DB::transaction(function () use ($id, $data): void {
+            /** @var MembershipPlan $membershipPlan */
+            $membershipPlan = $this->membershipPlanRepository->findOrFail($id);
+            $data = $this->normalizeSalaryData(
+                $data,
+                $membershipPlan->is_locked ? $membershipPlan->price : null,
+            );
+            $startingVersion = (int) $membershipPlan->version;
+            $aggregateChanged = false;
 
-            if ($existingMembershipPlan->is_locked) {
-                $this->syncMembershipPlanTrainers($existingMembershipPlan->id, $data['trainers'] ?? []);
-
-                return;
+            if (! $membershipPlan->is_locked) {
+                $rootData = $this->sharedRootData($data);
+                $membershipPlan->fill($rootData);
+                $aggregateChanged = $membershipPlan->isDirty(array_keys($rootData));
+                $aggregateChanged = $this->syncTranslations(
+                    $membershipPlan,
+                    $data['translations'],
+                ) || $aggregateChanged;
+                $aggregateChanged = $this->syncSchedule(
+                    $membershipPlan,
+                    $data['schedule_name_id'] ?? null,
+                ) || $aggregateChanged;
             }
 
-            $membershipPlan = $this->membershipPlanRepository->update($id, [
-                'membership_category_id' => $data['membership_category_id'],
-                'price' => $data['price'],
-                'price_type' => $data['price_type'],
-                'price_value' => $data['price_value'],
-                'duration_type' => $data['duration_type'],
-                'duration_value' => $data['duration_value'] ?? null,
-                'visits_limit' => $data['visits_limit'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'end_date' => $data['end_date'] ?? null,
-                'guest_limit' => $data['guest_limit'] ?? 0,
-                'freeze_limit' => $data['freeze_limit'] ?? 0,
-                'active' => $data['active'] ?? false,
-            ]);
+            $aggregateChanged = $this->syncTrainers(
+                $membershipPlan,
+                $data['trainers'] ?? [],
+            ) || $aggregateChanged;
 
-            foreach ($data['translations'] as $locale => $translation) {
-                //$this->membershipPlanTranslationRepository->updateOrCreate([
-                //    'membership_plan_id' => $membershipPlan->id,
-                //    'locale' => $locale,
-                //], [
-                //    'name' => $translation['name'],
-                //    'description' => $translation['description'] ?? null,
-                //]);
-                $membershipPlan->translations()->updateOrCreate(
-                    [
-                        'membership_plan_id' => $membershipPlan->id,
-                        'locale' => $locale,
-                    ],
-                    [
-                        'name' => $translation['name'],
-                        'description' => $translation['description'] ?? null,
-                    ]
-                );
+            if ($aggregateChanged) {
+                $membershipPlan->version = $startingVersion + 1;
+                $membershipPlan->save();
             }
-
-            $this->membershipPlanScheduleRepository->deleteByMembershipPlanId($membershipPlan->id);
-            //dd($data['schedule_name_id']);
-            if (!empty($data['schedule_name_id'])) {
-                $this->membershipPlanScheduleRepository->store([
-                    'membership_plan_id' => $membershipPlan->id,
-                    'schedule_id' => $data['schedule_name_id'],
-                ]);
-            }
-
-            $this->syncMembershipPlanTrainers($membershipPlan->id, $data['trainers'] ?? []);
         });
     }
 
-    private function syncMembershipPlanTrainers(int $membershipPlanId, array $trainers): void
+    /** @return array<string, mixed> */
+    private function sharedRootData(array $data): array
     {
-        $this->membershipPlanTrainerRepository->deleteByMembershipPlanId($membershipPlanId);
+        return [
+            'membership_category_id' => $data['membership_category_id'],
+            'price' => $data['price'],
+            'price_type' => 'percent',
+            'price_value' => $data['price_value'] ?? 0,
+            'duration_type' => $data['duration_type'],
+            'duration_value' => $data['duration_value'] ?? null,
+            'visits_limit' => $data['visits_limit'] ?? null,
+            'start_date' => $data['start_date'] ?? null,
+            'end_date' => $data['end_date'] ?? null,
+            'guest_limit' => $data['guest_limit'] ?? 0,
+            'freeze_limit' => $data['freeze_limit'] ?? 0,
+            'active' => $data['active'] ?? false,
+        ];
+    }
 
-        foreach ($trainers as $trainer) {
-            if (empty($trainer['trainer_id'])) {
+    private function syncTranslations(MembershipPlan $membershipPlan, array $translations): bool
+    {
+        $changed = false;
+
+        foreach ($translations as $locale => $data) {
+            $translation = $membershipPlan->translations()->firstOrNew(['locale' => $locale]);
+            $translation->fill([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+            ]);
+
+            if (! $translation->exists || $translation->isDirty()) {
+                $translation->save();
+                $changed = true;
+            }
+        }
+
+        return $changed;
+    }
+
+    private function syncSchedule(MembershipPlan $membershipPlan, int|string|null $scheduleId): bool
+    {
+        $desiredIds = $scheduleId === null || $scheduleId === ''
+            ? []
+            : [(int) $scheduleId];
+        $currentIds = $membershipPlan->schedules()
+            ->pluck('schedule_names.id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->sort()
+            ->values()
+            ->all();
+
+        if ($currentIds === $desiredIds) {
+            return false;
+        }
+
+        $membershipPlan->schedules()->sync($desiredIds);
+
+        return true;
+    }
+
+    /** @param list<array<string, mixed>> $trainers */
+    private function syncTrainers(MembershipPlan $membershipPlan, array $trainers): bool
+    {
+        $changed = false;
+        $existing = $membershipPlan->membershipPlanTrainers()
+            ->get()
+            ->keyBy(fn ($trainer): int => (int) $trainer->trainer_id);
+        $desiredTrainerIds = [];
+
+        foreach ($trainers as $trainerData) {
+            if (empty($trainerData['trainer_id'])) {
                 continue;
             }
 
-            $this->membershipPlanTrainerRepository->store([
-                'membership_plan_id' => $membershipPlanId,
-                'trainer_id' => $trainer['trainer_id'],
-                'price_type' => $trainer['price_type'],
-                'price_value' => $trainer['price_value'],
-                'total_price' => $trainer['total_price'],
+            $trainerId = (int) $trainerData['trainer_id'];
+            $desiredTrainerIds[] = $trainerId;
+            $trainer = $existing->get($trainerId)
+                ?? $membershipPlan->membershipPlanTrainers()->make(['trainer_id' => $trainerId]);
+            $trainer->fill([
+                'price_type' => 'percent',
+                'price_value' => $trainerData['price_value'] ?? 0,
+                'total_price' => $trainerData['total_price'] ?? 0,
             ]);
+
+            if (! $trainer->exists || $trainer->isDirty()) {
+                $trainer->save();
+                $changed = true;
+            }
         }
+
+        $removed = $existing->except(array_values(array_unique($desiredTrainerIds)));
+        if ($removed->isNotEmpty()) {
+            $removed->each->delete();
+            $changed = true;
+        }
+
+        return $changed;
+    }
+
+    /** @return array<string, mixed> */
+    private function normalizeSalaryData(
+        array $data,
+        int|float|string|null $priceOverride = null,
+    ): array {
+        $price = (float) ($priceOverride ?? $data['price'] ?? 0);
+
+        $data['price_type'] = 'percent';
+        $data['price_value'] = $this->salaryCalculator->normalizePercentage(
+            $data['price_value'] ?? 0,
+        );
+        $data['trainers'] = array_map(function (array $trainer) use ($price): array {
+            $percentage = $this->salaryCalculator->normalizePercentage(
+                $trainer['price_value'] ?? 0,
+            );
+
+            return [
+                ...$trainer,
+                'price_type' => 'percent',
+                'price_value' => $percentage,
+                'total_price' => $this->salaryCalculator->amount($price, $percentage),
+            ];
+        }, $data['trainers'] ?? []);
+
+        return $data;
     }
 }

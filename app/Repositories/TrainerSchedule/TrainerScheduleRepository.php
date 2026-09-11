@@ -4,22 +4,16 @@ namespace App\Repositories\TrainerSchedule;
 
 use App\Interfaces\TrainerSchedule\TrainerScheduleInterface;
 use App\Models\TrainerSchedule;
-use App\Models\User;
 use App\Repositories\BaseRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
-
-
 class TrainerScheduleRepository extends BaseRepository implements TrainerScheduleInterface
 {
-
-
-    public function __construct(TrainerSchedule $model)
+    public function __construct(TrainerSchedule $model, ?string $connection = null)
     {
-        parent::__construct($model);
+        parent::__construct($model, $connection);
     }
-
 
     public function create($data): Model
     {
@@ -41,15 +35,27 @@ class TrainerScheduleRepository extends BaseRepository implements TrainerSchedul
         $this->query()
             ->where('user_id', $trainerId)
             ->whereNotIn('schedule_name_id', $scheduleIds)
-            ->delete();
+            ->get()
+            ->each(function (TrainerSchedule $trainerSchedule): void {
+                $trainerSchedule->sessionDurations()->delete();
+                $trainerSchedule->delete();
+            });
     }
 
     public function firstOrCreate(int $trainerId, int $scheduleNameId): ?Model
     {
-        return $this->query()->firstOrCreate([
+        $trainerSchedule = $this->query()->withTrashed()->firstOrNew([
             'user_id' => $trainerId,
             'schedule_name_id' => $scheduleNameId,
         ]);
+
+        if (! $trainerSchedule->exists) {
+            $trainerSchedule->save();
+        } elseif ($trainerSchedule->trashed()) {
+            $trainerSchedule->restore();
+        }
+
+        return $trainerSchedule;
     }
 
     public function findByTrainerAndScheduleName(int $trainerId, int $scheduleNameId): ?Model

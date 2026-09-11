@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\MeasurementUnit;
+use App\Support\StableUuid;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class MeasurementUnitSeeder extends Seeder
 {
@@ -12,7 +13,7 @@ class MeasurementUnitSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('measurement_units')->insert([
+        $units = [
             [
                 'code' => 'pcs',
                 'name' => 'Հատով',
@@ -61,6 +62,16 @@ class MeasurementUnitSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        foreach ($units as $unit) {
+            MeasurementUnit::query()->updateOrCreate(
+                ['code' => $unit['code']],
+                [
+                    ...$unit,
+                    ...StableUuid::seedIdentity('measurement-units', $unit['code']),
+                ],
+            );
+        }
     }
 }

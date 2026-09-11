@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseItem extends Model
 {
+    use HasUuidAndVersion;
+
     public $timestamps = true;
+
     protected $guarded = [];
+
     protected $fillable = [
         'purchase_id',
         'purchase_token',
@@ -27,5 +32,10 @@ class PurchaseItem extends Model
     public function product()
     {
         return $this->belongsTo(InventoryProduct::class, 'product_id');
+    }
+
+    public function refundItems()
+    {
+        return $this->hasMany(PurchaseRefundItem::class);
     }
 }

@@ -6,10 +6,12 @@ use App\DTO\User\UserDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Http\Requests\Users\StoreStaffAttendanceRequest;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
 use App\Services\Roles\RoleService;
 use App\Services\Users\UserService;
+use App\Services\Users\StaffAttendanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -20,7 +22,8 @@ class UserController extends Controller
             protected UserService $userService,
             protected RoleService $roleService,
             protected GymService $gymService,
-            protected EntryCodeService $entryCodeService
+            protected EntryCodeService $entryCodeService,
+            protected StaffAttendanceService $staffAttendanceService,
 
     )
     {
@@ -33,6 +36,15 @@ class UserController extends Controller
             Auth::user()?->hasAnyRole(['owner', 'super_admin', 'sales_manager']),
             403,
             'You are not allowed to manage users.'
+        );
+    }
+
+    private function authorizeStaffAttendance(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'owner', 'super_admin']),
+            403,
+            'You are not allowed to manage staff attendance.'
         );
     }
 
@@ -144,6 +156,8 @@ class UserController extends Controller
 
     public function show($locale, $userId)
     {
+        $this->authorizeStaffAttendance();
+
         $user = $this->userService->getById($userId);
         $authUser = Auth::user();
 
@@ -157,7 +171,22 @@ class UserController extends Controller
             'user' => $user,
             'roles' => $roles,
             'selectedEntryCodeId' => $selectedEntryCodeId,
+            'lastAttendance' => $this->staffAttendanceService->lastAttendance($user),
             'canSelectGym' => $authUser->hasRole('owner'), // եթե անհրաժեշտ է, կարող եք նաև gym-երի ցուցակը
         ]);
+    }
+
+    public function storeAttendance(StoreStaffAttendanceRequest $request, $locale, $userId)
+    {
+        $this->authorizeStaffAttendance();
+
+        $user = $this->userService->getById($userId);
+        $this->staffAttendanceService->store(
+            $user,
+            $request->validated('action'),
+            $request->validated('manual_datetime'),
+        );
+
+        return back()->with('success', 'Staff attendance recorded successfully.');
     }
 }

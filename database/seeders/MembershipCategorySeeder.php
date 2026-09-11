@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Gym;
 use App\Models\MembershipCategory;
+use App\Support\StableUuid;
 use Illuminate\Database\Seeder;
 
 class MembershipCategorySeeder extends Seeder
@@ -12,7 +13,7 @@ class MembershipCategorySeeder extends Seeder
     {
         $gym = Gym::first();
 
-        if (!$gym) {
+        if (! $gym) {
             $this->command?->warn('No gyms found. Membership categories were not seeded.');
 
             return;
@@ -98,6 +99,7 @@ class MembershipCategorySeeder extends Seeder
                 ],
                 [
                     'active' => true,
+                    ...StableUuid::seedIdentity('membership-categories', $item['slug']),
                 ]
             );
 
@@ -110,6 +112,7 @@ class MembershipCategorySeeder extends Seeder
                     [
                         'name' => $translation['name'],
                         'description' => $translation['description'],
+                        ...StableUuid::seedIdentity('membership-category-translations', "{$item['slug']}:{$locale}"),
                     ]
                 );
             }

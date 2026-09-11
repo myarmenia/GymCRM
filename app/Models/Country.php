@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class Country extends Model
 {
+    use HasUuidAndVersion;
+
     protected $guarded = [];
+
     protected $appends = ['name'];
 
     public function translations()

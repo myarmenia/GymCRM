@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Gym;
 use App\Models\Lang;
-
+use App\Support\StableUuid;
 use Illuminate\Database\Seeder;
 
 class GymSeeder extends Seeder
@@ -19,6 +19,8 @@ class GymSeeder extends Seeder
             'address' => 'Yerevan',
             'phone' => '+374000000',
             'email' => 'gym@example.com',
+            'trainer_salary_mode' => Gym::TRAINER_SALARY_MODE_PREPAID,
+            ...StableUuid::seedIdentity('gyms', 'default'),
         ]);
 
         $hyLang = Lang::where('code', 'hy')->first();
@@ -26,6 +28,7 @@ class GymSeeder extends Seeder
         if ($hyLang) {
             $gym->languages()->attach($hyLang->id, [
                 'active' => true,
+                ...StableUuid::seedIdentity('gym-languages', 'default:hy'),
             ]);
         }
     }

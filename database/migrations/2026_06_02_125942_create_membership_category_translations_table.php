@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('membership_category_translations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_category_id')->constrained()->cascadeOnDelete();
 
             $table->string('locale', 5);

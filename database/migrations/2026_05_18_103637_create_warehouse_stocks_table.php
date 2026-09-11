@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('warehouse_stocks', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
 
             $table->foreignId('gym_id')
                 ->constrained()
@@ -51,7 +53,7 @@ return new class extends Migration
     */
             $table->unique([
                 'warehouse_id',
-                'inventory_product_id'
+                'inventory_product_id',
             ]);
 
             $table->index('gym_id');

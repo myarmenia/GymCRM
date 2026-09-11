@@ -2,10 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Gym;
-use Illuminate\Database\Seeder;
 use App\Models\Company;
 use App\Models\CompanyTranslation;
+use App\Models\Gym;
+use App\Support\StableUuid;
+use Illuminate\Database\Seeder;
 
 class CompanySeeder extends Seeder
 {
@@ -91,7 +92,7 @@ class CompanySeeder extends Seeder
             ['Company', null, null, null, 0, null, null, null, null],
         ];
 
-        foreach ($companies as $item) {
+        foreach ($companies as $companyIndex => $item) {
 
             [$name, $address, $city, $state, $postal, $phone, $fax, $email, $responsible] = $item;
             $gymId = Gym::first()?->id;
@@ -104,6 +105,7 @@ class CompanySeeder extends Seeder
                 'fax' => $fax,
                 'email' => $email,
                 'responsible' => $responsible,
+                ...StableUuid::seedIdentity('companies', $companyIndex),
             ]);
 
             $city = $city ? trim($city) : null;
@@ -115,6 +117,7 @@ class CompanySeeder extends Seeder
                 'name' => $name,
                 'address' => $address,
                 'city' => $city,
+                ...StableUuid::seedIdentity('company-translations', "{$companyIndex}:en"),
             ]);
 
             // RU
@@ -128,6 +131,7 @@ class CompanySeeder extends Seeder
                     'Tbilisi' => 'Тбилиси',
                     default => $city,
                 },
+                ...StableUuid::seedIdentity('company-translations', "{$companyIndex}:ru"),
             ]);
 
             // HY
@@ -150,6 +154,7 @@ class CompanySeeder extends Seeder
                     'Tbilisi' => 'Թբիլիսի',
                     default => $city,
                 },
+                ...StableUuid::seedIdentity('company-translations', "{$companyIndex}:hy"),
             ]);
         }
     }

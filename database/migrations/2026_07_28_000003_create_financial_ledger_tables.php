@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\StableUuid;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ return new class extends Migration
     {
         Schema::create('financial_categories', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('code')->unique();
             $table->string('name');
             $table->enum('direction', ['income', 'expense']);
@@ -21,6 +24,8 @@ return new class extends Migration
 
         Schema::create('financial_transactions', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('gym_id')->constrained()->restrictOnDelete();
             $table->foreignId('financial_category_id')->constrained()->restrictOnDelete();
             $table->foreignId('payment_method_id')->constrained()->restrictOnDelete();
@@ -53,14 +58,14 @@ return new class extends Migration
 
         $now = now();
         DB::table('financial_categories')->insert([
-            ['code' => 'membership_payment', 'name' => 'Աբոնեմենտի վճարում', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'membership_refund', 'name' => 'Աբոնեմենտի վերադարձ', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'product_sale', 'name' => 'Ապրանքի վաճառք', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'product_refund', 'name' => 'Ապրանքի վերադարձ', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'salary_payout', 'name' => 'Աշխատավարձի վճարում', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'salary_refund', 'name' => 'Աշխատավարձի վերադարձ', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'manual_income', 'name' => 'Այլ մուտք', 'direction' => 'income', 'is_system' => false, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
-            ['code' => 'manual_expense', 'name' => 'Այլ ելք', 'direction' => 'expense', 'is_system' => false, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'membership_payment', ...StableUuid::seedIdentity('financial-categories', 'membership_payment'), 'name' => 'Աբոնեմենտի վճարում', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'membership_refund', ...StableUuid::seedIdentity('financial-categories', 'membership_refund'), 'name' => 'Աբոնեմենտի վերադարձ', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'product_sale', ...StableUuid::seedIdentity('financial-categories', 'product_sale'), 'name' => 'Ապրանքի վաճառք', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'product_refund', ...StableUuid::seedIdentity('financial-categories', 'product_refund'), 'name' => 'Ապրանքի վերադարձ', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'salary_payout', ...StableUuid::seedIdentity('financial-categories', 'salary_payout'), 'name' => 'Աշխատավարձի վճարում', 'direction' => 'expense', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'salary_refund', ...StableUuid::seedIdentity('financial-categories', 'salary_refund'), 'name' => 'Աշխատավարձի վերադարձ', 'direction' => 'income', 'is_system' => true, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'manual_income', ...StableUuid::seedIdentity('financial-categories', 'manual_income'), 'name' => 'Այլ մուտք', 'direction' => 'income', 'is_system' => false, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['code' => 'manual_expense', ...StableUuid::seedIdentity('financial-categories', 'manual_expense'), 'name' => 'Այլ ելք', 'direction' => 'expense', 'is_system' => false, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 

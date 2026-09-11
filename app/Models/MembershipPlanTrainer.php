@@ -2,10 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Traits\HasUuidAndVersion;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class MembershipPlanTrainer extends Model
+class MembershipPlanTrainer extends Pivot
 {
+    use HasUuidAndVersion;
+
+    public $incrementing = true;
+
+    protected $table = 'membership_plan_trainers';
+
     protected $fillable = [
         'membership_plan_id',
         'trainer_id',
@@ -14,7 +21,13 @@ class MembershipPlanTrainer extends Model
         'total_price',
     ];
 
-    
+    protected function casts(): array
+    {
+        return [
+            'price_value' => 'decimal:6',
+            'total_price' => 'decimal:2',
+        ];
+    }
 
     public function membershipPlan()
     {

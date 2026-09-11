@@ -13,13 +13,15 @@ return new class extends Migration
     {
         Schema::create('schedule_details', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('schedule_name_id')->constrained('schedule_names')->cascadeOnDelete();
             $table->enum('week_day', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])->default('Monday');
             $table->time('day_start_time')->nullable();
             $table->time('day_end_time')->nullable();
             $table->time('break_start_time')->nullable();
             $table->time('break_end_time')->nullable();
-            //$table->softDeletes(); // ✅ ԱՅՍՆ Է SOFT DELETE COLUMN-ը
+            // $table->softDeletes(); // ✅ ԱՅՍՆ Է SOFT DELETE COLUMN-ը
 
             $table->timestamps();
         });

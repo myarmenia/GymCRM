@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('gym_id')->constrained()->cascadeOnDelete();
             $table->foreignId('country_id')->nullable()->constrained()->nullOnDelete();
             $table->string('postal_code')->nullable();

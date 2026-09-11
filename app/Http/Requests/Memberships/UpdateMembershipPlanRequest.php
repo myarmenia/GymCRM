@@ -5,7 +5,6 @@ namespace App\Http\Requests\MembershipPlans;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-
 class UpdateMembershipPlanRequest extends FormRequest
 {
     public function authorize(): bool
@@ -19,8 +18,8 @@ class UpdateMembershipPlanRequest extends FormRequest
             'membership_category_id' => ['required', 'exists:membership_categories,id'],
 
             'price' => ['required', 'numeric', 'min:0'],
-            'price_type' => ['required', Rule::in(['fixed', 'percent'])],
-            'price_value' => ['required', 'numeric', 'min:0'],
+            'price_type' => ['required', Rule::in(['percent'])],
+            'price_value' => ['required', 'numeric', 'min:0', 'max:100'],
 
             'duration_type' => ['required', 'in:day,month,year,visit,period'],
             'duration_value' => ['nullable', 'integer', 'min:1'],
@@ -42,9 +41,8 @@ class UpdateMembershipPlanRequest extends FormRequest
 
             'trainers' => ['nullable', 'array'],
             'trainers.*.trainer_id' => ['required', 'exists:users,id'],
-            'trainers.*.price_type' => ['required', 'in:fixed,percent'],
-            'trainers.*.price_value' => ['required', 'numeric', 'min:0'],
-            'trainers.*.total_price' => ['required', 'numeric', 'min:0'],
+            'trainers.*.price_type' => ['required', 'in:percent'],
+            'trainers.*.price_value' => ['required', 'numeric', 'min:0', 'max:100'],
         ];
     }
 }

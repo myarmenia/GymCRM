@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class PaymentMethod extends Model
 {
-    protected $guarded = [];
-    protected $appends = ['name'];
+    use HasUuidAndVersion;
 
+    protected $guarded = [];
+
+    protected $appends = ['name'];
 
     public function translations()
     {

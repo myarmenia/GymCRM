@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('schedule_names', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('name');
             $table->integer('status')->default(0);
-           // $table->softDeletes(); // ✅ ԱՅՍՆ Է SOFT DELETE COLUMN-ը
-
+            $table->softDeletes();
             $table->timestamps();
         });
     }

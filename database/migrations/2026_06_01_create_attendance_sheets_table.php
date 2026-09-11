@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('attendance_sheets', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->morphs('relation');
             $table->string('entry_code')->nullable();
             $table->timestamp('date')->nullable();

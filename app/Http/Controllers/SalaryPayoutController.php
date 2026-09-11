@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\SalaryPayouts\StoreSalaryPayoutRequest;
 use App\Models\SalaryPayableAssignment;
 use App\Models\SalaryPayout;
+use App\Services\Exports\ReportExcelExportService;
 use App\Services\SalaryPayouts\SalaryPayoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalaryPayoutController extends Controller
 {
     public function __construct(
         protected SalaryPayoutService $salaryPayoutService,
+        protected ReportExcelExportService $reportExcelExportService,
     ) {}
 
     public function index(Request $request): Response
@@ -35,6 +38,23 @@ class SalaryPayoutController extends Controller
         return back()->with(
             'success',
             "Վճարում #{$payout->id}-ը հաջողությամբ գրանցվեց։",
+        );
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $report = $this->salaryPayoutService->historyExportData(
+            $request->user(),
+            $request->query(),
+        );
+
+        return $this->reportExcelExportService->download(
+            $report['rows'],
+            $report['columns'],
+            $report['filters'],
+            'salary-payouts-'.now()->format('Y-m-d-H-i-s').'.xls',
+            'Աշխատավարձերի վճարումներ',
+            $report['summary'],
         );
     }
 

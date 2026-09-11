@@ -10,7 +10,11 @@ use App\Http\Requests\MembershipSales\StoreMembershipSalePaymentRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRefundRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleReminderRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
+use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
+use App\Services\Hdm\HdmPrepaymentTerminationService;
+use App\Services\Hdm\HdmPrintService;
+use App\Services\Hdm\HdmReturnService;
 use App\Services\MembershipSales\MembershipSaleFreezeService;
 use App\Services\MembershipSales\MembershipSaleGuestService;
 use App\Services\MembershipSales\MembershipSaleService;
@@ -26,8 +30,10 @@ class MembershipSaleController extends Controller
         protected MembershipSaleGuestService $membershipSaleGuestService,
         protected MembershipSaleFreezeService $membershipSaleFreezeService,
         protected EntryExitSystemService $entryExitSystemService,
-    ) {
-    }
+        protected HdmPrintService $hdmPrintService,
+        protected HdmReturnService $hdmReturnService,
+        protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
+    ) {}
 
     public function list(Request $request)
     {
@@ -39,12 +45,39 @@ class MembershipSaleController extends Controller
 
     public function create($locale, $person)
     {
-        return Inertia::render('MembershipSales/Create', $this->membershipSaleService->formOptions((int) $person));
+        return Inertia::render('MembershipSales/Create', [
+            ...$this->membershipSaleService->formOptions((int) $person),
+            'gateway' => $this->hdmGateway(),
+        ]);
     }
 
     public function store(StoreMembershipSaleRequest $request, $locale, $person)
     {
-        $this->membershipSaleService->store($request->validated());
+        $membershipSale = $this->membershipSaleService->store($request->validated());
+
+        if ($request->expectsJson()) {
+            $payment = $membershipSale->payments
+                ->where('type', 'payment')
+                ->where('status', 'paid')
+                ->filter(fn ($payment) => (float) $payment->amount > 0)
+                ->sortByDesc('id')
+                ->first();
+            $printResult = $payment?->is_hdm
+                ? $this->hdmPrintService->preparePrintData($payment)
+                : ['success' => true, 'need_print' => false];
+
+            return response()->json([
+                'success' => true,
+                'message' => ($printResult['success'] ?? false)
+                    ? 'Membership sale created successfully.'
+                    : 'Membership sale created, but HDM receipt preparation failed: '.($printResult['message'] ?? ''),
+                'membership_sale' => $membershipSale,
+                'need_print' => ($printResult['success'] ?? false) && ($printResult['need_print'] ?? false),
+                'print_data' => $printResult['data'] ?? null,
+                'print_error' => ($printResult['success'] ?? false) ? null : $printResult,
+                'redirect' => route('membership_sale.list', ['locale' => app()->getLocale()]),
+            ], 201);
+        }
 
         return redirect()
             ->route('membership_sale.list', ['locale' => app()->getLocale()])
@@ -57,13 +90,21 @@ class MembershipSaleController extends Controller
 
         return Inertia::render('MembershipSales/Edit', [
             'membershipSale' => $membershipSale,
+            'discountsLocked' => $this->membershipSaleService->discountsLocked($membershipSale),
             ...$this->membershipSaleService->formOptions((int) $membershipSale->person_id),
         ]);
     }
 
     public function payments($locale, $id)
     {
-        return Inertia::render('MembershipSales/Payments', $this->membershipSaleService->paymentPageData((int) $id));
+        $pageData = $this->membershipSaleService->paymentPageData((int) $id);
+
+        return Inertia::render('MembershipSales/Payments', [
+            ...$pageData,
+            'prepaymentTermination' => $this->hdmPrepaymentTerminationService
+                ->pageData($pageData['membershipSale']),
+            'gateway' => $this->hdmGateway(),
+        ]);
     }
 
     public function guests($locale, $id)
@@ -133,11 +174,50 @@ class MembershipSaleController extends Controller
 
     public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)
     {
-        $this->membershipSaleService->storePayment((int) $id, $request->validated());
+        $payment = $this->membershipSaleService->storePayment((int) $id, $request->validated());
+
+        if ($request->expectsJson()) {
+            $printResult = $payment->is_hdm
+                ? $this->hdmPrintService->preparePrintData($payment)
+                : ['success' => true, 'need_print' => false];
+
+            return response()->json([
+                'success' => true,
+                'message' => ($printResult['success'] ?? false)
+                    ? 'Payment saved successfully.'
+                    : 'Payment saved, but HDM receipt preparation failed: '.($printResult['message'] ?? ''),
+                'need_print' => ($printResult['success'] ?? false) && ($printResult['need_print'] ?? false),
+                'print_data' => $printResult['data'] ?? null,
+                'print_error' => ($printResult['success'] ?? false) ? null : $printResult,
+                'redirect' => route('membership_sale.payments', [
+                    'locale' => app()->getLocale(),
+                    'id' => $id,
+                ]),
+            ], 201);
+        }
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
             ->with('success', 'Payment saved successfully.');
+    }
+
+    public function retryPaymentHdmReceipt($locale, $id, $payment)
+    {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $membershipPayment = $sale->payments()
+            ->whereKey((int) $payment)
+            ->where('type', 'payment')
+            ->firstOrFail();
+        $result = $this->hdmPrintService->prepareRetryData($membershipPayment);
+
+        return response()->json([
+            ...$result,
+            'print_data' => $result['data'] ?? null,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ], ($result['success'] ?? false) ? 200 : 422);
     }
 
     public function storeReminder(StoreMembershipSaleReminderRequest $request, $locale, $id)
@@ -149,11 +229,63 @@ class MembershipSaleController extends Controller
 
     public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)
     {
-        $this->membershipSaleService->storeRefund((int) $id, $request->validated());
+        $refund = $this->membershipSaleService->storeRefund((int) $id, $request->validated());
+
+        if ($request->expectsJson()) {
+            $printResult = $refund->is_hdm
+                ? $this->hdmReturnService->prepareReturnData($refund)
+                : ['success' => true, 'need_print' => false];
+
+            return response()->json([
+                'success' => true,
+                'message' => ($printResult['success'] ?? false)
+                    ? 'Refund saved successfully.'
+                    : 'Refund saved, but HDM return preparation failed: '.($printResult['message'] ?? ''),
+                'refund' => $refund,
+                'need_print' => ($printResult['success'] ?? false) && ($printResult['need_print'] ?? false),
+                'print_data' => $printResult['data'] ?? null,
+                'print_error' => ($printResult['success'] ?? false) ? null : $printResult,
+                'redirect' => route('membership_sale.payments', [
+                    'locale' => app()->getLocale(),
+                    'id' => $id,
+                ]),
+            ], 201);
+        }
 
         return redirect()
             ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
             ->with('success', 'Refund saved successfully.');
+    }
+
+    public function terminateWithPrepaymentRefund(
+        StoreMembershipSaleTerminationRequest $request,
+        $locale,
+        $id,
+    ) {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $result = $this->hdmPrepaymentTerminationService->start($sale, $request->validated());
+
+        return response()->json([
+            ...$result,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ], 201);
+    }
+
+    public function resumePrepaymentTermination($locale, $id)
+    {
+        $sale = $this->membershipSaleService->getById((int) $id);
+        $result = $this->hdmPrepaymentTerminationService->resume($sale);
+
+        return response()->json([
+            ...$result,
+            'redirect' => route('membership_sale.payments', [
+                'locale' => app()->getLocale(),
+                'id' => $id,
+            ]),
+        ]);
     }
 
     public function cancel($locale, $id)
@@ -193,10 +325,23 @@ class MembershipSaleController extends Controller
             'online' => ['nullable'],
             'local_ip' => ['nullable', 'string'],
             'mac' => ['nullable', 'string'],
+            'membership_ids' => ['nullable', 'array', 'min:1'],
+            'membership_ids.*' => ['integer', 'distinct'],
         ]);
 
+        $membershipIds = $context['membership_ids'] ?? [(int) $id];
+        unset($context['membership_ids']);
+
         return response()->json(
-            $this->entryExitSystemService->finalizeTurnstileMembershipSelection((int) $id, auth()->user(), $context)
+            $this->entryExitSystemService->finalizeTurnstileMembershipSelection($membershipIds, auth()->user(), $context)
         );
+    }
+
+    private function hdmGateway(): array
+    {
+        return [
+            'url' => config('hdm.gateway.url'),
+            'token' => config('hdm.gateway.token'),
+        ];
     }
 }

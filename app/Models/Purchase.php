@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class Purchase extends Model
 {
+    use HasUuidAndVersion;
+
     public $timestamps = true;
 
     protected $guarded = [];
@@ -25,6 +28,7 @@ class Purchase extends Model
         'cash_received',
         'change_amount',
         'status',
+        'sync_origin',
         'payment_method_id',
         'card_type_id',
     ];
@@ -32,6 +36,11 @@ class Purchase extends Model
     public function items()
     {
         return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function refunds()
+    {
+        return $this->hasMany(PurchaseRefund::class);
     }
 
     public function person()

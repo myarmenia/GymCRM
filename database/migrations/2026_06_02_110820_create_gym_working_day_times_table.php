@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('gym_working_day_times', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->bigInteger('gym_id')->unsigned();
             $table->foreign('gym_id')->references('id')->on('gyms')->onDelete('cascade');
             $table->string('week_day')->nullable();

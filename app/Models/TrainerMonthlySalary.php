@@ -2,16 +2,22 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class TrainerMonthlySalary extends Model
 {
+    use HasUuidAndVersion;
+
     protected $guarded = [];
 
     protected function casts(): array
     {
         return [
             'salary_month' => 'date',
+            'period_start' => 'date',
+            'period_end' => 'date',
+            'installment_number' => 'integer',
             'price' => 'decimal:2',
         ];
     }

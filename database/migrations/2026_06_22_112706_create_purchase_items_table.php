@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('purchase_items', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('purchase_id')->constrained()->onDelete('cascade');
             $table->string('purchase_token');
             $table->foreignId('product_id')->constrained('inventory_products')->onDelete('cascade');

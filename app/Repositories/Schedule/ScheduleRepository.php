@@ -20,6 +20,7 @@ class ScheduleRepository extends BaseRepository implements ScheduleInterface
             'gym',
             'schedule_name.schedule_details',
         ])->where('gym_id', $gymId)
+            ->whereHas('schedule_name')
             ->get();
     }
 

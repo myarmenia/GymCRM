@@ -9,6 +9,7 @@ use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Purchase;
+use App\Models\PurchaseRefund;
 use App\Models\SalaryPayout;
 use App\Models\SalaryPayoutRefund;
 use App\Models\User;
@@ -24,10 +25,36 @@ class FinancialLedgerService
 
     public function recordMembershipPayment(MembershipPlanPayment $payment, ?int $createdBy = null): FinancialTransaction
     {
-        $membershipSale = MembershipSale::query()
+        $connectionName = $payment->getConnectionName();
+        $membershipSale = (new MembershipSale)
+            ->setConnection($connectionName)
+            ->newQuery()
             ->withTrashed()
             ->findOrFail($payment->membership_sale_id);
         $isRefund = $payment->type === 'refund';
+        $idempotencyKey = "membership-plan-payment:{$payment->uuid}";
+        $legacyKey = "membership-plan-payment:{$payment->id}";
+        $transactionQuery = (new FinancialTransaction)
+            ->setConnection($connectionName)
+            ->newQuery();
+
+        $existing = (clone $transactionQuery)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $legacy = (clone $transactionQuery)
+            ->where('idempotency_key', $legacyKey)
+            ->where('source_type', 'membership_plan_payment')
+            ->where('source_id', $payment->id)
+            ->first();
+        if ($legacy !== null) {
+            $legacy->update(['idempotency_key' => $idempotencyKey]);
+
+            return $legacy;
+        }
 
         return $this->record([
             'gym_id' => $membershipSale->gym_id,
@@ -41,12 +68,37 @@ class FinancialLedgerService
             'occurred_at' => $payment->created_at ?? now(),
             'created_by' => $createdBy,
             'description' => 'Աբոնեմենտի '.($isRefund ? 'վերադարձ' : 'վճարում')." #{$payment->membership_sale_id}",
-            'idempotency_key' => "membership-plan-payment:{$payment->id}",
-        ]);
+            'idempotency_key' => $idempotencyKey,
+        ], $connectionName);
     }
 
     public function recordProductSale(Purchase $purchase): FinancialTransaction
     {
+        $connectionName = $purchase->getConnectionName();
+        $idempotencyKey = "purchase:{$purchase->uuid}";
+        $legacyKey = "purchase:{$purchase->id}";
+        $transactionQuery = (new FinancialTransaction)
+            ->setConnection($connectionName)
+            ->newQuery();
+
+        $existing = (clone $transactionQuery)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $legacy = (clone $transactionQuery)
+            ->where('idempotency_key', $legacyKey)
+            ->where('source_type', 'purchase')
+            ->where('source_id', $purchase->id)
+            ->first();
+        if ($legacy !== null) {
+            $legacy->update(['idempotency_key' => $idempotencyKey]);
+
+            return $legacy;
+        }
+
         return $this->record([
             'gym_id' => $purchase->gym_id,
             'category_code' => 'product_sale',
@@ -60,8 +112,29 @@ class FinancialLedgerService
             'created_by' => $purchase->user_id,
             'description' => "Ապրանքի վաճառք #{$purchase->id}",
             'reference' => $purchase->token,
-            'idempotency_key' => "purchase:{$purchase->id}",
-        ]);
+            'idempotency_key' => $idempotencyKey,
+        ], $connectionName);
+    }
+
+    public function recordProductRefund(PurchaseRefund $refund): FinancialTransaction
+    {
+        $refund->loadMissing('purchase');
+
+        return $this->record([
+            'gym_id' => $refund->purchase->gym_id,
+            'category_code' => 'product_refund',
+            'direction' => 'expense',
+            'amount' => $refund->amount,
+            'payment_method_id' => $refund->payment_method_id,
+            'card_type_id' => $refund->card_type_id,
+            'source_type' => 'purchase_refund',
+            'source_id' => $refund->id,
+            'occurred_at' => $refund->refunded_at,
+            'created_by' => $refund->refunded_by,
+            'description' => "Ապրանքի վերադարձ #{$refund->id}",
+            'reference' => $refund->reference ?? $refund->purchase->token,
+            'idempotency_key' => "purchase-refund:{$refund->uuid}",
+        ], $refund->getConnectionName());
     }
 
     public function recordSalaryPayout(SalaryPayout $payout): FinancialTransaction
@@ -78,8 +151,8 @@ class FinancialLedgerService
             'created_by' => $payout->paid_by,
             'description' => "Աշխատավարձի վճարում #{$payout->id}",
             'reference' => $payout->reference,
-            'idempotency_key' => "salary-payout:{$payout->id}",
-        ]);
+            'idempotency_key' => "salary-payout:{$payout->uuid}",
+        ], $payout->getConnectionName());
     }
 
     public function recordSalaryRefund(SalaryPayoutRefund $refund): FinancialTransaction
@@ -98,8 +171,8 @@ class FinancialLedgerService
             'created_by' => $refund->refunded_by,
             'description' => "Աշխատավարձի վերադարձ #{$refund->id}",
             'reference' => $refund->reference,
-            'idempotency_key' => "salary-payout-refund:{$refund->id}",
-        ]);
+            'idempotency_key' => "salary-payout-refund:{$refund->uuid}",
+        ], $refund->getConnectionName());
     }
 
     public function createManual(User $actor, array $data): FinancialTransaction
@@ -238,6 +311,7 @@ class FinancialLedgerService
                 'noncash_balance' => round((float) $balanceRow->noncash_balance, 2),
                 'income' => round((float) $periodRow->income, 2),
                 'expense' => round((float) $periodRow->expense, 2),
+                'period_net' => round((float) $periodRow->income - (float) $periodRow->expense, 2),
             ],
             'categories' => FinancialCategory::query()
                 ->where('is_active', true)
@@ -361,9 +435,16 @@ class FinancialLedgerService
                 }
             }
         });
-        Purchase::query()->where('status', 'completed')->chunkById(200, function ($purchases) use (&$count) {
+        Purchase::query()->whereIn('status', ['completed', 'refunded'])->chunkById(200, function ($purchases) use (&$count) {
             foreach ($purchases as $purchase) {
                 if ($this->recordProductSale($purchase)->wasRecentlyCreated) {
+                    $count++;
+                }
+            }
+        });
+        PurchaseRefund::query()->chunkById(200, function ($refunds) use (&$count) {
+            foreach ($refunds as $refund) {
+                if ($this->recordProductRefund($refund)->wasRecentlyCreated) {
                     $count++;
                 }
             }
@@ -386,37 +467,44 @@ class FinancialLedgerService
         return $count;
     }
 
-    protected function record(array $data): FinancialTransaction
+    protected function record(array $data, ?string $connectionName = null): FinancialTransaction
     {
         $categoryId = $data['category_id']
-            ?? FinancialCategory::query()->where('code', $data['category_code'])->value('id');
+            ?? (new FinancialCategory)
+                ->setConnection($connectionName)
+                ->newQuery()
+                ->where('code', $data['category_code'])
+                ->value('id');
 
         if (! $categoryId || (float) $data['amount'] <= 0) {
             throw new \InvalidArgumentException('Financial transaction category and positive amount are required.');
         }
 
-        return FinancialTransaction::query()->firstOrCreate(
-            ['idempotency_key' => $data['idempotency_key']],
-            [
-                'gym_id' => $data['gym_id'],
-                'financial_category_id' => $categoryId,
-                'payment_method_id' => $data['payment_method_id'],
-                'card_type_id' => $data['card_type_id'] ?? null,
-                'direction' => $data['direction'],
-                'amount' => round((float) $data['amount'], 2),
-                'currency' => 'AMD',
-                'source_type' => $data['source_type'] ?? null,
-                'source_id' => $data['source_id'] ?? null,
-                'transaction_group_id' => $data['transaction_group_id'] ?? null,
-                'reversal_of_id' => $data['reversal_of_id'] ?? null,
-                'status' => 'posted',
-                'occurred_at' => $data['occurred_at'],
-                'created_by' => $data['created_by'] ?? null,
-                'description' => $data['description'] ?? null,
-                'reference' => $data['reference'] ?? null,
-                'metadata' => $data['metadata'] ?? null,
-            ],
-        );
+        return (new FinancialTransaction)
+            ->setConnection($connectionName)
+            ->newQuery()
+            ->firstOrCreate(
+                ['idempotency_key' => $data['idempotency_key']],
+                [
+                    'gym_id' => $data['gym_id'],
+                    'financial_category_id' => $categoryId,
+                    'payment_method_id' => $data['payment_method_id'],
+                    'card_type_id' => $data['card_type_id'] ?? null,
+                    'direction' => $data['direction'],
+                    'amount' => round((float) $data['amount'], 2),
+                    'currency' => 'AMD',
+                    'source_type' => $data['source_type'] ?? null,
+                    'source_id' => $data['source_id'] ?? null,
+                    'transaction_group_id' => $data['transaction_group_id'] ?? null,
+                    'reversal_of_id' => $data['reversal_of_id'] ?? null,
+                    'status' => 'posted',
+                    'occurred_at' => $data['occurred_at'],
+                    'created_by' => $data['created_by'] ?? null,
+                    'description' => $data['description'] ?? null,
+                    'reference' => $data['reference'] ?? null,
+                    'metadata' => $data['metadata'] ?? null,
+                ],
+            );
     }
 
     protected function applyFilters(Builder $query, array $filters): Builder

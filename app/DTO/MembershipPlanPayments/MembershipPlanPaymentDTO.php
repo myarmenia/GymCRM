@@ -13,6 +13,7 @@ class MembershipPlanPaymentDTO
         public string $type,
         public bool $is_hdm,
         public ?string $notes,
+        public ?int $parent_payment_id = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -26,6 +27,7 @@ class MembershipPlanPaymentDTO
             type: $data['type'] ?? 'payment',
             is_hdm: (bool) ($data['is_hdm'] ?? false),
             notes: $data['notes'] ?? null,
+            parent_payment_id: isset($data['parent_payment_id']) ? (int) $data['parent_payment_id'] : null,
         );
     }
 
@@ -40,6 +42,7 @@ class MembershipPlanPaymentDTO
             'type' => $this->type,
             'is_hdm' => $this->is_hdm,
             'notes' => $this->notes,
+            'parent_payment_id' => $this->parent_payment_id,
         ];
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EntryReport;
+use App\Models\AttendanceSheet;
 use App\Services\EntryReports\EntryReportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,10 +22,10 @@ class EntryReportController extends Controller
         );
     }
 
-    public function show(string $locale, EntryReport $entryReport)
+    public function show(string $locale, AttendanceSheet $attendance)
     {
         return response()->json(
-            $this->entryReportService->showData($entryReport)
+            $this->entryReportService->showData($attendance)
         );
     }
 

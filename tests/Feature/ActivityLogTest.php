@@ -20,6 +20,7 @@ use App\Services\People\PersonService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -175,6 +176,8 @@ class ActivityLogTest extends TestCase
 
     public function test_membership_sale_menu_mutations_create_before_and_after_logs(): void
     {
+        $this->travelTo('2026-08-03 09:00:00');
+
         $gym = Gym::query()->create(['name' => 'Main gym']);
         $actor = $this->userWithRole($gym, 'super_admin');
         $person = $this->person('Membership Customer');
@@ -219,27 +222,41 @@ class ActivityLogTest extends TestCase
             'end_date' => '2026-08-05',
             'notes' => 'Holiday',
         ]);
+        $service->update($sale->id, [
+            'membership_discount_ids' => [$discount->id],
+        ]);
         $service->storePayment($sale->id, [
             'is_full_payment' => true,
             'amount' => 6000,
             'payment_method_id' => $paymentMethod->id,
         ]);
-        $service->update($sale->id, [
-            'membership_discount_ids' => [$discount->id],
-        ]);
+        try {
+            $service->update($sale->id, [
+                'apply_discount' => true,
+                'discount_type' => 'fixed',
+                'discount_value' => 500,
+            ]);
+            $this->fail('A discount was added after the final payment.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('membership_discount_ids', $exception->errors());
+        }
         $service->cancelMembership($sale->id);
+        $parentPaymentId = $sale->payments()
+            ->whereNull('parent_payment_id')
+            ->oldest('id')
+            ->value('id');
         $service->storeRefund($sale->id, [
             'is_partial_refund' => true,
+            'parent_payment_id' => $parentPaymentId,
             'amount' => 2500,
-            'payment_method_id' => $paymentMethod->id,
         ]);
 
         $logs = ActivityLog::query()->orderBy('id')->get();
 
         $this->assertSame([
             'membership_sale.frozen',
-            'membership_sale.payment_added',
             'membership_sale.updated',
+            'membership_sale.payment_added',
             'membership_sale.cancelled',
             'membership_sale.refund_added',
         ], $logs->pluck('action')->all());

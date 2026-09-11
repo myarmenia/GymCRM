@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class TrainerSessionDuration extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'trainer_schedule_id',
         'title',

@@ -24,7 +24,14 @@ class UpdateDiscountRequest extends FormRequest
             'translations.*.name' => ['required', 'string', 'max:255'],
             'translations.*.description' => ['nullable', 'string'],
             'membership_plan_ids' => ['nullable', 'array'],
-            'membership_plan_ids.*' => ['integer', 'exists:membership_plans,id'],
+            'membership_plan_ids.*' => [
+                'integer',
+                Rule::exists('membership_plans', 'id')->where(function ($query): void {
+                    if ($this->user()?->gym_id !== null) {
+                        $query->where('gym_id', $this->user()->gym_id);
+                    }
+                }),
+            ],
         ];
     }
 

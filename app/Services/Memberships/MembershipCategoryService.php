@@ -5,6 +5,7 @@ namespace App\Services\Memberships;
 use App\DTO\Memberships\MembershipCategoryDTO;
 use App\Interfaces\Memberships\MembershipCategoryInterface;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class MembershipCategoryService
 {
@@ -66,11 +67,23 @@ class MembershipCategoryService
      */
     public function update(int $id, MembershipCategoryDTO $dto)
     {
-        $data = array_filter([
-            'gym_id' => $dto->gym_id,
+        $category = $this->membershipCategoryRepository->getWithTranslations($id);
+        $user = Auth::user();
+        $gymId = $user->hasRole('owner') && $dto->gym_id_provided
+            ? $dto->gym_id
+            : $category->gym_id;
+
+        if ($category->is_locked && (int) $category->gym_id !== (int) $gymId) {
+            throw ValidationException::withMessages([
+                'gym_id' => $category->lock_reason,
+            ]);
+        }
+
+        $data = [
+            'gym_id' => $gymId,
             'active' => $dto->active,
             'slug'   => $dto->slug,
-        ], fn($v) => !is_null($v));
+        ];
 
         return $this->membershipCategoryRepository->updateWithTranslations($id, $data, $dto->translations);
     }
@@ -80,6 +93,14 @@ class MembershipCategoryService
      */
     public function delete(int $id): bool
     {
+        $category = $this->membershipCategoryRepository->getWithTranslations($id);
+
+        if ($category->is_locked) {
+            throw ValidationException::withMessages([
+                'membership_category' => $category->lock_reason,
+            ]);
+        }
+
         return $this->membershipCategoryRepository->delete($id);
     }
 }

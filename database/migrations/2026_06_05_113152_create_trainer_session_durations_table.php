@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('trainer_session_durations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
 
             $table->foreignId('trainer_schedule_id')
                 ->constrained('trainer_schedules')

@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('card_types', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->string('name'); // Visa, MasterCard
             $table->timestamps();
         });

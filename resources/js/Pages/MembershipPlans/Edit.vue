@@ -1,10 +1,17 @@
 <script setup>
-import { computed, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, useForm, usePage } from "@inertiajs/vue3";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
+import {
+    existingSalaryPercentage,
+    fixedSalaryForPrice,
+    normalizePercentage,
+    salaryAmountFromPercentage,
+    salaryPercentageFromAmount,
+} from "@/utils/membershipSalary.js";
 
 const page = usePage();
 const currentLocale = computed(() => page.props.lang ?? "hy");
@@ -20,14 +27,20 @@ const getTrainerId = (trainer) => {
 };
 
 const isPlanLocked = computed(() => Boolean(props.membershipPlan.is_locked));
+const initialPrice = Number(props.membershipPlan.price ?? 0);
+const initialSalaryPercentage = existingSalaryPercentage(
+    initialPrice,
+    props.membershipPlan.price_type,
+    props.membershipPlan.price_value,
+);
 
 const form = useForm({
     membership_category_id: props.membershipPlan.membership_category_id ?? "",
 
     price: props.membershipPlan.price ?? 0,
 
-    price_type: props.membershipPlan.price_type ?? "fixed",
-    price_value: props.membershipPlan.price_value ?? 0,
+    price_type: "percent",
+    price_value: initialSalaryPercentage,
 
     duration_type: props.membershipPlan.duration_type ?? "month",
     duration_value: props.membershipPlan.duration_value ?? null,
@@ -53,13 +66,28 @@ const form = useForm({
         props.scheduleNames?.[0]?.id ??
         "",
     trainers:
-        props.membershipPlan.trainers?.map((item) => ({
-            trainer_id: Number(item.trainer_id),
-            price_type: item.price_type ?? "fixed",
-            price_value: Number(item.price_value ?? 0),
-            total_price: Number(item.total_price ?? 0),
-        })) ?? [],
+        props.membershipPlan.trainers?.map((item) => {
+            const percentage = existingSalaryPercentage(
+                initialPrice,
+                item.price_type,
+                item.price_value,
+            );
+
+            return {
+                trainer_id: Number(item.trainer_id),
+                price_type: "percent",
+                price_value: percentage,
+                total_price: salaryAmountFromPercentage(
+                    initialPrice,
+                    percentage,
+                ),
+            };
+        }) ?? [],
 });
+
+const salaryFixedAmount = ref(
+    salaryAmountFromPercentage(initialPrice, initialSalaryPercentage),
+);
 
 watch(currentLocale, () => {
     form.errors = {};
@@ -71,11 +99,6 @@ const durationTypes = [
     { value: "year", label: "Տարիներով" },
     { value: "visit", label: "Այցերի քանակով" },
     { value: "period", label: "Ժամանակահատվածով" },
-];
-
-const priceTypes = [
-    { value: "fixed", label: "Ֆիքսված գումար" },
-    { value: "percent", label: "Տոկոս" },
 ];
 
 const showDurationValue = computed(() =>
@@ -111,15 +134,32 @@ const getTrainerIndex = (trainerId) => {
 };
 
 const calculateTrainerTotalPrice = (trainer) => {
-    const price = Number(form.price || 0);
-    const value = Number(trainer.price_value || 0);
+    trainer.price_type = "percent";
+    trainer.total_price = salaryAmountFromPercentage(
+        form.price,
+        trainer.price_value,
+    );
+};
 
-    if (trainer.price_type === "percent") {
-        trainer.total_price = Number(((price * value) / 100).toFixed(2));
-        return;
-    }
+const updateSalaryFromPercentage = () => {
+    form.price_type = "percent";
+    form.price_value = normalizePercentage(form.price_value);
+    salaryFixedAmount.value = salaryAmountFromPercentage(
+        form.price,
+        form.price_value,
+    );
+};
 
-    trainer.total_price = Number(value.toFixed(2));
+const updateSalaryFromFixed = () => {
+    salaryFixedAmount.value = fixedSalaryForPrice(
+        form.price,
+        salaryFixedAmount.value,
+    );
+    form.price_type = "percent";
+    form.price_value = salaryPercentageFromAmount(
+        form.price,
+        salaryFixedAmount.value,
+    );
 };
 
 const toggleTrainer = (trainerId) => {
@@ -134,34 +174,35 @@ const toggleTrainer = (trainerId) => {
 
     form.trainers.push({
         trainer_id: id,
-        price_type: "fixed",
+        price_type: "percent",
         price_value: 0,
         total_price: 0,
     });
 };
 
-const updateTrainerPrice = (trainer) => {
-    if (trainer.price_type === "percent" && Number(trainer.price_value) > 100) {
-        trainer.price_value = 100;
-    }
-
-    if (Number(trainer.price_value) < 0) {
-        trainer.price_value = 0;
-    }
-
+const updateTrainerFromPercentage = (trainer) => {
+    trainer.price_type = "percent";
+    trainer.price_value = normalizePercentage(trainer.price_value);
     calculateTrainerTotalPrice(trainer);
 };
 
-const changeTrainerPriceType = (trainer) => {
-    trainer.price_value = 0;
-    trainer.total_price = 0;
-
-    updateTrainerPrice(trainer);
+const updateTrainerFromFixed = (trainer) => {
+    trainer.price_type = "percent";
+    trainer.total_price = fixedSalaryForPrice(form.price, trainer.total_price);
+    trainer.price_value = salaryPercentageFromAmount(
+        form.price,
+        trainer.total_price,
+    );
 };
 
 watch(
     () => form.price,
     () => {
+        salaryFixedAmount.value = salaryAmountFromPercentage(
+            form.price,
+            form.price_value,
+        );
+
         form.trainers.forEach((trainer) => {
             calculateTrainerTotalPrice(trainer);
         });
@@ -174,12 +215,6 @@ watch(
         if (form.duration_type === "day") {
             form.visits_limit = value;
         }
-    },
-);
-watch(
-    () => form.price_type,
-    () => {
-        form.price_value = 0;
     },
 );
 watch(
@@ -299,7 +334,7 @@ const submit = () => {
                     <InputLabel value="Գին" />
 
                     <input
-                        v-model="form.price"
+                        v-model.number="form.price"
                         type="number"
                         min="0"
                         step="0.01"
@@ -312,42 +347,37 @@ const submit = () => {
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <InputLabel value="Աշխատավարձ" />
-
-                        <select
-                            v-model="form.price_type"
-                            class="form-select"
-                            :disabled="isPlanLocked"
-                        >
-                            <option value="fixed">Ֆիքսված գումար</option>
-
-                            <option value="percent">Տոկոս</option>
-                        </select>
-
-                        <InputError :message="form.errors.price_type" />
-                    </div>
-
-                    <div class="col-md-6">
-                        <InputLabel
-                            :value="
-                                form.price_type === 'percent'
-                                    ? 'Տոկոս (%)'
-                                    : 'Գումար'
-                            "
-                        />
+                        <InputLabel value="Աշխատավարձ (%)" />
 
                         <input
                             v-model.number="form.price_value"
                             type="number"
                             min="0"
-                            :max="form.price_type === 'percent' ? 100 : null"
-                            step="0.01"
+                            max="100"
+                            step="0.000001"
                             class="form-control"
                             :disabled="isPlanLocked"
                             @wheel.prevent
+                            @input="updateSalaryFromPercentage"
                         />
 
                         <InputError :message="form.errors.price_value" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <InputLabel value="Աշխատավարձ (ֆիքսված)" />
+
+                        <input
+                            v-model.number="salaryFixedAmount"
+                            type="number"
+                            min="0"
+                            :max="Number(form.price || 0)"
+                            step="0.01"
+                            class="form-control"
+                            :disabled="isPlanLocked || Number(form.price || 0) <= 0"
+                            @wheel.prevent
+                            @input="updateSalaryFromFixed"
+                        />
                     </div>
                 </div>
 
@@ -580,63 +610,7 @@ const submit = () => {
                                         @click.stop
                                     >
                                         <div class="mb-3">
-                                            <InputLabel value="Գնի տեսակ" />
-
-                                            <select
-                                                v-model="
-                                                    form.trainers[
-                                                        getTrainerIndex(
-                                                            trainer.pivot
-                                                                ?.user_id ??
-                                                                trainer.id,
-                                                        )
-                                                    ].price_type
-                                                "
-                                                class="form-select"
-                                                @change="
-                                                    changeTrainerPriceType(
-                                                        form.trainers[
-                                                            getTrainerIndex(
-                                                                trainer.pivot
-                                                                    ?.user_id ??
-                                                                    trainer.id,
-                                                            )
-                                                        ],
-                                                    )
-                                                "
-                                            >
-                                                <option
-                                                    v-for="item in priceTypes"
-                                                    :key="item.value"
-                                                    :value="item.value"
-                                                >
-                                                    {{ item.label }}
-                                                </option>
-                                            </select>
-
-                                            <InputError
-                                                :message="
-                                                    form.errors[
-                                                        `trainers.${getTrainerIndex(trainer.pivot?.user_id ?? trainer.id)}.price_type`
-                                                    ]
-                                                "
-                                            />
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <InputLabel
-                                                :value="
-                                                    form.trainers[
-                                                        getTrainerIndex(
-                                                            trainer.pivot
-                                                                ?.user_id ??
-                                                                trainer.id,
-                                                        )
-                                                    ].price_type === 'percent'
-                                                        ? 'Տոկոս'
-                                                        : 'Ֆիքսված գումար'
-                                                "
-                                            />
+                                            <InputLabel value="Աշխատավարձ (%)" />
 
                                             <input
                                                 v-model.number="
@@ -650,21 +624,12 @@ const submit = () => {
                                                 "
                                                 type="number"
                                                 min="0"
-                                                :max="
-                                                    form.trainers[
-                                                        getTrainerIndex(
-                                                            trainer.pivot
-                                                                ?.user_id ??
-                                                                trainer.id,
-                                                        )
-                                                    ].price_type === 'percent'
-                                                        ? 100
-                                                        : null
-                                                "
-                                                step="0.01"
+                                                max="100"
+                                                step="0.000001"
                                                 class="form-control"
+                                                @wheel.prevent
                                                 @input="
-                                                    updateTrainerPrice(
+                                                    updateTrainerFromPercentage(
                                                         form.trainers[
                                                             getTrainerIndex(
                                                                 trainer.pivot
@@ -686,12 +651,10 @@ const submit = () => {
                                         </div>
 
                                         <div>
-                                            <InputLabel
-                                                value="Ընդհանուր գումար"
-                                            />
+                                            <InputLabel value="Աշխատավարձ (ֆիքսված)" />
 
                                             <input
-                                                v-model="
+                                                v-model.number="
                                                     form.trainers[
                                                         getTrainerIndex(
                                                             trainer.pivot
@@ -701,15 +664,22 @@ const submit = () => {
                                                     ].total_price
                                                 "
                                                 type="number"
-                                                readonly
-                                                class="form-control bg-light"
-                                            />
-
-                                            <InputError
-                                                :message="
-                                                    form.errors[
-                                                        `trainers.${getTrainerIndex(trainer.pivot?.user_id ?? trainer.id)}.total_price`
-                                                    ]
+                                                min="0"
+                                                :max="Number(form.price || 0)"
+                                                step="0.01"
+                                                class="form-control"
+                                                :disabled="Number(form.price || 0) <= 0"
+                                                @wheel.prevent
+                                                @input="
+                                                    updateTrainerFromFixed(
+                                                        form.trainers[
+                                                            getTrainerIndex(
+                                                                trainer.pivot
+                                                                    ?.user_id ??
+                                                                    trainer.id,
+                                                            )
+                                                        ],
+                                                    )
                                                 "
                                             />
                                         </div>

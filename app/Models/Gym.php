@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,9 +10,25 @@ use Illuminate\Support\Facades\Storage;
 
 class Gym extends Model
 {
-    use SoftDeletes;
+    use HasUuidAndVersion, SoftDeletes;
+
+    public const TRAINER_SALARY_MODE_PREPAID = 'prepaid';
+
+    public const TRAINER_SALARY_MODE_POSTPAID = 'postpaid';
 
     protected $guarded = [];
+
+    protected $hidden = [
+        'version',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'version' => 'integer',
+            'trainer_salary_mode' => 'string',
+        ];
+    }
 
     public function warehouses()
     {
@@ -61,7 +78,8 @@ class Gym extends Model
     public function languages()
     {
         return $this->belongsToMany(Lang::class, 'gym_languages')
-            ->withPivot('active');
+            ->using(GymLanguage::class)
+            ->withPivot(['active', 'uuid', 'version']);
 
     }
 

@@ -3,12 +3,12 @@
 namespace App\Services\People;
 
 use App\Models\AttendanceSheet;
-use App\Models\EntryReport;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PersonVisitService
@@ -37,13 +37,11 @@ class PersonVisitService
             ->get();
 
         $recentAttendances = AttendanceSheet::query()
-            ->with('membershipPlan.translations')
+            ->with('personMemberships.membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
-                    $membershipPlanQuery->where('gym_id', $user->gym_id);
-                });
+                $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
@@ -51,13 +49,11 @@ class PersonVisitService
             ->get();
 
         $lastAttendance = AttendanceSheet::query()
-            ->with('membershipPlan.translations')
+            ->with('personMemberships.membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
-                    $membershipPlanQuery->where('gym_id', $user->gym_id);
-                });
+                $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
@@ -74,7 +70,7 @@ class PersonVisitService
     public function storeManualVisit(
         int $personId,
         string $action,
-        ?int $membershipId = null,
+        ?int $membershipId,
         string $manualDateTime,
     ): AttendanceSheet
     {
@@ -87,26 +83,21 @@ class PersonVisitService
             $membership = $this->activateWaitingMembership($membership, $now);
             $membership = $this->consumeVisitIfNeeded($membership);
 
-            $attendance = AttendanceSheet::create([
-                'relation_id' => $person->id,
-                'relation_type' => Person::class,
-                'membership_plan_id' => $membership->membership_plan_id,
-                'entry_code' => 'manual',
-                'date' => $now,
-                'type' => 'manual',
-                'direction' => 'entry',
-                'online' => 1,
-            ]);
+            return DB::transaction(function () use ($person, $membership, $now): AttendanceSheet {
+                $attendance = AttendanceSheet::create([
+                    'relation_id' => $person->id,
+                    'relation_type' => Person::class,
+                    'gym_id' => $membership->gym_id,
+                    'entry_code' => 'manual',
+                    'date' => $now,
+                    'type' => 'manual',
+                    'direction' => 'entry',
+                    'online' => 1,
+                ]);
+                $attendance->personMemberships()->sync([$membership->id]);
 
-            $this->createManualEntryReport(
-                person: $person,
-                membership: $membership,
-                attendance: $attendance,
-                action: 'entry',
-                detectedAt: $now,
-            );
-
-            return $attendance;
+                return $attendance;
+            });
         }
 
         $lastAttendanceBeforeOrAt = $this->lastAttendanceBeforeOrAt($person, $now);
@@ -124,28 +115,21 @@ class PersonVisitService
             ]);
         }
 
-        $attendance = AttendanceSheet::create([
-            'relation_id' => $person->id,
-            'relation_type' => Person::class,
-            'membership_plan_id' => $lastEntry->membership_plan_id,
-            'entry_code' => 'manual',
-            'date' => $now,
-            'type' => 'manual',
-            'direction' => 'exit',
-            'online' => 1,
-        ]);
+        return DB::transaction(function () use ($person, $lastEntry, $now): AttendanceSheet {
+            $attendance = AttendanceSheet::create([
+                'relation_id' => $person->id,
+                'relation_type' => Person::class,
+                'gym_id' => $lastEntry->gym_id,
+                'entry_code' => 'manual',
+                'date' => $now,
+                'type' => 'manual',
+                'direction' => 'exit',
+                'online' => 1,
+            ]);
+            $attendance->personMemberships()->sync($lastEntry->personMemberships()->pluck('id')->all());
 
-        $membership = $this->membershipForAttendancePlan($person, $lastEntry->membership_plan_id, $user);
-
-        $this->createManualEntryReport(
-            person: $person,
-            membership: $membership,
-            attendance: $attendance,
-            action: 'exit',
-            detectedAt: $now,
-        );
-
-        return $attendance;
+            return $attendance;
+        });
     }
 
     protected function personQueryForUser(User $user)
@@ -257,9 +241,7 @@ class PersonVisitService
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
-                    $membershipPlanQuery->where('gym_id', $user->gym_id);
-                });
+                $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
@@ -275,9 +257,7 @@ class PersonVisitService
             ->where('relation_id', $person->id)
             ->where('date', '<=', $beforeOrAt)
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
-                    $membershipPlanQuery->where('gym_id', $user->gym_id);
-                });
+                $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
@@ -289,109 +269,20 @@ class PersonVisitService
         $user = Auth::user();
 
         return AttendanceSheet::query()
+            ->with('personMemberships')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->where('direction', 'entry')
-            ->whereNotNull('membership_plan_id')
+            ->whereHas('personMemberships')
             ->when($beforeOrAt, function ($query) use ($beforeOrAt) {
                 $query->where('date', '<=', $beforeOrAt);
             })
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->whereHas('membershipPlan', function ($membershipPlanQuery) use ($user) {
-                    $membershipPlanQuery->where('gym_id', $user->gym_id);
-                });
+                $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
             ->first();
     }
 
-    protected function membershipForAttendancePlan(Person $person, ?int $membershipPlanId, User $user): ?PersonMembership
-    {
-        if (!$membershipPlanId) {
-            return null;
-        }
-
-        return PersonMembership::query()
-            ->with([
-                'membershipPlan.translations',
-                'membershipPlan.MembershipCategory.translations',
-            ])
-            ->where('person_id', $person->id)
-            ->where('membership_plan_id', $membershipPlanId)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
-                $query->where('gym_id', $user->gym_id);
-            })
-            ->latest('id')
-            ->first();
-    }
-
-    protected function createManualEntryReport(
-        Person $person,
-        ?PersonMembership $membership,
-        AttendanceSheet $attendance,
-        string $action,
-        Carbon $detectedAt,
-    ): EntryReport {
-        return EntryReport::create([
-            'client_id' => $membership?->gym_id ?? Auth::user()?->gym_id,
-            'entry_code' => 'manual',
-            'owner_type' => 'person',
-            'owner_id' => $person->id,
-            'action' => $action,
-            'status' => 'success',
-            'reason' => 'success',
-            'access_allowed' => true,
-            'mac' => null,
-            'device_time' => $detectedAt,
-            'detected_at' => $detectedAt,
-            'payload' => [
-                'status' => 'success',
-                'access_allowed' => true,
-                'owner_type' => 'person',
-                'action' => $action,
-                'source' => 'visit_management_manual',
-                'person' => $this->personPayload($person),
-                'selected_membership' => $membership ? $this->membershipPayload($membership) : null,
-                'attendance_id' => $attendance->id,
-                'date' => $attendance->date,
-                'entry_code' => 'manual',
-                'client_id' => $membership?->gym_id ?? Auth::user()?->gym_id,
-                'detected_at' => $detectedAt->toDateTimeString(),
-            ],
-        ]);
-    }
-
-    protected function personPayload(Person $person): array
-    {
-        return [
-            'id' => $person->id,
-            'name' => $person->name,
-            'surname' => $person->surname ?? null,
-            'birth_date' => $person->birth_date ?? null,
-            'phone' => $person->phone ?? null,
-            'email' => $person->email ?? null,
-            'type' => $person->type ?? null,
-            'image' => $person->image ?? null,
-        ];
-    }
-
-    protected function membershipPayload(PersonMembership $membership): array
-    {
-        $plan = $membership->membershipPlan;
-        $category = $plan?->MembershipCategory;
-
-        return [
-            'id' => $membership->id,
-            'status' => $membership->status,
-            'start_date' => optional($membership->start_date)->toDateString() ?? $membership->start_date,
-            'valid_at' => optional($membership->valid_at)->toDateString() ?? $membership->valid_at,
-            'end_date' => optional($membership->end_date)->toDateString() ?? $membership->end_date,
-            'membership_plan_id' => $membership->membership_plan_id,
-            'membership_plan_name' => $plan?->name,
-            'membership_category_id' => $plan?->membership_category_id,
-            'membership_category_name' => $category?->name,
-            'visits_left' => $membership->visits_left,
-        ];
-    }
 }

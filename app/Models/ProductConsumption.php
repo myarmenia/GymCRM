@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductConsumption extends Model
 {
+    use HasUuidAndVersion;
+
     protected $fillable = [
         'product_id',
         'consumption_quantity',

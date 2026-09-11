@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('company_translations', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('locale');
             $table->string('name')->nullable();

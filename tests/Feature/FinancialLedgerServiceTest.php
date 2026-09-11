@@ -47,6 +47,7 @@ class FinancialLedgerServiceTest extends TestCase
         $this->assertSame(12500.0, $summary['cash_balance']);
         $this->assertSame(12500.0, $summary['income']);
         $this->assertSame(0.0, $summary['expense']);
+        $this->assertSame(12500.0, $summary['period_net']);
     }
 
     public function test_manual_transaction_can_be_reversed_without_losing_history(): void

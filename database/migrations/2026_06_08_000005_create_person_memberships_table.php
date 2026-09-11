@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('person_memberships', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
+            $table->unsignedBigInteger('version')->default(1);
             $table->foreignId('membership_sale_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('person_id')->constrained('people')->cascadeOnDelete();

@@ -15,17 +15,22 @@ use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
+use App\Models\Gym;
 use App\Models\MembershipPlan;
+use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
 use App\Models\PaymentMethod;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
+use App\Models\TrainerMonthlySalary;
 use App\Models\User;
-use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Audit\MembershipSaleAuditService;
 use App\Services\Finance\FinancialLedgerService;
+use App\Services\Hdm\HdmPrepaymentTerminationService;
+use App\Services\Memberships\MembershipSalaryCalculator;
+use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Reminders\ReminderService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
@@ -47,6 +52,8 @@ class MembershipSaleService
         protected FinancialLedgerService $financialLedgerService,
         protected ReminderService $reminderService,
         protected MembershipSaleAuditService $membershipSaleAuditService,
+        protected MembershipSalaryCalculator $salaryCalculator,
+        protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -152,6 +159,72 @@ class MembershipSaleService
     public function paymentPageData(int $id): array
     {
         $membershipSale = $this->getById($id);
+        $membershipSale->loadMissing('payments.hdmOperations');
+        $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
+        $returnedOperationIds = $hdmOperations
+            ->where('transaction_type', 'refund')
+            ->where('status', 'success')
+            ->pluck('parent_operation_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+        $lastReturnedFinalPaymentId = $hdmOperations
+            ->where('transaction_type', 'sale')
+            ->where('status', 'success')
+            ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                && $returnedOperationIds->contains((int) $operation->id))
+            ->max('operationable_id');
+        $finalHdmOperation = $hdmOperations
+            ->where('transaction_type', 'sale')
+            ->where('status', 'success')
+            ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                && ! $returnedOperationIds->contains((int) $operation->id))
+            ->sortByDesc('id')
+            ->first();
+
+        $membershipSale->payments->each(function (MembershipPlanPayment $payment) use ($lastReturnedFinalPaymentId): void {
+            $refundedAmount = $payment->type === 'payment'
+                ? (float) $payment->refunds()->where('status', 'paid')->sum('amount')
+                : 0;
+            $isClosedByReturnedReceipt = $payment->type === 'payment'
+                && $lastReturnedFinalPaymentId
+                && (int) $payment->id <= (int) $lastReturnedFinalPaymentId;
+            $saleOperations = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->sortByDesc('id');
+            $latestSaleOperation = $saleOperations->first();
+            $successfulSaleOperation = $saleOperations->first(fn ($operation) => $operation->status === 'success'
+                && $operation->crn
+                && $operation->rseq);
+
+            $payment->setAttribute('refunded_amount', $refundedAmount);
+            $payment->setAttribute('refundable_amount', $payment->type === 'payment' && ! $isClosedByReturnedReceipt
+                ? max((float) $payment->amount - $refundedAmount, 0)
+                : 0);
+            $payment->setAttribute('hdm_payment_closed_by_return', (bool) $isClosedByReturnedReceipt);
+            $payment->setAttribute('has_successful_hdm_operation', $payment->type === 'payment'
+                && $successfulSaleOperation !== null);
+            $payment->setAttribute('hdm_print_status', $latestSaleOperation?->status);
+            $payment->setAttribute('can_retry_hdm_receipt', $payment->type === 'payment'
+                && $payment->status === 'paid'
+                && $payment->is_hdm
+                && $successfulSaleOperation === null
+                && ($latestSaleOperation === null || $latestSaleOperation->status === 'failed'));
+        });
+        $membershipSale->payments->each(function (MembershipPlanPayment $payment) use ($finalHdmOperation): void {
+            $isFinalHdmPayment = $finalHdmOperation
+                && $payment->type === 'payment'
+                && (int) $payment->id === (int) $finalHdmOperation->operationable_id;
+            $isConsumedPrepayment = $finalHdmOperation
+                && $payment->type === 'payment'
+                && $payment->is_hdm
+                && (int) $payment->id !== (int) $finalHdmOperation->operationable_id
+                && $payment->hdmOperations->contains(fn ($operation) => $operation->transaction_type === 'sale'
+                    && $operation->status === 'success'
+                    && (int) data_get($operation->request, 'mode') === 3);
+
+            $payment->setAttribute('is_final_hdm_payment', (bool) $isFinalHdmPayment);
+            $payment->setAttribute('hdm_prepayment_consumed', (bool) $isConsumedPrepayment);
+        });
         $paymentMethods = PaymentMethod::query()
             ->with(['translations', 'cardTypes'])
             ->orderBy('id')
@@ -164,7 +237,7 @@ class MembershipSaleService
             'refundedAmount' => $this->refundedAmount($membershipSale),
             'netPaidAmount' => $this->netPaidAmount($membershipSale),
             'debtAmount' => $this->debtAmount($membershipSale),
-            'availableRefundAmount' => $this->availableRefundAmount($membershipSale),
+            'availableRefundAmount' => $this->refundablePaidAmount($membershipSale),
         ];
     }
 
@@ -265,6 +338,13 @@ class MembershipSaleService
                 ->where('trainer_commission_id', $oldTrainerCommission->id)
                 ->sum('available_amount');
             $remainingAmount = max($oldRemainingAmount - $outstandingGeneratedAmount, 0);
+            $membershipInstallmentCount = $this->trainerMonthlySalaryService
+                ->installmentCountForMembership($personMembership);
+            $lastProcessedInstallment = (int) TrainerMonthlySalary::query()
+                ->where('person_membership_id', $personMembership->id)
+                ->max('installment_number');
+            $nextInstallment = max($lastProcessedInstallment + 1, 1);
+            $remainingInstallments = max($membershipInstallmentCount - $nextInstallment + 1, 0);
 
             $oldTrainerCommission->update([
                 'salary_amount' => $outstandingGeneratedAmount,
@@ -284,6 +364,11 @@ class MembershipSaleService
                     'salary_type' => $commissionData['type'],
                     'salary_value' => $commissionData['value'],
                     'salary_amount' => $remainingAmount,
+                    'initial_salary_amount' => $remainingAmount,
+                    'calculation_mode' => $oldTrainerCommission->calculation_mode
+                        ?? Gym::TRAINER_SALARY_MODE_PREPAID,
+                    'salary_start_installment' => $nextInstallment,
+                    'salary_installment_count' => $remainingInstallments,
                     'status' => 'pending',
                     'paid_at' => null,
                     'is_kept' => $this->shouldKeepTrainerCommissionForSale($membershipSale),
@@ -310,12 +395,13 @@ class MembershipSaleService
         }
     }
 
-    public function storePayment(int $id, array $data): MembershipSale
+    public function storePayment(int $id, array $data): MembershipPlanPayment
     {
         DB::beginTransaction();
 
         try {
             $membershipSale = $this->getById($id);
+            $data['is_hdm'] = $this->paymentHdmMode($membershipSale, $data);
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $debtAmount = $this->debtAmount($membershipSale);
             $paymentAmount = $this->resolveAdditionalPaymentAmount($data, $debtAmount);
@@ -360,7 +446,14 @@ class MembershipSaleService
 
             DB::commit();
 
-            return $this->getById($membershipSale->id);
+            return $payment->load([
+                'membershipSale.membershipPlan.translations',
+                'membershipSale.discounts',
+                'membershipSale.payments.refunds',
+                'membershipSale.payments.hdmOperations',
+                'paymentMethod',
+                'cardType',
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
@@ -391,12 +484,14 @@ class MembershipSaleService
         );
     }
 
-    public function storeRefund(int $id, array $data): MembershipSale
+    public function storeRefund(int $id, array $data): MembershipPlanPayment
     {
         DB::beginTransaction();
 
         try {
             $membershipSale = $this->getById($id);
+            $this->paymentHdmMode($membershipSale, $data);
+            $membershipSale->loadMissing('payments.hdmOperations');
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
 
             if ($this->paidAmount($membershipSale) <= 0) {
@@ -405,11 +500,72 @@ class MembershipSaleService
                 ]);
             }
 
-            $availableRefundAmount = $this->availableRefundAmount($membershipSale);
+            $selectedPayment = $this->resolveOriginalPaymentForRefund(
+                $membershipSale,
+                (int) $data['parent_payment_id'],
+                0,
+            );
+            $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
+            $returnedOperationIds = $hdmOperations
+                ->where('transaction_type', 'refund')
+                ->where('status', 'success')
+                ->pluck('parent_operation_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id);
+            $lastReturnedFinalPaymentId = $hdmOperations
+                ->where('transaction_type', 'sale')
+                ->where('status', 'success')
+                ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                    && $returnedOperationIds->contains((int) $operation->id))
+                ->max('operationable_id');
+            $finalOperation = $hdmOperations
+                ->where('transaction_type', 'sale')
+                ->where('status', 'success')
+                ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                    && ! $returnedOperationIds->contains((int) $operation->id))
+                ->sortByDesc('id')
+                ->first();
+
+            if ($lastReturnedFinalPaymentId
+                && (int) $selectedPayment->id <= (int) $lastReturnedFinalPaymentId) {
+                throw ValidationException::withMessages([
+                    'parent_payment_id' => 'Այս վճարումն արդեն ներառված է ամբողջությամբ վերադարձված ՀԴՄ կտրոնում։',
+                ]);
+            }
+
+            $isFinalHdmReceipt = $selectedPayment->is_hdm && $finalOperation;
+
+            if ($isFinalHdmReceipt
+                && (int) $selectedPayment->id !== (int) $finalOperation->operationable_id) {
+                throw ValidationException::withMessages([
+                    'parent_payment_id' => 'Կանխավճարն արդեն ներառված է վերջնական ՀԴՄ կտրոնում։ Վերադարձի համար ընտրեք վերջնական ՀԴՄ կտրոնը։',
+                ]);
+            }
+
+            if ($isFinalHdmReceipt && empty($data['is_full_refund'])) {
+                throw ValidationException::withMessages([
+                    'is_full_refund' => 'Մեկ ապրանքով վերջնական ՀԴՄ կտրոնը հնարավոր է վերադարձնել միայն ամբողջությամբ։',
+                ]);
+            }
+
+            $originalPayment = $isFinalHdmReceipt
+                ? MembershipPlanPayment::query()->findOrFail($finalOperation->operationable_id)
+                : $selectedPayment;
+
+            if ($isFinalHdmReceipt) {
+                $availableRefundAmount = $this->refundablePaidAmount($membershipSale);
+            } else {
+                $alreadyRefunded = (float) $originalPayment->refunds()
+                    ->where('status', 'paid')
+                    ->sum('amount');
+                $paymentRefundableAmount = max((float) $originalPayment->amount - $alreadyRefunded, 0);
+                $availableRefundAmount = min($this->refundablePaidAmount($membershipSale), $paymentRefundableAmount);
+            }
+
             $refundAmount = $this->resolveRefundAmount($data, $availableRefundAmount);
 
-            $paymentMethod = $this->resolvePaymentMethod($data['payment_method_id'] ?? null, $refundAmount);
-            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $data['card_type_id'] ?? null);
+            $paymentMethod = $this->resolvePaymentMethod($originalPayment->payment_method_id, $refundAmount);
+            $cardTypeId = $this->resolveCardTypeId($paymentMethod, $originalPayment->card_type_id);
 
             $payment = $this->membershipPlanPaymentRepository->create(
                 $this->paymentDtoData([
@@ -417,13 +573,16 @@ class MembershipSaleService
                     'amount' => $refundAmount,
                     'payment_method_id' => $paymentMethod->id,
                     'card_type_id' => $cardTypeId,
-                    'status' => 'paid',
+                    'status' => $originalPayment->is_hdm ? 'pending' : 'paid',
                     'type' => 'refund',
-                    'is_hdm' => $data['is_hdm'] ?? false,
+                    'is_hdm' => $originalPayment->is_hdm,
                     'notes' => $data['refund_notes'] ?? null,
+                    'parent_payment_id' => $originalPayment->id,
                 ])
             );
-            $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
+            if (! $payment->is_hdm) {
+                $this->financialLedgerService->recordMembershipPayment($payment, Auth::id());
+            }
 
             $membershipSale->update([
                 'payment_status' => $this->recalculatedPaymentStatus($membershipSale->fresh()),
@@ -438,7 +597,10 @@ class MembershipSaleService
 
             DB::commit();
 
-            return $this->getById($membershipSale->id);
+            return $payment->load([
+                'membershipSale.membershipPlan.translations',
+                'originalPayment',
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
@@ -451,6 +613,13 @@ class MembershipSaleService
 
         try {
             $membershipSale = $this->getById($id);
+            $termination = $this->hdmPrepaymentTerminationService->pageData($membershipSale);
+            if ($termination['requires_workflow']) {
+                throw ValidationException::withMessages([
+                    'membership_sale_id' => $termination['reason']
+                        ?? 'ՀԴՄ կանխավճարով վաճառքը պետք է խզել կանխավճարի վերադարձի բաժնից։',
+                ]);
+            }
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
             $personMembership = $membershipSale->personMemberships->first();
 
@@ -463,6 +632,11 @@ class MembershipSaleService
             $personMembership->update([
                 'status' => 'cancelled',
             ]);
+
+            $this->trainerMonthlySalaryService->stopFutureGenerationForMembership(
+                $personMembership,
+                'membership_cancelled',
+            );
 
             $this->reminderService->cancelForMembershipSale($membershipSale->id);
 
@@ -492,6 +666,7 @@ class MembershipSaleService
                 'translations',
                 'discounts' => fn ($query) => $this->activeDiscountQuery($query)->with('translations'),
                 'trainers',
+                'gym:id,name,trainer_salary_mode',
             ])
             ->where('active', true)
             ->when(! $user->hasRole('owner'), function ($query) use ($user) {
@@ -550,6 +725,12 @@ class MembershipSaleService
 
     public function store(array $data)
     {
+        if (! empty($data['apply_discount']) && ($data['discount_type'] ?? null) !== 'percent') {
+            throw ValidationException::withMessages([
+                'discount_type' => 'Թույլատրվում է միայն տոկոսային զեղչ։',
+            ]);
+        }
+
         DB::beginTransaction();
 
         try {
@@ -589,6 +770,7 @@ class MembershipSaleService
                     'notes' => $data['notes'] ?? null,
                     'discount_membership_amount' => $discountData['membership_amount'],
                     'sold_at' => now()->toDateTimeString(),
+                    'is_hdm' => (bool) ($data['is_hdm'] ?? false),
                 ])
             );
 
@@ -658,6 +840,11 @@ class MembershipSaleService
             if (! empty($data['trainer_id'])) {
                 $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
+                $salaryInstallmentCount = $this->trainerMonthlySalaryService
+                    ->installmentCountForMembership($personMembership);
+                $salaryMode = Gym::query()
+                    ->whereKey($gymId)
+                    ->value('trainer_salary_mode') ?? Gym::TRAINER_SALARY_MODE_PREPAID;
 
                 $trainerCommission = $this->trainerCommissionRepository->create(
                     $this->trainerCommissionDtoData([
@@ -667,6 +854,10 @@ class MembershipSaleService
                         'salary_type' => $commissionData['type'],
                         'salary_value' => $commissionData['value'],
                         'salary_amount' => $commissionData['amount'],
+                        'initial_salary_amount' => $commissionData['amount'],
+                        'calculation_mode' => $salaryMode,
+                        'salary_start_installment' => 1,
+                        'salary_installment_count' => $salaryInstallmentCount,
                         'status' => 'pending',
                         'paid_at' => null,
                         'is_kept' => $this->shouldKeepTrainerCommission($paymentAmount, $finalPrice, $paymentMethodId),
@@ -771,6 +962,16 @@ class MembershipSaleService
                 array_map('intval', $data['membership_discount_ids'] ?? []),
                 $existingDiscountIds
             ));
+            $hasExistingManualDiscount = (float) ($membershipSale->discount_amount ?? 0) > 0;
+
+            if ($this->discountsLocked($membershipSale)
+                && (! empty($newDiscountIds)
+                    || (! $hasExistingManualDiscount && ! empty($data['apply_discount'])))) {
+                throw ValidationException::withMessages([
+                    'membership_discount_ids' => 'Վերջնական վճարումից հետո վաճառքի զեղչերը հնարավոր չէ փոփոխել։',
+                ]);
+            }
+
             $newDiscounts = $this->getMembershipAttachedDiscounts($membershipPlan, $newDiscountIds);
             $discounts = $existingDiscountRecords
                 ->map(fn ($discountRecord) => (object) [
@@ -781,7 +982,6 @@ class MembershipSaleService
                 ])
                 ->concat($newDiscounts);
             $totalPrice = (float) $membershipSale->total_price;
-            $hasExistingManualDiscount = (float) ($membershipSale->discount_amount ?? 0) > 0;
             $discountData = $this->calculateDiscount(
                 $discounts,
                 $totalPrice,
@@ -814,6 +1014,7 @@ class MembershipSaleService
                 'notes' => $membershipSale->notes,
                 'discount_membership_amount' => $discountData['membership_amount'],
                 'sold_at' => $membershipSale->sold_at?->toDateTimeString() ?? now()->toDateTimeString(),
+                'is_hdm' => $membershipSale->is_hdm,
             ]));
 
             foreach ($discountData['membership_discounts'] as $membershipDiscountData) {
@@ -849,6 +1050,36 @@ class MembershipSaleService
     public function delete(int $id): bool
     {
         return $this->getById($id)->delete();
+    }
+
+    public function discountsLocked(MembershipSale $membershipSale): bool
+    {
+        $membershipSale->loadMissing('payments.hdmOperations');
+        $paidAmount = (float) $membershipSale->payments
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->sum('amount');
+        $refundedAmount = (float) $membershipSale->payments
+            ->where('type', 'refund')
+            ->where('status', 'paid')
+            ->sum('amount');
+        $netPaidAmount = max($paidAmount - $refundedAmount, 0);
+        $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
+        $returnedOperationIds = $hdmOperations
+            ->where('transaction_type', 'refund')
+            ->where('status', 'success')
+            ->pluck('parent_operation_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+        $hasActiveFinalHdmReceipt = $hdmOperations
+            ->where('transaction_type', 'sale')
+            ->where('status', 'success')
+            ->contains(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
+                && ! $returnedOperationIds->contains((int) $operation->id));
+
+        return $hasActiveFinalHdmReceipt
+            || ((float) $membershipSale->final_price > 0
+                && round($netPaidAmount, 2) >= round((float) $membershipSale->final_price, 2));
     }
 
     protected function getMembershipPlan(int $id, User $user): MembershipPlan
@@ -1091,9 +1322,15 @@ class MembershipSaleService
         return max($this->paidAmount($membershipSale) - $this->refundedAmount($membershipSale), 0);
     }
 
+    protected function refundablePaidAmount(MembershipSale $membershipSale): float
+    {
+        return $this->netPaidAmount($membershipSale);
+    }
+
     protected function debtAmount(MembershipSale $membershipSale): float
     {
-        if ($this->isMembershipCancelled($membershipSale)) {
+        if ($this->isMembershipCancelled($membershipSale)
+            || $membershipSale->payment_status === 'cancelled') {
             return 0;
         }
 
@@ -1110,12 +1347,41 @@ class MembershipSaleService
         }
 
         if ($this->isMembershipCancelled($membershipSale)) {
-            return max($paidAmount - $refundedAmount, 0);
+            return max(
+                $paidAmount
+                    - $refundedAmount
+                    - $this->hdmPrepaymentTerminationService->settledServiceAmount($membershipSale),
+                0,
+            );
         }
 
         $overpaidAmount = max($paidAmount - (float) $membershipSale->final_price, 0);
 
         return max($overpaidAmount - $refundedAmount, 0);
+    }
+
+    protected function resolveOriginalPaymentForRefund(
+        MembershipSale $membershipSale,
+        int $paymentId,
+        float $refundAmount,
+    ): MembershipPlanPayment {
+        $payment = MembershipPlanPayment::query()
+            ->where('membership_sale_id', $membershipSale->id)
+            ->whereKey($paymentId)
+            ->where('type', 'payment')
+            ->where('status', 'paid')
+            ->withSum([
+                'refunds as refunded_amount' => fn ($query) => $query->where('status', 'paid'),
+            ], 'amount')
+            ->first();
+
+        if (! $payment || (float) $payment->amount - (float) ($payment->refunded_amount ?? 0) < $refundAmount) {
+            throw ValidationException::withMessages([
+                'parent_payment_id' => 'Ընտրված վճարումը չունի բավարար վերադարձվող մնացորդ։',
+            ]);
+        }
+
+        return $payment;
     }
 
     protected function isMembershipCancelled(MembershipSale $membershipSale): bool
@@ -1189,6 +1455,17 @@ class MembershipSaleService
             return 0;
         }
 
+        if (! empty($data['is_partial_payment'])) {
+            $amount = round((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), 2);
+            if (! empty($data['is_full_payment']) || $amount <= 0 || $amount >= round($finalPrice, 2)) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։',
+                ]);
+            }
+
+            return $amount;
+        }
+
         if (! empty($data['is_full_payment'])) {
             return $finalPrice;
         }
@@ -1198,6 +1475,24 @@ class MembershipSaleService
         }
 
         return min((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), $finalPrice);
+    }
+
+    private function paymentHdmMode(MembershipSale $sale, array $data): bool
+    {
+        if ($sale->is_hdm === null) {
+            throw ValidationException::withMessages([
+                'is_hdm' => 'Այս հին վաճառքի ՀԴՄ ռեժիմը որոշված չէ։ Անհրաժեշտ է ստուգել վճարումների պատմությունը։',
+            ]);
+        }
+
+        if ((array_key_exists('is_hdm', $data) && (bool) $data['is_hdm'] !== $sale->is_hdm)
+            || $sale->payments()->withTrashed()->where('is_hdm', '!=', $sale->is_hdm)->exists()) {
+            throw ValidationException::withMessages([
+                'is_hdm' => 'Վճարման ՀԴՄ ռեժիմը պետք է համապատասխանի վաճառքի ՀԴՄ ռեժիմին։',
+            ]);
+        }
+
+        return $sale->is_hdm;
     }
 
     protected function resolveAdditionalPaymentAmount(array $data, float $debtAmount): float
@@ -1213,6 +1508,18 @@ class MembershipSaleService
         }
 
         $paymentAmount = (float) ($data['payment_amount'] ?? $data['amount'] ?? 0);
+
+        if (! empty($data['is_partial_payment'])) {
+            $paymentAmount = round($paymentAmount, 2);
+
+            if ($paymentAmount <= 0 || $paymentAmount >= round($debtAmount, 2)) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և մնացած պարտքից փոքր։',
+                ]);
+            }
+
+            return $paymentAmount;
+        }
 
         if ($paymentAmount > $debtAmount) {
             throw ValidationException::withMessages([
@@ -1328,29 +1635,27 @@ class MembershipSaleService
 
     protected function calculateTrainerCommission(User $trainer, float $finalPrice, array $data): array
     {
-        $type = $trainer->pivot?->price_type ?? 'fixed';
-        $value = (float) ($trainer->pivot?->price_value ?? 0);
-        $amount = (float) ($trainer->pivot?->total_price ?? 0);
+        $value = $this->salaryCalculator->normalizePercentage(
+            $trainer->pivot?->price_value ?? 0,
+        );
 
         return [
-            'type' => $type === 'percent' ? 'percent' : 'fixed',
+            'type' => 'percent',
             'value' => $value,
-            'amount' => $amount,
+            'amount' => $this->salaryCalculator->amount($finalPrice, $value),
         ];
     }
 
     protected function calculateSalespersonCommission(MembershipPlan $membershipPlan, float $finalPrice): array
     {
-        $type = $membershipPlan->price_type === 'percent' ? 'percent' : 'fixed';
-        $value = (float) ($membershipPlan->price_value ?? 0);
-        $amount = $type === 'percent'
-            ? ($finalPrice * $value / 100)
-            : $value;
+        $value = $this->salaryCalculator->normalizePercentage(
+            $membershipPlan->price_value ?? 0,
+        );
 
         return [
-            'type' => $type,
+            'type' => 'percent',
             'value' => $value,
-            'amount' => $amount,
+            'amount' => $this->salaryCalculator->amount($finalPrice, $value),
         ];
     }
 

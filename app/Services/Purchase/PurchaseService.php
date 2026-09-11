@@ -10,6 +10,8 @@ use App\Interfaces\PurchaseItem\PurchaseItemInterface;
 use App\Interfaces\Warehouses\WarehouseInterface;
 use App\Interfaces\WarehouseStock\WarehouseStockInterface;
 use App\Models\PaymentMethod;
+use App\Models\Purchase;
+use App\Models\PurchaseRefund;
 use App\Repositories\CategoryTranslations\CategoryTranslationsRepository;
 use App\Services\Finance\FinancialLedgerService;
 use Illuminate\Http\Request;
@@ -135,6 +137,13 @@ class PurchaseService
                 'total' => (float) $purchase->total,
                 'cash_received' => (float) ($purchase->cash_received ?? 0),
                 'change_amount' => (float) ($purchase->change_amount ?? 0),
+                'status' => $purchase->status,
+                'sync_origin' => $purchase->sync_origin,
+                'refunded_amount' => round((float) $purchase->refunds->sum('amount'), 2),
+                'refundable_amount' => max(round((float) $purchase->total - (float) $purchase->refunds->sum('amount'), 2), 0),
+                'can_refund' => $purchase->sync_origin === null
+                    && $purchase->status === 'completed'
+                    && $purchase->items->contains(fn ($item) => (int) $item->quantity > (int) $item->refundItems->sum('quantity')),
 
                 'items' => $purchase->items->map(function ($item) {
                     return [
@@ -145,8 +154,31 @@ class PurchaseService
                             ?? '-',
                         'sku' => $item->product?->sku,
                         'quantity' => (float) $item->quantity,
+                        'refunded_quantity' => (int) $item->refundItems->sum('quantity'),
+                        'refundable_quantity' => max((int) $item->quantity - (int) $item->refundItems->sum('quantity'), 0),
                         'price' => (float) $item->unit_price,
                         'total' => (float) $item->final_price,
+                        'refunded_amount' => round((float) $item->refundItems->sum('amount'), 2),
+                    ];
+                })->values(),
+
+                'refunds' => $purchase->refunds->map(function ($refund) {
+                    return [
+                        'id' => $refund->id,
+                        'date' => $refund->refunded_at?->format('Y-m-d H:i'),
+                        'amount' => (float) $refund->amount,
+                        'payment_method' => $refund->paymentMethod,
+                        'card_type' => $refund->cardType,
+                        'reference' => $refund->reference,
+                        'reason' => $refund->reason,
+                        'refunder' => $refund->refunder
+                            ? trim("{$refund->refunder->name} {$refund->refunder->surname}")
+                            : null,
+                        'items' => $refund->items->map(fn ($item) => [
+                            'purchase_item_id' => $item->purchase_item_id,
+                            'quantity' => (int) $item->quantity,
+                            'amount' => (float) $item->amount,
+                        ])->values(),
                     ];
                 })->values(),
             ];
@@ -344,6 +376,143 @@ class PurchaseService
             }
 
             $this->financialLedgerService->recordProductSale($purchase);
+        });
+    }
+
+    public function refund(Purchase $purchase, array $validated, int $gymId, int $userId): PurchaseRefund
+    {
+        return DB::transaction(function () use ($purchase, $validated, $gymId, $userId): PurchaseRefund {
+            $purchase = Purchase::query()
+                ->whereKey($purchase->id)
+                ->where('gym_id', $gymId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($purchase === null) {
+                throw ValidationException::withMessages(['refund' => 'Վաճառքը գտնված չէ։']);
+            }
+
+            if ($purchase->sync_origin !== null) {
+                throw ValidationException::withMessages([
+                    'refund' => 'Սինքված վաճառքի վերադարձը պետք է գրանցել սև համակարգում։',
+                ]);
+            }
+
+            if ($purchase->status !== 'completed') {
+                throw ValidationException::withMessages(['refund' => 'Այս վաճառքն այլևս վերադարձման ենթակա չէ։']);
+            }
+
+            if ($purchase->warehouse_id === null) {
+                throw ValidationException::withMessages(['refund' => 'Վաճառքի պահեստը նշված չէ։']);
+            }
+
+            $paymentMethod = PaymentMethod::query()
+                ->with('cardTypes')
+                ->whereKey($validated['payment_method_id'])
+                ->where('slug', '!=', 'free')
+                ->first();
+
+            if ($paymentMethod === null) {
+                throw ValidationException::withMessages([
+                    'payment_method_id' => 'Ընտրված վճարման եղանակը հասանելի չէ վերադարձի համար։',
+                ]);
+            }
+
+            $cardTypeId = null;
+            if ($paymentMethod->cardTypes->isNotEmpty()) {
+                $cardTypeId = isset($validated['card_type_id']) ? (int) $validated['card_type_id'] : null;
+                if ($cardTypeId === null || ! $paymentMethod->cardTypes->contains('id', $cardTypeId)) {
+                    throw ValidationException::withMessages([
+                        'card_type_id' => 'Ընտրեք վճարման եղանակին համապատասխան քարտի տեսակը։',
+                    ]);
+                }
+            }
+
+            $purchase->load('items.refundItems');
+            $calculatedItems = [];
+            $refundAmount = 0.0;
+
+            foreach ($validated['items'] as $input) {
+                $purchaseItem = $purchase->items->firstWhere('id', (int) $input['purchase_item_id']);
+                if ($purchaseItem === null) {
+                    throw ValidationException::withMessages(['items' => 'Վերադարձվող ապրանքը տվյալ վաճառքից չէ։']);
+                }
+
+                $quantity = (int) $input['quantity'];
+                $alreadyRefundedQuantity = (int) $purchaseItem->refundItems->sum('quantity');
+                $remainingQuantity = (int) $purchaseItem->quantity - $alreadyRefundedQuantity;
+                if ($quantity < 1 || $quantity > $remainingQuantity) {
+                    throw ValidationException::withMessages([
+                        'items' => "{$purchaseItem->id} ապրանքի վերադարձվող քանակը հասանելի մնացորդից մեծ է։",
+                    ]);
+                }
+
+                $alreadyRefundedAmount = round((float) $purchaseItem->refundItems->sum('amount'), 2);
+                $remainingAmount = max(round((float) $purchaseItem->final_price - $alreadyRefundedAmount, 2), 0);
+                $amount = $quantity === $remainingQuantity
+                    ? $remainingAmount
+                    : min(round(((float) $purchaseItem->final_price / (int) $purchaseItem->quantity) * $quantity, 2), $remainingAmount);
+
+                $calculatedItems[] = [
+                    'purchase_item' => $purchaseItem,
+                    'quantity' => $quantity,
+                    'amount' => $amount,
+                ];
+                $refundAmount += $amount;
+            }
+
+            $refundAmount = round($refundAmount, 2);
+            if ($refundAmount <= 0) {
+                throw ValidationException::withMessages(['items' => 'Վերադարձի գումարը պետք է դրական լինի։']);
+            }
+
+            $refund = PurchaseRefund::query()->create([
+                'purchase_id' => $purchase->id,
+                'payment_method_id' => $paymentMethod->id,
+                'card_type_id' => $cardTypeId,
+                'amount' => $refundAmount,
+                'refunded_at' => now(),
+                'refunded_by' => $userId,
+                'reference' => $validated['reference'] ?? null,
+                'reason' => $validated['reason'] ?? null,
+            ]);
+
+            foreach ($calculatedItems as $calculatedItem) {
+                $purchaseItem = $calculatedItem['purchase_item'];
+                $refund->items()->create([
+                    'purchase_item_id' => $purchaseItem->id,
+                    'quantity' => $calculatedItem['quantity'],
+                    'amount' => $calculatedItem['amount'],
+                ]);
+
+                $stock = $this->warehouseStockRepository->findByProductAndWarehouseForUpdate(
+                    productId: $purchaseItem->product_id,
+                    warehouseId: $purchase->warehouse_id,
+                );
+                if ($stock === null) {
+                    throw ValidationException::withMessages(['refund' => 'Վերադարձի համար պահեստային մնացորդը գտնված չէ։']);
+                }
+
+                $this->warehouseStockRepository->updateQuantity(
+                    warehouseStockId: $stock->id,
+                    quantity: (float) $stock->quantity + $calculatedItem['quantity'],
+                );
+            }
+
+            $newQuantities = collect($calculatedItems)
+                ->keyBy(fn ($item) => $item['purchase_item']->id)
+                ->map(fn ($item) => (int) $item['quantity']);
+            $fullyRefunded = $purchase->items->every(function ($item) use ($newQuantities): bool {
+                $refundedQuantity = (int) $item->refundItems->sum('quantity')
+                    + (int) $newQuantities->get($item->id, 0);
+
+                return $refundedQuantity >= (int) $item->quantity;
+            });
+
+            $purchase->update(['status' => $fullyRefunded ? 'refunded' : 'completed']);
+            $this->financialLedgerService->recordProductRefund($refund);
+
+            return $refund;
         });
     }
 
