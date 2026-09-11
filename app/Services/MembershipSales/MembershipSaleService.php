@@ -633,6 +633,11 @@ class MembershipSaleService
                 'status' => 'cancelled',
             ]);
 
+            $this->trainerMonthlySalaryService->stopFutureGenerationForMembership(
+                $personMembership,
+                'membership_cancelled',
+            );
+
             $this->reminderService->cancelForMembershipSale($membershipSale->id);
 
             $this->membershipSaleAuditService->afterChanged(

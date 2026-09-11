@@ -33,4 +33,9 @@ class PurchaseItem extends Model
     {
         return $this->belongsTo(InventoryProduct::class, 'product_id');
     }
+
+    public function refundItems()
+    {
+        return $this->hasMany(PurchaseRefundItem::class);
+    }
 }

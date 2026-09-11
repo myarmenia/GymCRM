@@ -146,6 +146,7 @@ Route::prefix('{locale}')
 
             Route::prefix('salary-payouts')->name('salary-payouts.')->group(function () {
                 Route::get('/', [SalaryPayoutController::class, 'index'])->name('index');
+                Route::get('/export', [SalaryPayoutController::class, 'export'])->name('export');
                 Route::post('/', [SalaryPayoutController::class, 'store'])->name('store');
                 Route::patch('/{salaryPayout}/void', [SalaryPayoutController::class, 'void'])->name('void');
                 Route::post('/{salaryPayout}/refund', [SalaryPayoutController::class, 'refund'])->name('refund');
@@ -410,6 +411,7 @@ Route::prefix('{locale}')
                 Route::get('/', [PurchaseController::class, 'index'])->name('index');
                 Route::get('/history', [PurchaseController::class, 'history'])->name('history');
                 Route::post('/sell', [PurchaseController::class, 'sell'])->name('sell');
+                Route::post('/{purchase}/refund', [PurchaseController::class, 'refund'])->name('refund');
             });
         });
     });

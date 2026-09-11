@@ -4,6 +4,7 @@ namespace App\Services\TrainerMonthlySalaries;
 
 use App\Models\AttendanceSheet;
 use App\Models\Person;
+use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
 use App\Models\TrainerMonthlySalary;
@@ -22,6 +23,7 @@ class TrainerMonthlySalaryService
         TrainerCommission::query()
             ->with(['personMembership.freezes', 'personMembership.gym'])
             ->whereNotNull('trainer_id')
+            ->whereNull('generation_stopped_at')
             ->whereHas('personMembership', function ($query) {
                 $query->whereNotNull('trainer_id');
             })
@@ -60,12 +62,63 @@ class TrainerMonthlySalaryService
         return $this->membershipMonthCount($personMembership);
     }
 
+    public function stopFutureGenerationForMembership(
+        PersonMembership $personMembership,
+        string $reason = 'membership_cancelled',
+    ): float {
+        $connectionName = $personMembership->getConnectionName();
+
+        return DB::connection($connectionName)->transaction(function () use (
+            $personMembership,
+            $reason,
+            $connectionName,
+        ): float {
+            $commissions = (new TrainerCommission)
+                ->setConnection($connectionName)
+                ->newQuery()
+                ->where('person_membership_id', $personMembership->id)
+                ->whereNull('generation_stopped_at')
+                ->lockForUpdate()
+                ->get();
+            $cancelledAmount = 0.0;
+
+            foreach ($commissions as $commission) {
+                $generatedPayableAmount = (float) (new SalaryPayableAssignment)
+                    ->setConnection($connectionName)
+                    ->newQuery()
+                    ->where('trainer_commission_id', $commission->id)
+                    ->sum('available_amount');
+                $deduction = max(
+                    round((float) $commission->salary_amount - $generatedPayableAmount, 2),
+                    0,
+                );
+
+                $commission->update([
+                    'salary_amount' => round((float) $commission->salary_amount - $deduction, 2),
+                    'cancelled_unearned_amount' => round(
+                        (float) $commission->cancelled_unearned_amount + $deduction,
+                        2,
+                    ),
+                    'generation_stopped_at' => now(),
+                    'generation_stopped_reason' => $reason,
+                ]);
+                $cancelledAmount = round($cancelledAmount + $deduction, 2);
+            }
+
+            return $cancelledAmount;
+        });
+    }
+
     protected function processCommission(TrainerCommission $trainerCommission, Carbon $runDate): array
     {
         $trainerCommission->loadMissing(['personMembership.freezes', 'personMembership.gym']);
         $personMembership = $trainerCommission->personMembership;
 
         if (! $personMembership || ! $trainerCommission->created_at) {
+            return $this->emptyResult();
+        }
+
+        if ($trainerCommission->generation_stopped_at !== null) {
             return $this->emptyResult();
         }
 
@@ -108,6 +161,19 @@ class TrainerMonthlySalaryService
             $commissionInstallmentCount,
             &$result,
         ): void {
+            $lockedCommission = (new TrainerCommission)
+                ->setConnection($connectionName)
+                ->newQuery()
+                ->whereKey($trainerCommission->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $lockedCommission || $lockedCommission->generation_stopped_at !== null) {
+                return;
+            }
+
+            $trainerCommission->setRawAttributes($lockedCommission->getAttributes(), true);
+
             for ($installment = $startInstallment; $installment <= $lastInstallment; $installment++) {
                 $period = $periods[$installment] ?? null;
 
@@ -165,7 +231,11 @@ class TrainerMonthlySalaryService
                         continue;
                     }
 
-                    if ($periodCompleted && ! $this->hasAttendance($personMembership, $period, $connectionName)) {
+                    if (! $this->hasAttendance($personMembership, $period, $connectionName)) {
+                        if (! $periodCompleted) {
+                            continue;
+                        }
+
                         $salary = $this->createCancelledSalary(
                             $trainerCommission,
                             $personMembership,

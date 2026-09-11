@@ -118,6 +118,7 @@ class TrainerCommissionsReportService
                 ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
                 ['value' => 'paid', 'label' => 'Վճարված'],
                 ['value' => 'transferred', 'label' => 'Փոխանցված'],
+                ['value' => 'cancelled', 'label' => 'Գեներացումը դադարեցված'],
             ],
         ];
     }
@@ -130,7 +131,9 @@ class TrainerCommissionsReportService
             ['key' => 'customer', 'title' => 'Հաճախորդ'],
             ['key' => 'salary_type', 'title' => 'Միջնորդավճարի տեսակ'],
             ['key' => 'salary_value', 'title' => 'Միջնորդավճարի արժեք'],
+            ['key' => 'initial_commission_amount', 'title' => 'Սկզբնական միջնորդավճար'],
             ['key' => 'salary_amount', 'title' => 'Ընդհանուր վերագրված'],
+            ['key' => 'cancelled_unearned_amount', 'title' => 'Չվաստակած՝ չեղարկված'],
             ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
             ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
             ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
@@ -138,6 +141,8 @@ class TrainerCommissionsReportService
             ['key' => 'transferred_out_amount', 'title' => 'Փոխանցված ելք'],
             ['key' => 'status', 'title' => 'Կարգավիճակ'],
             ['key' => 'is_kept', 'title' => 'Պահված է'],
+            ['key' => 'generation_stopped_reason', 'title' => 'Դադարեցման պատճառ'],
+            ['key' => 'generation_stopped_at', 'title' => 'Գեներացումը դադարեցվել է'],
             ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
         ];
     }
@@ -157,6 +162,9 @@ class TrainerCommissionsReportService
             ), 2),
             'refunded_commission_amount' => round($commissions->sum(
                 fn ($commission) => $this->commissionMetrics($commission)['refunded_amount']
+            ), 2),
+            'cancelled_unearned_commission_amount' => round($commissions->sum(
+                fn ($commission) => $this->commissionMetrics($commission)['cancelled_unearned_amount']
             ), 2),
             'transferred_in_amount' => round($commissions->sum(
                 fn ($commission) => $this->commissionMetrics($commission)['transferred_in_amount']
@@ -178,6 +186,7 @@ class TrainerCommissionsReportService
                 ['label' => 'Վճարված միջնորդավճար', 'value' => $summary['paid_commission_amount']],
                 ['label' => 'Սպասող միջնորդավճար', 'value' => $summary['pending_commission_amount']],
                 ['label' => 'Վերադարձված միջնորդավճար', 'value' => $summary['refunded_commission_amount']],
+                ['label' => 'Չվաստակած՝ չեղարկված', 'value' => $summary['cancelled_unearned_commission_amount']],
                 ['label' => 'Փոխանցված մուտք', 'value' => $summary['transferred_in_amount']],
                 ['label' => 'Փոխանցված ելք', 'value' => $summary['transferred_out_amount']],
                 ['label' => 'Պահված միջնորդավճարներ', 'value' => $summary['kept_commissions_count']],
@@ -198,7 +207,9 @@ class TrainerCommissionsReportService
             'customer' => $this->customerName($commission),
             'salary_type' => $commission->salary_type,
             'salary_value' => (float) $commission->salary_value,
+            'initial_commission_amount' => (float) ($commission->initial_salary_amount ?? 0),
             'salary_amount' => $metrics['total_amount'],
+            'cancelled_unearned_amount' => $metrics['cancelled_unearned_amount'],
             'net_paid_amount' => $metrics['net_paid_amount'],
             'outstanding_amount' => $metrics['outstanding_amount'],
             'refunded_amount' => $metrics['refunded_amount'],
@@ -206,6 +217,10 @@ class TrainerCommissionsReportService
             'transferred_out_amount' => $metrics['transferred_out_amount'],
             'status' => $metrics['status'],
             'is_kept' => (bool) $commission->is_kept,
+            'generation_stopped_reason' => $commission->generation_stopped_reason === 'membership_cancelled'
+                ? 'Աբոնեմենտի չեղարկում'
+                : ($commission->generation_stopped_reason ?? '-'),
+            'generation_stopped_at' => $commission->generation_stopped_at?->toDateTimeString(),
             'created_at' => $commission->created_at?->toDateTimeString(),
         ];
     }
@@ -218,6 +233,7 @@ class TrainerCommissionsReportService
                 'net_paid_amount' => (float) ($commission['net_paid_amount'] ?? 0),
                 'outstanding_amount' => (float) ($commission['outstanding_amount'] ?? 0),
                 'refunded_amount' => (float) ($commission['refunded_amount'] ?? 0),
+                'cancelled_unearned_amount' => (float) ($commission['cancelled_unearned_amount'] ?? 0),
                 'transferred_in_amount' => (float) ($commission['transferred_in_amount'] ?? 0),
                 'transferred_out_amount' => (float) ($commission['transferred_out_amount'] ?? 0),
                 'status' => $commission['status'] ?? 'pending',
@@ -227,12 +243,14 @@ class TrainerCommissionsReportService
         $outstanding = max(round((float) $commission->salary_amount, 2), 0);
         $payout = max(round((float) ($commission->payout_amount ?? 0), 2), 0);
         $refunded = max(round((float) ($commission->refunded_amount ?? 0), 2), 0);
+        $cancelledUnearned = max(round((float) ($commission->cancelled_unearned_amount ?? 0), 2), 0);
         $netPaid = max(round($payout - $refunded, 2), 0);
         $transferredIn = max(round((float) ($commission->transferred_in_amount ?? 0), 2), 0);
         $transferredOut = max(round((float) ($commission->transferred_out_amount ?? 0), 2), 0);
         $total = round($outstanding + $netPaid, 2);
 
         $status = match (true) {
+            $commission->generation_stopped_at !== null => 'cancelled',
             $outstanding <= 0 && $netPaid > 0 => 'paid',
             $outstanding > 0 && $netPaid > 0 => 'partial',
             $outstanding <= 0 && $transferredOut > 0 => 'transferred',
@@ -244,6 +262,7 @@ class TrainerCommissionsReportService
             'net_paid_amount' => $netPaid,
             'outstanding_amount' => $outstanding,
             'refunded_amount' => $refunded,
+            'cancelled_unearned_amount' => $cancelledUnearned,
             'transferred_in_amount' => $transferredIn,
             'transferred_out_amount' => $transferredOut,
             'status' => $status,

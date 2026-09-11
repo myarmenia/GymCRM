@@ -21,6 +21,8 @@ class TrainerCommission extends Model
             'initial_salary_amount' => 'decimal:2',
             'salary_start_installment' => 'integer',
             'salary_installment_count' => 'integer',
+            'cancelled_unearned_amount' => 'decimal:2',
+            'generation_stopped_at' => 'datetime',
             'paid_at' => 'datetime',
             'is_kept' => 'boolean',
         ];

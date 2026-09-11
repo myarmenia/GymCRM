@@ -24,6 +24,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    historySummary: {
+        type: Object,
+        default: () => ({}),
+    },
     filterOptions: {
         type: Object,
         default: () => ({
@@ -267,6 +271,11 @@ const cleanQuery = query => Object.fromEntries(
     Object.entries(query).filter(([, value]) => value !== null && value !== undefined && value !== ''),
 )
 
+const exportHref = computed(() => route('salary-payouts.export', {
+    locale: currentLocale.value,
+    ...cleanQuery({ ...filters.value, tab: 'history' }),
+}))
+
 const applyFilters = () => {
     const query = {
         ...filters.value,
@@ -353,6 +362,8 @@ const isPayoutExpanded = payoutId => expandedPayoutIds.value.includes(payoutId)
 
 const payoutStatusLabel = payout => payout.status === 'voided'
     ? 'Չեղարկված'
+    : Number(payout.refunded_amount) >= Number(payout.amount)
+        ? 'Ամբողջությամբ վերադարձված'
     : payout.refunded_amount > 0
         ? 'Մասնակի վերադարձ'
         : 'Վճարված'
@@ -384,6 +395,10 @@ const hasAuditNotes = payout => Boolean(
                     Մարզիչների և վաճառողների բոլոր վճարման ենթակա գումարները մեկ տեղում
                 </div>
             </div>
+            <a v-if="activeTab === 'history'" :href="exportHref" class="btn btn-outline-success">
+                <i class="icon-base ti tabler-file-export me-1"></i>
+                Արտահանել Excel
+            </a>
         </div>
 
         <ul class="nav nav-tabs mb-4">
@@ -439,6 +454,33 @@ const hasAuditNotes = payout => Boolean(
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div v-if="activeTab === 'history'" class="row g-4 mb-4">
+            <div class="col-6 col-xl-3">
+                <div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Վճարումների քանակ</div>
+                    <div class="h4 mb-0">{{ historySummary.payout_count ?? 0 }}</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Ընդհանուր վճարված</div>
+                    <div class="h4 mb-0">{{ formatAmount(historySummary.paid_amount) }} AMD</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Վերադարձված</div>
+                    <div class="h4 mb-0 text-warning">{{ formatAmount(historySummary.refunded_amount) }} AMD</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card h-100"><div class="card-body">
+                    <div class="text-muted small">Զուտ վճարված</div>
+                    <div class="h4 mb-0 text-success">{{ formatAmount(historySummary.net_amount) }} AMD</div>
+                </div></div>
             </div>
         </div>
 

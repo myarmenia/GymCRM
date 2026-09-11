@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\SalaryPayouts\SalaryPayoutService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -146,6 +147,9 @@ class SalaryPayoutServiceTest extends TestCase
         ]);
         $this->assertDatabaseCount('salary_payout_items', 2);
         $this->assertDatabaseCount('salary_payout_refunds', 1);
+
+        $export = $service->historyExportData($actor);
+        $this->assertSame('Չեղարկված', $export['rows']->first()['status']);
     }
 
     public function test_partial_payment_and_refund_reopen_only_the_refunded_balance(): void
@@ -196,6 +200,40 @@ class SalaryPayoutServiceTest extends TestCase
             'id' => $payout->id,
             'status' => 'paid',
         ]);
+        $this->assertSame(2, $payout->fresh()->version);
+
+        $page = $service->pageData($actor, ['tab' => 'history']);
+        $this->assertSame([
+            'payout_count' => 1,
+            'paid_amount' => 4000.0,
+            'refunded_amount' => 1500.0,
+            'net_amount' => 2500.0,
+        ], $page['historySummary']);
+        $export = $service->historyExportData($actor, ['tab' => 'history']);
+        $this->assertSame('Մասնակի վերադարձ', $export['rows']->first()['status']);
+        $this->assertSame(2500.0, $export['summary']['rows'][3]['value']);
+    }
+
+    public function test_salary_schema_and_page_data_do_not_expose_sync_scope(): void
+    {
+        $this->assertFalse(Schema::hasColumn('salary_payable_assignments', 'sync_scope'));
+        $this->assertFalse(Schema::hasColumn('salary_payouts', 'sync_scope'));
+        [$actor, , $method, , , $trainer] = $this->payableFixture();
+        $service = app(SalaryPayoutService::class);
+        $service->pay($actor, [
+            'items' => [['id' => $trainer->id, 'amount' => 4000]],
+            'payment_method_id' => $method->id,
+        ]);
+
+        $page = $service->pageData($actor, ['sync_scope' => 'local_only']);
+
+        $this->assertSame(2, $page['summary']['payable_count']);
+        $this->assertSame(1, $page['payouts']->total());
+        $this->assertArrayNotHasKey('sync_scope', $page['filters']);
+        foreach (array_merge($page['payables']->items(), $page['payouts']->items()) as $row) {
+            $this->assertArrayNotHasKey('sync_scope', $row);
+            $this->assertArrayNotHasKey('sync_scope_label', $row);
+        }
     }
 
     private function payableFixture(): array

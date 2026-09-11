@@ -12,10 +12,13 @@ use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
 use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\MembershipSales\MembershipSaleService;
+use App\Services\Reports\TrainerCommissionsReportService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Database\Seeders\GymSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class TrainerSalaryAccrualModeTest extends TestCase
@@ -32,30 +35,44 @@ class TrainerSalaryAccrualModeTest extends TestCase
         ]);
     }
 
-    public function test_prepaid_salary_is_created_in_advance_and_cancelled_after_a_cycle_without_attendance(): void
+    public function test_prepaid_salary_waits_for_first_attendance_and_one_entry_activates_the_full_cycle_amount(): void
     {
-        [$commission] = $this->salaryFixture('prepaid', '2026-01-01', '2026-01-31', 10000, 1);
+        [$commission, $membership] = $this->salaryFixture(
+            'prepaid',
+            '2026-01-01',
+            '2026-01-31',
+            10000,
+            1,
+        );
         $service = app(TrainerMonthlySalaryService::class);
 
-        $salary = $service->generateForCommission($commission, '2026-01-01');
+        $this->assertNull($service->generateForCommission($commission, '2026-01-01'));
+        $this->assertDatabaseCount('trainer_monthly_salaries', 0);
+        $this->assertDatabaseCount('salary_payable_assignments', 0);
+
+        $this->attendance($membership, '2026-01-20 10:00:00');
+        $salary = $service->generateForCommission($commission->fresh(), '2026-01-20');
 
         $this->assertSame('pending', $salary?->status);
+        $this->assertSame(10000.0, (float) $salary?->price);
         $this->assertDatabaseHas('salary_payable_assignments', [
             'trainer_monthly_salary_id' => $salary?->id,
             'available_amount' => 10000,
         ]);
+    }
+
+    public function test_prepaid_cycle_without_attendance_is_recorded_as_non_payable_after_it_ends(): void
+    {
+        [$commission] = $this->salaryFixture('prepaid', '2026-01-01', '2026-01-31', 10000, 1);
+        $service = app(TrainerMonthlySalaryService::class);
 
         $service->generateForCommission($commission->fresh(), '2026-02-01');
 
         $this->assertDatabaseHas('trainer_monthly_salaries', [
-            'id' => $salary?->id,
             'status' => 'cancel',
             'cancellation_reason' => 'no_attendance',
         ]);
-        $this->assertDatabaseHas('salary_payable_assignments', [
-            'trainer_monthly_salary_id' => $salary?->id,
-            'available_amount' => 0,
-        ]);
+        $this->assertDatabaseCount('salary_payable_assignments', 0);
         $this->assertDatabaseHas('trainer_commissions', [
             'id' => $commission->id,
             'salary_amount' => 0,
@@ -176,6 +193,104 @@ class TrainerSalaryAccrualModeTest extends TestCase
         );
     }
 
+    public function test_plain_cancellation_keeps_generated_salary_and_cancels_only_unearned_installments(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'prepaid',
+            '2026-01-01',
+            '2026-03-31',
+            30000,
+            3,
+        );
+        $trainer = $commission->trainer;
+        $trainer->assignRole(Role::firstOrCreate([
+            'name' => 'owner',
+            'guard_name' => 'web',
+        ], ['g_name' => 'owner']));
+        $this->actingAs($trainer);
+        $this->attendance($membership, '2026-01-20 10:00:00');
+        $salaryService = app(TrainerMonthlySalaryService::class);
+        $generatedSalary = $salaryService->generateForCommission($commission->fresh(), '2026-01-20');
+
+        app(MembershipSaleService::class)->cancelMembership($commission->membership_sale_id);
+
+        $commission->refresh();
+        $this->assertSame(10000.0, (float) $commission->salary_amount);
+        $this->assertSame(30000.0, (float) $commission->initial_salary_amount);
+        $this->assertSame(20000.0, (float) $commission->cancelled_unearned_amount);
+        $this->assertSame('membership_cancelled', $commission->generation_stopped_reason);
+        $this->assertNotNull($commission->generation_stopped_at);
+        $this->assertDatabaseHas('trainer_monthly_salaries', [
+            'id' => $generatedSalary?->id,
+            'status' => 'pending',
+            'price' => 10000,
+        ]);
+        $this->assertDatabaseHas('salary_payable_assignments', [
+            'trainer_monthly_salary_id' => $generatedSalary?->id,
+            'available_amount' => 10000,
+        ]);
+
+        $this->assertNull($salaryService->generateForCommission($commission->fresh(), '2026-04-01'));
+        $this->assertDatabaseCount('trainer_monthly_salaries', 1);
+
+        $report = app(TrainerCommissionsReportService::class)->report($trainer, [
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+        ]);
+        $row = $report['commissions']->getCollection()->first();
+        $this->assertSame(10000.0, (float) $report['summary']['total_commission_amount']);
+        $this->assertSame(10000.0, (float) $report['summary']['pending_commission_amount']);
+        $this->assertSame(20000.0, (float) $report['summary']['cancelled_unearned_commission_amount']);
+        $this->assertSame('cancelled', $row['status']);
+        $this->assertSame(30000.0, (float) $row['initial_commission_amount']);
+        $this->assertSame(20000.0, (float) $row['cancelled_unearned_amount']);
+    }
+
+    public function test_cancelled_membership_status_alone_does_not_change_refund_or_termination_salary_behavior(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'postpaid',
+            '2026-01-01',
+            '2026-01-31',
+            10000,
+            1,
+        );
+        $this->attendance($membership, '2026-01-20 10:00:00');
+        $membership->update(['status' => 'cancelled']);
+
+        $salary = app(TrainerMonthlySalaryService::class)
+            ->generateForCommission($commission->fresh(), '2026-02-01');
+
+        $this->assertSame('pending', $salary?->status);
+        $this->assertNull($commission->fresh()->generation_stopped_at);
+        $this->assertSame(0.0, (float) $commission->fresh()->cancelled_unearned_amount);
+    }
+
+    public function test_generation_stop_preserves_an_old_trainers_generated_balance_after_future_amount_was_reassigned(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'prepaid',
+            '2026-01-01',
+            '2026-03-31',
+            30000,
+            3,
+        );
+        $this->attendance($membership, '2026-01-20 10:00:00');
+        app(TrainerMonthlySalaryService::class)
+            ->generateForCommission($commission->fresh(), '2026-01-20');
+
+        // Changing the trainer already removes this commission's future share.
+        $commission->update(['salary_amount' => 10000]);
+
+        app(TrainerMonthlySalaryService::class)
+            ->stopFutureGenerationForMembership($membership);
+
+        $commission->refresh();
+        $this->assertSame(10000.0, (float) $commission->salary_amount);
+        $this->assertSame(0.0, (float) $commission->cancelled_unearned_amount);
+        $this->assertNotNull($commission->generation_stopped_at);
+    }
+
     private function salaryFixture(
         string $mode,
         string $startDate,
@@ -216,6 +331,7 @@ class TrainerSalaryAccrualModeTest extends TestCase
             'phone' => uniqid('09', false),
         ]);
         $sale = MembershipSale::query()->create([
+            'is_hdm' => true,
             'user_id' => $trainer->id,
             'person_id' => $person->id,
             'gym_id' => $gym->id,

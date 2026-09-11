@@ -3,37 +3,37 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
-use App\Services\Exports\ReportExcelExportService;
-use App\Services\Reports\CommissionsReportService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CommissionsReportController extends Controller
 {
-    public function __construct(
-        protected CommissionsReportService $commissionsReportService,
-        protected ReportExcelExportService $reportExcelExportService,
-    ) {}
-
-    public function index(Request $request)
+    public function index(Request $request): RedirectResponse
     {
-        return Inertia::render(
-            'Reports/Commissions',
-            $this->commissionsReportService->report($request->user(), $request->query())
-        );
+        $route = $request->query('tab') === 'salesperson'
+            ? 'reports.salesperson-commissions'
+            : 'reports.trainer-commissions';
+
+        return redirect()->route($route, $this->redirectParameters($request));
     }
 
-    public function export(Request $request): StreamedResponse
+    public function export(Request $request): RedirectResponse
     {
-        $export = $this->commissionsReportService->exportData($request->user(), $request->query());
+        $route = $request->query('tab') === 'salesperson'
+            ? 'reports.salesperson-commissions.export'
+            : 'reports.trainer-commissions.export';
 
-        return $this->reportExcelExportService->download(
-            $export['rows'],
-            $export['columns'],
-            $export['filters'],
-            $export['filename'],
-            $export['title']
-        );
+        return redirect()->route($route, $this->redirectParameters($request));
+    }
+
+    private function redirectParameters(Request $request): array
+    {
+        $query = $request->query();
+        unset($query['tab']);
+
+        return [
+            ...$query,
+            'locale' => $request->route('locale'),
+        ];
     }
 }
