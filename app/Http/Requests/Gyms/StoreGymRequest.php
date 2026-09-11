@@ -38,6 +38,7 @@ class StoreGymRequest extends FormRequest
                 'email',
                 'max:255',
             ],
+            'entry_code_type' => ['required', 'string', Rule::in(['rfId', 'FaceId'])],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
         ];
     }

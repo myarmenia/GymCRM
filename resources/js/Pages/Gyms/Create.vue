@@ -15,6 +15,7 @@ const form = useForm({
     address: '',
     phone: '',
     email: '',
+    entry_code_type: 'rfId',
     logo: null,
 });
 
@@ -100,6 +101,15 @@ const cancel = () => {
                             placeholder="Enter gym address"
                         />
                         <InputError class="mt-2" :message="form.errors.address" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <InputLabel for="entry_code_type" class="form-label" value="Entry code type" />
+                        <select id="entry_code_type" v-model="form.entry_code_type" class="form-select">
+                            <option value="rfId">RF ID only</option>
+                            <option value="FaceId">Face ID only</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.entry_code_type" />
                     </div>
 
                     <div class="col-md-6">

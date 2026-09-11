@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Gyms;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateGymRequest extends FormRequest
 {
@@ -25,6 +26,7 @@ class UpdateGymRequest extends FormRequest
                 'email',
                 'max:255',
             ],
+            'entry_code_type' => ['required', 'string', Rule::in(['rfId', 'FaceId'])],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
 
         ];

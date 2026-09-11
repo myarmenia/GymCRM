@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, computed, nextTick } from 'vue';
+import { onMounted, computed, nextTick, watch } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
@@ -30,6 +30,21 @@ const gymOptions = computed(() => {
         text: gym.name
     }));
 });
+
+const selectedGym = computed(() => {
+    return props.gyms.find(gym => Number(gym.id) === Number(form.gym_id)) ?? null;
+});
+
+const allowedEntryCodeType = computed(() => {
+    return selectedGym.value?.entry_code_type ?? props.entryCode?.gym?.entry_code_type ?? 'rfId';
+});
+
+watch(
+    () => form.gym_id,
+    () => {
+        form.type = allowedEntryCodeType.value;
+    },
+);
 
 onMounted(async () => {
     await nextTick();
@@ -123,9 +138,11 @@ const submit = () => {
                     <label class="col-sm-3 col-form-label">Տեսակ</label>
                     <div class="col-sm-9">
                         <select class="form-select" v-model="form.type">
-                            <option value="rfId">rfId</option>
-                            <option value="FaceId">FaceID</option>
+                            <option :value="allowedEntryCodeType">
+                                {{ allowedEntryCodeType === 'rfId' ? 'RF ID' : 'Face ID' }}
+                            </option>
                         </select>
+                        <div class="form-text">The type is defined by the selected gym.</div>
                         <InputError :message="form.errors.type" />
                     </div>
                 </div>
