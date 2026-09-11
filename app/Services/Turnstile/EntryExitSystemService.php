@@ -112,8 +112,13 @@ class EntryExitSystemService
         }
 
         if ($ownerType === 'person' && $action === 'entry') {
-            $selectedMembership = $this->resolveAutomaticMembershipForEntry($owner, (int) $clientId, $detectedAt, $action);
-            $selectedMemberships = $selectedMembership ? collect([$selectedMembership]) : collect();
+            $selectedMemberships = $this->resolveAutomaticMembershipsForEntry(
+                $owner,
+                (int) $clientId,
+                $detectedAt,
+                $action,
+            );
+            $selectedMembership = $selectedMemberships->first();
         }
 
         if ($ownerType === 'person' && $action === 'exit') {
@@ -124,7 +129,7 @@ class EntryExitSystemService
         if (
             $ownerType === 'person' &&
             $action === 'entry' &&
-            $selectedMembership === null &&
+            $selectedMemberships->isEmpty() &&
             $this->requiresManagerMembershipSelection($owner, (int) $clientId, $detectedAt)
         ) {
             $payload = $this->makeSocketPayload([
@@ -158,11 +163,6 @@ class EntryExitSystemService
             ];
         }
 
-        if ($ownerType === 'person' && $action === 'entry' && $selectedMembership) {
-            $selectedMembership = $this->consumeMembershipVisit($selectedMembership);
-            $selectedMemberships = collect([$selectedMembership]);
-        }
-
         $attendance = DB::transaction(function () use (
             $owner,
             $clientId,
@@ -170,8 +170,14 @@ class EntryExitSystemService
             $detectedAt,
             $data,
             $action,
-            $selectedMemberships,
+            &$selectedMemberships,
         ): AttendanceSheet {
+            if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
+                $selectedMemberships = $selectedMemberships
+                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership))
+                    ->values();
+            }
+
             $attendance = $this->attendanceSheetRepository->create([
                 'relation_id' => $owner->id,
                 'relation_type' => get_class($owner),
@@ -192,6 +198,8 @@ class EntryExitSystemService
             return $attendance;
         });
 
+        $selectedMembership = $selectedMemberships->first();
+
         $payload = $this->makeSocketPayload([
             'status' => 'success',
             'access_allowed' => true,
@@ -208,6 +216,10 @@ class EntryExitSystemService
             'mac' => $data->mac ?? null,
             'scan_type' => $data->type ?? null,
             'selected_membership' => $selectedMembership ? $this->membershipPayload($selectedMembership) : null,
+            'selected_memberships' => $selectedMemberships
+                ->map(fn (PersonMembership $membership) => $this->membershipPayload($membership))
+                ->values()
+                ->all(),
             'attendance_id' => $attendance->id,
             'date' => $attendance->date,
             'detected_at' => $detectedAt->toDateTimeString(),
@@ -598,38 +610,36 @@ class EntryExitSystemService
         ];
     }
 
-    private function resolveAutomaticMembershipForEntry(Person $person, int $clientId, Carbon $referenceTime, string $action): ?PersonMembership
+    private function resolveAutomaticMembershipsForEntry(Person $person, int $clientId, Carbon $referenceTime, string $action)
     {
         if ($action !== 'entry') {
-            return null;
+            return collect();
         }
 
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
         $selectionMemberships = $memberships->values();
 
-        if ($selectionMemberships->count() !== 1) {
-            return null;
+        // One or two valid memberships are unambiguous business-wise: consume
+        // every valid membership and create one attendance row linked to all of them.
+        if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > 2) {
+            return collect();
         }
 
-        $membership = $selectionMemberships->first();
+        return $selectionMemberships
+            ->map(function (PersonMembership $membership) {
+                if ($membership->status === 'waiting') {
+                    $membership->update([
+                        'status' => 'active',
+                        'activated_at' => now(self::LOCAL_TIMEZONE),
+                    ]);
+                }
 
-        if (!$membership) {
-            return null;
-        }
-
-        if ($membership->status === 'waiting') {
-            $membership->update([
-                'status' => 'active',
-                'activated_at' => now(self::LOCAL_TIMEZONE),
-            ]);
-
-            $membership = $membership->fresh([
-                'membershipPlan.translations',
-                'membershipPlan.MembershipCategory.translations',
-            ]);
-        }
-
-        return $membership;
+                return $membership->fresh([
+                    'membershipPlan.translations',
+                    'membershipPlan.MembershipCategory.translations',
+                ]);
+            })
+            ->values();
     }
 
     private function resolveMembershipsForExit(Person $person, int $clientId)
@@ -660,7 +670,7 @@ class EntryExitSystemService
     {
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
 
-        return $memberships->count() > 1;
+        return $memberships->count() > 2;
     }
 
     private function consumeMembershipVisit(PersonMembership $membership): PersonMembership

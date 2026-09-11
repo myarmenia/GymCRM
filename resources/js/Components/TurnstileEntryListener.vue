@@ -64,6 +64,7 @@ const showEntryModal = ref(false);
 const entryData = ref(null);
 const activatingMembershipId = ref(null);
 const selectedMembershipIds = ref([]);
+const entryQueue = ref([]);
 
 let subscribedChannelName = null;
 
@@ -106,7 +107,7 @@ const reasonLabel = computed(() => {
     }
 
     if (entryData.value?.reason === "invalid_entry_code") {
-        return "Մուտքը մերժված է. մուտքի կոդը չի գտնվել";
+        return "Մուտքը մերժված է. մուտքի կոդը չի գտնվել կամ տվյալ կոդով այցելու չի գտնվել";
     }
 
     return entryData.value?.message ?? "Մուտքը մերժված է";
@@ -137,11 +138,23 @@ const selectableMemberships = computed(() => {
     return membershipSelectionContext.value?.selectable_memberships ?? [];
 });
 
+const recordedMemberships = computed(() => {
+    const memberships = entryData.value?.selected_memberships;
+
+    if (Array.isArray(memberships) && memberships.length) {
+        return memberships;
+    }
+
+    return entryData.value?.selected_membership
+        ? [entryData.value.selected_membership]
+        : [];
+});
+
 const requiresManagerSelection = computed(() => {
     return Boolean(
         entryData.value?.action === "entry" &&
         membershipSelectionContext.value?.requires_manager_selection &&
-            selectableMemberships.value.length > 1,
+            selectableMemberships.value.length > 2,
     );
 });
 
@@ -168,7 +181,53 @@ const statusLabel = (status) => {
     return status ?? "-";
 };
 
+const pendingEntries = computed(() => {
+    return [entryData.value, ...entryQueue.value].filter(Boolean);
+});
+
+const entryOwner = (entry) => {
+    return entry?.person ?? entry?.user ?? entry?.owner ?? null;
+};
+
+const entryOwnerName = (entry) => {
+    const owner = entryOwner(entry);
+    return [owner?.name, owner?.surname].filter(Boolean).join(" ") || "-";
+};
+
+const entryActionLabel = (entry) => {
+    return entry?.action === "exit" ? "Ելք" : "Մուտք";
+};
+
+const selectPendingEntry = (entry) => {
+    if (!entry || entry === entryData.value) {
+        return;
+    }
+
+    const entryIndex = entryQueue.value.indexOf(entry);
+    if (entryIndex === -1) {
+        return;
+    }
+
+    const currentEntry = entryData.value;
+    entryQueue.value.splice(entryIndex, 1, currentEntry);
+    showNextEntry(entry);
+};
+
+const showNextEntry = (event) => {
+    entryData.value = event;
+    activatingMembershipId.value = null;
+    selectedMembershipIds.value = [];
+    showEntryModal.value = true;
+};
+
 const closeModal = () => {
+    const nextEntry = entryQueue.value.shift();
+
+    if (nextEntry) {
+        showNextEntry(nextEntry);
+        return;
+    }
+
     showEntryModal.value = false;
     entryData.value = null;
     activatingMembershipId.value = null;
@@ -229,6 +288,7 @@ const leaveCurrentChannel = () => {
 const subscribeToTurnstileChannel = () => {
     if (!isManager.value) {
         leaveCurrentChannel();
+        entryQueue.value = [];
         closeModal();
         return;
     }
@@ -253,8 +313,12 @@ const subscribeToTurnstileChannel = () => {
             return;
         }
 
-        entryData.value = event;
-        showEntryModal.value = true;
+        if (showEntryModal.value || entryData.value) {
+            entryQueue.value.push(event);
+            return;
+        }
+
+        showNextEntry(event);
     });
 };
 
@@ -278,7 +342,7 @@ onBeforeUnmount(() => {
         tabindex="-1"
         style="background: rgba(0, 0, 0, 0.5)"
     >
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -292,8 +356,36 @@ onBeforeUnmount(() => {
                     ></button>
                 </div>
 
-                <div class="modal-body">
-                    <div v-if="entryData">
+                <div class="modal-body p-0">
+                    <div class="turnstile-entry-layout">
+                        <aside class="turnstile-entry-list">
+                            <div class="turnstile-entry-list__title">
+                                Մուտքերի հերթ ({{ pendingEntries.length }})
+                            </div>
+
+                            <button
+                                v-for="(entry, index) in pendingEntries"
+                                :key="`${entry.entry_code}-${entry.detected_at}-${index}`"
+                                type="button"
+                                class="turnstile-entry-list__item"
+                                :class="{ 'is-active': entry === entryData }"
+                                @click="selectPendingEntry(entry)"
+                            >
+                                <span
+                                    class="turnstile-entry-list__avatar"
+                                    :class="entry.access_allowed === false ? 'is-denied' : 'is-allowed'"
+                                >
+                                    {{ entryOwnerName(entry).slice(0, 1) || "?" }}
+                                </span>
+                                <span class="turnstile-entry-list__content">
+                                    <strong>{{ entryOwnerName(entry) }}</strong>
+                                    <small>{{ entryActionLabel(entry) }} · {{ entry.entry_code || "-" }}</small>
+                                    <small>{{ entry.detected_at || entry.date || "-" }}</small>
+                                </span>
+                            </button>
+                        </aside>
+
+                        <div v-if="entryData" class="turnstile-entry-detail">
                         <div
                             class="alert mb-3"
                             :class="
@@ -365,6 +457,36 @@ onBeforeUnmount(() => {
                             <strong>Տեսակ:</strong>
                             {{ entryData.owner_type || currentOwner?.type }}
                         </p>
+
+                        <div
+                            v-if="recordedMemberships.length && !requiresManagerSelection"
+                            class="alert alert-info mt-4 mb-0"
+                        >
+                            <div class="fw-semibold mb-3">
+                                Ֆիքսված աբոնեմենտներ
+                            </div>
+
+                            <div class="d-flex flex-column gap-2">
+                                <div
+                                    v-for="membership in recordedMemberships"
+                                    :key="`recorded-${membership.id}`"
+                                    class="border rounded p-3 bg-white"
+                                >
+                                    <div class="fw-semibold">
+                                        {{ membership.membership_plan_name }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Category: {{ membership.membership_category_name || "-" }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        {{ formatMembershipPeriod(membership) }}
+                                    </div>
+                                    <div class="small text-muted">
+                                        Visits left: {{ membership.visits_left ?? "-" }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div
                             v-if="requiresManagerSelection"
@@ -475,11 +597,12 @@ onBeforeUnmount(() => {
                                 </div>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button class="btn btn-primary" :disabled="!selectedMembershipIds.length || activatingMembershipId" @click="selectMembership">
+                    <button v-if="requiresManagerSelection" class="btn btn-primary" :disabled="!selectedMembershipIds.length || activatingMembershipId" @click="selectMembership">
                         Ֆիքսել մուտքը ընտրված աբոնեմենտների համար
                     </button>
                     <button class="btn btn-secondary" @click="closeModal">
@@ -492,6 +615,111 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.turnstile-entry-layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    min-height: 520px;
+}
+
+.turnstile-entry-list {
+    background: #f7f8fc;
+    border-right: 1px solid #e6e8ef;
+    max-height: 72vh;
+    overflow-y: auto;
+    padding: 14px 10px;
+}
+
+.turnstile-entry-list__title {
+    color: #566075;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    padding: 0 8px 10px;
+    text-transform: uppercase;
+}
+
+.turnstile-entry-list__item {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 10px;
+    color: inherit;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 6px;
+    padding: 10px 8px;
+    text-align: left;
+    transition: background-color .15s ease, box-shadow .15s ease;
+    width: 100%;
+}
+
+.turnstile-entry-list__item:hover {
+    background: #eef1fa;
+}
+
+.turnstile-entry-list__item.is-active {
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(67, 89, 113, .12);
+}
+
+.turnstile-entry-list__avatar {
+    align-items: center;
+    background: #dff7e9;
+    border-radius: 50%;
+    color: #1a9b5a;
+    display: inline-flex;
+    flex: 0 0 34px;
+    font-weight: 700;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+.turnstile-entry-list__avatar.is-denied {
+    background: #fde1e3;
+    color: #d5424f;
+}
+
+.turnstile-entry-list__content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.turnstile-entry-list__content strong,
+.turnstile-entry-list__content small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.turnstile-entry-list__content small {
+    color: #7b8496;
+    font-size: .75rem;
+}
+
+.turnstile-entry-detail {
+    max-height: 72vh;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+@media (max-width: 991.98px) {
+    .turnstile-entry-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .turnstile-entry-list {
+        border-bottom: 1px solid #e6e8ef;
+        border-right: 0;
+        max-height: 220px;
+    }
+
+    .turnstile-entry-detail {
+        max-height: none;
+    }
+}
+
 .membership-select {
     align-items: center;
     cursor: pointer;
