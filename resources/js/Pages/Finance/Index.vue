@@ -315,35 +315,52 @@ const rowNumber = (index) =>
                 </form>
             </div>
 
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Ընթացիկ մնացորդ</h5>
+                <small class="text-muted">Ամբողջ պատմության տվյալներով</small>
+            </div>
             <div class="row g-3 mb-4">
-                <div class="col-xl col-md-4 col-6">
+                <div class="col-md-4">
                     <div class="summary-card">
                         <span>Ընդհանուր մնացորդ</span>
                         <strong>{{ money(summary.balance) }}</strong>
                     </div>
                 </div>
-                <div class="col-xl col-md-4 col-6">
+                <div class="col-md-4">
                     <div class="summary-card cash">
                         <span>Կանխիկ</span>
                         <strong>{{ money(summary.cash_balance) }}</strong>
                     </div>
                 </div>
-                <div class="col-xl col-md-4 col-6">
+                <div class="col-md-4">
                     <div class="summary-card noncash">
                         <span>Անկանխիկ</span>
                         <strong>{{ money(summary.noncash_balance) }}</strong>
                     </div>
                 </div>
-                <div class="col-xl col-md-4 col-6">
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Ընտրված ժամանակահատված</h5>
+                <small class="text-muted">Կիրառված ֆիլտրերով</small>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
                     <div class="summary-card income">
                         <span>Մուտքեր</span>
                         <strong>{{ money(summary.income) }}</strong>
                     </div>
                 </div>
-                <div class="col-xl col-md-4 col-6">
+                <div class="col-md-4">
                     <div class="summary-card expense">
                         <span>Ելքեր</span>
                         <strong>{{ money(summary.expense) }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="summary-card" :class="Number(summary.period_net) < 0 ? 'expense' : 'income'">
+                        <span>Զուտ տարբերություն</span>
+                        <strong>{{ money(summary.period_net) }}</strong>
                     </div>
                 </div>
             </div>

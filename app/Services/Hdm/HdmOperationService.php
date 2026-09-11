@@ -17,6 +17,7 @@ class HdmOperationService
     public function __construct(
         private HdmOperationInterface $operationRepository,
         private FinancialLedgerService $financialLedgerService,
+        private HdmPrepaymentTerminationService $prepaymentTerminationService,
     ) {}
 
     /**
@@ -47,11 +48,17 @@ class HdmOperationService
                         $this->financialLedgerService->recordMembershipPayment($refund, $operation->user_id);
                     }
 
-                    if ($data['status'] === 'failed' && $refund->status === 'pending') {
+                    if ($data['status'] === 'failed'
+                        && $refund->status === 'pending'
+                        && ! $this->prepaymentTerminationService->isOperationPartOfPendingWorkflow($operation)) {
                         $refund->update(['status' => 'cancelled']);
                     }
 
                     $this->recalculateMembershipSalePaymentStatus($refund);
+                }
+
+                if ($operation) {
+                    $this->prepaymentTerminationService->refreshWorkflowForOperation($operation);
                 }
 
                 // 2. Gateway can return a fresh cashier key even for DECRYPT_FAILED.

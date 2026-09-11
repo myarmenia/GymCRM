@@ -49,7 +49,9 @@ class SalaryPayoutService
             fn (SalaryPayableAssignment $assignment) => $this->mapAssignmentPayable($assignment)
         );
 
-        $history = $this->historyQuery($actor, $filters)
+        $filteredHistory = $this->historyQuery($actor, $filters);
+        $historySummary = $this->historySummary($filteredHistory);
+        $history = $filteredHistory
             ->latest('paid_at')
             ->latest('id')
             ->paginate(20, ['*'], 'history_page')
@@ -65,8 +67,64 @@ class SalaryPayoutService
                 'payable_count' => (int) ($summaryRow->payable_count ?? 0),
                 'payable_amount' => round((float) ($summaryRow->payable_amount ?? 0), 2),
             ],
+            'historySummary' => $historySummary,
             'filterOptions' => $this->assignmentFilterOptions($actor),
             'canVoid' => $actor->hasAnyRole(self::MANAGER_ROLES),
+        ];
+    }
+
+    public function historyExportData(User $actor, array $filters = []): array
+    {
+        $this->authorizeManager($actor);
+        $filters = $this->normalizeFilters($filters);
+        $query = $this->historyQuery($actor, $filters);
+        $summary = $this->historySummary(clone $query);
+        $rows = $query
+            ->latest('paid_at')
+            ->latest('id')
+            ->get()
+            ->map(fn (SalaryPayout $payout) => $this->mapPayout($payout))
+            ->map(fn (array $payout) => [
+                'id' => $payout['id'],
+                'paid_at' => $payout['paid_at'],
+                'payee' => $payout['payee'],
+                'gym' => $payout['gym'],
+                'payment_method' => $payout['payment_method'],
+                'paid_by' => $payout['paid_by'],
+                'amount' => $payout['amount'],
+                'refunded_amount' => $payout['refunded_amount'],
+                'net_amount' => $payout['net_amount'],
+                'status' => $this->payoutStatusLabel($payout),
+                'reference' => $payout['reference'] ?? '',
+                'notes' => $payout['notes'] ?? '',
+            ]);
+
+        return [
+            'rows' => $rows,
+            'columns' => [
+                ['key' => 'id', 'title' => '#'],
+                ['key' => 'paid_at', 'title' => 'Վճարման ամսաթիվ'],
+                ['key' => 'payee', 'title' => 'Աշխատակից'],
+                ['key' => 'gym', 'title' => 'Մարզասրահ'],
+                ['key' => 'payment_method', 'title' => 'Վճարման եղանակ'],
+                ['key' => 'paid_by', 'title' => 'Վճարել է'],
+                ['key' => 'amount', 'title' => 'Ընդհանուր վճարված'],
+                ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
+                ['key' => 'net_amount', 'title' => 'Զուտ վճարված'],
+                ['key' => 'status', 'title' => 'Կարգավիճակ'],
+                ['key' => 'reference', 'title' => 'Հղում / փաստաթուղթ'],
+                ['key' => 'notes', 'title' => 'Նշումներ'],
+            ],
+            'filters' => $filters,
+            'summary' => [
+                'title' => 'Ամփոփում',
+                'rows' => [
+                    ['label' => 'Վճարումների քանակ', 'value' => $summary['payout_count']],
+                    ['label' => 'Ընդհանուր վճարված', 'value' => $summary['paid_amount']],
+                    ['label' => 'Վերադարձված', 'value' => $summary['refunded_amount']],
+                    ['label' => 'Զուտ վճարված', 'value' => $summary['net_amount']],
+                ],
+            ],
         ];
     }
 
@@ -451,6 +509,8 @@ class SalaryPayoutService
             ]);
         }
 
+        $payout->forceFill(['version' => (int) $payout->version + 1])->saveQuietly();
+
         $this->financialLedgerService->recordSalaryRefund($refund);
 
         return $refund->load(['items.payoutItem', 'paymentMethod.translations', 'refundedBy']);
@@ -826,11 +886,48 @@ class SalaryPayoutService
             ->when($filters['history_status'] ?? null, function ($query, $status) {
                 match ($status) {
                     'paid' => $query->where('status', 'paid')->whereDoesntHave('refunds'),
-                    'refunded' => $query->where('status', 'paid')->whereHas('refunds'),
+                    'refunded' => $query->whereHas('refunds'),
                     'voided' => $query->where('status', 'voided'),
                     default => null,
                 };
             });
+    }
+
+    protected function historySummary($query): array
+    {
+        $payoutIds = (clone $query)->select('salary_payouts.id');
+        $row = (clone $query)
+            ->selectRaw('COUNT(*) as payout_count, COALESCE(SUM(amount), 0) as paid_amount')
+            ->first();
+        $refunded = SalaryPayoutRefund::query()
+            ->whereIn('salary_payout_id', $payoutIds)
+            ->sum('amount');
+        $paid = round((float) ($row->paid_amount ?? 0), 2);
+        $refunded = round((float) $refunded, 2);
+
+        return [
+            'payout_count' => (int) ($row->payout_count ?? 0),
+            'paid_amount' => $paid,
+            'refunded_amount' => $refunded,
+            'net_amount' => round($paid - $refunded, 2),
+        ];
+    }
+
+    protected function payoutStatusLabel(array $payout): string
+    {
+        if ($payout['status'] === 'voided') {
+            return 'Չեղարկված';
+        }
+
+        if ((float) $payout['refunded_amount'] >= (float) $payout['amount']) {
+            return 'Ամբողջությամբ վերադարձված';
+        }
+
+        if ((float) $payout['refunded_amount'] > 0) {
+            return 'Մասնակի վերադարձ';
+        }
+
+        return 'Վճարված';
     }
 
     protected function filterOptions(User $actor, QueryBuilder $basePayables): array

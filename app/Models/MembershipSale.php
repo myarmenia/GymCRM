@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Validation\ValidationException;
 
 class MembershipSale extends Model
 {
@@ -15,6 +16,17 @@ class MembershipSale extends Model
     use HasUuidAndVersion;
 
     protected $guarded = [];
+
+    protected static function booted(): void
+    {
+        static::updating(function (self $sale): void {
+            if ($sale->isDirty('is_hdm')) {
+                throw ValidationException::withMessages([
+                    'is_hdm' => 'Վաճառքի ՀԴՄ ռեժիմը հնարավոր չէ փոխել։',
+                ]);
+            }
+        });
+    }
 
     protected array $filterConfig = [
         'trainer_id' => [
@@ -60,6 +72,7 @@ class MembershipSale extends Model
     protected function casts(): array
     {
         return [
+            'is_hdm' => 'boolean',
             'total_price' => 'decimal:2',
             'discount_value' => 'decimal:2',
             'discount_amount' => 'decimal:2',

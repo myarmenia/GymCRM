@@ -15,6 +15,9 @@ class TrainerMonthlySalary extends Model
     {
         return [
             'salary_month' => 'date',
+            'period_start' => 'date',
+            'period_end' => 'date',
+            'installment_number' => 'integer',
             'price' => 'decimal:2',
         ];
     }

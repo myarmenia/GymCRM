@@ -12,6 +12,10 @@ class Gym extends Model
 {
     use HasUuidAndVersion, SoftDeletes;
 
+    public const TRAINER_SALARY_MODE_PREPAID = 'prepaid';
+
+    public const TRAINER_SALARY_MODE_POSTPAID = 'postpaid';
+
     protected $guarded = [];
 
     protected $hidden = [
@@ -22,6 +26,7 @@ class Gym extends Model
     {
         return [
             'version' => 'integer',
+            'trainer_salary_mode' => 'string',
         ];
     }
 

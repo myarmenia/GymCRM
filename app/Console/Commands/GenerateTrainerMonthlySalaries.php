@@ -16,7 +16,7 @@ class GenerateTrainerMonthlySalaries extends Command
         $result = $trainerMonthlySalaryService->generateForMonth($this->argument('date'));
 
         $this->info(
-            "Trainer monthly salaries generated for {$result['salary_month']}. Created: {$result['created']}, skipped: {$result['skipped']}."
+            "Trainer monthly salaries generated for {$result['salary_month']}. Created: {$result['created']}, cancelled: {$result['cancelled']}, skipped: {$result['skipped']}."
         );
 
         return self::SUCCESS;

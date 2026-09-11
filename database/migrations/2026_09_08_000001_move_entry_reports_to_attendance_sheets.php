@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,17 +11,10 @@ return new class extends Migration
         Schema::table('attendance_sheets', function (Blueprint $table): void {
             $table->foreignId('gym_id')
                 ->nullable()
-                ->after('membership_plan_id')
                 ->constrained('gyms')
                 ->nullOnDelete();
             $table->index(['gym_id', 'date'], 'attendance_gym_date_index');
         });
-
-        DB::statement(
-            'UPDATE attendance_sheets
-             SET gym_id = (SELECT gym_id FROM membership_plans WHERE membership_plans.id = attendance_sheets.membership_plan_id)
-             WHERE gym_id IS NULL AND membership_plan_id IS NOT NULL'
-        );
 
         Schema::dropIfExists('entry_reports');
     }

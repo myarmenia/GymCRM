@@ -141,6 +141,7 @@ class TrainerCommissionsReportRepository implements TrainerCommissionsReportRepo
             ])
             ->whereRaw(
                 "(trainer_commissions.salary_amount + {$netPaidSql} > 0
+                OR trainer_commissions.generation_stopped_at IS NOT NULL
                 OR {$transferredInSql} > 0
                 OR {$transferredOutSql} > 0)"
             )
@@ -149,6 +150,14 @@ class TrainerCommissionsReportRepository implements TrainerCommissionsReportRepo
             ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->where('created_at', '<=', "{$endDate} 23:59:59"))
             ->when($filters['trainer_id'] ?? null, fn (Builder $query, $trainerId) => $query->where('trainer_id', $trainerId))
             ->when($filters['status'] ?? null, function (Builder $query, $status) use ($netPaidSql, $transferredOutSql) {
+                if ($status === 'cancelled') {
+                    $query->whereNotNull('generation_stopped_at');
+
+                    return;
+                }
+
+                $query->whereNull('generation_stopped_at');
+
                 match ($status) {
                     'paid' => $query->whereRaw("trainer_commissions.salary_amount <= 0 AND {$netPaidSql} > 0"),
                     'partial' => $query->whereRaw("trainer_commissions.salary_amount > 0 AND {$netPaidSql} > 0"),

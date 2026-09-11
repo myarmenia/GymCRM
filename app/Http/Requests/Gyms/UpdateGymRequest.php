@@ -27,6 +27,7 @@ class UpdateGymRequest extends FormRequest
                 'max:255',
             ],
             'entry_code_type' => ['required', 'string', Rule::in(['rfId', 'FaceId'])],
+            'trainer_salary_mode' => ['required', Rule::in(['prepaid', 'postpaid'])],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
 
         ];
@@ -39,6 +40,8 @@ class UpdateGymRequest extends FormRequest
             'address.required' => 'The gym address is required.',
             'phone.regex' => 'The phone number format is invalid.',
             'email.email' => 'Please enter a valid email address.',
+            'trainer_salary_mode.required' => 'Ընտրեք մարզչի աշխատավարձի հաշվարկման եղանակը։',
+            'trainer_salary_mode.in' => 'Մարզչի աշխատավարձի հաշվարկման եղանակը սխալ է։',
         ];
     }
 }

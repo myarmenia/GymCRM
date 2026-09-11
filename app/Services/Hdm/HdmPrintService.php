@@ -134,6 +134,107 @@ class HdmPrintService extends HdmBaseService
         return $this->preparePrintData($entity);
     }
 
+    public function prepareRetryData(MembershipPlanPayment $payment): array
+    {
+        try {
+            if ($payment->type !== 'payment' || ! $payment->is_hdm
+                || $payment->status !== 'paid' || (float) $payment->amount <= 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Only a paid HDM payment with a positive amount can be printed.',
+                ];
+            }
+
+            $payment->loadMissing([
+                'membershipSale.membershipPlan.translations',
+                'hdmOperations.config',
+            ]);
+            $successfulOperation = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->first(fn ($operation) => $operation->status === 'success'
+                    && $operation->crn
+                    && $operation->rseq);
+
+            if ($successfulOperation) {
+                return [
+                    'success' => true,
+                    'need_print' => false,
+                    'message' => 'The HDM receipt is already printed.',
+                ];
+            }
+
+            $pendingOperation = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->where('status', 'pending')
+                ->sortByDesc('id')
+                ->first();
+            if ($pendingOperation) {
+                return [
+                    'success' => false,
+                    'message' => 'The HDM operation is still pending. Check its status before printing again.',
+                ];
+            }
+
+            $operation = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->where('status', 'failed')
+                ->filter(fn ($operation) => ! empty($operation->request))
+                ->sortByDesc('id')
+                ->first();
+
+            if (! $operation) {
+                return $this->preparePrintData($payment);
+            }
+
+            $sale = $payment->membershipSale;
+            $device = $operation->config;
+            if (! $sale || ! $device || ! $device->status) {
+                return [
+                    'success' => false,
+                    'message' => 'The HDM device of the failed operation is unavailable.',
+                ];
+            }
+
+            $cashier = $this->getCashier($device->id, $sale->user_id);
+            if (! $cashier) {
+                return [
+                    'success' => false,
+                    'message' => 'Active HDM cashier was not found.',
+                ];
+            }
+
+            if ((int) $operation->hdm_cashier_id !== (int) $cashier->id
+                || (string) $operation->cashier_number !== (string) $cashier->login) {
+                $operation->update([
+                    'hdm_cashier_id' => $cashier->id,
+                    'cashier_number' => $cashier->login,
+                ]);
+            }
+
+            return $this->formatResponse(
+                operation: $operation,
+                device: $device,
+                cashier: $cashier,
+                receiptData: (array) $operation->request,
+                entityData: [
+                    'id' => $payment->id,
+                    'number' => $sale->id,
+                    'total' => (float) $payment->amount,
+                ],
+            );
+        } catch (\Throwable $e) {
+            Log::error('HDM: Failed to prepare membership receipt retry.', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to prepare HDM receipt retry: '.$e->getMessage(),
+            ];
+        }
+    }
+
     private function buildMembershipPlanItem(MembershipPlanPayment $payment): array
     {
         $sale = $payment->membershipSale;

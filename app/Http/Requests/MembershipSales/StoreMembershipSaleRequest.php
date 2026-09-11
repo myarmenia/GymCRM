@@ -232,16 +232,6 @@ class StoreMembershipSaleRequest extends FormRequest
 
     protected function discountTypes(): array
     {
-        $migration = file_get_contents(
-            base_path('database/migrations/2026_06_08_000004_create_membership_sales_table.php')
-        );
-
-        if (! preg_match("/enum\\('discount_type',\\s*\\[(.*?)\\]\\)/s", $migration, $matches)) {
-            return [];
-        }
-
-        preg_match_all("/'([^']+)'/", $matches[1], $values);
-
-        return $values[1] ?? [];
+        return ['percent'];
     }
 }
