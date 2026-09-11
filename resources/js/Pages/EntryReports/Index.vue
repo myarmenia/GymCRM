@@ -564,6 +564,41 @@ const exportHref = computed(() => {
                             </div>
                         </div>
 
+                        <div class="border rounded p-3 mb-4">
+                            <h6 class="mb-3">Աբոնեմենտներ</h6>
+
+                            <div
+                                v-if="selectedReport.memberships?.length"
+                                class="d-flex flex-column gap-2"
+                            >
+                                <div
+                                    v-for="membership in selectedReport.memberships"
+                                    :key="membership.id"
+                                    class="d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2"
+                                >
+                                    <div>
+                                        <div class="fw-medium">
+                                            {{ membership.plan_name || "Անանուն աբոնեմենտ" }}
+                                        </div>
+                                        <small class="text-muted">
+                                            Մնացած այցեր:
+                                            {{ membership.visits_left ?? "Անսահմանափակ" }}
+                                            <template v-if="membership.valid_at || membership.end_date">
+                                                · Վավեր մինչև {{ membership.valid_at || membership.end_date }}
+                                            </template>
+                                        </small>
+                                    </div>
+                                    <span class="badge bg-label-primary">
+                                        {{ membership.status || "-" }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div v-else class="text-muted small">
+                                Այս մուտքը կամ ելքը աբոնեմենտի հետ կապված չէ։
+                            </div>
+                        </div>
+
                         <h6>Payload JSON</h6>
                         <pre class="bg-light border rounded p-3 mb-0"><code>{{ formatPayload(selectedReport.payload) }}</code></pre>
                     </div>

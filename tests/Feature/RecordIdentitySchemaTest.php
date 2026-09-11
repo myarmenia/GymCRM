@@ -17,7 +17,7 @@ class RecordIdentitySchemaTest extends TestCase
         'gyms', 'users', 'langs', 'countries', 'country_translations', 'companies',
         'company_translations', 'payment_methods', 'payment_method_translations',
         'card_types', 'measurement_units', 'person_positions', 'people', 'documents',
-        'partners', 'person_biometrics', 'entry_codes', 'entry_permissions', 'entry_reports',
+        'partners', 'person_biometrics', 'entry_codes', 'entry_permissions',
         'attendance_sheets', 'turnstiles', 'gym_working_day_times', 'gym_languages',
         'notifications', 'inventory_categories', 'inventory_category_translations',
         'inventory_products', 'inventory_product_translations', 'warehouses',

@@ -96,6 +96,7 @@ const summaryCards = computed(() => [
     { label: 'Վճարված միջնորդավճար', value: formatAmount(props.summary.paid_commission_amount), icon: 'tabler-check', class: 'bg-label-info text-info' },
     { label: 'Սպասող միջնորդավճար', value: formatAmount(props.summary.pending_commission_amount), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
     { label: 'Վերադարձված', value: formatAmount(props.summary.refunded_commission_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: 'Չվաստակած՝ չեղարկված', value: formatAmount(props.summary.cancelled_unearned_commission_amount), icon: 'tabler-ban', class: 'bg-label-danger text-danger' },
     { label: 'Փոխանցված մուտք', value: formatAmount(props.summary.transferred_in_amount), icon: 'tabler-arrow-down-left', class: 'bg-label-success text-success' },
     { label: 'Փոխանցված ելք', value: formatAmount(props.summary.transferred_out_amount), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
     { label: 'Պահված միջնորդավճարներ', value: props.summary.kept_commissions_count ?? 0, icon: 'tabler-lock', class: 'bg-label-secondary text-secondary' },
@@ -168,6 +169,7 @@ const statusLabel = status => ({
     partial: 'Մասնակի վճարված',
     paid: 'Վճարված',
     transferred: 'Փոխանցված',
+    cancelled: 'Գեներացումը դադարեցված',
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -175,6 +177,7 @@ const statusClass = status => ({
     partial: 'bg-label-info',
     paid: 'bg-label-success',
     transferred: 'bg-label-secondary',
+    cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 </script>
 
@@ -254,13 +257,16 @@ const statusClass = status => ({
                             <th>Հաճախորդ</th>
                             <th>Միջնորդավճարի տեսակ</th>
                             <th>Միջնորդավճարի արժեք</th>
+                            <th>Սկզբնական միջնորդավճար</th>
                             <th>Ընդհանուր վերագրված</th>
+                            <th>Չվաստակած՝ չեղարկված</th>
                             <th>Զուտ վճարված</th>
                             <th>Չվճարված մնացորդ</th>
                             <th>Վերադարձված</th>
                             <th>Փոխանցված մուտք</th>
                             <th>Փոխանցված ելք</th>
                             <th>Կարգավիճակ</th>
+                            <th>Գեներացման դադարեցում</th>
                             <th>Պահված է</th>
                             <th>Ստեղծվել է</th>
                         </tr>
@@ -275,7 +281,9 @@ const statusClass = status => ({
                             <td>{{ commission.customer }}</td>
                             <td>{{ salaryTypeLabel(commission.salary_type) }}</td>
                             <td>{{ formatAmount(commission.salary_value) }}</td>
+                            <td>{{ formatAmount(commission.initial_commission_amount) }}</td>
                             <td>{{ formatAmount(commission.salary_amount) }}</td>
+                            <td>{{ formatAmount(commission.cancelled_unearned_amount) }}</td>
                             <td>{{ formatAmount(commission.net_paid_amount) }}</td>
                             <td>{{ formatAmount(commission.outstanding_amount) }}</td>
                             <td>{{ formatAmount(commission.refunded_amount) }}</td>
@@ -289,12 +297,19 @@ const statusClass = status => ({
                                     {{ statusLabel(commission.status) }}
                                 </span>
                             </td>
+                            <td>
+                                <template v-if="commission.generation_stopped_at">
+                                    <div>{{ commission.generation_stopped_reason }}</div>
+                                    <div class="text-muted small">{{ formatDate(commission.generation_stopped_at) }}</div>
+                                </template>
+                                <span v-else>-</span>
+                            </td>
                             <td>{{ commission.is_kept ? 'Այո' : 'Ոչ' }}</td>
                             <td>{{ formatDate(commission.created_at) }}</td>
                         </tr>
                         <tr v-if="!commissions.data.length">
                             <td
-                                colspan="14"
+                                colspan="17"
                                 class="text-center text-muted py-4"
                             >
                                 Տվյալներ չկան։

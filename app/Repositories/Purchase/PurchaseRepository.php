@@ -33,6 +33,15 @@ class PurchaseRepository extends BaseRepository implements PurchaseInterface
                 'items.product.translations' => function ($query) use ($locale) {
                     $query->where('locale', $locale);
                 },
+                'items.refundItems:id,purchase_refund_id,purchase_item_id,quantity,amount',
+                'refunds' => fn ($query) => $query
+                    ->with([
+                        'paymentMethod.translations',
+                        'cardType:id,name',
+                        'refunder:id,name,surname',
+                        'items:id,purchase_refund_id,purchase_item_id,quantity,amount',
+                    ])
+                    ->latest('refunded_at'),
             ])
             ->where('gym_id', $gymId)
             ->when($search, function ($query) use ($search, $locale) {

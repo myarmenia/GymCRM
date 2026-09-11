@@ -3,9 +3,10 @@
 namespace App\Services\EntryReports;
 
 use App\Interfaces\EntryReports\EntryReportInterface;
-use App\Models\EntryReport;
+use App\Models\AttendanceSheet;
 use App\Models\Gym;
 use App\Models\Person;
+use App\Models\PersonMembership;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -30,8 +31,8 @@ class EntryReportService
         $summary = $this->summary((clone $query));
         $perPage = min(max((int) ($filters['per_page'] ?? 10), 10), 100);
         $reports = $query
-            ->with('client')
-            ->latest('detected_at')
+            ->with(['gym', 'relation', 'personMemberships.membershipPlan.translations'])
+            ->latest('date')
             ->latest('id')
             ->paginate($perPage)
             ->withQueryString();
@@ -47,16 +48,18 @@ class EntryReportService
         ];
     }
 
-    public function showData(EntryReport $entryReport): array
+    public function showData(AttendanceSheet $entryReport): array
     {
         $user = auth()->user();
         abort_unless($this->canViewReports($user), 403);
 
         $clientId = $this->restrictedClientId($user);
 
-        if ($clientId && (int) $entryReport->client_id !== (int) $clientId) {
+        if ($clientId && (int) $entryReport->gym_id !== (int) $clientId) {
             abort(403);
         }
+
+        $entryReport->loadMissing(['gym', 'personMemberships.membershipPlan.translations']);
 
         return $this->transformReport($entryReport);
     }
@@ -70,7 +73,8 @@ class EntryReportService
         $canSelectClient = $this->canViewAllClients($user);
 
         $reports = $this->filteredQuery($filters, $clientId, $canSelectClient)
-            ->latest('detected_at')
+            ->with(['gym', 'personMemberships.membershipPlan.translations'])
+            ->latest('date')
             ->latest('id')
             ->limit(10000)
             ->get();
@@ -83,21 +87,23 @@ class EntryReportService
         $query = $this->entryReportRepository->query();
 
         if ($clientId) {
-            $query->where('client_id', $clientId);
+            $query->where('gym_id', $clientId);
         } elseif ($canSelectClient && !empty($filters['client_id'])) {
-            $query->where('client_id', $filters['client_id']);
+            $query->where('gym_id', $filters['client_id']);
         }
 
         $query
-            ->when(!empty($filters['status']), fn(Builder $q) => $q->where('status', $filters['status']))
-            ->when(!empty($filters['action']), fn(Builder $q) => $q->where('action', $filters['action']))
-            ->when(!empty($filters['reason']), fn(Builder $q) => $q->where('reason', $filters['reason']))
-            ->when(!empty($filters['owner_type']), fn(Builder $q) => $q->where('owner_type', $filters['owner_type']))
+            ->when(!empty($filters['status']) && $filters['status'] !== 'success', fn(Builder $q) => $q->whereRaw('1 = 0'))
+            ->when(!empty($filters['action']), fn(Builder $q) => $q->where('direction', $filters['action']))
+            ->when(!empty($filters['reason']) && $filters['reason'] !== 'success', fn(Builder $q) => $q->whereRaw('1 = 0'))
+            ->when(!empty($filters['owner_type']), fn(Builder $q) => $q->where('relation_type', $this->relationClass($filters['owner_type'])))
             ->when(isset($filters['access_allowed']) && $filters['access_allowed'] !== '', function (Builder $q) use ($filters) {
-                $q->where('access_allowed', (bool) (int) $filters['access_allowed']);
+                if (!(bool) (int) $filters['access_allowed']) {
+                    $q->whereRaw('1 = 0');
+                }
             })
-            ->when(!empty($filters['start_date']), fn(Builder $q) => $q->whereDate('detected_at', '>=', $filters['start_date']))
-            ->when(!empty($filters['end_date']), fn(Builder $q) => $q->whereDate('detected_at', '<=', $filters['end_date']));
+            ->when(!empty($filters['start_date']), fn(Builder $q) => $q->whereDate('date', '>=', $filters['start_date']))
+            ->when(!empty($filters['end_date']), fn(Builder $q) => $q->whereDate('date', '<=', $filters['end_date']));
 
         if (!empty($filters['search'])) {
             $this->applySearch($query, trim((string) $filters['search']));
@@ -123,20 +129,19 @@ class EntryReportService
 
         $query->where(function (Builder $q) use ($search, $userIds, $personIds) {
             $q->where('entry_code', 'like', "%{$search}%")
-                ->orWhere('mac', 'like', "%{$search}%")
-                ->orWhere('reason', 'like', "%{$search}%");
+                ->orWhere('mac', 'like', "%{$search}%");
 
             if ($userIds->isNotEmpty()) {
                 $q->orWhere(function (Builder $ownerQuery) use ($userIds) {
-                    $ownerQuery->where('owner_type', 'user')
-                        ->whereIn('owner_id', $userIds);
+                    $ownerQuery->where('relation_type', User::class)
+                        ->whereIn('relation_id', $userIds);
                 });
             }
 
             if ($personIds->isNotEmpty()) {
                 $q->orWhere(function (Builder $ownerQuery) use ($personIds) {
-                    $ownerQuery->where('owner_type', 'person')
-                        ->whereIn('owner_id', $personIds);
+                    $ownerQuery->where('relation_type', Person::class)
+                        ->whereIn('relation_id', $personIds);
                 });
             }
         });
@@ -146,16 +151,16 @@ class EntryReportService
     {
         return [
             'total_count' => (clone $query)->count(),
-            'success_count' => (clone $query)->where('status', 'success')->count(),
-            'denied_count' => (clone $query)->where('status', 'denied')->count(),
-            'entry_count' => (clone $query)->where('action', 'entry')->count(),
-            'exit_count' => (clone $query)->where('action', 'exit')->count(),
-            'invalid_code_count' => (clone $query)->where('reason', 'invalid_entry_code')->count(),
-            'expired_subscription_count' => (clone $query)->where('reason', 'subscription_expired')->count(),
-            'no_active_subscription_count' => (clone $query)->where('reason', 'no_active_subscription')->count(),
-            'users_count' => (clone $query)->where('owner_type', 'user')->count(),
-            'people_count' => (clone $query)->where('owner_type', 'person')->count(),
-            'today_count' => (clone $query)->whereDate('detected_at', today())->count(),
+            'success_count' => (clone $query)->count(),
+            'denied_count' => 0,
+            'entry_count' => (clone $query)->where('direction', 'entry')->count(),
+            'exit_count' => (clone $query)->where('direction', 'exit')->count(),
+            'invalid_code_count' => 0,
+            'expired_subscription_count' => 0,
+            'no_active_subscription_count' => 0,
+            'users_count' => (clone $query)->where('relation_type', User::class)->count(),
+            'people_count' => (clone $query)->where('relation_type', Person::class)->count(),
+            'today_count' => (clone $query)->whereDate('date', today())->count(),
         ];
     }
 
@@ -168,52 +173,63 @@ class EntryReportService
     {
         $users = User::query()
             ->with('roles')
-            ->whereIn('id', $reports->where('owner_type', 'user')->pluck('owner_id')->filter()->unique())
+            ->whereIn('id', $reports->filter(fn (AttendanceSheet $report) => $report->owner_type === 'user')->pluck('relation_id')->filter()->unique())
             ->get()
             ->keyBy('id');
 
         $people = Person::query()
-            ->whereIn('id', $reports->where('owner_type', 'person')->pluck('owner_id')->filter()->unique())
+            ->whereIn('id', $reports->filter(fn (AttendanceSheet $report) => $report->owner_type === 'person')->pluck('relation_id')->filter()->unique())
             ->get()
             ->keyBy('id');
 
-        return $reports->map(fn(EntryReport $report) => $this->transformReport($report, $users, $people));
+        return $reports->map(fn(AttendanceSheet $report) => $this->transformReport($report, $users, $people));
     }
 
-    private function transformReport(EntryReport $report, ?Collection $users = null, ?Collection $people = null): array
+    private function transformReport(AttendanceSheet $report, ?Collection $users = null, ?Collection $people = null): array
     {
         $owner = null;
 
         if ($report->owner_type === 'user') {
-            $owner = $users?->get($report->owner_id) ?? User::with('roles')->find($report->owner_id);
+            $owner = $users?->get($report->relation_id) ?? User::with('roles')->find($report->relation_id);
         }
 
         if ($report->owner_type === 'person') {
-            $owner = $people?->get($report->owner_id) ?? Person::find($report->owner_id);
+            $owner = $people?->get($report->relation_id) ?? Person::find($report->relation_id);
         }
 
         return [
             'id' => $report->id,
             'client_id' => $report->client_id,
-            'client_name' => $report->client?->name,
+            'client_name' => $report->gym?->name,
             'entry_code' => $report->entry_code,
             'owner_type' => $report->owner_type,
             'owner' => $this->ownerPayload($report->owner_type, $owner),
             'action' => $report->action,
-            'action_label' => $report->action_label,
-            'action_badge_class' => $report->action_badge_class,
+            'action_label' => $report->action === 'entry' ? 'Մուտք' : 'Ելք',
+            'action_badge_class' => $report->action === 'entry' ? 'bg-label-primary' : 'bg-label-info',
             'status' => $report->status,
-            'status_label' => $report->status_label,
-            'status_badge_class' => $report->status_badge_class,
+            'status_label' => 'Հաջողված',
+            'status_badge_class' => 'bg-label-success',
             'reason' => $report->reason,
-            'reason_label' => $report->reason_label,
-            'reason_badge_class' => $report->reason_badge_class,
+            'reason_label' => 'Հաջողված',
+            'reason_badge_class' => 'bg-label-success',
             'access_allowed' => $report->access_allowed,
             'mac' => $report->mac,
-            'device_time' => $report->device_time?->format('Y-m-d H:i:s'),
-            'detected_at' => $report->detected_at?->format('Y-m-d H:i:s'),
+            'device_time' => $report->date?->format('Y-m-d H:i:s'),
+            'detected_at' => $report->date?->format('Y-m-d H:i:s'),
             'created_at' => $report->created_at?->format('Y-m-d H:i:s'),
-            'payload' => $report->payload,
+            'memberships' => $report->personMemberships
+                ->map(fn (PersonMembership $membership): array => [
+                    'id' => $membership->id,
+                    'plan_name' => $membership->membershipPlan?->name,
+                    'status' => $membership->status,
+                    'visits_left' => $membership->visits_left,
+                    'valid_at' => $membership->valid_at?->toDateString(),
+                    'end_date' => $membership->end_date?->toDateString(),
+                ])
+                ->values()
+                ->all(),
+            'payload' => null,
         ];
     }
 
@@ -234,6 +250,11 @@ class EntryReportService
             'role' => $owner instanceof User ? $owner->roles?->first()?->name : null,
             'owner_type' => $ownerType,
         ];
+    }
+
+    private function relationClass(string $ownerType): string
+    {
+        return $ownerType === 'user' ? User::class : Person::class;
     }
 
     private function options(bool $canSelectClient): array

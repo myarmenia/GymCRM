@@ -8,6 +8,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AttendanceSheet extends Model
 {
@@ -23,14 +24,72 @@ class AttendanceSheet extends Model
 
     protected $appends = ['schedule_name_id', 'department_id'];
 
+    protected function casts(): array
+    {
+        return [
+            'date' => 'datetime',
+            'online' => 'boolean',
+        ];
+    }
+
     public function relation()
     {
         return $this->morphTo();
     }
 
-    public function membershipPlan(): BelongsTo
+    public function gym(): BelongsTo
     {
-        return $this->belongsTo(MembershipPlan::class, 'membership_plan_id');
+        return $this->belongsTo(Gym::class);
+    }
+
+    public function getOwnerTypeAttribute(): ?string
+    {
+        return match ($this->relation_type) {
+            Person::class => 'person',
+            User::class => 'user',
+            default => null,
+        };
+    }
+
+    public function getClientIdAttribute(): ?int
+    {
+        return $this->gym_id;
+    }
+
+    public function getOwnerIdAttribute(): ?int
+    {
+        return $this->relation_id;
+    }
+
+    public function getDetectedAtAttribute()
+    {
+        return $this->date;
+    }
+
+    public function getActionAttribute(): ?string
+    {
+        return $this->direction;
+    }
+
+    public function getStatusAttribute(): string
+    {
+        return 'success';
+    }
+
+    public function getReasonAttribute(): string
+    {
+        return 'success';
+    }
+
+    public function getAccessAllowedAttribute(): bool
+    {
+        return true;
+    }
+
+    public function personMemberships(): BelongsToMany
+    {
+        return $this->belongsToMany(PersonMembership::class, 'attendance_person_memberships')
+            ->withTimestamps();
     }
 
     // accesors
