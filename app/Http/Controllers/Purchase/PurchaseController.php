@@ -316,6 +316,30 @@ class PurchaseController extends Controller
         ]);
     }
 
+    public function refund(Request $request, string $locale, Purchase $purchase)
+    {
+        $validated = $request->validate([
+            'payment_method_id' => [
+                'required',
+                'integer',
+                Rule::exists('payment_methods', 'id')->where(
+                    fn ($query) => $query->where('slug', '!=', 'free')
+                ),
+            ],
+            'card_type_id' => ['nullable', 'integer', 'exists:card_types,id'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.purchase_item_id' => ['required', 'integer', 'distinct', 'exists:purchase_items,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $gymId = auth()->user()->gym_id ?? auth()->user()->gym?->id;
+        $this->purchaseService->refund($purchase, $validated, (int) $gymId, (int) auth()->id());
+
+        return back()->with('success', 'Ապրանքի վերադարձը հաջողությամբ գրանցվեց։');
+    }
+
     // public function sell(Request $request, string $locale)
     // {
     //    $validated = $request->validate([

@@ -19,6 +19,7 @@ class GymSeeder extends Seeder
             'address' => 'Yerevan',
             'phone' => '+374000000',
             'email' => 'gym@example.com',
+            'trainer_salary_mode' => Gym::TRAINER_SALARY_MODE_PREPAID,
             ...StableUuid::seedIdentity('gyms', 'default'),
         ]);
 

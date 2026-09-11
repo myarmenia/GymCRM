@@ -146,6 +146,7 @@ Route::prefix('{locale}')
 
             Route::prefix('salary-payouts')->name('salary-payouts.')->group(function () {
                 Route::get('/', [SalaryPayoutController::class, 'index'])->name('index');
+                Route::get('/export', [SalaryPayoutController::class, 'export'])->name('export');
                 Route::post('/', [SalaryPayoutController::class, 'store'])->name('store');
                 Route::patch('/{salaryPayout}/void', [SalaryPayoutController::class, 'void'])->name('void');
                 Route::post('/{salaryPayout}/refund', [SalaryPayoutController::class, 'refund'])->name('refund');
@@ -322,6 +323,7 @@ Route::prefix('{locale}')
                     Route::get('/edit/{id}', [MembershipSaleController::class, 'edit'])->name('edit');
                     Route::get('/payments/{id}', [MembershipSaleController::class, 'payments'])->name('payments');
                     Route::post('/payments/{id}', [MembershipSaleController::class, 'storePayment'])->name('payments.store');
+                    Route::post('/payments/{id}/hdm/{payment}/retry', [MembershipSaleController::class, 'retryPaymentHdmReceipt'])->name('payments.hdm.retry');
                     Route::post('/reminders/{id}', [MembershipSaleController::class, 'storeReminder'])->name('reminders.store');
                     Route::get('/guests/{id}', [MembershipSaleController::class, 'guests'])->name('guests');
                     Route::get('/guests/{id}/lookup', [MembershipSaleController::class, 'lookupGuest'])->name('guests.lookup');
@@ -331,6 +333,8 @@ Route::prefix('{locale}')
                     Route::get('/change-trainer/{id}', [MembershipSaleController::class, 'changeTrainer'])->name('change_trainer');
                     Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');
+                    Route::post('/terminate/{id}', [MembershipSaleController::class, 'terminateWithPrepaymentRefund'])->name('terminate');
+                    Route::post('/terminate/{id}/resume', [MembershipSaleController::class, 'resumePrepaymentTermination'])->name('terminate.resume');
                     Route::post('/cancel/{id}', [MembershipSaleController::class, 'cancel'])->name('cancel');
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
@@ -407,6 +411,7 @@ Route::prefix('{locale}')
                 Route::get('/', [PurchaseController::class, 'index'])->name('index');
                 Route::get('/history', [PurchaseController::class, 'history'])->name('history');
                 Route::post('/sell', [PurchaseController::class, 'sell'])->name('sell');
+                Route::post('/{purchase}/refund', [PurchaseController::class, 'refund'])->name('refund');
             });
         });
     });

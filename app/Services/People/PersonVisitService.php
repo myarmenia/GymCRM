@@ -70,7 +70,7 @@ class PersonVisitService
     public function storeManualVisit(
         int $personId,
         string $action,
-        ?int $membershipId = null,
+        ?int $membershipId,
         string $manualDateTime,
     ): AttendanceSheet
     {
