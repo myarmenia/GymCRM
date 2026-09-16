@@ -18,6 +18,8 @@ const form = useForm({
     address: props.gym.address,
     phone: props.gym.phone,
     email: props.gym.email,
+    entry_code_type: props.gym.entry_code_type ?? 'rfId',
+
     logo: null,
     trainer_salary_mode: props.gym.trainer_salary_mode ?? 'prepaid',
 });
@@ -100,6 +102,12 @@ const cancel = () => {
                     </div>
 
                     <div class="col-md-6">
+                        <InputLabel for="entry_code_type" class="form-label" value="Entry code type" />
+                        <select id="entry_code_type" v-model="form.entry_code_type" class="form-select">
+                            <option value="rfId">RF ID only</option>
+                            <option value="FaceId">Face ID only</option>
+                        </select>
+                        <InputError class="mt-2" :message="form.errors.entry_code_type" />
                         <InputLabel
                             for="trainer_salary_mode"
                             class="form-label"

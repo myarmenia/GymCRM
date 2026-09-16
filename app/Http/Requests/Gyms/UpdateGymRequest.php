@@ -26,6 +26,7 @@ class UpdateGymRequest extends FormRequest
                 'email',
                 'max:255',
             ],
+            'entry_code_type' => ['required', 'string', Rule::in(['rfId', 'FaceId'])],
             'trainer_salary_mode' => ['required', Rule::in(['prepaid', 'postpaid'])],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
 

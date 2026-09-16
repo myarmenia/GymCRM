@@ -5,6 +5,7 @@ use App\Events\EntryCodeCreated;
 use App\Interfaces\Turnstile\CheckEntryCodeInterface;
 use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Models\EntryCode;
+use App\Models\Gym;
 use App\Models\Turnstile;
 
 
@@ -23,6 +24,9 @@ class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryC
 
         $message = 'success';
         $result = false;
+        $allowedEntryCodeType = Gym::query()
+            ->whereKey($gym_id)
+            ->value('entry_code_type') ?? 'rfId';
 
         $entry_code = EntryCode::where([
             'token' => $request_entry_code,
@@ -34,7 +38,7 @@ class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryC
 
                 $entryCode = EntryCode::create([
                     'token' => $request_entry_code,
-                    'type' => $type,
+                    'type' => $allowedEntryCodeType,
                     'gym_id' => $gym_id,
                     'activation' => 0
                 ]);
@@ -47,6 +51,9 @@ class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryC
             }
 
             $message = 'Code not found.';
+
+        } elseif ($entry_code->type !== $allowedEntryCodeType) {
+             $message = 'The entry code type is not allowed for this gym.';
 
         } elseif ($entry_code->status != 1) {
              $message = 'The code is not active.';

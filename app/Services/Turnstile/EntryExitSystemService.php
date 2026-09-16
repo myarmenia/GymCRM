@@ -60,6 +60,7 @@ class EntryExitSystemService
                 'status' => 'denied',
                 'access_allowed' => false,
                 'owner_type' => null,
+                'action' => $action,
                 'reason' => 'invalid_entry_code',
                 'message' => 'Invalid entry code',
                 'entry_code' => $entryCode,
@@ -88,6 +89,7 @@ class EntryExitSystemService
                 'status' => 'denied',
                 'access_allowed' => false,
                 'owner_type' => 'person',
+                'action' => $action,
                 'reason' => 'subscription_expired',
                 'message' => 'Մուտքը մերժված է․ aboniment-ի ժամկետը լրացել է կամ active aboniment չկա',
                 'person' => $this->personPayload($owner),
@@ -234,6 +236,205 @@ class EntryExitSystemService
             'owner_id' => $owner->id,
             'status' => 'success',
             'reason' => 'success',
+        ]);
+
+        return (object) [
+            'message' => 'success',
+            'result' => [
+                'access_allowed' => true,
+                'status' => 'success',
+                'owner_type' => $ownerType,
+                'action' => $action,
+            ],
+        ];
+    }
+
+    /**
+     * Registers a scan coming from a keyboard-wedge RFID reader on the people page.
+     * This intentionally does not use the public turnstile EES request or its MAC lookup.
+     */
+    public function manualScan(User $operator, string $rawEntryCode, string $direction): object
+    {
+        abort_unless(
+            $operator->hasRole('manager'),
+            403,
+            'You are not allowed to register a manual scan.'
+        );
+
+        $clientId = (int) $operator->gym_id;
+        if ($clientId <= 0) {
+            throw ValidationException::withMessages([
+                'gym' => 'A gym must be assigned before using the manual scanner.',
+            ]);
+        }
+
+        $action = match ($direction) {
+            'enter' => 'entry',
+            'exit' => 'exit',
+            default => throw ValidationException::withMessages(['direction' => 'Direction must be enter or exit.']),
+        };
+
+        [$entryCode, $timestamp] = $this->parseEntryCode($rawEntryCode);
+        $entryCode = $this->normalizeEntryCode($entryCode, 'standart');
+        $detectedAt = $this->resolveDeviceTime($timestamp) ?? now(self::LOCAL_TIMEZONE);
+        $resolved = $this->resolveEntryCodeOwner($entryCode, $clientId, 'rfId', false);
+
+        if (!$resolved) {
+            $payload = $this->makeSocketPayload([
+                'status' => 'denied',
+                'access_allowed' => false,
+                'owner_type' => null,
+                'reason' => 'invalid_entry_code',
+                'message' => 'Invalid entry code',
+                'entry_code' => $entryCode,
+                'client_id' => $clientId,
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+
+            $this->broadcastEntryAttempt($clientId, $payload);
+
+            return $this->deniedResponse('denied', 'invalid_entry_code', null, $action);
+        }
+
+        $ownerType = $resolved['owner_type'];
+        $owner = $resolved['owner'];
+        $selectedMemberships = collect();
+
+        if ($ownerType === 'person' && $action === 'entry' && !$this->hasActiveSubscription($owner, $clientId, $detectedAt)) {
+            $payload = $this->makeSocketPayload([
+                'status' => 'denied',
+                'access_allowed' => false,
+                'owner_type' => 'person',
+                'reason' => 'subscription_expired',
+                'message' => 'Subscription expired or unavailable.',
+                'person' => $this->personPayload($owner),
+                'entry_code' => $entryCode,
+                'client_id' => $clientId,
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+
+            $this->broadcastEntryAttempt($clientId, $payload);
+
+            return $this->deniedResponse('denied', 'subscription_expired', $ownerType, $action);
+        }
+
+        if ($ownerType === 'person' && $action === 'entry') {
+            $selectedMemberships = $this->resolveAutomaticMembershipsForEntry(
+                $owner,
+                $clientId,
+                $detectedAt,
+                $action,
+            );
+        }
+
+        if ($ownerType === 'person' && $action === 'exit') {
+            $selectedMemberships = $this->resolveMembershipsForExit($owner, $clientId);
+        }
+
+        if (
+            $ownerType === 'person' &&
+            $action === 'entry' &&
+            $selectedMemberships->isEmpty() &&
+            $this->requiresManagerMembershipSelection($owner, $clientId, $detectedAt)
+        ) {
+            $payload = $this->makeSocketPayload([
+                'status' => 'success',
+                'access_allowed' => true,
+                'owner_type' => 'person',
+                'action' => $action,
+                'message' => 'Person entry allowed',
+                'person' => $this->personPayload($owner),
+                'membership_activation_context' => $this->membershipSelectionContext($owner, $clientId, $detectedAt),
+                'pending_attendance_selection' => true,
+                'entry_code' => $entryCode,
+                'client_id' => $clientId,
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+
+            $this->broadcastEntryAttempt($clientId, $payload);
+
+            return (object) [
+                'message' => 'success',
+                'result' => [
+                    'access_allowed' => true,
+                    'status' => 'success',
+                    'owner_type' => $ownerType,
+                    'action' => $action,
+                ],
+            ];
+        }
+
+        $attendance = DB::transaction(function () use (
+            $owner,
+            $clientId,
+            $entryCode,
+            $detectedAt,
+            $action,
+            &$selectedMemberships,
+        ): AttendanceSheet {
+            if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
+                $selectedMemberships = $selectedMemberships
+                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership))
+                    ->values();
+            }
+
+            $attendance = $this->attendanceSheetRepository->create([
+                'relation_id' => $owner->id,
+                'relation_type' => get_class($owner),
+                'gym_id' => $clientId,
+                'entry_code' => $entryCode,
+                'date' => $detectedAt,
+                'type' => 'rfId',
+                'direction' => $action,
+            ]);
+
+            if ($selectedMemberships->isNotEmpty()) {
+                $attendance->personMemberships()->sync($selectedMemberships->pluck('id')->all());
+            }
+
+            return $attendance;
+        });
+
+        $selectedMembership = $selectedMemberships->first();
+        $payload = $this->makeSocketPayload([
+            'status' => 'success',
+            'access_allowed' => true,
+            'owner_type' => $ownerType,
+            'action' => $action,
+            'message' => $ownerType === 'user' ? 'User entry allowed' : 'Person entry allowed',
+            'person' => $ownerType === 'person' ? $this->personPayload($owner) : null,
+            'user' => $ownerType === 'user' ? $this->userPayload($owner) : null,
+            'membership_activation_context' => $ownerType === 'person'
+                ? $this->membershipSelectionContext($owner, $clientId, $detectedAt)
+                : null,
+            'entry_code' => $entryCode,
+            'client_id' => $clientId,
+            'scan_type' => 'rfId',
+            'manual_scan' => true,
+            'selected_membership' => $selectedMembership ? $this->membershipPayload($selectedMembership) : null,
+            'selected_memberships' => $selectedMemberships
+                ->map(fn (PersonMembership $membership) => $this->membershipPayload($membership))
+                ->values()
+                ->all(),
+            'attendance_id' => $attendance->id,
+            'date' => $attendance->date,
+            'detected_at' => $detectedAt->toDateTimeString(),
+        ]);
+
+        $this->broadcastEntryAttempt($clientId, $payload);
+
+        Log::info('manual_entry_scan', [
+            'client_id' => $clientId,
+            'entry_code' => $entryCode,
+            'owner_type' => $ownerType,
+            'owner_id' => $owner->id,
+            'action' => $action,
         ]);
 
         return (object) [
@@ -675,20 +876,21 @@ class EntryExitSystemService
 
     private function consumeMembershipVisit(PersonMembership $membership): PersonMembership
     {
-        if ($membership->visits_left === null) {
-            return $membership;
-        }
-
-        if ((int) $membership->visits_left <= 0) {
+        if ($membership->visits_left !== null && (int) $membership->visits_left <= 0) {
             throw ValidationException::withMessages([
                 'membership' => 'No visits left for this membership.',
             ]);
         }
 
-        $membership->update([
+        $usage = [
             'visits_used' => (int) $membership->visits_used + 1,
-            'visits_left' => (int) $membership->visits_left - 1,
-        ]);
+        ];
+
+        if ($membership->visits_left !== null) {
+            $usage['visits_left'] = (int) $membership->visits_left - 1;
+        }
+
+        $membership->update($usage);
 
         return $membership->fresh([
             'membershipPlan.translations',
