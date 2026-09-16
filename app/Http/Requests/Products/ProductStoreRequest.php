@@ -4,6 +4,7 @@ namespace App\Http\Requests\Products;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ProductStoreRequest extends FormRequest
 {
@@ -37,16 +38,16 @@ class ProductStoreRequest extends FormRequest
             //'description.ru' => ['nullable', 'string'],
             //'description.en' => ['nullable', 'string'],
             'sku' => [
-                'nullable',
+                'required',
                 'string',
                 'max:255',
-                'unique:inventory_products,sku',
+                Rule::unique('inventory_products', 'sku'),
             ],
             'barcode' => [
                 'nullable',
                 'string',
                 'max:255',
-                'unique:inventory_products,barcode',
+                Rule::unique('inventory_products', 'barcode'),
             ],
             'default_purchase_price' => [
                 'required',
@@ -78,6 +79,15 @@ class ProductStoreRequest extends FormRequest
             ],
             'reserved_quantity' => ['nullable', 'integer', 'min:0', 'regex:/^[0-9]+$/'],
             'average_cost' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'sku.required' => 'SKU դաշտը պարտադիր է։',
+            'sku.unique' => 'Այս SKU-ով ապրանք արդեն գոյություն ունի։',
+            'barcode.unique' => 'Այս barcode-ով ապրանք արդեն գոյություն ունի։',
         ];
     }
 }
