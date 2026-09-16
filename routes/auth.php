@@ -402,6 +402,7 @@ Route::prefix('{locale}')
             Route::prefix('trainer')->name('trainer.')->group(function () {
                 Route::get('/my-schedules', [TrainerPortalController::class, 'mySchedules'])->name('my-schedules');
                 Route::get('/my-customers', [TrainerPortalController::class, 'myCustomers'])->name('my-customers');
+                Route::get('/my-salaries', [TrainerPortalController::class, 'mySalaries'])->name('my-salaries');
                 Route::get('/', [TrainerController::class, 'index'])->name('index');
                 Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
                 Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');

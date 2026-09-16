@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Trainer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Person;
+use App\Models\TrainerMonthlySalary;
 use App\Models\TrainerSchedule;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -51,6 +52,26 @@ class TrainerPortalController extends Controller
 
         return Inertia::render('Trainer/MyCustomers', [
             'customers' => $customers,
+        ]);
+    }
+
+    public function mySalaries(Request $request)
+    {
+        $trainer = $this->trainer($request);
+
+        $salaries = TrainerMonthlySalary::query()
+            ->with([
+                'personMembership.person',
+                'personMembership.membershipPlan.translations',
+            ])
+            ->where('trainer_id', $trainer->id)
+            ->orderByDesc('salary_month')
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render('Trainer/MySalaries', [
+            'salaries' => $salaries,
         ]);
     }
 

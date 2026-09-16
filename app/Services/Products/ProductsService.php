@@ -165,15 +165,34 @@ class ProductsService
             }
 
             if (!empty($data['warehouse_id'])) {
-                $product->warehouseStocks()->updateOrCreate(
-                    [
-                        'warehouse_id' => $data['warehouse_id'],
-                    ],
-                    [
-                        'quantity' => $data['quantity'] ?? 0,
-                        'reserved_quantity' => $data['reserved_quantity'] ?? 0,
-                    ]
-                );
+                $stockData = [
+                    'gym_id' => $product->gym_id,
+                    'warehouse_id' => $data['warehouse_id'],
+                    'quantity' => $data['quantity'] ?? 0,
+                    'reserved_quantity' => $data['reserved_quantity'] ?? 0,
+                ];
+                $currentStock = $product->warehouseStocks()
+                    ->lockForUpdate()
+                    ->orderBy('id')
+                    ->first();
+
+                if (! $currentStock) {
+                    $product->warehouseStocks()->create($stockData);
+                } elseif ((int) $currentStock->warehouse_id === (int) $data['warehouse_id']) {
+                    $currentStock->update($stockData);
+                } else {
+                    $targetStock = $product->warehouseStocks()
+                        ->where('warehouse_id', $data['warehouse_id'])
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($targetStock) {
+                        $targetStock->update($stockData);
+                        $currentStock->delete();
+                    } else {
+                        $currentStock->update($stockData);
+                    }
+                }
             }
 
             // Translations and stock are stored separately.  When those are the

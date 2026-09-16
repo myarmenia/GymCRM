@@ -228,6 +228,22 @@ const { hasRole, hasAnyRole } = useAuth();
                 v-if="hasRole('trainer')"
                 :class="[
                     'menu-item',
+                    route().current('trainer.my-salaries') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('trainer.my-salaries', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-cash"></i>
+                    <div>Իմ աշխատավարձերը</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="hasRole('trainer')"
+                :class="[
+                    'menu-item',
                     route().current('trainer.my-customers') ? 'active' : '',
                 ]"
             >
@@ -250,6 +266,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         'super_admin',
                         'sales_manager',
                         'manager',
+                        'trainer',
                     ])
                 "
                 :class="[
