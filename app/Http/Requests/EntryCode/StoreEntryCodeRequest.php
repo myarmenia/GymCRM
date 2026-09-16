@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\EntryCode;
 
+use App\Models\Gym;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +23,20 @@ class StoreEntryCodeRequest extends FormRequest
                 'max:255',
                 Rule::unique('entry_codes', 'token')->where('gym_id', $this->gym_id),
             ],
-            'type'   => 'required|string|in:rfId,FaceId',
+            'type'   => [
+                'required',
+                'string',
+                'in:rfId,FaceId',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $allowedType = Gym::query()
+                        ->whereKey($this->input('gym_id'))
+                        ->value('entry_code_type');
+
+                    if ($allowedType !== null && $value !== $allowedType) {
+                        $fail('This gym only allows '.$allowedType.' entry codes.');
+                    }
+                },
+            ],
             'activation' => 'sometimes|boolean',
         ];
     }

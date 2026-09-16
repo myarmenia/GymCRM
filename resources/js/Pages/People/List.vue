@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
 import { Link, router, usePage } from "@inertiajs/vue3";
@@ -7,6 +7,7 @@ import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
+import { useToast } from "vue-toastification";
 
 const props = defineProps({
     people: Object,
@@ -21,6 +22,14 @@ const canManagePeople = computed(() =>
 const canManagePersonVisits = computed(() =>
     hasAnyRole(["manager", "sales_manager", "super_admin"]),
 );
+const canManualScan = computed(() =>
+    hasRole("manager") &&
+    Boolean(page.props.auth?.user?.gym_id),
+);
+const toast = useToast();
+const manualScanCode = ref("");
+const manualScanInput = ref(null);
+const manualScanProcessing = ref(false);
 
 const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
@@ -110,6 +119,41 @@ const resetFilters = () => {
         },
     );
 };
+
+onMounted(async () => {
+    if (!canManualScan.value) {
+        return;
+    }
+
+    await nextTick();
+    manualScanInput.value?.focus();
+});
+
+const submitManualScan = async () => {
+    const token = manualScanCode.value.trim().split("#")[0];
+
+    if (!token || manualScanProcessing.value) {
+        return;
+    }
+
+    manualScanProcessing.value = true;
+
+    try {
+        await axios.post(route("person.manual-scan", { locale: currentLocale.value }), {
+            direction: "enter",
+            entry_code: `${token}#${Math.floor(Date.now() / 1000)}`,
+            type: "rfId",
+        });
+
+        manualScanCode.value = "";
+        await nextTick();
+        manualScanInput.value?.focus();
+    } catch (error) {
+        toast.error(error?.response?.data?.message ?? "Չհաջողվեց գրանցել սկանավորումը։");
+    } finally {
+        manualScanProcessing.value = false;
+    }
+};
 </script>
 
 <template>
@@ -135,7 +179,25 @@ const resetFilters = () => {
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                 <h5 class="mb-0">Անձինք</h5>
+                    <form
+                        v-if="canManualScan"
+                        class="d-flex align-items-center gap-2"
+                        @submit.prevent="submitManualScan"
+                    >
+                        <input
+                            ref="manualScanInput"
+                            v-model="manualScanCode"
+                            type="text"
+                            class="form-control form-control-sm manual-scan-input"
+                            placeholder="Սկանավորել մուտքի RFID code-ը"
+                            :disabled="manualScanProcessing"
+                            autocomplete="off"
+                            autofocus
+                        >
+                    </form>
+                </div>
                 <Link
                     v-if="canManagePeople"
                     class="btn create-new btn-primary"
@@ -293,3 +355,15 @@ const resetFilters = () => {
         </div>
     </Index>
 </template>
+
+<style scoped>
+.manual-scan-input {
+    min-width: 260px;
+}
+
+@media (max-width: 575.98px) {
+    .manual-scan-input {
+        min-width: 200px;
+    }
+}
+</style>
