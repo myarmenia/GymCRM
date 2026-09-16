@@ -24,6 +24,7 @@ use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\People\PersonController;
+use App\Http\Controllers\People\ManualEntryScanController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Purchase\PurchaseController;
@@ -39,6 +40,7 @@ use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
 use App\Http\Controllers\Trainer\TrainerController;
+use App\Http\Controllers\Trainer\TrainerPortalController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Warehouses\WarehouseController;
 use Illuminate\Support\Facades\Route;
@@ -185,6 +187,7 @@ Route::prefix('{locale}')
             // ====== people ================
             Route::prefix('person')->name('person.')->group(function () {
                 Route::get('/list', [PersonController::class, 'list'])->name('list');
+                Route::post('/manual-scan', ManualEntryScanController::class)->name('manual-scan');
                 Route::get('/create', [PersonController::class, 'create'])->name('create');
                 Route::post('/store', [PersonController::class, 'store'])->name('store');
 
@@ -397,6 +400,8 @@ Route::prefix('{locale}')
             });
 
             Route::prefix('trainer')->name('trainer.')->group(function () {
+                Route::get('/my-schedules', [TrainerPortalController::class, 'mySchedules'])->name('my-schedules');
+                Route::get('/my-customers', [TrainerPortalController::class, 'myCustomers'])->name('my-customers');
                 Route::get('/', [TrainerController::class, 'index'])->name('index');
                 Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
                 Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');

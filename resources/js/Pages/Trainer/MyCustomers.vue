@@ -1,0 +1,104 @@
+<script setup>
+import { computed } from "vue";
+import { Head, usePage } from "@inertiajs/vue3";
+import Index from "@/Layouts/Index.vue";
+import Pagination from "@/Components/Pagination.vue";
+
+const props = defineProps({
+    customers: {
+        type: Object,
+        required: true,
+    },
+});
+
+const page = usePage();
+const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? "hy");
+
+const statusLabels = {
+    waiting: "Սպասման մեջ",
+    active: "Ակտիվ",
+    frozen: "Սառեցված",
+};
+
+const statusClasses = {
+    waiting: "bg-label-warning",
+    active: "bg-label-success",
+    frozen: "bg-label-info",
+};
+
+const planName = (membership) => {
+    const translations = membership.membership_plan?.translations ?? [];
+
+    return (
+        translations.find((translation) => translation.locale === currentLocale.value)
+            ?.name ??
+        membership.membership_plan?.name ??
+        "-"
+    );
+};
+
+const statusLabel = (status) => statusLabels[status] ?? status ?? "-";
+const statusClass = (status) => statusClasses[status] ?? "bg-label-secondary";
+</script>
+
+<template>
+    <Head title="Իմ հաճախորդները" />
+
+    <Index>
+        <template #header>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+                Իմ հաճախորդները
+            </h2>
+        </template>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Ինձ կցված հաճախորդներ</h5>
+            </div>
+
+            <div class="card-body">
+                <div v-if="!customers.data?.length" class="alert alert-info mb-0">
+                    Ձեզ դեռ գործող հաճախորդ կցված չէ։
+                </div>
+
+                <div v-else class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Հաճախորդ</th>
+                                <th>Հեռախոս</th>
+                                <th>Էլ. հասցե</th>
+                                <th>Աբոնեմենտ(ներ)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="customer in customers.data" :key="customer.id">
+                                <td>
+                                    {{ customer.name || "-" }} {{ customer.surname || "" }}
+                                </td>
+                                <td>{{ customer.phone || "-" }}</td>
+                                <td>{{ customer.email || "-" }}</td>
+                                <td>
+                                    <div
+                                        v-for="membership in customer.memberships"
+                                        :key="membership.id"
+                                        class="d-flex align-items-center gap-2 mb-1"
+                                    >
+                                        <span>{{ planName(membership) }}</span>
+                                        <span class="badge" :class="statusClass(membership.status)">
+                                            {{ statusLabel(membership.status) }}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="customers.links?.length" class="card-footer">
+                <Pagination :links="customers.links" />
+            </div>
+        </div>
+    </Index>
+</template>
