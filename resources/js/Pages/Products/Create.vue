@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, watch, ref } from "vue";
 import { useForm, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/Index.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     categories: {
@@ -16,10 +21,18 @@ const props = defineProps({
         type: [Array, Object],
         default: () => [],
     },
+    langs: {
+        type: Array,
+        default: null,
+    },
 });
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
+
+const availableLangs = computed(() =>
+    Array.isArray(props.langs) && props.langs.length ? props.langs : ["hy"],
+);
 
 const localCategories = computed(() => {
     return props.categories?.data ?? props.categories ?? [];
@@ -41,17 +54,13 @@ const form = useForm({
     measurement_unit_id: "",
     warehouse_id: "",
 
-    name: {
-        hy: "",
-        // ru: "",
-        // en: "",
-    },
+    name: Object.fromEntries(
+        availableLangs.value.map((code) => [code, ""]),
+    ),
 
-    description: {
-        hy: "",
-        // ru: "",
-        // en: "",
-    },
+    description: Object.fromEntries(
+        availableLangs.value.map((code) => [code, ""]),
+    ),
     sku: "",
     barcode: "",
     default_purchase_price: 0,
@@ -102,25 +111,25 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ապրանք ստեղծել" />
+    <Head :title="t('inventory.create_product')" />
 
     <AppLayout>
         <div class="card">
             <div class="card-header">
-                <h5>Ապրանք ստեղծել</h5>
+                <h5>{{ t('inventory.create_product') }}</h5>
             </div>
 
             <div class="card-body">
                 <form @submit.prevent="submit">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Կատեգորիա</label>
+                            <label class="form-label">{{ t('people.category') }}</label>
 
                             <select
                                 v-model="form.category_id"
                                 class="form-control"
                             >
-                                <option value="">Ընտրել կատեգորիան</option>
+                                <option value="">{{ t('inventory.select_the_category') }}</option>
 
                                 <option
                                     v-for="category in localCategories"
@@ -141,7 +150,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Ենթակատեգորիա</label>
+                            <label class="form-label">{{ t('inventory.subcategory') }}</label>
 
                             <select
                                 v-model="form.sub_category_id"
@@ -154,8 +163,8 @@ const submit = () => {
                                 <option value="">
                                     {{
                                         !form.category_id
-                                            ? "ընտրել նախ կատեգորիան"
-                                            : "ընտրել ենթակատեգորիան"
+                                            ? t('inventory.select_a_category_first_2')
+                                            : t('inventory.select_subcategory_2')
                                     }}
                                 </option>
 
@@ -178,13 +187,13 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Չափման միավոր</label>
+                            <label class="form-label">{{ t('inventory.unit_of_measure') }}</label>
 
                             <select
                                 v-model="form.measurement_unit_id"
                                 class="form-control"
                             >
-                                <option value="">Ընտրել չափման միավորը</option>
+                                <option value="">{{ t('inventory.select_unit_of_measure') }}</option>
 
                                 <option
                                     v-for="unit in localMeasurementUnits"
@@ -200,13 +209,13 @@ const submit = () => {
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Պահեստ</label>
+                            <label class="form-label">{{ t('inventory.warehouse') }}</label>
 
                             <select
                                 v-model="form.warehouse_id"
                                 class="form-control"
                             >
-                                <option value="">ընտրել պահեստը</option>
+                                <option value="">{{ t('inventory.select_warehouse') }}</option>
 
                                 <option
                                     v-for="warehouse in localWarehouses"
@@ -223,7 +232,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Քանակ</label>
+                            <label class="form-label">{{ t('inventory.quantity') }}</label>
                             <input
                                 v-model="form.quantity"
                                 type="number"
@@ -239,7 +248,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Ամրագրված քանակ</label>
+                            <label class="form-label">{{ t('inventory.reserved_quantity') }}</label>
                             <input
                                 v-model="form.reserved_quantity"
                                 type="number"
@@ -255,7 +264,7 @@ const submit = () => {
                         </div>
 
                         <!-- <div class="col-md-4 mb-3">
-                            <label class="form-label">Average Cost</label>
+                            <label class="form-label">{{ t('logs.average_cost') }}</label>
                             <input
                                 v-model="form.average_cost"
                                 type="number"
@@ -272,96 +281,51 @@ const submit = () => {
 
                         <!-- Armenian -->
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label"> Անվանում (HY) </label>
-
-                            <input
-                                v-model="form.name.hy"
-                                type="text"
-                                class="form-control"
-                                placeholder="Ապրանքի անուն հայերենով"
-                            />
-
-                            <div class="text-danger">
-                                {{ form.errors["name.hy"] }}
+                        <template
+                            v-for="code in availableLangs"
+                            :key="code"
+                        >
+                            <div class="col-12 mt-2">
+                                <h6 class="fw-semibold">
+                                    {{ code.toUpperCase() }}
+                                </h6>
                             </div>
-                        </div>
 
-                        <!-- <div class="col-md-6 mb-3">
-                            <label class="form-label"> Name (RU) </label>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    {{ t('inventory.name') }}
+                                    ({{ code.toUpperCase() }})
+                                </label>
 
-                            <input
-                                v-model="form.name.ru"
-                                type="text"
-                                class="form-control"
-                                placeholder="Product name in Russian"
-                            />
+                                <input
+                                    v-model="form.name[code]"
+                                    type="text"
+                                    class="form-control"
+                                    :placeholder="t('inventory.name')"
+                                />
 
-                            <div class="text-danger">
-                                {{ form.errors["name.ru"] }}
+                                <div class="text-danger">
+                                    {{ form.errors[`name.${code}`] }}
+                                </div>
                             </div>
-                        </div>
 
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">
+                                    {{ t('inventory.description') }}
+                                    ({{ code.toUpperCase() }})
+                                </label>
 
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label"> Name (EN) </label>
+                                <textarea
+                                    v-model="form.description[code]"
+                                    class="form-control"
+                                    rows="3"
+                                ></textarea>
 
-                            <input
-                                v-model="form.name.en"
-                                type="text"
-                                class="form-control"
-                                placeholder="Product name in English"
-                            />
-
-                            <div class="text-danger">
-                                {{ form.errors["name.en"] }}
+                                <div class="text-danger">
+                                    {{ form.errors[`description.${code}`] }}
+                                </div>
                             </div>
-                        </div> -->
-
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label">
-                                Նկարագրություն (HY)
-                            </label>
-
-                            <textarea
-                                v-model="form.description.hy"
-                                class="form-control"
-                                rows="3"
-                            ></textarea>
-
-                            <div class="text-danger">
-                                {{ form.errors["description.hy"] }}
-                            </div>
-                        </div>
-
-                        <!-- <div class="col-md-12 mb-3">
-                            <label class="form-label"> Description (RU) </label>
-
-                            <textarea
-                                v-model="form.description.ru"
-                                class="form-control"
-                                rows="3"
-                            ></textarea>
-
-                            <div class="text-danger">
-                                {{ form.errors["description.ru"] }}
-                            </div>
-                        </div>
-
-
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label"> Description (EN) </label>
-
-                            <textarea
-                                v-model="form.description.en"
-                                class="form-control"
-                                rows="3"
-                            ></textarea>
-
-                            <div class="text-danger">
-                                {{ form.errors["description.en"] }}
-                            </div>
-                        </div> -->
+                        </template>
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label">SKU</label>
@@ -374,7 +338,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Barcode</label>
+                            <label class="form-label">{{ t('logs.barcode') }}</label>
                             <input
                                 v-model="form.barcode"
                                 type="text"
@@ -386,7 +350,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Գնման գին</label>
+                            <label class="form-label">{{ t('inventory.purchase_price') }}</label>
                             <input
                                 v-model="form.default_purchase_price"
                                 type="number"
@@ -400,7 +364,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">Վաճառքի գին</label>
+                            <label class="form-label">{{ t('inventory.sale_price') }}</label>
                             <input
                                 v-model="form.default_sale_price"
                                 type="number"
@@ -415,7 +379,7 @@ const submit = () => {
 
                         <div class="col-md-4 mb-3">
                             <label class="form-label"
-                                >Նվազագույն պահեստի զգուշացում</label
+                                >{{ t('inventory.low_stock_warning') }}</label
                             >
                             <input
                                 v-model="form.min_stock_alert"
@@ -430,7 +394,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label"> Ապրանքի նկար </label>
+                            <label class="form-label"> {{ t('inventory.product_image') }} </label>
 
                             <input
                                 type="file"
@@ -446,7 +410,7 @@ const submit = () => {
                             <div v-if="imagePreview" class="mt-3">
                                 <img
                                     :src="imagePreview"
-                                    alt="Preview"
+                                    :alt="t('ui.preview')"
                                     class="img-fluid rounded border"
                                     style="max-height: 200px"
                                 />
@@ -454,10 +418,10 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Կարգավիճակ</label>
+                            <label class="form-label">{{ t('status.status') }}</label>
                             <select v-model="form.status" class="form-control">
-                                <option :value="true">Ակտիվ</option>
-                                <option :value="false">Պասիվ</option>
+                                <option :value="true">{{ t('status.active') }}</option>
+                                <option :value="false">{{ t('inventory.inactive') }}</option>
                             </select>
                             <div class="text-danger">
                                 {{ form.errors.status }}
@@ -470,7 +434,7 @@ const submit = () => {
                             type="submit"
                             :disabled="form.processing"
                         >
-                            Ստեղծել
+                            {{ t('people.create') }}
                         </button>
                     </div>
                 </form>

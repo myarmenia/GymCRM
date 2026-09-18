@@ -1,5 +1,6 @@
 <script setup>
 import { useConfirm } from '@/composables/useConfirm';
+import { useTrans } from '/resources/js/trans';
 
 const { isOpen, modalData, confirmYes, confirmNo } = useConfirm();
 </script>
@@ -16,7 +17,7 @@ const { isOpen, modalData, confirmYes, confirmNo } = useConfirm();
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">{{ modalData.title }}</h5>
-                    <button type="button" class="btn-close" @click="confirmNo"></button>
+                    <button type="button" :aria-label="useTrans('app.confirm.close')" class="btn-close" @click="confirmNo"></button>
                 </div>
                 <div class="modal-body">
                     <p>{{ modalData.message }}</p>

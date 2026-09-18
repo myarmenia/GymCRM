@@ -14,16 +14,20 @@ class LangSeeder extends Seeder
     public function run(): void
     {
         $langs = [
-            ['id' => 1, 'code' => 'hy', 'name' => 'Հայերեն'],
-            ['id' => 2, 'code' => 'ru', 'name' => 'Русский'],
-            ['id' => 3, 'code' => 'en', 'name' => 'English'],
+            ['code' => 'hy', 'name' => 'Հայերեն'],
+            ['code' => 'ru', 'name' => 'Русский'],
+            ['code' => 'en', 'name' => 'English'],
         ];
 
         foreach ($langs as $lang) {
-            Lang::updateOrCreate(['code' => $lang['code']], [
-                ...$lang,
-                ...StableUuid::seedIdentity('langs', $lang['code']),
-            ]);
+            $record = Lang::firstOrNew(['code' => $lang['code']]);
+            $record->name = $lang['name'];
+
+            if (! $record->exists) {
+                $record->fill(StableUuid::seedIdentity('langs', $lang['code']));
+            }
+
+            $record->save();
         }
     }
 }

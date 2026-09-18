@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -44,14 +49,14 @@ const initials = computed(() => {
     return `${first}${last}`.toUpperCase() || '#'
 })
 
-const trainerStatusLabel = computed(() => props.trainer?.deleted_at ? 'Ապաակտիվ' : 'Ակտիվ')
+const trainerStatusLabel = computed(() => props.trainer?.deleted_at ? t('people.inactive') : t('status.active'))
 const trainerStatusClass = computed(() => props.trainer?.deleted_at ? 'bg-label-danger' : 'bg-label-success')
 const salaryStatusLabel = status => ({
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    transfer: 'Փոխանցում',
-    cancel: 'Չեղարկված',
-    reject: 'Մերժված',
+    pending: t('status.pending'),
+    paid: t('people.paid'),
+    transfer: t('staff_reports.transfer'),
+    cancel: t('people.cancelled'),
+    reject: t('staff_reports.rejected'),
 }[status] ?? status ?? '-')
 const salaryStatusClass = status => ({
     pending: 'bg-label-warning',
@@ -77,11 +82,11 @@ const totalRejectedCancelledSalaries = computed(() => salaries.value
     .filter(salary => ['reject', 'cancel'].includes(salary.status))
     .reduce((total, salary) => total + Number(salary.price || 0), 0))
 const stats = computed(() => [
-    { label: 'Ընդհանուր ստեղծված', value: formatAmount(totalGeneratedSalaries.value), icon: 'tabler-calendar-dollar', className: 'bg-label-primary' },
-    { label: 'Վճարված', value: formatAmount(totalPaidSalaries.value), icon: 'tabler-check', className: 'bg-label-success' },
-    { label: 'Սպասման մեջ', value: formatAmount(totalPendingSalaries.value), icon: 'tabler-clock', className: 'bg-label-warning' },
-    { label: 'Փոխանցված', value: formatAmount(totalTransferredSalaries.value), icon: 'tabler-transfer', className: 'bg-label-info' },
-    { label: 'Մերժված/չեղարկված', value: formatAmount(totalRejectedCancelledSalaries.value), icon: 'tabler-x', className: 'bg-label-danger' },
+    { label: t('staff_reports.total_created'), value: formatAmount(totalGeneratedSalaries.value), icon: 'tabler-calendar-dollar', className: 'bg-label-primary' },
+    { label: t('people.paid'), value: formatAmount(totalPaidSalaries.value), icon: 'tabler-check', className: 'bg-label-success' },
+    { label: t('status.pending'), value: formatAmount(totalPendingSalaries.value), icon: 'tabler-clock', className: 'bg-label-warning' },
+    { label: t('staff_reports.transferred'), value: formatAmount(totalTransferredSalaries.value), icon: 'tabler-transfer', className: 'bg-label-info' },
+    { label: t('staff_reports.rejected_cancelled'), value: formatAmount(totalRejectedCancelledSalaries.value), icon: 'tabler-x', className: 'bg-label-danger' },
 ])
 
 const payableStatuses = ['pending', 'transfer']
@@ -136,14 +141,14 @@ const transferSalary = salaryId => {
 </script>
 
 <template>
-    <Head title="Մարզչի աշխատավարձ" />
+    <Head :title="t('staff_reports.trainer_salary')" />
 
     <Index>
         <template #header>
             <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 mb-1">
-                        Մարզչի աշխատավարձ
+                        {{ t('staff_reports.trainer_salary') }}
                     </h2>
                     <div class="text-muted">{{ fullName(trainer) }}</div>
                 </div>
@@ -151,7 +156,7 @@ const transferSalary = salaryId => {
                     class="btn btn-secondary"
                     :href="route('trainer.index', { locale: currentLocale })"
                 >
-                    Վերադառնալ
+                    {{ t('people.back') }}
                 </Link>
                 <Link
                     class="btn btn-success"
@@ -162,7 +167,7 @@ const transferSalary = salaryId => {
                     })"
                 >
                     <i class="icon-base ti tabler-cash me-1"></i>
-                    Անցնել վճարման
+                    {{ t('inventory.proceed_to_payment') }}
                 </Link>
             </div>
         </template>
@@ -228,8 +233,8 @@ const transferSalary = salaryId => {
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
-                    <h5 class="mb-0">Մարզչի աշխատավարձերի աղյուսակ</h5>
-                    <small class="text-muted">Ընտրեք աշխատավարձերը՝ կարգավիճակը փոխելու համար</small>
+                    <h5 class="mb-0">{{ t('staff_reports.trainer_salary_table') }}</h5>
+                    <small class="text-muted">{{ t('staff_reports.select_salaries_to_change_their_status') }}</small>
                 </div>
             </div>
             <div class="card-body">
@@ -238,7 +243,7 @@ const transferSalary = salaryId => {
                     class="salary-action-bar mb-3"
                 >
                     <div class="fw-semibold">
-                        Ընտրված է՝ {{ selectedCount }}
+                        {{ t('staff_reports.selected_count', { count: selectedCount }) }}
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
                         <button
@@ -248,7 +253,7 @@ const transferSalary = salaryId => {
                             @click="submitBulkAction('cancel')"
                         >
                             <i class="icon-base ti tabler-x me-1"></i>
-                            Չեղարկել ընտրվածները
+                            {{ t('staff_reports.cancel_selected') }}
                         </button>
                     </div>
                 </div>
@@ -271,15 +276,15 @@ const transferSalary = salaryId => {
                                         @change="toggleAllSelectable"
                                     >
                                 </th>
-                                <th>Ամիս</th>
-                                <th>Հաճախորդ</th>
-                                <th>Աբոնեմենտ</th>
-                                <th>Ժամկետ</th>
-                                <th>Կոմիսիայի գումար</th>
-                                <th>Ամսական աշխատավարձ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Ստեղծվել է</th>
-                                <th>Գործողություն</th>
+                                <th>{{ t('membership.month') }}</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('people.membership') }}</th>
+                                <th>{{ t('sales.term') }}</th>
+                                <th>{{ t('staff_reports.commission_amount') }}</th>
+                                <th>{{ t('staff_reports.monthly_salary') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('inventory.created_at') }}</th>
+                                <th>{{ t('people.action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -314,11 +319,11 @@ const transferSalary = salaryId => {
                                 <td>{{ membershipPlanName(row.membership) }}</td>
                                 <td>
                                     <div>
-                                        <span class="text-muted">Սկիզբ՝</span>
+                                        <span class="text-muted">{{ t('sales.start') }}</span>
                                         {{ formatDate(row.membership?.start_date) }}
                                     </div>
                                     <div>
-                                        <span class="text-muted">Ավարտ՝</span>
+                                        <span class="text-muted">{{ t('sales.end') }}</span>
                                         {{ formatDate(row.membership?.valid_at || row.membership?.end_date) }}
                                     </div>
                                 </td>
@@ -341,7 +346,7 @@ const transferSalary = salaryId => {
                                         :disabled="transferForm.processing"
                                         @click="transferSalary(row.salary.id)"
                                     >
-                                        Transfer
+                                        {{ t('operations.transfer') }}
                                     </button>
                                 </td>
                             </tr>
@@ -350,7 +355,7 @@ const transferSalary = salaryId => {
                                     colspan="10"
                                     class="text-center text-muted"
                                 >
-                                    Ամսական աշխատավարձեր չկան
+                                    {{ t('staff_reports.no_monthly_salaries') }}
                                 </td>
                             </tr>
                         </tbody>

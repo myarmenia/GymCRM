@@ -23,25 +23,25 @@ class StoreMembershipCategoryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
-            'max.string' => ':attribute դաշտը չի կարող գերազանցել :max նիշը։',
-            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'unique' => ':attribute դաշտի արժեքը արդեն օգտագործվում է։',
+            'required' => __('backend_messages.attribute_field_required'),
+            'string' => __('backend_messages.attribute_must_be_string'),
+            'max.string' => __('backend_messages.attribute_may_not_be_greater_than_max_characters'),
+            'array' => __('backend_messages.attribute_must_be_array'),
+            'boolean' => __('backend_messages.attribute_field_must_be_true_or_false'),
+            'exists' => __('backend_messages.selected_attribute_invalid'),
+            'unique' => __('backend_messages.attribute_has_already_been_taken'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'gym_id' => 'մարզասրահ',
-            'active' => 'կարգավիճակ',
-            'slug' => 'հղում',
-            'translations' => 'թարգմանություններ',
-            'translations.*.name' => 'անուն',
-            'translations.*.description' => 'նկարագրություն',
+            'gym_id' => __('backend_messages.gym_lowercase'),
+            'active' => __('backend_messages.status_lowercase'),
+            'slug' => __('backend_messages.reference'),
+            'translations' => __('backend_messages.translations'),
+            'translations.*.name' => __('backend_messages.first_name'),
+            'translations.*.description' => __('backend_messages.description_lowercase'),
         ];
     }
 }

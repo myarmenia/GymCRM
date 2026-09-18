@@ -1,5 +1,6 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import { useTrans } from '/resources/js/trans';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -8,6 +9,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
     name: '',
+    surname: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -22,11 +24,11 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Register" />
+        <Head :title="useTrans('app.auth.register')" />
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" :value="useTrans('app.auth.name')" />
 
                 <TextInput
                     id="name"
@@ -42,7 +44,22 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="surname" :value="useTrans('app.auth.surname')" />
+
+                <TextInput
+                    id="surname"
+                    type="text"
+                    class="mt-1 block w-full"
+                    v-model="form.surname"
+                    required
+                    autocomplete="family-name"
+                />
+
+                <InputError class="mt-2" :message="form.errors.surname" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="email" :value="useTrans('app.auth.email')" />
 
                 <TextInput
                     id="email"
@@ -57,7 +74,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="useTrans('app.auth.password')" />
 
                 <TextInput
                     id="password"
@@ -74,7 +91,7 @@ const submit = () => {
             <div class="mt-4">
                 <InputLabel
                     for="password_confirmation"
-                    value="Confirm Password"
+                    :value="useTrans('app.auth.confirm_password')"
                 />
 
                 <TextInput
@@ -97,7 +114,7 @@ const submit = () => {
                     :href="route('login')"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                 >
-                    Already registered?
+                    {{ useTrans("app.auth.already_registered") }}
                 </Link>
 
                 <PrimaryButton
@@ -105,7 +122,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Register
+                    {{ useTrans("app.auth.register") }}
                 </PrimaryButton>
             </div>
         </form>

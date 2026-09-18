@@ -37,7 +37,7 @@ class SalaryPayoutController extends Controller
 
         return back()->with(
             'success',
-            "Վճարում #{$payout->id}-ը հաջողությամբ գրանցվեց։",
+            __('backend_messages.payment_recorded_successfully', ['id' => $payout->id]),
         );
     }
 
@@ -53,7 +53,7 @@ class SalaryPayoutController extends Controller
             $report['columns'],
             $report['filters'],
             'salary-payouts-'.now()->format('Y-m-d-H-i-s').'.xls',
-            'Աշխատավարձերի վճարումներ',
+            __('backend_messages.salary_payments'),
             $report['summary'],
         );
     }
@@ -70,7 +70,7 @@ class SalaryPayoutController extends Controller
             $validated['reason'],
         );
 
-        return back()->with('success', "Վճարում #{$salaryPayout->id}-ը չեղարկվեց։");
+        return back()->with('success', __('backend_messages.payment_id_cancelled', ['id' => $salaryPayout->id]));
     }
 
     public function refund(Request $request, string $locale, SalaryPayout $salaryPayout): RedirectResponse
@@ -90,7 +90,7 @@ class SalaryPayoutController extends Controller
             $validated,
         );
 
-        return back()->with('success', "Վերադարձ #{$refund->id}-ը հաջողությամբ գրանցվեց։");
+        return back()->with('success', __('backend_messages.refund_id_recorded_successfully', ['id' => $refund->id]));
     }
 
     public function transfer(
@@ -109,6 +109,6 @@ class SalaryPayoutController extends Controller
             $validated,
         );
 
-        return back()->with('success', 'Չվճարված գումարը փոխանցվեց աբոնեմենտի ընթացիկ մարզչին։');
+        return back()->with('success', __('backend_messages.unpaid_amount_transferred_membership_current_trainer'));
     }
 }

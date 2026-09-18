@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { ref } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
@@ -7,6 +9,9 @@ import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     gyms: Object,
@@ -20,18 +25,18 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
 </script>
 
 <template>
-    <Head title="Gyms List" />
+    <Head :title="t('ui.gyms_list')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Gyms List
+                {{ t('ui.gyms_list') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Gyms List</h5>
+                <h5 class="mb-0">{{ t('ui.gyms_list') }}</h5>
                 <Link
                     class="btn create-new btn-primary"
                     tabindex="0"
@@ -41,7 +46,7 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                     <span>
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
-                            <span class="d-none d-sm-inline-block">Add New Gym</span>
+                            <span class="d-none d-sm-inline-block">{{ t('ui.add_gym') }}</span>
                         </span>
                     </span>
                 </Link>
@@ -52,11 +57,11 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                     <table class="table table-bordered align-middle"> <thead>
                             <tr>
                                 <th style="width: 60px;">ID</th>
-                                <th style="width: 70px;">Logo</th> <th>Name</th>
-                                <th>Address</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th style="width: 80px;">Actions</th>
+                                <th style="width: 70px;">{{ t('ui.logo') }}</th> <th>{{ t('filter.name') }}</th>
+                                <th>{{ t('inventory.address') }}</th>
+                                <th>{{ t('filter.phone') }}</th>
+                                <th>{{ t('auth.email') }}</th>
+                                <th style="width: 80px;">{{ t('people.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,7 +72,7 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                                     <img
                                         v-if="gym.logo"
                                         :src="`/storage/${gym.logo}`"
-                                        alt="Gym Logo"
+                                        :alt="t('ui.gym_logo')"
                                         class="rounded-circle object-fit-cover"
                                         style="width: 40px; height: 40px; border: 1px solid #e5e7eb;"
                                     />
@@ -100,7 +105,7 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                                                 :href="route('gym.edit', { locale: currentLocale, id: gym.id })"
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Edit
+                                                {{ t('people.edit') }}
                                             </Link>
 
                                             <a class="dropdown-item waves-effect" href="javascript:void(0);">
@@ -119,7 +124,7 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                                 </td>
                             </tr>
                             <tr v-if="gymsList.length === 0">
-                                <td colspan="7" class="text-center text-muted">No gyms found.</td>
+                                <td colspan="7" class="text-center text-muted">{{ t('ui.no_gyms') }}</td>
                             </tr>
                         </tbody>
                     </table>

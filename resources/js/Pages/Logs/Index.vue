@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import Pagination from "@/Components/Pagination.vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     logs: {
@@ -17,31 +22,31 @@ const currentLocale = computed(
 );
 const logs = computed(() => props.logs.data ?? []);
 const actionLabels = {
-    "person.created": "Անձի գրանցում",
-    "membership_sale.created": "Աբոնեմենտի վաճառք",
-    "membership_sale.payment_added": "Վճարման ավելացում",
-    "membership_sale.refund_added": "Գումարի վերադարձ",
-    "membership_sale.cancelled": "Աբոնեմենտի չեղարկում",
-    "membership_sale.trainer_changed": "Մարզչի փոփոխություն",
-    "membership_sale.frozen": "Աբոնեմենտի սառեցում",
-    "membership_sale.updated": "Աբոնեմենտի խմբագրում",
+    "person.created": t('logs.person_registration'),
+    "membership_sale.created": t('staff_reports.membership_sale'),
+    "membership_sale.payment_added": t('logs.payment_addition'),
+    "membership_sale.refund_added": t('logs.refund'),
+    "membership_sale.cancelled": t('logs.membership_cancellation'),
+    "membership_sale.trainer_changed": t('logs.trainer_change'),
+    "membership_sale.frozen": t('logs.membership_freeze'),
+    "membership_sale.updated": t('logs.membership_edit'),
 };
 const actionLabel = (action) => actionLabels[action] ?? action;
 </script>
 
 <template>
-    <Head title="Մատյաններ" />
+    <Head :title="t('sidebar.logs')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մատյաններ
+                {{ t('sidebar.logs') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Մատյաններ</h5>
+                <h5 class="mb-0">{{ t('sidebar.logs') }}</h5>
             </div>
 
             <div class="card-body">
@@ -50,11 +55,11 @@ const actionLabel = (action) => actionLabels[action] ?? action;
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Գործողություն</th>
-                                <th>Մոդել / Օբյեկտ</th>
-                                <th>Օգտատեր</th>
-                                <th>Ստեղծվել է</th>
-                                <th>Ցույց տալ</th>
+                                <th>{{ t('people.action') }}</th>
+                                <th>{{ t('logs.model_object') }}</th>
+                                <th>{{ t('logs.user') }}</th>
+                                <th>{{ t('inventory.created_at') }}</th>
+                                <th>{{ t('logs.show') }}</th>
                             </tr>
                         </thead>
 
@@ -76,7 +81,7 @@ const actionLabel = (action) => actionLabels[action] ?? action;
                                             log: log.id,
                                         })"
                                         class="btn btn-sm btn-icon btn-text-secondary"
-                                        title="Մատյանի մանրամասներ"
+                                        :title="t('logs.log_details')"
                                     >
                                         <i class="icon-base ti tabler-eye"></i>
                                     </Link>
@@ -85,7 +90,7 @@ const actionLabel = (action) => actionLabels[action] ?? action;
 
                             <tr v-if="!logs.length">
                                 <td colspan="6" class="text-center text-muted">
-                                    Գործողությունների մատյաններ չեն գտնվել
+                                    {{ t('logs.no_activity_logs_found') }}
                                 </td>
                             </tr>
                         </tbody>

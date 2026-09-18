@@ -246,16 +246,16 @@ class MembershipSaleFreezeService
 
     protected function freezeRequiresActiveMembershipMessage(): string
     {
-        return 'Աբոնեմենտը սառեցնել հնարավոր է միայն ակտիվ աբոնեմենտի համար։';
+        return __('backend.membership_sales.freeze_active_only');
     }
 
     protected function freezeLimitReachedMessage(): string
     {
-        return 'Սառեցումների թույլատրելի քանակը սպառված է։';
+        return __('backend.membership_sales.freeze_limit_reached');
     }
 
     protected function freezeStartDateOverlapsMessage(): string
     {
-        return 'Սառեցման սկիզբը չի կարող լինել արդեն գոյություն ունեցող սառեցման ժամանակահատվածում։';
+        return __('backend.membership_sales.freeze_start_overlaps');
     }
 }

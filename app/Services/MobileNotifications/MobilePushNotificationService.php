@@ -22,8 +22,8 @@ class MobilePushNotificationService
             $person,
             'first-login:'.$person->id,
             'welcome',
-            'Բարի գալուստ FitTracker',
-            'Ձեր հաշիվը պատրաստ է։ Սկսեք հետևել մարզումներին և աբոնեմենտին։',
+            __('backend_messages.welcome_fittracker'),
+            __('backend_messages.your_account_ready_start_tracking_your_workouts_and_membership'),
             ['screen' => 'home'],
         );
     }
@@ -34,8 +34,8 @@ class MobilePushNotificationService
             $membership->person,
             'membership-purchased:'.$membership->id,
             'membership_purchased',
-            'Աբոնեմենտը գնված է',
-            'Ձեր նոր աբոնեմենտը հաջողությամբ ավելացվել է։',
+            __('backend_messages.membership_purchased'),
+            __('backend_messages.your_new_membership_added_successfully'),
             [
                 'screen' => 'membership',
                 'membership_id' => $membership->id,
@@ -49,8 +49,8 @@ class MobilePushNotificationService
             $membership->person,
             'membership-expires-in-3-days:'.$membership->id.':'.$membership->valid_at?->toDateString(),
             'membership_expiring',
-            'Աբոնեմենտի ավարտին մնացել է 3 օր',
-            'Ձեր աբոնեմենտի ժամկետը շուտով կավարտվի։',
+            __('backend_messages.membership_expires_3_days'),
+            __('backend_messages.your_membership_will_expire_soon'),
             [
                 'screen' => 'membership',
                 'membership_id' => $membership->id,
@@ -68,8 +68,8 @@ class MobilePushNotificationService
             $membership->person,
             'membership-freeze-ends-in-2-days:'.$freeze->id.':'.$freeze->end_date?->toDateString(),
             'membership_freeze_ending',
-            'Սառեցման ավարտին մնացել է 2 օր',
-            'Ձեր աբոնեմենտի սառեցումը շուտով կավարտվի։',
+            __('backend_messages.freeze_ends_2_days'),
+            __('backend_messages.your_membership_freeze_will_end_soon'),
             [
                 'screen' => 'membership',
                 'membership_id' => $membership->id,

@@ -23,13 +23,13 @@ class MyHelper
 
         // $weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday','Friday','Saturday','Sunday'];
         $weekdays = [
-            'Monday' => 'Երկուշաբթի',
-            'Tuesday' => 'Երեքշաբթի',
-            'Wednesday' => 'Չորեքշաբթի',
-            'Thursday' => 'Հինգշաբթի',
-            'Friday' => 'Ուրբաթ',
-            'Saturday' => 'Շաբաթ',
-            'Sunday' => 'Կիրակի'
+            'Monday' => __('backend_messages.monday'),
+            'Tuesday' => __('backend_messages.tuesday'),
+            'Wednesday' => __('backend_messages.wednesday'),
+            'Thursday' => __('backend_messages.thursday'),
+            'Friday' => __('backend_messages.friday'),
+            'Saturday' => __('backend_messages.saturday'),
+            'Sunday' => __('backend_messages.sunday')
         ];
         //$substring = substr($binaryString, 9, 16); // Индексы начинаются с 0, поэтому берем с 9 символа и длиной 16
         //$decimal = bindec($substring);
@@ -59,7 +59,7 @@ class MyHelper
     public  static function absence_type()
     {
 
-        return ['Հիվանդ', 'Գործուղում', 'Արձակուրդ'];
+        return [__('backend_messages.sick_leave'), __('backend_messages.business_trip'), __('backend_messages.vacation')];
     }
     //public static function get_client_department()
     //{

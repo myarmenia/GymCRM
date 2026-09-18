@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import AppLayout from "@/Layouts/Index.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     data: {
@@ -58,13 +63,13 @@ const canEdit = computed(() => {
 });
 
 const weekDaysTranslations = {
-    monday: "Երկուշաբթի",
-    tuesday: "Երեքշաբթի",
-    wednesday: "Չորեքշաբթի",
-    thursday: "Հինգշաբթի",
-    friday: "Ուրբաթ",
-    saturday: "Շաբաթ",
-    sunday: "Կիրակի",
+    monday: t('staff_reports.monday'),
+    tuesday: t('staff_reports.tuesday'),
+    wednesday: t('staff_reports.wednesday'),
+    thursday: t('staff_reports.thursday'),
+    friday: t('staff_reports.friday'),
+    saturday: t('staff_reports.saturday'),
+    sunday: t('staff_reports.sunday'),
 };
 
 const weekOrder = {
@@ -129,12 +134,12 @@ const deleteSchedule = (item) => {
     if (item.schedule_name?.is_locked) {
         alert(
             item.schedule_name?.lock_reason ||
-                "Այս ժամային գրաֆիկը հնարավոր չէ ջնջել։",
+                t('operations.this_hourly_schedule_cannot_be_deleted'),
         );
         return;
     }
 
-    if (!confirm("Delete this item?")) {
+    if (!confirm(translate(page.props.translations, 'app.action.confirm_delete'))) {
         return;
     }
 
@@ -151,7 +156,7 @@ const deleteSchedule = (item) => {
 </script>
 
 <template>
-    <Head title="Ժամանակի գրաֆիկ" />
+    <Head :title="t('operations.time_schedule')" />
 
     <AppLayout>
         <main id="main" class="main">
@@ -171,8 +176,7 @@ const deleteSchedule = (item) => {
                                         </div>
 
                                         <h4 class="mb-0">
-                                            Աշխատանքային ժամանակի ղեկավարման
-                                            վահանակ
+                                            {{ t('operations.work_schedule_dashboard') }}
                                         </h4>
 
                                         <Link
@@ -185,7 +189,7 @@ const deleteSchedule = (item) => {
                                             class="btn btn-primary btn-sm ms-auto"
                                         >
                                             <i class="bi bi-plus-lg me-1"></i>
-                                            Ստեղծել
+                                            {{ t('people.create') }}
                                         </Link>
                                     </div>
                                 </div>
@@ -200,22 +204,22 @@ const deleteSchedule = (item) => {
                                             <thead class="table-light">
                                                 <tr>
                                                     <th class="py-3 text-start">
-                                                        Անվանում
+                                                        {{ t('membership.title') }}
                                                     </th>
                                                     <th
                                                         class="py-3 text-center"
                                                     >
-                                                        Աշխատանքային ժամ
+                                                        {{ t('operations.working_time') }}
                                                     </th>
                                                     <th
                                                         class="py-3 text-center"
                                                     >
-                                                        Օրեր
+                                                        {{ t('operations.days') }}
                                                     </th>
                                                     <th
                                                         class="py-3 text-center"
                                                     >
-                                                        Գործողություն
+                                                        {{ t('people.action') }}
                                                     </th>
                                                 </tr>
                                             </thead>
@@ -355,8 +359,7 @@ const deleteSchedule = (item) => {
                                                                 <i
                                                                     class="bi bi-person-check me-1"
                                                                 ></i>
-                                                                Գրանցված
-                                                                այցելուներ
+                                                                {{ t('operations.registered_visitors') }}
                                                             </Link>
 
                                                             <Link
@@ -421,7 +424,7 @@ const deleteSchedule = (item) => {
                                                         <i
                                                             class="bi bi-inbox me-1"
                                                         ></i>
-                                                        Տվյալներ չկան
+                                                        {{ t('staff_reports.no_data') }}
                                                     </td>
                                                 </tr>
                                             </tbody>

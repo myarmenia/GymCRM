@@ -43,7 +43,7 @@ class PurchaseService
 
         if (! $cashierWarehouse) {
             return [
-                'error' => 'Cashier պահեստը գտնված չէ։',
+                'error' => __('backend_messages.cashier_warehouse_not_found'),
             ];
         }
 
@@ -229,7 +229,7 @@ class PurchaseService
 
         if (! $cashierWarehouse) {
             throw ValidationException::withMessages([
-                'sell' => 'Դրամարկղի պահեստը գտնված չէ։',
+                'sell' => __('backend_messages.cash_register_warehouse_not_found'),
             ]);
         }
 
@@ -242,7 +242,7 @@ class PurchaseService
 
             if (! $paymentMethod) {
                 throw ValidationException::withMessages([
-                    'payment_method_id' => 'Ընտրված վճարման եղանակը հասանելի չէ ապրանքի վաճառքի համար։',
+                    'payment_method_id' => __('backend_messages.selected_payment_method_unavailable_product_sales'),
                 ]);
             }
 
@@ -251,7 +251,7 @@ class PurchaseService
             if ($paymentMethod->cardTypes->isNotEmpty()) {
                 if (empty($validated['card_type_id'])) {
                     throw ValidationException::withMessages([
-                        'card_type_id' => 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։',
+                        'card_type_id' => __('backend_messages.card_type_required_this_payment_method'),
                     ]);
                 }
 
@@ -259,7 +259,7 @@ class PurchaseService
 
                 if (! $paymentMethod->cardTypes->contains('id', $cardTypeId)) {
                     throw ValidationException::withMessages([
-                        'card_type_id' => 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։',
+                        'card_type_id' => __('backend_messages.selected_card_type_does_not_match_payment_method'),
                     ]);
                 }
             }
@@ -276,7 +276,7 @@ class PurchaseService
 
                 if (! $product) {
                     throw ValidationException::withMessages([
-                        'product_id' => 'Ապրանքը գտնված չէ։',
+                        'product_id' => __('backend_messages.product_not_found'),
                     ]);
                 }
 
@@ -287,7 +287,7 @@ class PurchaseService
 
                 if (! $warehouseStock) {
                     throw ValidationException::withMessages([
-                        'quantity' => 'Այս ապրանքը դրամարկղի պահեստում առկա չէ։',
+                        'quantity' => __('backend_messages.this_product_not_available_cash_register_warehouse'),
                     ]);
                 }
 
@@ -295,7 +295,7 @@ class PurchaseService
 
                 if ($quantity > (float) $warehouseStock->quantity) {
                     throw ValidationException::withMessages([
-                        'quantity' => 'Վաճառքի քանակը չի կարող մեծ լինել հասանելի քանակից։',
+                        'quantity' => __('backend_messages.sale_quantity_cannot_exceed_available_quantity'),
                     ]);
                 }
 
@@ -329,7 +329,7 @@ class PurchaseService
 
             if ($paymentMethod->slug === 'cash' && $cashReceived < $total) {
                 throw ValidationException::withMessages([
-                    'cash_received' => 'Ստացված կանխիկ գումարը պետք է բավարար լինի վճարման համար։',
+                    'cash_received' => __('backend_messages.cash_received_must_be_enough_cover_payment'),
                 ]);
             }
 
@@ -389,21 +389,21 @@ class PurchaseService
                 ->first();
 
             if ($purchase === null) {
-                throw ValidationException::withMessages(['refund' => 'Վաճառքը գտնված չէ։']);
+                throw ValidationException::withMessages(['refund' => __('backend_messages.sale_not_found')]);
             }
 
             if ($purchase->sync_origin !== null) {
                 throw ValidationException::withMessages([
-                    'refund' => 'Սինքված վաճառքի վերադարձը պետք է գրանցել սև համակարգում։',
+                    'refund' => __('backend_messages.synced_sale_refund_must_be_recorded_black_system'),
                 ]);
             }
 
             if ($purchase->status !== 'completed') {
-                throw ValidationException::withMessages(['refund' => 'Այս վաճառքն այլևս վերադարձման ենթակա չէ։']);
+                throw ValidationException::withMessages(['refund' => __('backend_messages.this_sale_no_longer_refundable')]);
             }
 
             if ($purchase->warehouse_id === null) {
-                throw ValidationException::withMessages(['refund' => 'Վաճառքի պահեստը նշված չէ։']);
+                throw ValidationException::withMessages(['refund' => __('backend_messages.sales_warehouse_not_set')]);
             }
 
             $paymentMethod = PaymentMethod::query()
@@ -414,7 +414,7 @@ class PurchaseService
 
             if ($paymentMethod === null) {
                 throw ValidationException::withMessages([
-                    'payment_method_id' => 'Ընտրված վճարման եղանակը հասանելի չէ վերադարձի համար։',
+                    'payment_method_id' => __('backend_messages.selected_payment_method_unavailable_refunds'),
                 ]);
             }
 
@@ -423,7 +423,7 @@ class PurchaseService
                 $cardTypeId = isset($validated['card_type_id']) ? (int) $validated['card_type_id'] : null;
                 if ($cardTypeId === null || ! $paymentMethod->cardTypes->contains('id', $cardTypeId)) {
                     throw ValidationException::withMessages([
-                        'card_type_id' => 'Ընտրեք վճարման եղանակին համապատասխան քարտի տեսակը։',
+                        'card_type_id' => __('backend_messages.select_card_type_that_matches_payment_method'),
                     ]);
                 }
             }
@@ -435,7 +435,7 @@ class PurchaseService
             foreach ($validated['items'] as $input) {
                 $purchaseItem = $purchase->items->firstWhere('id', (int) $input['purchase_item_id']);
                 if ($purchaseItem === null) {
-                    throw ValidationException::withMessages(['items' => 'Վերադարձվող ապրանքը տվյալ վաճառքից չէ։']);
+                    throw ValidationException::withMessages(['items' => __('backend_messages.returned_product_does_not_belong_this_sale')]);
                 }
 
                 $quantity = (int) $input['quantity'];
@@ -443,7 +443,9 @@ class PurchaseService
                 $remainingQuantity = (int) $purchaseItem->quantity - $alreadyRefundedQuantity;
                 if ($quantity < 1 || $quantity > $remainingQuantity) {
                     throw ValidationException::withMessages([
-                        'items' => "{$purchaseItem->id} ապրանքի վերադարձվող քանակը հասանելի մնացորդից մեծ է։",
+                        'items' => __('backend_messages.refundable_quantity_product_id_exceeds_available_balance', [
+                            'id' => $purchaseItem->id,
+                        ]),
                     ]);
                 }
 
@@ -463,7 +465,7 @@ class PurchaseService
 
             $refundAmount = round($refundAmount, 2);
             if ($refundAmount <= 0) {
-                throw ValidationException::withMessages(['items' => 'Վերադարձի գումարը պետք է դրական լինի։']);
+                throw ValidationException::withMessages(['items' => __('backend_messages.refund_amount_must_be_positive')]);
             }
 
             $refund = PurchaseRefund::query()->create([
@@ -490,7 +492,7 @@ class PurchaseService
                     warehouseId: $purchase->warehouse_id,
                 );
                 if ($stock === null) {
-                    throw ValidationException::withMessages(['refund' => 'Վերադարձի համար պահեստային մնացորդը գտնված չէ։']);
+                    throw ValidationException::withMessages(['refund' => __('backend_messages.no_inventory_balance_found_refund')]);
                 }
 
                 $this->warehouseStockRepository->updateQuantity(

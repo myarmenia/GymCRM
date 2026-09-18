@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, watch } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
@@ -48,21 +53,21 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ստեղծել մուտքի կոդ" />
+    <Head :title="t('operations.create_entry_code')" />
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold">Մուտքի կոդ / Ստեղծել</h2>
+            <h2 class="text-xl font-semibold">{{ t('operations.entry_code_create') }}</h2>
         </template>
         <div class="card">
-            <h5 class="card-header">Ստեղծել նոր կոդ</h5>
+            <h5 class="card-header">{{ t('operations.create_new_code') }}</h5>
             <form @submit.prevent="submit" class="card-body">
                 <!-- Gym dropdown – visible only for owner -->
                 <div class="row mb-3" v-if="isOwner">
-                    <label class="col-sm-3 col-form-label">Մարզասրահ</label>
+                    <label class="col-sm-3 col-form-label">{{ t('people.gym') }}</label>
                     <div class="col-sm-9 select2-primary">
                      
                         <select v-model="form.gym_id" class="form-select">
-                            <option value="" disabled>Ընտրել մարզասրահը</option>
+                            <option value="" disabled>{{ t('operations.select_gym_2') }}</option>
 
 
                             <option
@@ -79,7 +84,7 @@ const submit = () => {
 
                 <!-- Token -->
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Թոքեն</label>
+                    <label class="col-sm-3 col-form-label">{{ t('operations.token') }}</label>
                     <div class="col-sm-9">
                         <TextInput type="text" class="form-control" v-model="form.token" />
                         <InputError :message="form.errors.token" />
@@ -88,14 +93,14 @@ const submit = () => {
 
                 <!-- Type (only for owner – but you removed v-if, keep as is) -->
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Տեսակ</label>
+                    <label class="col-sm-3 col-form-label">{{ t('people.type') }}</label>
                     <div class="col-sm-9">
                         <select class="form-select" v-model="form.type">
                             <option :value="allowedEntryCodeType">
                                 {{ allowedEntryCodeType === 'rfId' ? 'RF ID' : 'Face ID' }}
                             </option>
                         </select>
-                        <div class="form-text">The type is defined by the selected gym.</div>
+                        <div class="form-text">{{ t('ui.entry_code_type_help') }}</div>
                         <InputError :message="form.errors.type" />
                     </div>
                 </div>
@@ -104,7 +109,7 @@ const submit = () => {
 
                 <div class="row mb-3">
                     <div class="pt-6 d-flex justify-content-end gap-2">
-                        <PrimaryButton :disabled="form.processing">Ստեղծել</PrimaryButton>
+                        <PrimaryButton :disabled="form.processing">{{ t('people.create') }}</PrimaryButton>
                     </div>
                 </div>
             </form>

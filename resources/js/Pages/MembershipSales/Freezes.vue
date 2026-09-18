@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
@@ -8,6 +9,7 @@ import TextInput from '@/Components/TextInput.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -40,7 +42,7 @@ const form = useForm({
 const remaining = computed(() => Number(props.remainingFreezeCount || 0))
 const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen'].includes(props.personMembership?.status))
 const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value)
-const freezeOverlapMessage = 'Սառեցման սկիզբը չի կարող լինել արդեն գոյություն ունեցող սառեցման ժամանակահատվածում։'
+const freezeOverlapMessage = t('sales.freeze_cannot_start_during_an_existing_freeze_period')
 
 const personName = person => `${person?.name ?? ''} ${person?.surname ?? ''}`.trim() || '-'
 const translatedName = item => {
@@ -51,12 +53,12 @@ const translatedName = item => {
 }
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const statusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    expired: 'Ժամկետանց',
-    deleted: 'Ջնջված',
-    cancelled: 'Չեղարկված',
+    waiting: t('people.waiting'),
+    active: t('membership.active'),
+    frozen: t('people.frozen'),
+    expired: t('people.expired'),
+    deleted: t('people.deleted'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const dateInsideFreezePeriod = value => {
     if (!value) {
@@ -90,12 +92,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Սառեցնել աբոնեմենտը" />
+    <Head :title="t('people.freeze_membership')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Սառեցնել աբոնեմենտը
+                {{ t('people.freeze_membership') }}
             </h2>
         </template>
 
@@ -103,46 +105,46 @@ const submit = () => {
             <div class="col-lg-5 mb-4">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Աբոնեմենտի տվյալներ</h5>
+                        <h5 class="mb-0">{{ t('sales.membership_details') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Հաճախորդ</span>
+                            <span class="text-muted">{{ t('sales.client') }}</span>
                             <strong>{{ personName(personMembership.person) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Աբոնեմենտ</span>
+                            <span class="text-muted">{{ t('people.membership') }}</span>
                             <strong>{{ translatedName(personMembership.membership_plan) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Սկիզբ</span>
+                            <span class="text-muted">{{ t('membership.start') }}</span>
                             <strong>{{ formatDate(personMembership.start_date) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Ավարտ</span>
+                            <span class="text-muted">{{ t('membership.end') }}</span>
                             <strong>{{ formatDate(personMembership.end_date) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Վավեր է մինչև</span>
+                            <span class="text-muted">{{ t('people.valid_until') }}</span>
                             <strong>{{ formatDate(personMembership.valid_at) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted">Կարգավիճակ</span>
+                            <span class="text-muted">{{ t('membership.status') }}</span>
                             <span class="badge bg-label-success">{{ statusLabel(personMembership.status) }}</span>
                         </div>
 
                         <hr>
 
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Թույլատրված սառեցումներ</span>
+                            <span class="text-muted">{{ t('sales.allowed_freezes') }}</span>
                             <strong>{{ allowedFreezeCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Օգտագործված սառեցումներ</span>
+                            <span class="text-muted">{{ t('sales.used_freezes') }}</span>
                             <strong>{{ usedFreezeCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-0">
-                            <span class="text-muted">Մնացած սառեցումներ</span>
+                            <span class="text-muted">{{ t('sales.remaining_freezes') }}</span>
                             <strong class="text-primary">{{ remainingFreezeCount }}</strong>
                         </div>
                     </div>
@@ -152,7 +154,7 @@ const submit = () => {
             <div class="col-lg-7 mb-4">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Նախորդ սառեցումներ</h5>
+                        <h5 class="mb-0">{{ t('sales.previous_freezes') }}</h5>
                     </div>
                     <div class="card-body">
                         <div
@@ -162,9 +164,9 @@ const submit = () => {
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Սկիզբ</th>
-                                        <th>Ավարտ</th>
-                                        <th>Նշումներ</th>
+                                        <th>{{ t('membership.start') }}</th>
+                                        <th>{{ t('membership.end') }}</th>
+                                        <th>{{ t('people.notes') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -183,7 +185,7 @@ const submit = () => {
                             v-else
                             class="text-muted"
                         >
-                            Սառեցումներ դեռ չկան
+                            {{ t('sales.no_freezes_yet') }}
                         </div>
                     </div>
                 </div>
@@ -195,7 +197,7 @@ const submit = () => {
             class="card mb-4"
         >
             <div class="card-header">
-                <h5 class="mb-0">Նոր սառեցում</h5>
+                <h5 class="mb-0">{{ t('sales.new_freeze') }}</h5>
             </div>
             <form
                 class="card-body"
@@ -205,7 +207,7 @@ const submit = () => {
                     <div class="col-md-6">
                         <InputLabel
                             for="start_date"
-                            value="Սառեցման սկիզբ"
+                            :value="t('sales.freeze_start')"
                         />
                         <TextInput
                             id="start_date"
@@ -219,7 +221,7 @@ const submit = () => {
                     <div class="col-md-6">
                         <InputLabel
                             for="end_date"
-                            value="Սառեցման ավարտ"
+                            :value="t('sales.freeze_end')"
                         />
                         <TextInput
                             id="end_date"
@@ -233,14 +235,14 @@ const submit = () => {
                     <div class="col-md-12">
                         <InputLabel
                             for="notes"
-                            value="Նշումներ"
+                            :value="t('people.notes')"
                         />
                         <textarea
                             id="notes"
                             v-model="form.notes"
                             class="form-control"
                             rows="3"
-                            placeholder="Մուտքագրել նշումները"
+                            :placeholder="t('sales.enter_notes')"
                         ></textarea>
                         <InputError :message="form.errors.notes" />
                     </div>
@@ -251,10 +253,10 @@ const submit = () => {
                         class="btn btn-label-secondary"
                         :href="route('membership_sale.list', { locale: currentLocale })"
                     >
-                        Չեղարկել
+                        {{ t('people.cancel') }}
                     </Link>
                     <PrimaryButton :disabled="form.processing">
-                        Սառեցնել աբոնեմենտը
+                        {{ t('people.freeze_membership') }}
                     </PrimaryButton>
                 </div>
             </form>
@@ -264,7 +266,7 @@ const submit = () => {
             v-else
             class="alert alert-warning"
         >
-            {{ remaining > 0 && !hasFreezableStatus ? 'Այս կարգավիճակով աբոնեմենտը սառեցնել հնարավոր չէ։' : 'Սառեցման փորձեր չեն մնացել։' }}
+            {{ remaining > 0 && !hasFreezableStatus ? t('sales.a_membership_with_this_status_cannot_be_frozen') : t('sales.no_freezes_remaining') }}
         </div>
     </Index>
 </template>

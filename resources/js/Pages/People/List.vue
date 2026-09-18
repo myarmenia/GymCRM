@@ -8,12 +8,14 @@ import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "vue-toastification";
+import { translate } from '/resources/js/trans';
 
 const props = defineProps({
     people: Object,
 });
 
 const page = usePage();
+const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements);
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 const { hasRole, hasAnyRole } = useAuth();
 const canManagePeople = computed(() =>
@@ -37,34 +39,34 @@ const filters = ref({
     date_field: "created_at",
     ...Object.fromEntries(new URLSearchParams(window.location.search)),
 });
-const peopleTypes = [
-    { value: "visitor", label: "Այցելու" },
-    { value: "guest", label: "Հյուր" },
-];
+const peopleTypes = computed(() => [
+    { value: "visitor", label: t('visitor') },
+    { value: "guest", label: t('guest') },
+]);
 const peopleFilterSelectFields = computed(() => [
     {
         name: "type",
-        label: "Տեսակ",
-        placeholder: "Բոլորը",
-        options: peopleTypes,
+        label: t('type'),
+        placeholder: t('all'),
+        options: peopleTypes.value,
     },
     {
         name: "has_membership",
-        label: "Աբոնեմենտ",
-        placeholder: "Բոլորը",
+        label: t('membership'),
+        placeholder: t('all'),
         options: [
-            { value: "with", label: "Աբոնեմենտ ունեցողներ" },
-            { value: "without", label: "Առանց աբոնեմենտի" },
+            { value: "with", label: t('with_membership') },
+            { value: "without", label: t('without_membership') },
         ],
     },
 ]);
-const peopleFilterDateFields = [
-    { value: "birth_date", label: "Ծննդյան ամսաթիվ" },
-    { value: "created_at", label: "Ստեղծման ամսաթիվ" },
-];
+const peopleFilterDateFields = computed(() => [
+    { value: "birth_date", label: t('birth_date') },
+    { value: "created_at", label: t('created_at') },
+]);
 const personTypeLabel = type => ({
-    visitor: "Այցելու",
-    guest: "Հյուր",
+    visitor: t('visitor'),
+    guest: t('guest'),
 }[type] ?? type ?? "-");
 
 const personTypeClass = type => ({
@@ -81,7 +83,7 @@ const membershipNames = person => {
         .map(membership => planName(membership.membership_plan))
         .filter(Boolean);
 
-    return names.length ? names.join(", ") : "Ոչ";
+    return names.length ? names.join(", ") : t('no');
 };
 
 watch(
@@ -149,7 +151,7 @@ const submitManualScan = async () => {
         await nextTick();
         manualScanInput.value?.focus();
     } catch (error) {
-        toast.error(error?.response?.data?.message ?? "Չհաջողվեց գրանցել սկանավորումը։");
+        toast.error(error?.response?.data?.message ?? t('scan_failed'));
     } finally {
         manualScanProcessing.value = false;
     }
@@ -157,12 +159,12 @@ const submitManualScan = async () => {
 </script>
 
 <template>
-    <Head title="Անձինք" />
+    <Head :title="t('clients')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Անձինք
+                {{ t('clients') }}
             </h2>
         </template>
 
@@ -180,7 +182,7 @@ const submitManualScan = async () => {
                 class="card-header d-flex justify-content-between align-items-center"
             >
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                <h5 class="mb-0">Անձինք</h5>
+                <h5 class="mb-0">{{ t('clients') }}</h5>
                     <form
                         v-if="canManualScan"
                         class="d-flex align-items-center gap-2"
@@ -191,7 +193,7 @@ const submitManualScan = async () => {
                             v-model="manualScanCode"
                             type="text"
                             class="form-control form-control-sm manual-scan-input"
-                            placeholder="Սկանավորել մուտքի RFID code-ը"
+                            :placeholder="t('scan_entry_code')"
                             :disabled="manualScanProcessing"
                             autocomplete="off"
                             autofocus
@@ -210,7 +212,7 @@ const submitManualScan = async () => {
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block">
-                                Ավելացնել նոր անձ
+                                {{ t('add_person') }}
                             </span>
                         </span>
                     </span>
@@ -222,17 +224,17 @@ const submitManualScan = async () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Անուն</th>
-                                <th>Ազգանուն</th>
-                                <th>Էլ. հասցե</th>
-                                <th>Հեռախոս</th>
-                                <th>Ծննդյան ամսաթիվ</th>
-                                <th>Տեսակ</th>
-                                <th>Աբոնեմենտ</th>
+                                <th>{{ t('name') }}</th>
+                                <th>{{ t('surname') }}</th>
+                                <th>{{ t('email') }}</th>
+                                <th>{{ t('phone') }}</th>
+                                <th>{{ t('birth_date') }}</th>
+                                <th>{{ t('type') }}</th>
+                                <th>{{ t('membership') }}</th>
                                 <th v-if="hasRole('owner')">
-                                    Մարզասրահ(ներ)
+                                    {{ t('gyms') }}
                                 </th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -280,7 +282,7 @@ const submitManualScan = async () => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-eye me-1"></i>
-                                                Դիտել պրոֆիլը
+                                                {{ t('view_profile') }}
                                             </Link>
                                             <Link
                                                 v-if="canManagePeople"
@@ -293,7 +295,7 @@ const submitManualScan = async () => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-credit-card-pay me-1"></i>
-                                                Վաճառել աբոնեմենտ
+                                                {{ t('sell_membership') }}
                                             </Link>
                                             <Link
                                                 v-if="canManagePersonVisits"
@@ -306,7 +308,7 @@ const submitManualScan = async () => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-walk me-1"></i>
-                                                Այցելությունների կառավարում
+                                                {{ t('visits_management') }}
                                             </Link>
                                             <Link
                                                 v-if="canManagePeople"
@@ -319,7 +321,7 @@ const submitManualScan = async () => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('edit') }}
                                             </Link>
                                             <a
                                                 v-if="canManagePeople"

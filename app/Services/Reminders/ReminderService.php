@@ -30,7 +30,7 @@ class ReminderService
 
         if ($recipientIds->isEmpty()) {
             throw ValidationException::withMessages([
-                'recipient_ids' => 'Ընտրեք առնվազն մեկ ստացող։',
+                'recipient_ids' => __('backend_messages.select_least_one_recipient'),
             ]);
         }
 
@@ -85,10 +85,11 @@ class ReminderService
             'about_id' => $sale->person_id,
             'source_type' => 'membership_sale',
             'source_id' => $sale->id,
-            'title' => $data['title'] ?? 'Աբոնեմենտի վճարման հիշեցում',
-            'description' => $data['description']
-                ?? "{$personName}-ի աբոնեմենտի մնացորդային վճարումը՝ "
-                    .number_format($debtAmount, 2, '.', ' ').' դրամ։',
+            'title' => $data['title'] ?? __('backend_messages.membership_payment_reminder'),
+            'description' => $data['description'] ?? __('backend_messages.name_membership_balance_payment_amount_amd', [
+                'name' => $personName,
+                'amount' => number_format($debtAmount, 2, '.', ' '),
+            ]),
             'scheduled_at' => $data['scheduled_at'] ?? null,
         ]);
     }

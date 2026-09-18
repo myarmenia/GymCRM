@@ -30,16 +30,16 @@ class ChangeMembershipSaleTrainerRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'trainer_id.required' => 'Ընտրեք նոր մարզիչը։',
-            'trainer_id.integer' => 'Ընտրված մարզիչը սխալ է։',
-            'trainer_id.exists' => 'Ընտրված մարզիչը չի գտնվել։',
+            'trainer_id.required' => __('backend.membership_sales.select_new_trainer'),
+            'trainer_id.integer' => __('backend.membership_sales.invalid_trainer'),
+            'trainer_id.exists' => __('backend.membership_sales.trainer_not_found'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'trainer_id' => 'մարզիչ',
+            'trainer_id' => __('backend.attributes.trainer'),
         ];
     }
 }

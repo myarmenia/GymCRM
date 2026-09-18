@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { ref } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import DeleteButton from "@/Components/DeleteButton.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     categories: {
@@ -59,15 +64,15 @@ const removeSubCategory = (categoryId, subId) => {
 </script>
 
 <template>
-    <Head title="Կատեգորիաներ" />
+    <Head :title="t('sidebar.categories')" />
 
     <Index>
         <div class="container-xxl py-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h3 class="fw-bold mb-1">Կատեգորիաներ</h3>
+                    <h3 class="fw-bold mb-1">{{ t('sidebar.categories') }}</h3>
                     <p class="text-muted mb-0">
-                        Կառավարել կատեգորիաներ և ենթակատեգորիաներ
+                        {{ t('inventory.manage_categories_and_subcategories') }}
                     </p>
                 </div>
 
@@ -78,7 +83,7 @@ const removeSubCategory = (categoryId, subId) => {
                     class="btn btn-primary add-product-btn"
                 >
                     <i class="icon-base ti tabler-plus me-1"></i>
-                    Ավելացնել կատեգորիա
+                    {{ t('inventory.add_category') }}
                 </Link>
             </div>
 
@@ -88,10 +93,10 @@ const removeSubCategory = (categoryId, subId) => {
                         <thead class="table-light">
                             <tr>
                                 <th width="60"></th>
-                                <th>Կատեգորիա</th>
-                                <th>Ենթակատեգորիա</th>
+                                <th>{{ t('people.category') }}</th>
+                                <th>{{ t('inventory.subcategory') }}</th>
                                 <!-- <th>Status</th> -->
-                                <th class="text-end">Գործողություն</th>
+                                <th class="text-end">{{ t('people.action') }}</th>
                             </tr>
                         </thead>
 
@@ -132,11 +137,9 @@ const removeSubCategory = (categoryId, subId) => {
 
                                     <td>
                                         <span class="badge bg-label-primary">
-                                            {{
-                                                category.subcategories
-                                                    ?.length ?? 0
-                                            }}
-                                            հատ
+                                            {{ t('inventory.available_units', {
+                                                count: category.subcategories?.length ?? 0,
+                                            }) }}
                                         </span>
                                     </td>
 
@@ -177,7 +180,7 @@ const removeSubCategory = (categoryId, subId) => {
                                                         class="icon-base ti tabler-pencil me-1"
                                                     ></i>
                                                     <span class="edit-span"
-                                                        >Խմբագրել</span
+                                                        >{{ t('action.edit') }}</span
                                                     >
                                                 </Link>
                                                 <!-- <Link
@@ -248,7 +251,7 @@ const removeSubCategory = (categoryId, subId) => {
                                                     "
                                                     class="empty-subcategory"
                                                 >
-                                                    Չկա ենթակատեգորիա
+                                                    {{ t('inventory.no_subcategory') }}
                                                 </div>
 
                                                 <div
@@ -299,7 +302,7 @@ const removeSubCategory = (categoryId, subId) => {
                                                                 <i
                                                                     class="icon-base ti tabler-pencil"
                                                                 ></i>
-                                                                Խմբագրել
+                                                                {{ t('action.edit') }}
                                                             </Link>
 
                                                             <div @click.stop>
@@ -342,7 +345,7 @@ const removeSubCategory = (categoryId, subId) => {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 rounded-4">
                     <div class="modal-header">
-                        <h5 class="modal-title text-danger">Ջնջել չհաջողվեց</h5>
+                        <h5 class="modal-title text-danger">{{ t('inventory.could_not_delete') }}</h5>
 
                         <button
                             type="button"
@@ -361,7 +364,7 @@ const removeSubCategory = (categoryId, subId) => {
                             class="btn btn-secondary"
                             data-bs-dismiss="modal"
                         >
-                            Close
+                            {{ t('confirm.close') }}
                         </button>
                     </div>
                 </div>

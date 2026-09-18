@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Support\SupportedLocales;
 
 // Route::get('/', function () {
 //     return Inertia::render('Welcome', [
@@ -15,26 +16,27 @@ use Inertia\Inertia;
 // });
 
 Route::get('/', function () {
-    return redirect('/hy/login');
+    return redirect('/'.SupportedLocales::resolve(request()).'/login');
 });
 
 
 Route::prefix('{locale}')
+    ->where(['locale' => 'hy|en|ru'])
     ->middleware(['setLocale'])
     ->group(function () {
 
         Route::get('/dashboard', function () {
-                return Inertia::render('Dashboard');
-            })->middleware(['auth'])->name('dashboard');
+            return Inertia::render('Dashboard');
+        })->middleware(['auth'])->name('dashboard');
+
+        Route::middleware('auth')->group(function () {
+            Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+            Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+            Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
         });
+    });
 
 
-
-// Route::middleware('auth')->group(function () {
-//     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-//     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-//     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-// });
 
 require __DIR__ . '/auth.php';
 /////////

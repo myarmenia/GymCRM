@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { ref } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
@@ -7,6 +9,9 @@ import { useTrans } from "/resources/js/trans";
 import ToggleStatus from "@/Components/ToggleStatus.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     partners: Object,
@@ -21,18 +26,18 @@ const pagination = ref(props.partners?.links ? props.partners : null);
 </script>
 
 <template>
-    <Head title="Partners List" />
+    <Head :title="t('ui.partners_list')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Partners List
+                {{ t('ui.partners_list') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Partners List</h5>
+                <h5 class="mb-0">{{ t('ui.partners_list') }}</h5>
                 <Link
                     class="btn create-new btn-primary"
                     tabindex="0"
@@ -42,7 +47,7 @@ const pagination = ref(props.partners?.links ? props.partners : null);
                     <span>
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
-                            <span class="d-none d-sm-inline-block">Add New Partner</span>
+                            <span class="d-none d-sm-inline-block">{{ t('ui.add_partner') }}</span>
                         </span>
                     </span>
                 </Link>
@@ -54,13 +59,13 @@ const pagination = ref(props.partners?.links ? props.partners : null);
                         <thead>
                             <tr>
                                 <th style="width: 60px;">ID</th>
-                                <th>Partner Name</th>
-                                <th>Account Number</th>
-                                <th>Contract Number</th>
-                                <th>Contact Details</th>
-                                <th>Contact Person</th>
-                                <th style="width: 100px;">Status</th>
-                                <th style="width: 80px;">Actions</th>
+                                <th>{{ t('ui.partner_name') }}</th>
+                                <th>{{ t('ui.account_number') }}</th>
+                                <th>{{ t('ui.contract_number') }}</th>
+                                <th>{{ t('ui.contact_details') }}</th>
+                                <th>{{ t('ui.contact_person') }}</th>
+                                <th style="width: 100px;">{{ t('status.status') }}</th>
+                                <th style="width: 80px;">{{ t('people.actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,7 +102,7 @@ const pagination = ref(props.partners?.links ? props.partners : null);
                                         <i class="ti tabler-device-mobile icon-sm me-2"></i>
                                         <span>{{ partner.contact_phone }}</span>
                                     </div>
-                                    <small v-else class="text-light d-block">No Phone</small>
+                                    <small v-else class="text-light d-block">{{ t('ui.no_phone') }}</small>
                                 </td>
 
                                 <td>
@@ -138,7 +143,7 @@ const pagination = ref(props.partners?.links ? props.partners : null);
                                                 :href="route('partner.edit', { locale: currentLocale, id: partner.id })" 
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Edit
+                                                {{ t('people.edit') }}
                                             </Link>
                                             
                                             <a class="dropdown-item waves-effect" href="javascript:void(0);">
@@ -157,7 +162,7 @@ const pagination = ref(props.partners?.links ? props.partners : null);
                                 </td>
                             </tr>
                             <tr v-if="partnersList.length === 0">
-                                <td colspan="7" class="text-center text-muted">No partners found.</td>
+                                <td colspan="7" class="text-center text-muted">{{ t('ui.no_partners') }}</td>
                             </tr>
                         </tbody>
                     </table>

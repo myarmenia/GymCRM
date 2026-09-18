@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, reactive, ref, watch } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -55,27 +60,27 @@ watch(
 const reportFilterFields = [
     {
         name: 'report_filter',
-        label: 'Ֆիլտր',
-        placeholder: 'Բոլոր աբոնեմենտները',
+        label: t('staff_reports.filter'),
+        placeholder: t('sales.all_memberships'),
         options: [
-            { value: 'discounted', label: 'Զեղչված աբոնեմենտներ' },
-            { value: 'manual_discount', label: 'Միայն ձեռքով զեղչ' },
-            { value: 'membership_plan_discount', label: 'Աբոնեմենտի զեղչ' },
-            { value: 'fully_paid', label: 'Լիովին վճարված աբոնեմենտներ' },
-            { value: 'with_debt', label: 'Պարտքով աբոնեմենտներ' },
-            { value: 'refund_due', label: 'Հետվերադարձի գումարով աբոնեմենտներ' },
+            { value: 'discounted', label: t('staff_reports.discounted_memberships') },
+            { value: 'manual_discount', label: t('staff_reports.manual_discount_only') },
+            { value: 'membership_plan_discount', label: t('sales.membership_discount') },
+            { value: 'fully_paid', label: t('staff_reports.fully_paid_memberships') },
+            { value: 'with_debt', label: t('staff_reports.memberships_with_debt') },
+            { value: 'refund_due', label: t('staff_reports.memberships_with_refund_amounts') },
         ],
     },
 ]
 
 const summaryCards = computed(() => [
-    { label: 'Վաճառված աբոնեմենտներ', value: props.summary.sold_memberships_count, icon: 'tabler-id', class: 'bg-label-primary text-primary' },
-    { label: 'Նախնական գումար', value: formatAmount(props.summary.total_amount), icon: 'tabler-cash', class: 'bg-label-info text-info' },
-    { label: 'Վերջնական գումար', value: formatAmount(props.summary.final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
-    { label: 'Վճարված գումար', value: formatAmount(props.summary.paid_amount), icon: 'tabler-credit-card', class: 'bg-label-success text-success' },
-    { label: 'Պարտք', value: formatAmount(props.summary.debt), icon: 'tabler-alert-circle', class: 'bg-label-danger text-danger' },
-    { label: 'Ձեռքով զեղչ', value: formatAmount(props.summary.manual_discount_amount), icon: 'tabler-discount', class: 'bg-label-warning text-warning' },
-    { label: 'Աբոնեմենտի զեղչ', value: formatAmount(props.summary.membership_discount_amount), icon: 'tabler-percentage', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.memberships_sold'), value: props.summary.sold_memberships_count, icon: 'tabler-id', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.initial_amount'), value: formatAmount(props.summary.total_amount), icon: 'tabler-cash', class: 'bg-label-info text-info' },
+    { label: t('staff_reports.final_amount'), value: formatAmount(props.summary.final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
+    { label: t('sales.paid_amount'), value: formatAmount(props.summary.paid_amount), icon: 'tabler-credit-card', class: 'bg-label-success text-success' },
+    { label: t('sales.debt'), value: formatAmount(props.summary.debt), icon: 'tabler-alert-circle', class: 'bg-label-danger text-danger' },
+    { label: t('sales.manual_discount'), value: formatAmount(props.summary.manual_discount_amount), icon: 'tabler-discount', class: 'bg-label-warning text-warning' },
+    { label: t('sales.membership_discount'), value: formatAmount(props.summary.membership_discount_amount), icon: 'tabler-percentage', class: 'bg-label-secondary text-secondary' },
 ])
 
 const cleanQuery = query => Object.fromEntries(
@@ -142,11 +147,11 @@ const formatAmount = value => {
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
 const statusLabel = status => ({
-    unpaid: 'Չվճարված',
-    partial: 'Մասնակի',
-    paid: 'Վճարված',
-    refunded: 'Վերադարձված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    partial: t('sales.partial'),
+    paid: t('people.paid'),
+    refunded: t('sales.refunded'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -159,12 +164,12 @@ const statusClass = status => ({
 </script>
 
 <template>
-    <Head title="Աբոնեմենտների հաշվետվություն" />
+    <Head :title="t('staff_reports.membership_report')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Աբոնեմենտների հաշվետվություն</h2>
+                <h2 class="mb-1">{{ t('staff_reports.membership_report') }}</h2>
                 <div class="text-muted">
                     {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
                 </div>
@@ -174,7 +179,7 @@ const statusClass = status => ({
                 class="btn btn-outline-success"
             >
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -192,8 +197,8 @@ const statusClass = status => ({
             :select-fields="reportFilterFields"
             :date-fields="[]"
             default-date-field=""
-            submit-label="Կիրառել"
-            reset-label="Վերականգնել"
+            :submit-label="t('staff_reports.apply')"
+            :reset-label="t('filter.reset')"
             @update:model-value="updateReportFilters"
             @filter="applyReportFilters"
             @reset="resetReportFilters"
@@ -224,25 +229,25 @@ const statusClass = status => ({
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Վաճառված աբոնեմենտներ</h5>
-                <span class="badge bg-label-primary">{{ sales.total ?? sales.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('staff_reports.memberships_sold') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: sales.total ?? sales.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Հաճախորդ</th>
-                            <th>Աբոնեմենտ</th>
-                            <th>Մարզիչ</th>
-                            <th>Ժամկետ</th>
-                            <th>Գին</th>
-                            <th>Զեղչ</th>
-                            <th>Վերջնական</th>
-                            <th>Վճարված</th>
-                            <th>Պարտք</th>
-                            <th>Հետվերադարձ</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Ստեղծվել է</th>
+                            <th>{{ t('sales.client') }}</th>
+                            <th>{{ t('people.membership') }}</th>
+                            <th>{{ t('roles.trainer') }}</th>
+                            <th>{{ t('sales.term') }}</th>
+                            <th>{{ t('membership.price') }}</th>
+                            <th>{{ t('sales.discount') }}</th>
+                            <th>{{ t('staff_reports.final') }}</th>
+                            <th>{{ t('people.paid') }}</th>
+                            <th>{{ t('sales.debt') }}</th>
+                            <th>{{ t('staff_reports.refund') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('inventory.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -268,8 +273,8 @@ const statusClass = status => ({
                             </td>
                             <td>{{ formatAmount(sale.total_price) }}</td>
                             <td>
-                                <div>Ձեռքով՝ {{ formatAmount(sale.manual_discount_amount) }}</div>
-                                <div class="text-muted small">Աբոնեմենտ՝ {{ formatAmount(sale.membership_discount_amount) }}</div>
+                                <div>{{ t('staff_reports.manual_amount', { amount: formatAmount(sale.manual_discount_amount) }) }}</div>
+                                <div class="text-muted small">{{ t('staff_reports.membership_amount', { amount: formatAmount(sale.membership_discount_amount) }) }}</div>
                             </td>
                             <td>{{ formatAmount(sale.final_price) }}</td>
                             <td>{{ formatAmount(sale.paid_amount) }}</td>
@@ -298,17 +303,17 @@ const statusClass = status => ({
                                 colspan="12"
                                 class="text-center text-muted py-4"
                             >
-                                Տվյալներ չկան։
+                                {{ t('staff_reports.no_data_2') }}
                             </td>
                         </tr>
                     </tbody>
                     <tfoot v-if="sales.data.length">
                         <tr class="fw-semibold">
-                            <td colspan="4">Այս էջի ամփոփում</td>
+                            <td colspan="4">{{ t('staff_reports.this_page_summary') }}</td>
                             <td>{{ formatAmount(totals.total_amount) }}</td>
                             <td>
-                                <div>Ձեռքով՝ {{ formatAmount(totals.manual_discount_amount) }}</div>
-                                <div class="text-muted small">Աբոնեմենտ՝ {{ formatAmount(totals.membership_discount_amount) }}</div>
+                                <div>{{ t('staff_reports.manual_amount', { amount: formatAmount(totals.manual_discount_amount) }) }}</div>
+                                <div class="text-muted small">{{ t('staff_reports.membership_amount', { amount: formatAmount(totals.membership_discount_amount) }) }}</div>
                             </td>
                             <td>{{ formatAmount(totals.final_amount) }}</td>
                             <td>{{ formatAmount(totals.paid_amount) }}</td>

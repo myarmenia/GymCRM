@@ -1,32 +1,43 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+import { computed } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     parentCategories: {
         type: Array,
         default: () => [],
     },
+    langs: {
+        type: Array,
+        default: null,
+    },
 });
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
 
+const availableLangs = computed(() =>
+    Array.isArray(props.langs) && props.langs.length ? props.langs : ["hy"],
+);
+
 const form = useForm({
     type: "category",
     parent_id: null,
     status: true,
-    translations: {
-        en: {
-            name: "",
-        },
-        ru: {
-            name: "",
-        },
-        hy: {
-            name: "",
-        },
-    },
+    translations: Object.fromEntries(
+        availableLangs.value.map((code) => [
+            code,
+            {
+                name: "",
+            },
+        ]),
+    ),
 });
 
 const changeType = () => {
@@ -41,7 +52,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ավելացնել կատեգորիա" />
+    <Head :title="t('inventory.add_category')" />
 
     <Index>
         <div class="container-xxl py-4">
@@ -56,7 +67,7 @@ const submit = () => {
                     </h3>
 
                     <p class="text-muted mb-0">
-                        Ավելացնել կատեգորիա կամ ենթակատեգորիա
+                        {{ t('inventory.add_category_or_subcategory') }}
                     </p>
                 </div>
 
@@ -65,7 +76,7 @@ const submit = () => {
                     :href="route('categories.index', { locale: currentLocale })"
                 >
                     <i class="icon-base ti tabler-arrow-left me-1"></i>
-                    Հետ գնալ
+                    {{ t('inventory.back') }}
                 </Link>
             </div>
 
@@ -74,7 +85,7 @@ const submit = () => {
                     <form @submit.prevent="submit">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label">Ստեղծել տիպ</label>
+                                <label class="form-label">{{ t('inventory.create_type') }}</label>
 
                                 <select
                                     v-model="form.type"
@@ -82,10 +93,10 @@ const submit = () => {
                                     @change="changeType"
                                 >
                                     <option value="category">
-                                        Կատեգորիա
+                                        {{ t('people.category') }}
                                     </option>
                                     <option value="subcategory">
-                                        Ենթակատեգորիա
+                                        {{ t('inventory.subcategory') }}
                                     </option>
                                 </select>
                             </div>
@@ -95,7 +106,7 @@ const submit = () => {
                                 class="col-md-6"
                             >
                                 <label class="form-label">
-                                    Ծնող կատեգորիա
+                                    {{ t('inventory.parent_category') }}
                                 </label>
 
                                 <select
@@ -103,7 +114,7 @@ const submit = () => {
                                     class="form-select rounded-pill"
                                 >
                                     <option :value="null" disabled>
-                                        Ընտրել ծնող կատեգորիա
+                                        {{ t('inventory.select_parent_category') }}
                                     </option>
 
                                     <option
@@ -124,71 +135,53 @@ const submit = () => {
                             </div>
 
                             <div class="col-12">
-                                <h5 class="fw-bold mb-3">Թարգմանություններ</h5>
+                                <h5 class="fw-bold mb-3">
+                                    {{ t('inventory.translations') }}
+                                </h5>
                             </div>
 
-                            <!-- <div class="col-md-4">
-                                <label class="form-label">Name EN</label>
+                            <div
+                                v-for="code in availableLangs"
+                                :key="code"
+                                class="col-md-4"
+                            >
+                                <label class="form-label">
+                                    {{ t('inventory.name') }}
+                                    ({{ code.toUpperCase() }})
+                                </label>
 
                                 <input
-                                    v-model="form.translations.en.name"
+                                    v-model="form.translations[code].name"
                                     type="text"
                                     class="form-control rounded-pill"
-                                    placeholder="Example: Food"
+                                    :placeholder="t('inventory.name')"
                                 />
 
                                 <div
-                                    v-if="form.errors['translations.en.name']"
+                                    v-if="
+                                        form.errors[
+                                            `translations.${code}.name`
+                                        ]
+                                    "
                                     class="text-danger small mt-1"
                                 >
-                                    {{ form.errors["translations.en.name"] }}
+                                    {{
+                                        form.errors[
+                                            `translations.${code}.name`
+                                        ]
+                                    }}
                                 </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Name RU</label>
-
-                                <input
-                                    v-model="form.translations.ru.name"
-                                    type="text"
-                                    class="form-control rounded-pill"
-                                    placeholder="Например: Еда"
-                                />
-
-                                <div
-                                    v-if="form.errors['translations.ru.name']"
-                                    class="text-danger small mt-1"
-                                >
-                                    {{ form.errors["translations.ru.name"] }}
-                                </div>
-                            </div> -->
-
-                            <div class="col-md-4">
-                                <label class="form-label">Անուն HY</label>
-
-                                <input
-                                    v-model="form.translations.hy.name"
-                                    type="text"
-                                    class="form-control rounded-pill"
-                                    placeholder="Օրինակ՝ Սնունդ"
-                                />
-
-                                <div
-                                    v-if="form.errors['translations.hy.name']"
-                                    class="text-danger small mt-1"
-                                >
-                                    {{ form.errors["translations.hy.name"] }}
-                                </div>
-                            </div>
                             <!-- <div class="col-md-6">
-                                <label class="form-label">Status</label>
+                                <label class="form-label">{{ t('status.status') }}</label>
 
                                 <select
                                     v-model="form.status"
                                     class="form-select rounded-pill"
                                 >
-                                    <option :value="true">Active</option>
-                                    <option :value="false">Inactive</option>
+                                    <option :value="true">{{ t('status.active') }}</option>
+                                    <option :value="false">{{ t('status.inactive') }}</option>
                                 </select>
 
                                 <div
@@ -209,7 +202,7 @@ const submit = () => {
                                     })
                                 "
                             >
-                                Չեղարկել
+                                {{ t('confirm.cancel') }}
                             </Link>
 
                             <button
@@ -223,8 +216,8 @@ const submit = () => {
 
                                 {{
                                     form.type === "category"
-                                        ? "Ստեղծել կատեգորիան"
-                                        : "Ստեղծել ենթակատեգորիան"
+                                        ? t('inventory.create_category')
+                                        : t('inventory.create_subcategory')
                                 }}
                             </button>
                         </div>

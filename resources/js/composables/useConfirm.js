@@ -1,22 +1,26 @@
 import { ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+import { translate } from '/resources/js/trans';
 
 const isOpen = ref(false);
 const modalData = ref({
     message: '',
-    title: 'Հաստատեք գործողությունը',
-    confirmText: 'Հաստատել',
-    cancelText: 'Չեղարկել',
+    title: '',
+    confirmText: '',
+    cancelText: '',
     confirmClass: 'btn-danger'
 });
 let resolver = null;
 
 export function useConfirm() {
+    const page = usePage();
+    const translated = key => translate(page.props.translations, `app.confirm.${key}`);
     const confirm = (msg, options = {}) => {
         modalData.value = {
             message: msg,
-            title: options.title || 'Հաստատեք գործողությունը',
-            confirmText: options.confirmText || 'Հաստատել',
-            cancelText: options.cancelText || 'Չեղարկել',
+            title: options.title ?? translated('title'),
+            confirmText: options.confirmText ?? translated('accept'),
+            cancelText: options.cancelText ?? translated('cancel'),
             confirmClass: options.confirmClass || 'btn-danger'
         };
         isOpen.value = true;

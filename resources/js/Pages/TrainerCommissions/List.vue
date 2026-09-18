@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     commissions: Object,
@@ -41,14 +46,14 @@ const planName = plan => {
 };
 
 const salaryTypeLabel = type => ({
-    fixed: "Ֆիքսված",
-    percent: "Տոկոս",
+    fixed: t('staff_reports.fixed'),
+    percent: t('staff_reports.percent'),
 }[type] ?? type ?? "-");
 
 const statusLabel = status => ({
-    pending: "Սպասման մեջ",
-    paid: "Վճարված",
-    cancelled: "Չեղարկված",
+    pending: t('status.pending'),
+    paid: t('people.paid'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? "-");
 
 const statusClass = status => ({
@@ -62,18 +67,18 @@ const formatDate = value => value ? String(value).slice(0, 10) : "-";
 </script>
 
 <template>
-    <Head title="Մարզիչների աշխատավարձեր" />
+    <Head :title="t('sidebar.trainer_salaries')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մարզիչների աշխատավարձեր
+                {{ t('sidebar.trainer_salaries') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Մարզիչների աշխատավարձեր</h5>
+                <h5 class="mb-0">{{ t('sidebar.trainer_salaries') }}</h5>
             </div>
 
             <div class="card-body">
@@ -82,15 +87,15 @@ const formatDate = value => value ? String(value).slice(0, 10) : "-";
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Մարզիչ</th>
-                                <th>Անդամ</th>
-                                <th>Աբոնեմենտ</th>
-                                <th>Աբոնեմենտի վաճառք</th>
-                                <th>Հաշվարկման տեսակ</th>
-                                <th>Հաշվարկման արժեք</th>
-                                <th>Հաշվարկված աշխատավարձ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Ստեղծվել է</th>
+                                <th>{{ t('roles.trainer') }}</th>
+                                <th>{{ t('staff_reports.member') }}</th>
+                                <th>{{ t('people.membership') }}</th>
+                                <th>{{ t('staff_reports.membership_sale') }}</th>
+                                <th>{{ t('staff_reports.calculation_type') }}</th>
+                                <th>{{ t('staff_reports.calculation_value') }}</th>
+                                <th>{{ t('staff_reports.calculated_salary') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('inventory.created_at') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -129,7 +134,7 @@ const formatDate = value => value ? String(value).slice(0, 10) : "-";
                                     colspan="10"
                                     class="text-center text-muted"
                                 >
-                                    Գրառումներ չկան
+                                    {{ t('staff_reports.no_records') }}
                                 </td>
                             </tr>
                         </tbody>

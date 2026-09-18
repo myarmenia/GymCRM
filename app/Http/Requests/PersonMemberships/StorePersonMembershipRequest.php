@@ -40,39 +40,39 @@ class StorePersonMembershipRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
-            'after_or_equal' => ':attribute-ը պետք է լինի :date-ից ոչ շուտ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+            'required' => __('backend_messages.attribute_field_required'),
+            'integer' => __('backend_messages.attribute_must_be_integer'),
+            'numeric' => __('backend_messages.attribute_must_be_number'),
+            'min.numeric' => __('backend_messages.attribute_must_be_least_min'),
+            'date' => __('backend_messages.attribute_must_be_valid_date'),
+            'after_or_equal' => __('backend_messages.attribute_must_be_date_after_or_equal_date'),
+            'exists' => __('backend_messages.selected_attribute_invalid'),
+            'in' => __('backend_messages.selected_attribute_invalid'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'membership_sale_id' => 'աբոնեմենտի վաճառք',
-            'user_id' => 'օգտատեր',
-            'person_id' => 'հաճախորդ',
-            'gym_id' => 'մարզասրահ',
-            'membership_plan_id' => 'աբոնեմենտ',
-            'trainer_id' => 'մարզիչ',
-            'status' => 'կարգավիճակ',
-            'start_date' => 'սկիզբ',
-            'end_date' => 'ավարտ',
-            'valid_at' => 'վավերական է մինչև',
-            'visits_used' => 'օգտագործված այցելություններ',
-            'visits_left' => 'մնացած այցելություններ',
-            'freeze_used' => 'սառեցման քանակ',
-            'guest_used' => 'հյուրերի քանակ',
-            'freeze_left' => 'մնացած սառեցումներ',
-            'guest_left' => 'մնացած հյուրեր',
-            'next_membership_id' => 'հաջորդ աբոնեմենտ',
-            'activated_at' => 'ակտիվացման ամսաթիվ',
-            'expired_at' => 'ավարտման ամսաթիվ',
+            'membership_sale_id' => __('backend_messages.membership_sale_lowercase'),
+            'user_id' => __('backend_messages.user_lowercase'),
+            'person_id' => __('backend_messages.customer'),
+            'gym_id' => __('backend_messages.gym_lowercase'),
+            'membership_plan_id' => __('backend_messages.membership_lowercase'),
+            'trainer_id' => __('backend_messages.trainer_lowercase'),
+            'status' => __('backend_messages.status_lowercase'),
+            'start_date' => __('backend_messages.start_date'),
+            'end_date' => __('backend_messages.end_date'),
+            'valid_at' => __('backend_messages.valid_until'),
+            'visits_used' => __('backend_messages.used_visits'),
+            'visits_left' => __('backend_messages.remaining_visits'),
+            'freeze_used' => __('backend_messages.number_freezes'),
+            'guest_used' => __('backend_messages.number_guests'),
+            'freeze_left' => __('backend_messages.remaining_freezes'),
+            'guest_left' => __('backend_messages.remaining_guests'),
+            'next_membership_id' => __('backend_messages.next_membership'),
+            'activated_at' => __('backend_messages.activation_date'),
+            'expired_at' => __('backend_messages.end_date_label'),
         ];
     }
 }

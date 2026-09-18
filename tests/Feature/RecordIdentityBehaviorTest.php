@@ -16,9 +16,7 @@ class RecordIdentityBehaviorTest extends TestCase
     {
         $gym = Gym::query()->create(['name' => 'Main gym']);
         $lang = Lang::query()->create(['code' => 'en', 'name' => 'English']);
-
         $gym->languages()->attach($lang->id, ['active' => true]);
-
         $gymLanguage = GymLanguage::query()->firstOrFail();
 
         $this->assertNotNull($gymLanguage->uuid);

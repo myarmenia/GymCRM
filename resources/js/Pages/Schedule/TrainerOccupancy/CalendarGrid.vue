@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import CalendarEventItem from './CalendarEventItem.vue'
 import { parseYmdAsUtcDate } from '@/utils/yerevanDate'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     weekDates: {
@@ -64,7 +69,7 @@ const formatShortDate = value => {
 
 const slotEvents = (day, slot) => eventGroups.value[cellKey(day.date, slot)] ?? []
 
-const recordCountText = () => 'գրառում'
+const recordCountText = () => t('operations.record')
 
 const openDrawer = (day, slot) => {
     const records = slotEvents(day, slot)
@@ -95,12 +100,12 @@ watch(
 <template>
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0">Շաբաթական օրացույց</h5>
+            <h5 class="mb-0">{{ t('operations.weekly_calendar') }}</h5>
         </div>
         <div class="card-body p-0">
             <div class="calendar-scroll">
                 <div class="calendar-table">
-                    <div class="calendar-header calendar-time-cell">Ժամ</div>
+                    <div class="calendar-header calendar-time-cell">{{ t('operations.hour') }}</div>
                     <div
                         v-for="day in weekDates"
                         :key="day.key"
@@ -144,7 +149,7 @@ watch(
                         v-if="!timeSlots.length"
                         class="empty-calendar"
                     >
-                        Օրացույցում ցուցադրվող ժամեր չկան։
+                        {{ t('operations.there_are_no_hours_to_display_in_the_calendar') }}
                     </div>
                 </div>
             </div>
@@ -169,16 +174,16 @@ watch(
                     id="workload-drawer-title"
                     class="offcanvas-title"
                 >
-                    Զբաղվածության մանրամասներ
+                    {{ t('operations.occupancy_details') }}
                 </h5>
                 <div class="text-muted small">
-                    {{ selectedDateLabel }} · {{ selectedTimeRange }} · {{ selectedRecords.length }} գրառում
+                    {{ t('operations.calendar_selection_summary', { date: selectedDateLabel, time: selectedTimeRange, count: selectedRecords.length }) }}
                 </div>
             </div>
             <button
                 type="button"
                 class="btn-close"
-                aria-label="Փակել"
+                :aria-label="t('confirm.close')"
                 @click="closeDrawer"
             ></button>
         </div>

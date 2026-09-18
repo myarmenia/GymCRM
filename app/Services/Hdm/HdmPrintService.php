@@ -253,7 +253,7 @@ class HdmPrintService extends HdmBaseService
             'productName' => $name,
             'dep' => 1,
             'adgCode' => $plan?->adg_code ?? '93.13',
-            'unit' => $plan?->armenian_unit ?? 'հատ',
+            'unit' => $plan?->armenian_unit ?? __('backend_messages.pcs'),
         ];
 
         $this->applyMembershipPlanDiscount($item, $sale);

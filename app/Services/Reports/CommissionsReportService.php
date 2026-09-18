@@ -59,13 +59,13 @@ class CommissionsReportService
                     ])
                     ->values(),
                 'trainerStatuses' => [
-                    ['value' => 'pending', 'label' => 'Սպասման մեջ'],
-                    ['value' => 'paid', 'label' => 'Վճարված'],
+                    ['value' => 'pending', 'label' => __('backend_messages.pending')],
+                    ['value' => 'paid', 'label' => __('backend_messages.paid')],
                 ],
                 'salespersonStatuses' => [
-                    ['value' => 'pending', 'label' => 'Սպասման մեջ'],
-                    ['value' => 'paid', 'label' => 'Վճարված'],
-                    ['value' => 'cancelled', 'label' => 'Չեղարկված'],
+                    ['value' => 'pending', 'label' => __('backend_messages.pending')],
+                    ['value' => 'paid', 'label' => __('backend_messages.paid')],
+                    ['value' => 'cancelled', 'label' => __('backend_messages.cancelled')],
                 ],
             ],
         ];
@@ -86,7 +86,7 @@ class CommissionsReportService
                 'columns' => $this->salespersonExportColumns(),
                 'filters' => array_merge($resolvedFilters, ['tab' => $tab]),
                 'filename' => 'salesperson-commissions-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
-                'title' => 'Վաճառողների միջնորդավճարների հաշվետվություն',
+                'title' => __('backend_messages.salesperson_commissions_report'),
             ];
         }
 
@@ -99,7 +99,7 @@ class CommissionsReportService
             'columns' => $this->trainerExportColumns(),
             'filters' => array_merge($resolvedFilters, ['tab' => $tab]),
             'filename' => 'trainer-commissions-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
-            'title' => 'Մարզիչների միջնորդավճարների հաշվետվություն',
+            'title' => __('backend_messages.trainer_commissions_report'),
         ];
     }
 
@@ -158,16 +158,16 @@ class CommissionsReportService
     {
         return [
             ['key' => 'id', 'title' => 'ID'],
-            ['key' => 'trainer', 'title' => 'Մարզիչ'],
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
-            ['key' => 'salary_type', 'title' => 'Տեսակ'],
-            ['key' => 'salary_value', 'title' => 'Արժեք'],
-            ['key' => 'salary_amount', 'title' => 'Գումար'],
-            ['key' => 'status', 'title' => 'Կարգավիճակ'],
-            ['key' => 'is_kept', 'title' => 'Պահված է'],
-            ['key' => 'paid_at', 'title' => 'Վճարվել է'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'trainer', 'title' => __('backend_messages.trainer')],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'membership_plan', 'title' => __('backend_messages.membership')],
+            ['key' => 'salary_type', 'title' => __('backend_messages.type')],
+            ['key' => 'salary_value', 'title' => __('backend_messages.price')],
+            ['key' => 'salary_amount', 'title' => __('backend_messages.amount')],
+            ['key' => 'status', 'title' => __('backend_messages.status')],
+            ['key' => 'is_kept', 'title' => __('backend_messages.saved_status')],
+            ['key' => 'paid_at', 'title' => __('backend_messages.paid_status')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 
@@ -175,16 +175,16 @@ class CommissionsReportService
     {
         return [
             ['key' => 'id', 'title' => 'ID'],
-            ['key' => 'salesperson', 'title' => 'Վաճառող'],
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
-            ['key' => 'salary_type', 'title' => 'Տեսակ'],
-            ['key' => 'salary_value', 'title' => 'Արժեք'],
-            ['key' => 'sale_amount', 'title' => 'Վաճառքի գումար'],
-            ['key' => 'salary_amount', 'title' => 'Միջնորդավճար'],
-            ['key' => 'status', 'title' => 'Կարգավիճակ'],
-            ['key' => 'paid_at', 'title' => 'Վճարվել է'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'salesperson', 'title' => __('backend_messages.salesperson')],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'membership_plan', 'title' => __('backend_messages.membership')],
+            ['key' => 'salary_type', 'title' => __('backend_messages.type')],
+            ['key' => 'salary_value', 'title' => __('backend_messages.price')],
+            ['key' => 'sale_amount', 'title' => __('backend_messages.sale_amount')],
+            ['key' => 'salary_amount', 'title' => __('backend_messages.commission')],
+            ['key' => 'status', 'title' => __('backend_messages.status')],
+            ['key' => 'paid_at', 'title' => __('backend_messages.paid_status')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 

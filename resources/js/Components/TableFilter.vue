@@ -2,6 +2,7 @@
 import { computed, reactive, watch } from 'vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+import { usePage } from '@inertiajs/vue3'
 
 const props = defineProps({
     modelValue: {
@@ -23,10 +24,7 @@ const props = defineProps({
     },
     dateFields: {
         type: Array,
-        default: () => [
-            { value: 'birth_date', label: 'Ծննդյան ամսաթիվ' },
-            { value: 'created_at', label: 'Ստեղծման ամսաթիվ' },
-        ],
+        default: null,
     },
     defaultDateField: {
         type: String,
@@ -34,41 +32,47 @@ const props = defineProps({
     },
     datePlaceholder: {
         type: String,
-        default: 'Ընտրել ամսաթվի դաշտը',
+        default: null,
     },
     submitLabel: {
         type: String,
-        default: 'Ֆիլտրել',
+        default: null,
     },
     resetLabel: {
         type: String,
-        default: 'Վերականգնել',
+        default: null,
     },
 })
 
 const emit = defineEmits(['update:modelValue', 'filter', 'reset'])
 
 const form = reactive({})
+const page = usePage()
+const t = key => page.props.translations?.app?.filter?.[key] ?? key
+const resolvedDateFields = computed(() => props.dateFields ?? [
+    { value: 'birth_date', label: t('birth_date') },
+    { value: 'created_at', label: t('created_at') },
+])
 
 const defaultTextFields = computed(() => {
     const nameFields = props.nameMode === 'full'
-        ? [{ name: 'full_name', label: 'Ամբողջական անուն', col: 'col-md-4' }]
+        ? [{ name: 'full_name', label: t('full_name'), col: 'col-md-4' }]
         : [
-            { name: 'name', label: 'Անուն', col: 'col-md-3' },
-            { name: 'surname', label: 'Ազգանուն', col: 'col-md-3' },
+            { name: 'name', label: t('name'), col: 'col-md-3' },
+            { name: 'surname', label: t('surname'), col: 'col-md-3' },
         ]
 
     return [
         ...nameFields,
-        { name: 'phone', label: 'Հեռախոս', col: 'col-md-3' },
-        { name: 'email', label: 'Էլ. հասցե', type: 'email', col: 'col-md-3' },
+        { name: 'phone', label: t('phone'), col: 'col-md-3' },
+        { name: 'email', label: t('email'), type: 'email', col: 'col-md-3' },
     ]
 })
 
 const resolvedTextFields = computed(() => props.textFields ?? defaultTextFields.value)
 
 const selectedDateField = computed(() => {
-    return props.dateFields.find(field => field.value === form.date_field)
+    return resolvedDateFields.value.find(field => field.value === form.date_field)
         ?? null
 })
 
@@ -183,7 +187,7 @@ watch(
                             v-if="!field.multiple"
                             value=""
                         >
-                            {{ field.placeholder ?? 'Բոլորը' }}
+                            {{ field.placeholder ?? t('all') }}
                         </option>
                         <option
                             v-for="option in field.options ?? []"
@@ -196,11 +200,11 @@ watch(
                 </div>
 
                 <div
-                    v-if="dateFields.length"
+                    v-if="resolvedDateFields.length"
                     class="col-md-3"
                 >
                     <InputLabel
-                        value="Ամսաթվի դաշտ"
+                        :value="t('date_field')"
                         class="form-label"
                     />
                     <select
@@ -209,10 +213,10 @@ watch(
                         @change="updateModel"
                     >
                         <option value="">
-                            {{ datePlaceholder }}
+                            {{ datePlaceholder ?? t('choose_date_field') }}
                         </option>
                         <option
-                            v-for="field in dateFields"
+                            v-for="field in resolvedDateFields"
                             :key="field.value"
                             :value="field.value"
                         >
@@ -222,11 +226,11 @@ watch(
                 </div>
 
                 <div
-                    v-if="dateFields.length"
+                    v-if="resolvedDateFields.length"
                     class="col-md-3"
                 >
                     <InputLabel
-                        :value="`${selectedDateField?.label ?? 'Ամսաթիվ'} սկսած`"
+                        :value="`${selectedDateField?.label ?? t('date')} ${t('from')}`"
                         class="form-label"
                     />
                     <input
@@ -239,11 +243,11 @@ watch(
                 </div>
 
                 <div
-                    v-if="dateFields.length"
+                    v-if="resolvedDateFields.length"
                     class="col-md-3"
                 >
                     <InputLabel
-                        :value="`${selectedDateField?.label ?? 'Ամսաթիվ'} մինչև`"
+                        :value="`${selectedDateField?.label ?? t('date')} ${t('to')}`"
                         class="form-label"
                     />
                     <input
@@ -258,7 +262,7 @@ watch(
                 <div class="col-md-3 d-flex gap-2">
                     <PrimaryButton>
                         <i class="icon-base ti tabler-filter me-1"></i>
-                        {{ submitLabel }}
+                        {{ submitLabel ?? t('submit') }}
                     </PrimaryButton>
 
                     <button
@@ -266,7 +270,7 @@ watch(
                         class="btn btn-secondary waves-effect"
                     >
                         <i class="icon-base ti tabler-restore me-1"></i>
-                        {{ resetLabel }}
+                        {{ resetLabel ?? t('reset') }}
                     </button>
                 </div>
             </div>

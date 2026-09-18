@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from "vue";
 import { Head, usePage } from "@inertiajs/vue3";
 import Index from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     salaries: {
@@ -39,11 +44,11 @@ const formatAmount = (amount) =>
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "-");
 const statusLabel = (status) =>
     ({
-        pending: "Սպասման մեջ",
-        paid: "Վճարված",
-        transfer: "Փոխանցված",
-        cancel: "Չեղարկված",
-        reject: "Մերժված",
+        pending: t('status.pending'),
+        paid: t('people.paid'),
+        transfer: t('staff_reports.transferred'),
+        cancel: t('people.cancelled'),
+        reject: t('staff_reports.rejected'),
     })[status] ?? status ?? "-";
 const statusClass = (status) =>
     ({
@@ -56,34 +61,34 @@ const statusClass = (status) =>
 </script>
 
 <template>
-    <Head title="Իմ աշխատավարձերը" />
+    <Head :title="t('sidebar.my_salaries')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Իմ աշխատավարձերը
+                {{ t('sidebar.my_salaries') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Իմ աշխատավարձերի պատմությունը</h5>
+                <h5 class="mb-0">{{ t('staff_reports.my_salary_history') }}</h5>
             </div>
 
             <div class="card-body">
                 <div v-if="!salaries.data?.length" class="alert alert-info mb-0">
-                    Աշխատավարձի գրանցումներ դեռ չկան։
+                    {{ t('staff_reports.there_are_no_salary_records_yet') }}
                 </div>
 
                 <div v-else class="table-responsive">
                     <table class="table table-bordered align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Ամիս</th>
-                                <th>Հաճախորդ</th>
-                                <th>Աբոնեմենտ</th>
-                                <th>Գումար</th>
-                                <th>Կարգավիճակ</th>
+                                <th>{{ t('membership.month') }}</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('people.membership') }}</th>
+                                <th>{{ t('people.amount') }}</th>
+                                <th>{{ t('status.status') }}</th>
                             </tr>
                         </thead>
                         <tbody>

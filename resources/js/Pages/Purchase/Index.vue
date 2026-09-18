@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { Head, router, usePage } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     products: Object,
@@ -262,7 +267,8 @@ const getCartItemTotal = (item) => {
 };
 
 const formatMoney = (value) => {
-    return `${Number(value || 0).toLocaleString("hy-AM")} ֏`;
+    const locale = translationPage.props.lang ?? translationPage.props.locale ?? 'hy'
+    return `${Number(value || 0).toLocaleString({ hy: 'hy-AM', en: 'en-US', ru: 'ru-RU' }[locale] ?? 'hy-AM')} ֏`;
 };
 
 const setError = (message) => {
@@ -322,7 +328,7 @@ const validateQuantity = (item, showLimitError = true) => {
         quantity = availableQuantity;
 
         if (showLimitError) {
-            setError("Քանակը չի կարող գերազանցել պահեստում առկա քանակը");
+            setError(t('inventory.quantity_cannot_exceed_the_available_warehouse_stock'));
         }
     }
 
@@ -333,7 +339,7 @@ const addToCart = (product) => {
     const availableQuantity = getAvailableQuantity(product);
 
     if (availableQuantity <= 0) {
-        setError("Ապրանքը պահեստում առկա չէ");
+        setError(t('inventory.the_product_is_not_available_in_the_warehouse'));
         return;
     }
 
@@ -347,7 +353,7 @@ const addToCart = (product) => {
         existingItem.availableQuantity = availableQuantity;
 
         if (existingItem.quantity >= availableQuantity) {
-            setError("Պահեստում բավարար քանակ չկա");
+            setError(t('inventory.there_is_not_enough_stock_in_the_warehouse'));
             return;
         }
 
@@ -368,7 +374,7 @@ const addToCart = (product) => {
 
 const increaseQuantity = (item) => {
     if (Number(item.quantity) >= Number(item.availableQuantity)) {
-        setError("Պահեստում բավարար քանակ չկա");
+        setError(t('inventory.there_is_not_enough_stock_in_the_warehouse'));
         return;
     }
 
@@ -400,7 +406,7 @@ const goToPayment = () => {
     clearMessages();
 
     if (!cart.value.length) {
-        setError("Ավելացրեք առնվազն մեկ ապրանք");
+        setError(t('inventory.add_at_least_one_product'));
         return;
     }
 
@@ -483,7 +489,7 @@ const finishSale = () => {
     clearMessages();
 
     if (!cart.value.length) {
-        setError("Ավելացրեք առնվազն մեկ ապրանք");
+        setError(t('inventory.add_at_least_one_product'));
         return;
     }
 
@@ -493,12 +499,12 @@ const finishSale = () => {
         isCashPayment.value &&
         Number(cashReceived.value || 0) < payableTotal.value
     ) {
-        setError("Ստացված կանխիկ գումարը պետք է բավարար լինի վճարման համար");
+        setError(t('inventory.the_cash_received_must_cover_the_amount_due'));
         return;
     }
 
     if (requiresCardType.value && !cardTypeId.value) {
-        setError("Ընտրեք քարտի տեսակը");
+        setError(t('inventory.select_card_type'));
         return;
     }
 
@@ -533,7 +539,7 @@ const finishSale = () => {
             },
             onSuccess: () => {
                 clearCart({ clearSuccess: false });
-                success.value = "Վաճառքը հաջողությամբ կատարվեց";
+                success.value = t('inventory.sale_completed_successfully');
 
                 router.reload({
                     only: ["products"],
@@ -544,7 +550,7 @@ const finishSale = () => {
             onError: (serverErrors) => {
                 errors.value =
                     getFirstServerError(serverErrors) ||
-                    "Վաճառքը չհաջողվեց կատարել";
+                    t('inventory.could_not_complete_the_sale');
             },
             onFinish: () => {
                 isSubmitting.value = false;
@@ -555,7 +561,7 @@ const finishSale = () => {
 </script>
 
 <template>
-    <Head title="Ապրանքի վաճառք" />
+    <Head :title="t('inventory.product_sale')" />
 
     <AppLayout>
         <div class="purchase-page">
@@ -569,20 +575,20 @@ const finishSale = () => {
                                         class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-3"
                                     >
                                         <div>
-                                            <h5 class="mb-1">Վաճառքի պատուհան</h5>
+                                            <h5 class="mb-1">{{ t('inventory.sales_window') }}</h5>
                                             <p class="text-muted mb-0">
-                                                Ընտրեք ապրանքը, սահմանեք քանակը և ավարտեք վաճառքը։
+                                                {{ t('inventory.select_a_product_set_the_quantity_and_complete_the_sale') }}
                                             </p>
                                         </div>
 
                                         <div class="summary-chip-group">
                                             <span class="summary-chip">
                                                 <i class="icon-base ti tabler-box"></i>
-                                                {{ productsData.length }} ապրանք
+                                                {{ t('inventory.product_count', { count: productsData.length }) }}
                                             </span>
                                             <span class="summary-chip">
                                                 <i class="icon-base ti tabler-shopping-cart"></i>
-                                                {{ totalQuantity }} հատ զամբյուղում
+                                                {{ t('inventory.cart_unit_count', { count: totalQuantity }) }}
                                             </span>
                                         </div>
                                     </div>
@@ -590,7 +596,7 @@ const finishSale = () => {
                                     <div class="row g-3">
                                         <div class="col-xl-4 col-md-6">
                                             <label class="form-label filter-label">
-                                                Որոնում
+                                                {{ t('inventory.search_2') }}
                                             </label>
                                             <div class="input-group input-group-merge">
                                                 <span class="input-group-text bg-white">
@@ -600,7 +606,7 @@ const finishSale = () => {
                                                     v-model="name"
                                                     type="text"
                                                     class="form-control"
-                                                    placeholder="Ապրանքի անուն կամ կոդ"
+                                                    :placeholder="t('inventory.product_name_or_code')"
                                                     @keyup.enter="search"
                                                 />
                                             </div>
@@ -608,10 +614,10 @@ const finishSale = () => {
 
                                         <div class="col-xl-3 col-md-6">
                                             <label class="form-label filter-label">
-                                                Պահեստ
+                                                {{ t('inventory.warehouse') }}
                                             </label>
                                             <select v-model="warehouseId" class="form-select">
-                                                <option value="">Բոլոր պահեստները</option>
+                                                <option value="">{{ t('inventory.all_warehouses') }}</option>
                                                 <option
                                                     v-for="warehouse in localWarehouses"
                                                     :key="warehouse.id"
@@ -624,10 +630,10 @@ const finishSale = () => {
 
                                         <div class="col-xl-2 col-md-6">
                                             <label class="form-label filter-label">
-                                                Կատեգորիա
+                                                {{ t('people.category') }}
                                             </label>
                                             <select v-model="categoryId" class="form-select">
-                                                <option value="">Բոլորը</option>
+                                                <option value="">{{ t('common.all') }}</option>
                                                 <option
                                                     v-for="category in localCategories"
                                                     :key="category.id"
@@ -644,14 +650,14 @@ const finishSale = () => {
 
                                         <div class="col-xl-3 col-md-6">
                                             <label class="form-label filter-label">
-                                                Ենթակատեգորիա
+                                                {{ t('inventory.subcategory') }}
                                             </label>
                                             <select
                                                 v-model="subCategoryId"
                                                 class="form-select"
                                                 :disabled="!categoryId || !filteredSubCategories.length"
                                             >
-                                                <option value="">Ընտրել ենթակատեգորիա</option>
+                                                <option value="">{{ t('inventory.select_subcategory') }}</option>
                                                 <option
                                                     v-for="subCategory in filteredSubCategories"
                                                     :key="subCategory.id"
@@ -675,7 +681,7 @@ const finishSale = () => {
                                                 @click="search"
                                             >
                                                 <i class="icon-base ti tabler-search me-1"></i>
-                                                Որոնել
+                                                {{ t('inventory.search') }}
                                             </button>
 
                                             <button
@@ -684,7 +690,7 @@ const finishSale = () => {
                                                 @click="resetFilters"
                                             >
                                                 <i class="icon-base ti tabler-refresh me-1"></i>
-                                                Մաքրել ֆիլտրերը
+                                                {{ t('inventory.clear_filters') }}
                                             </button>
                                         </div>
                                     </div>
@@ -729,8 +735,8 @@ const finishSale = () => {
                                                 >
                                                     {{
                                                         isProductOutOfStock(product)
-                                                            ? "Առկա չէ"
-                                                            : `${getAvailableQuantity(product)} հատ`
+                                                            ? t('inventory.unavailable')
+                                                            : t('inventory.available_units', { count: getAvailableQuantity(product) })
                                                     }}
                                                 </span>
 
@@ -738,7 +744,7 @@ const finishSale = () => {
                                                     v-if="isProductLowStock(product)"
                                                     class="badge rounded-pill bg-label-warning"
                                                 >
-                                                    Քիչ քանակ
+                                                    {{ t('inventory.low_stock') }}
                                                 </span>
                                             </div>
                                         </div>
@@ -749,7 +755,7 @@ const finishSale = () => {
                                                     {{ getProductName(product) }}
                                                 </div>
                                                 <div class="product-sku">
-                                                    {{ product.sku ?? "SKU չկա" }}
+                                                    {{ product.sku ?? t('inventory.no_sku') }}
                                                 </div>
                                             </div>
 
@@ -759,11 +765,11 @@ const finishSale = () => {
 
                                             <div class="product-meta-list mb-3">
                                                 <div class="product-meta-row">
-                                                    <span>Պահեստում</span>
+                                                    <span>{{ t('inventory.in_warehouse') }}</span>
                                                     <strong>{{ getAvailableQuantity(product) }}</strong>
                                                 </div>
                                                 <div class="product-meta-row">
-                                                    <span>Ամրագրված</span>
+                                                    <span>{{ t('inventory.reserved') }}</span>
                                                     <strong>{{ getProductReservedQuantity(product) }}</strong>
                                                 </div>
                                             </div>
@@ -777,8 +783,8 @@ const finishSale = () => {
                                                 <i class="icon-base ti tabler-plus me-1"></i>
                                                 {{
                                                     isProductOutOfStock(product)
-                                                        ? "Ապրանքը սպառված է"
-                                                        : "Ավելացնել զամբյուղ"
+                                                        ? t('inventory.the_product_is_out_of_stock')
+                                                        : t('inventory.add_to_cart')
                                                 }}
                                             </button>
                                         </div>
@@ -794,9 +800,9 @@ const finishSale = () => {
                                             <div class="empty-icon mb-3">
                                                 <i class="icon-base ti tabler-search-off"></i>
                                             </div>
-                                            <h6 class="mb-1">Ապրանք չի գտնվել</h6>
+                                            <h6 class="mb-1">{{ t('inventory.product_not_found') }}</h6>
                                             <p class="text-muted mb-0">
-                                                Փորձեք փոխել որոնման կամ ֆիլտրերի պայմանները։
+                                                {{ t('inventory.try_changing_the_search_or_filter_conditions') }}
                                             </p>
                                         </div>
                                     </div>
@@ -813,9 +819,9 @@ const finishSale = () => {
                                 <div class="card-body p-3 p-md-4">
                                     <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                         <div>
-                                            <h5 class="mb-1">Զամբյուղ</h5>
+                                            <h5 class="mb-1">{{ t('inventory.cart') }}</h5>
                                             <p class="text-muted mb-0">
-                                                Կառավարեք պատվերը և ավարտեք վաճառքը։
+                                                {{ t('inventory.manage_the_order_and_complete_the_sale') }}
                                             </p>
                                         </div>
 
@@ -826,19 +832,19 @@ const finishSale = () => {
                                             @click="clearCart()"
                                         >
                                             <i class="icon-base ti tabler-trash me-1"></i>
-                                            Մաքրել
+                                            {{ t('inventory.clear') }}
                                         </button>
                                     </div>
 
                                     <div class="person-card mb-3">
                                         <label class="form-label fw-semibold mb-2">
-                                            Հաճախորդ (ոչ պարտադիր)
+                                            {{ t('inventory.customer_optional') }}
                                         </label>
                                         <select
                                             v-model="selectedPersonId"
                                             class="form-select"
                                         >
-                                            <option value="">Ընտրեք հաճախորդ (ոչ պարտադիր)</option>
+                                            <option value="">{{ t('inventory.select_customer_optional') }}</option>
                                             <option
                                                 v-for="person in localPeople"
                                                 :key="person.id"
@@ -857,7 +863,7 @@ const finishSale = () => {
                                             @click="step = 'cart'"
                                         >
                                             <i class="icon-base ti tabler-shopping-cart me-1"></i>
-                                            Զամբյուղ
+                                            {{ t('inventory.cart') }}
                                         </button>
                                         <button
                                             type="button"
@@ -867,7 +873,7 @@ const finishSale = () => {
                                             @click="goToPayment"
                                         >
                                             <i class="icon-base ti tabler-credit-card me-1"></i>
-                                            Վճարում
+                                            {{ t('people.payment') }}
                                         </button>
                                     </div>
 
@@ -875,9 +881,9 @@ const finishSale = () => {
                                         <div class="empty-icon mb-3">
                                             <i class="icon-base ti tabler-shopping-cart-off"></i>
                                         </div>
-                                        <h6 class="mb-1">Զամբյուղը դատարկ է</h6>
+                                        <h6 class="mb-1">{{ t('inventory.the_cart_is_empty') }}</h6>
                                         <p class="text-muted mb-0">
-                                            Ընտրեք ապրանքներ ձախ հատվածից։
+                                            {{ t('inventory.select_products_from_the_left_section') }}
                                         </p>
                                     </div>
 
@@ -909,7 +915,7 @@ const finishSale = () => {
                                                                 {{ item.name }}
                                                             </div>
                                                             <div class="cart-item-subtitle">
-                                                                {{ item.sku || "Կոդ չկա" }}
+                                                                {{ item.sku || t('inventory.no_code') }}
                                                             </div>
                                                         </div>
 
@@ -928,7 +934,7 @@ const finishSale = () => {
                                                                 {{ formatMoney(item.price) }}
                                                             </div>
                                                             <small class="text-muted">
-                                                                Առկա՝ {{ item.availableQuantity }} հատ
+                                                                {{ t('inventory.available_unit_count', { count: item.availableQuantity }) }}
                                                             </small>
                                                         </div>
 
@@ -962,7 +968,7 @@ const finishSale = () => {
                                                     </div>
 
                                                     <div class="cart-item-total mt-2">
-                                                        Ընդամենը՝ {{ formatMoney(getCartItemTotal(item)) }}
+                                                        {{ t('inventory.total_amount', { amount: formatMoney(getCartItemTotal(item)) }) }}
                                                     </div>
                                                 </div>
                                             </div>
@@ -970,19 +976,19 @@ const finishSale = () => {
 
                                         <div class="order-summary mt-3">
                                             <div class="summary-row">
-                                                <span>Ապրանքների քանակ</span>
+                                                <span>{{ t('inventory.product_quantity') }}</span>
                                                 <strong>{{ totalQuantity }}</strong>
                                             </div>
                                             <div class="summary-row">
-                                                <span>Միջանկյալ գումար</span>
+                                                <span>{{ t('inventory.subtotal_amount') }}</span>
                                                 <strong>{{ formatMoney(subtotal) }}</strong>
                                             </div>
                                             <div class="summary-row">
-                                                <span>Զեղչ</span>
+                                                <span>{{ t('sales.discount') }}</span>
                                                 <strong>{{ formatMoney(discountAmount) }}</strong>
                                             </div>
                                             <div class="summary-row total-row">
-                                                <span>Վճարման ենթակա</span>
+                                                <span>{{ t('inventory.amount_due') }}</span>
                                                 <strong>{{ formatMoney(payableTotal) }}</strong>
                                             </div>
                                         </div>
@@ -994,14 +1000,14 @@ const finishSale = () => {
                                                 @click="goToPayment"
                                             >
                                                 <i class="icon-base ti tabler-arrow-right me-1"></i>
-                                                Անցնել վճարման
+                                                {{ t('inventory.proceed_to_payment') }}
                                             </button>
                                         </div>
 
                                         <div v-else class="payment-panel mt-3">
                                             <div class="mb-3">
                                                 <label class="form-label fw-semibold">
-                                                    Զեղչի տոկոս
+                                                    {{ t('inventory.discount_percentage') }}
                                                 </label>
                                                 <div class="discount-row">
                                                     <input
@@ -1032,7 +1038,7 @@ const finishSale = () => {
 
                                             <div class="mb-3">
                                                 <label class="form-label fw-semibold">
-                                                    Վճարման եղանակ
+                                                    {{ t('people.payment_method') }}
                                                 </label>
                                                 <div class="payment-methods">
                                                     <button
@@ -1057,7 +1063,7 @@ const finishSale = () => {
                                                 class="mb-3"
                                             >
                                                 <label class="form-label fw-semibold">
-                                                    Քարտի տեսակ
+                                                    {{ t('sales.card_type') }}
                                                 </label>
                                                 <select
                                                     v-model="cardTypeId"
@@ -1065,7 +1071,7 @@ const finishSale = () => {
                                                     required
                                                 >
                                                     <option value="" disabled>
-                                                        Ընտրել քարտի տեսակը
+                                                        {{ t('sales.select_card_type') }}
                                                     </option>
                                                     <option
                                                         v-for="cardType in availableCardTypes"
@@ -1079,24 +1085,24 @@ const finishSale = () => {
 
                                             <div v-if="isCashPayment" class="mb-3">
                                                 <label class="form-label fw-semibold">
-                                                    Ստացված գումար
+                                                    {{ t('inventory.amount_received') }}
                                                 </label>
                                                 <input
                                                     v-model.number="cashReceived"
                                                     type="number"
                                                     class="form-control"
                                                     min="0"
-                                                    placeholder="Մուտքագրեք ստացված գումարը"
+                                                    :placeholder="t('inventory.enter_the_amount_received')"
                                                 />
                                                 <div class="change-box mt-2">
-                                                    <span>Մանր</span>
+                                                    <span>{{ t('inventory.retail') }}</span>
                                                     <strong>{{ formatMoney(changeAmount) }}</strong>
                                                 </div>
                                             </div>
 
                                             <div v-else class="info-box mb-3">
                                                 <i class="icon-base ti tabler-info-circle"></i>
-                                                <span>Անկանխիկ վճարման դեպքում կանխիկ գումար մուտքագրել պետք չէ։</span>
+                                                <span>{{ t('inventory.for_a_non_cash_payment_you_do_not_need_to_enter_a_cash_amount') }}</span>
                                             </div>
 
                                             <div class="d-grid gap-2">
@@ -1107,7 +1113,7 @@ const finishSale = () => {
                                                     @click="finishSale"
                                                 >
                                                     <i class="icon-base ti tabler-check me-1"></i>
-                                                    {{ isSubmitting ? "Պահպանվում է..." : "Ավարտել վաճառքը" }}
+                                                    {{ isSubmitting ? t('inventory.saving') : t('inventory.complete_sale') }}
                                                 </button>
 
                                                 <button
@@ -1116,7 +1122,7 @@ const finishSale = () => {
                                                     @click="step = 'cart'"
                                                 >
                                                     <i class="icon-base ti tabler-arrow-left me-1"></i>
-                                                    Վերադառնալ զամբյուղ
+                                                    {{ t('inventory.return_to_cart') }}
                                                 </button>
                                             </div>
                                         </div>

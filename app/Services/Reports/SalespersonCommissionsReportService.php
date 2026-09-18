@@ -42,7 +42,7 @@ class SalespersonCommissionsReportService
             'columns' => $this->exportColumns(),
             'filters' => $filters,
             'filename' => 'salesperson-commissions-report-'.now()->format('Y-m-d-H-i-s').'.xls',
-            'title' => 'Վաճառողների միջնորդավճարների հաշվետվություն',
+            'title' => __('backend_messages.salesperson_commissions_report'),
             'summary' => $this->exportSummary($this->summary($commissions)),
         ];
     }
@@ -114,10 +114,10 @@ class SalespersonCommissionsReportService
                 ])
                 ->values(),
             'statuses' => [
-                ['value' => 'pending', 'label' => 'Սպասման մեջ'],
-                ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
-                ['value' => 'paid', 'label' => 'Վճարված'],
-                ['value' => 'cancelled', 'label' => 'Չեղարկված'],
+                ['value' => 'pending', 'label' => __('backend_messages.pending')],
+                ['value' => 'partial', 'label' => __('backend_messages.partially_paid')],
+                ['value' => 'paid', 'label' => __('backend_messages.paid')],
+                ['value' => 'cancelled', 'label' => __('backend_messages.cancelled')],
             ],
         ];
     }
@@ -125,17 +125,17 @@ class SalespersonCommissionsReportService
     protected function exportColumns(): array
     {
         return [
-            ['key' => 'salesperson', 'title' => 'Վաճառող'],
-            ['key' => 'membership_sale', 'title' => 'Աբոնեմենտի վաճառք'],
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'salary_type', 'title' => 'Միջնորդավճարի տեսակ'],
-            ['key' => 'salary_value', 'title' => 'Միջնորդավճարի արժեք'],
-            ['key' => 'salary_amount', 'title' => 'Միջնորդավճարի գումար'],
-            ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
-            ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
-            ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
-            ['key' => 'status', 'title' => 'Կարգավիճակ'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'salesperson', 'title' => __('backend_messages.salesperson')],
+            ['key' => 'membership_sale', 'title' => __('backend_messages.membership_sale')],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'salary_type', 'title' => __('backend_messages.commission_type')],
+            ['key' => 'salary_value', 'title' => __('backend_messages.commission_value')],
+            ['key' => 'salary_amount', 'title' => __('backend_messages.commission_amount')],
+            ['key' => 'net_paid_amount', 'title' => __('backend_messages.net_paid')],
+            ['key' => 'outstanding_amount', 'title' => __('backend_messages.unpaid_balance')],
+            ['key' => 'refunded_amount', 'title' => __('backend_messages.refunded')],
+            ['key' => 'status', 'title' => __('backend_messages.status')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 
@@ -158,15 +158,15 @@ class SalespersonCommissionsReportService
     protected function exportSummary(array $summary): array
     {
         return [
-            'title' => 'Ամփոփում',
+            'title' => __('backend_messages.summary'),
             'rows' => [
-                ['label' => 'Գրանցումների քանակ', 'value' => $summary['commissions_count']],
-                ['label' => 'Վաճառքների գումար', 'value' => $summary['total_sale_amount']],
-                ['label' => 'Միջնորդավճարի ընդհանուր գումար', 'value' => $summary['total_commission_amount']],
-                ['label' => 'Վճարված միջնորդավճար', 'value' => $summary['paid_commission_amount']],
-                ['label' => 'Սպասող միջնորդավճար', 'value' => $summary['pending_commission_amount']],
-                ['label' => 'Վերադարձված միջնորդավճար', 'value' => $summary['refunded_commission_amount']],
-                ['label' => 'Չեղարկված միջնորդավճար', 'value' => $summary['cancelled_commission_amount']],
+                ['label' => __('backend_messages.record_count'), 'value' => $summary['commissions_count']],
+                ['label' => __('backend_messages.sales_amount'), 'value' => $summary['total_sale_amount']],
+                ['label' => __('backend_messages.total_commission_amount'), 'value' => $summary['total_commission_amount']],
+                ['label' => __('backend_messages.paid_commission'), 'value' => $summary['paid_commission_amount']],
+                ['label' => __('backend_messages.pending_commission'), 'value' => $summary['pending_commission_amount']],
+                ['label' => __('backend_messages.refunded_commission'), 'value' => $summary['refunded_commission_amount']],
+                ['label' => __('backend_messages.cancelled_commission'), 'value' => $summary['cancelled_commission_amount']],
             ],
         ];
     }

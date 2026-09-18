@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from "vue";
 import { Head, router, useForm, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     transactions: Object,
@@ -201,7 +206,7 @@ const submitReversal = () => {
     const reason = reversalReason.value.trim();
 
     if (!reason) {
-        reversalError.value = "Նշեք հետվերադարձի պատճառը։";
+        reversalError.value = t('operations.specify_the_refund_reason');
         return;
     }
 
@@ -222,7 +227,7 @@ const submitReversal = () => {
             },
             onError: (errors) => {
                 reversalError.value =
-                    errors.reason ?? "Չհաջողվեց կատարել հետվերադարձը։";
+                    errors.reason ?? t('operations.could_not_process_the_refund');
             },
             onFinish: () => {
                 reversalProcessing.value = false;
@@ -234,7 +239,7 @@ const submitReversal = () => {
 const creatorName = (creator) =>
     creator
         ? `${creator.name ?? ""} ${creator.surname ?? ""}`.trim()
-        : "Համակարգ";
+        : t('operations.system');
 
 const rowNumber = (index) =>
     (Number(props.transactions.current_page ?? 1) - 1) *
@@ -244,14 +249,14 @@ const rowNumber = (index) =>
 </script>
 
 <template>
-    <Head title="Դրամարկղ" />
+    <Head :title="t('sidebar.cashier')" />
 
     <AppLayout>
         <div class="container-fluid py-3">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
-                    <h4 class="mb-1">Դրամարկղ</h4>
-                    <p class="text-muted mb-0">Բոլոր ֆինանսական մուտքերն ու ելքերը մեկ միասնական մատյանում</p>
+                    <h4 class="mb-1">{{ t('sidebar.cashier') }}</h4>
+                    <p class="text-muted mb-0">{{ t('operations.all_financial_income_and_expenses_in_one_unified_ledger') }}</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button
@@ -261,7 +266,7 @@ const rowNumber = (index) =>
                         @click="showManualForm = !showManualForm"
                     >
                         <i class="ti tabler-plus me-1"></i>
-                        Ձեռքով մուտք / ելք
+                        {{ t('operations.manual_income_expense') }}
                     </button>
                     <button
                         v-if="canManage"
@@ -269,7 +274,7 @@ const rowNumber = (index) =>
                         type="button"
                         @click="showCategoryForm = !showCategoryForm"
                     >
-                        Կատեգորիաներ
+                        {{ t('sidebar.categories') }}
                     </button>
                     <!-- <a
                         :href="printHref"
@@ -278,11 +283,11 @@ const rowNumber = (index) =>
                         class="btn btn-outline-secondary"
                     >
                         <i class="ti tabler-printer me-1"></i>
-                        Տպել
+                        {{ t('operations.print') }}
                     </a> -->
                     <a :href="exportHref" class="btn btn-outline-success">
                         <i class="ti tabler-file-export me-1"></i>
-                        Արտահանել Excel
+                        {{ t('staff_reports.export_to_excel') }}
                     </a>
                 </div>
             </div>
@@ -291,114 +296,114 @@ const rowNumber = (index) =>
                 <form class="card-body" @submit.prevent="submitCategory">
                     <div class="row g-3 align-items-end">
                         <div v-if="gyms.length" class="col-md-3">
-                            <label class="form-label">Մարզասրահ</label>
+                            <label class="form-label">{{ t('people.gym') }}</label>
                             <select v-model="categoryForm.gym_id" class="form-select">
                                 <option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Կատեգորիայի տեսակ</label>
+                            <label class="form-label">{{ t('operations.category_type') }}</label>
                             <select v-model="categoryForm.direction" class="form-select">
-                                <option value="income">Մուտք</option>
-                                <option value="expense">Ելք</option>
+                                <option value="income">{{ t('auth.login') }}</option>
+                                <option value="expense">{{ t('people.exit') }}</option>
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Անվանում</label>
-                            <input v-model="categoryForm.name" class="form-control" placeholder="Օր․ Կոմունալ վճարում" />
+                            <label class="form-label">{{ t('membership.title') }}</label>
+                            <input v-model="categoryForm.name" class="form-control" :placeholder="t('operations.e_g_utility_payment')" />
                             <div class="text-danger small">{{ categoryForm.errors.name }}</div>
                         </div>
                         <div class="col-md-2">
-                            <button class="btn btn-primary w-100" :disabled="categoryForm.processing">Ավելացնել</button>
+                            <button class="btn btn-primary w-100" :disabled="categoryForm.processing">{{ t('operations.add') }}</button>
                         </div>
                     </div>
                 </form>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0">Ընթացիկ մնացորդ</h5>
-                <small class="text-muted">Ամբողջ պատմության տվյալներով</small>
+                <h5 class="mb-0">{{ t('operations.current_balance') }}</h5>
+                <small class="text-muted">{{ t('operations.using_the_full_history') }}</small>
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <div class="summary-card">
-                        <span>Ընդհանուր մնացորդ</span>
+                        <span>{{ t('operations.total_balance') }}</span>
                         <strong>{{ money(summary.balance) }}</strong>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="summary-card cash">
-                        <span>Կանխիկ</span>
+                        <span>{{ t('operations.cash') }}</span>
                         <strong>{{ money(summary.cash_balance) }}</strong>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="summary-card noncash">
-                        <span>Անկանխիկ</span>
+                        <span>{{ t('operations.non_cash') }}</span>
                         <strong>{{ money(summary.noncash_balance) }}</strong>
                     </div>
                 </div>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h5 class="mb-0">Ընտրված ժամանակահատված</h5>
-                <small class="text-muted">Կիրառված ֆիլտրերով</small>
+                <h5 class="mb-0">{{ t('operations.selected_period') }}</h5>
+                <small class="text-muted">{{ t('operations.with_applied_filters') }}</small>
             </div>
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <div class="summary-card income">
-                        <span>Մուտքեր</span>
+                        <span>{{ t('staff_reports.entries') }}</span>
                         <strong>{{ money(summary.income) }}</strong>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="summary-card expense">
-                        <span>Ելքեր</span>
+                        <span>{{ t('staff_reports.exits') }}</span>
                         <strong>{{ money(summary.expense) }}</strong>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="summary-card" :class="Number(summary.period_net) < 0 ? 'expense' : 'income'">
-                        <span>Զուտ տարբերություն</span>
+                        <span>{{ t('operations.net_difference') }}</span>
                         <strong>{{ money(summary.period_net) }}</strong>
                     </div>
                 </div>
             </div>
 
             <div v-if="showManualForm" class="card border-0 shadow-sm mb-4">
-                <div class="card-header"><strong>Նոր ձեռքով գործարք</strong></div>
+                <div class="card-header"><strong>{{ t('operations.new_manual_transaction') }}</strong></div>
                 <form class="card-body" @submit.prevent="submitManual">
                     <div class="row g-3">
                         <div v-if="gyms.length" class="col-lg-3 col-md-6">
-                            <label class="form-label">Մարզասրահ</label>
+                            <label class="form-label">{{ t('people.gym') }}</label>
                             <select v-model="form.gym_id" class="form-select">
-                                <option value="" disabled>Ընտրել</option>
+                                <option value="" disabled>{{ t('people.select') }}</option>
                                 <option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option>
                             </select>
                             <div class="text-danger small">{{ form.errors.gym_id }}</div>
                         </div>
                         <div class="col-lg-2 col-md-6">
-                            <label class="form-label">Տեսակ</label>
+                            <label class="form-label">{{ t('people.type') }}</label>
                             <select v-model="form.direction" class="form-select">
-                                <option value="income">Մուտք</option>
-                                <option value="expense">Ելք</option>
+                                <option value="income">{{ t('auth.login') }}</option>
+                                <option value="expense">{{ t('people.exit') }}</option>
                             </select>
                         </div>
                         <div class="col-lg-3 col-md-6">
-                            <label class="form-label">Կատեգորիա</label>
+                            <label class="form-label">{{ t('people.category') }}</label>
                             <select v-model="form.category_id" class="form-select">
-                                <option value="" disabled>Ընտրել</option>
+                                <option value="" disabled>{{ t('people.select') }}</option>
                                 <option v-for="category in manualCategories" :key="category.id" :value="category.id">{{ category.name }}</option>
                             </select>
                             <div class="text-danger small">{{ form.errors.category_id }}</div>
                         </div>
                         <div class="col-lg-2 col-md-6">
-                            <label class="form-label">Գումար</label>
+                            <label class="form-label">{{ t('people.amount') }}</label>
                             <input v-model="form.amount" type="number" min="0.01" step="0.01" class="form-control" />
                             <div class="text-danger small">{{ form.errors.amount }}</div>
                         </div>
                         <div class="col-lg-3 col-md-6">
-                            <label class="form-label">Վճարման եղանակ</label>
+                            <label class="form-label">{{ t('people.payment_method') }}</label>
                             <select v-model="form.payment_method_id" class="form-select">
                                 <option v-for="method in paymentMethods" :key="method.id" :value="method.id">
                                     {{ translatedName(method) }}
@@ -406,30 +411,30 @@ const rowNumber = (index) =>
                             </select>
                         </div>
                         <div v-if="availableCardTypes.length" class="col-lg-2 col-md-6">
-                            <label class="form-label">Քարտի տեսակ</label>
+                            <label class="form-label">{{ t('sales.card_type') }}</label>
                             <select v-model="form.card_type_id" class="form-select">
-                                <option value="" disabled>Ընտրել</option>
+                                <option value="" disabled>{{ t('people.select') }}</option>
                                 <option v-for="card in availableCardTypes" :key="card.id" :value="card.id">{{ card.name }}</option>
                             </select>
                             <div class="text-danger small">{{ form.errors.card_type_id }}</div>
                         </div>
                         <div class="col-lg-3 col-md-6">
-                            <label class="form-label">Ամսաթիվ և ժամ</label>
+                            <label class="form-label">{{ t('operations.date_and_time') }}</label>
                             <input v-model="form.occurred_at" type="datetime-local" class="form-control" />
                         </div>
                         <div class="col-lg-6 col-md-6">
-                            <label class="form-label">Նկարագրություն</label>
+                            <label class="form-label">{{ t('people.description') }}</label>
                             <input v-model="form.description" class="form-control" />
                             <div class="text-danger small">{{ form.errors.description }}</div>
                         </div>
                         <div class="col-lg-3 col-md-6">
-                            <label class="form-label">Հղում / փաստաթուղթ</label>
+                            <label class="form-label">{{ t('operations.reference_document') }}</label>
                             <input v-model="form.reference" class="form-control" />
                         </div>
                     </div>
                     <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button type="button" class="btn btn-outline-secondary" @click="showManualForm = false">Փակել</button>
-                        <button type="submit" class="btn btn-primary" :disabled="form.processing">Գրանցել</button>
+                        <button type="button" class="btn btn-outline-secondary" @click="showManualForm = false">{{ t('confirm.close') }}</button>
+                        <button type="submit" class="btn btn-primary" :disabled="form.processing">{{ t('operations.record_2') }}</button>
                     </div>
                 </form>
             </div>
@@ -437,22 +442,22 @@ const rowNumber = (index) =>
             <div class="card border-0 shadow-sm">
                  <div class="card-body border-bottom"> 
                     <div class="row g-2">
-                        <div class="col-lg-2 col-md-4"><input v-model="filters.search" class="form-control" placeholder="Որոնում" @keyup.enter="applyFilters" /></div>
+                        <div class="col-lg-2 col-md-4"><input v-model="filters.search" class="form-control" :placeholder="t('inventory.search_2')" @keyup.enter="applyFilters" /></div>
                         <div v-if="gyms.length" class="col-lg-2 col-md-4">
-                            <select v-model="filters.gym_id" class="form-select"><option value="">Բոլոր մարզասրահները</option><option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option></select>
+                            <select v-model="filters.gym_id" class="form-select"><option value="">{{ t('operations.all_gyms') }}</option><option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option></select>
                         </div>
                         <div class="col-lg-2 col-md-4">
-                            <select v-model="filters.direction" class="form-select"><option value="">Մուտք և ելք</option><option value="income">Մուտք</option><option value="expense">Ելք</option></select>
+                            <select v-model="filters.direction" class="form-select"><option value="">{{ t('operations.income_and_expense') }}</option><option value="income">{{ t('auth.login') }}</option><option value="expense">{{ t('people.exit') }}</option></select>
                         </div>
                         <div class="col-lg-2 col-md-4">
-                            <select v-model="filters.payment_method_id" class="form-select"><option value="">Բոլոր եղանակները</option><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ translatedName(method) }}</option></select>
+                            <select v-model="filters.payment_method_id" class="form-select"><option value="">{{ t('operations.all_methods') }}</option><option v-for="method in paymentMethods" :key="method.id" :value="method.id">{{ translatedName(method) }}</option></select>
                         </div>
                         <div class="col-lg-2 col-md-4">
-                            <select v-model="filters.category_id" class="form-select"><option value="">Բոլոր կատեգորիաները</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select>
+                            <select v-model="filters.category_id" class="form-select"><option value="">{{ t('inventory.all_categories') }}</option><option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option></select>
                         </div>
                         <div class="col-lg-2 col-md-4">
                             <select v-model="filters.creator_id" class="form-select">
-                                <option value="">Բոլոր գրանցողները</option>
+                                <option value="">{{ t('operations.all_creators') }}</option>
                                 <option v-for="creator in creators" :key="creator.id" :value="creator.id">
                                     {{ creatorName(creator) }}
                                 </option>
@@ -461,7 +466,7 @@ const rowNumber = (index) =>
                         <div class="col-lg-2 col-md-4"><input v-model="filters.start_date" type="date" class="form-control" /></div>
                         <div class="col-lg-2 col-md-4"><input v-model="filters.end_date" type="date" class="form-control" /></div>
                         <div class="col-lg-2 col-md-4 d-flex gap-2">
-                            <button class="btn btn-primary flex-grow-1" @click="applyFilters">Ֆիլտրել</button>
+                            <button class="btn btn-primary flex-grow-1" @click="applyFilters">{{ t('filter.submit') }}</button>
                             <button class="btn btn-outline-secondary" @click="resetFilters">×</button>
                         </div>
                     </div>
@@ -469,7 +474,7 @@ const rowNumber = (index) =>
 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
-                        <thead><tr><th>#</th><th>Ամսաթիվ</th><th>Կատեգորիա</th><th>Վճարում</th><th>Նկարագրություն</th><th>Մուտք</th><th>Ելք</th><th>Գրանցող</th><th></th></tr></thead>
+                        <thead><tr><th>#</th><th>{{ t('filter.date') }}</th><th>{{ t('people.category') }}</th><th>{{ t('people.payment') }}</th><th>{{ t('people.description') }}</th><th>{{ t('auth.login') }}</th><th>{{ t('people.exit') }}</th><th>{{ t('inventory.recorded_by') }}</th><th></th></tr></thead>
                         <tbody>
                             <tr v-for="(transaction, index) in transactions.data" :key="transaction.id">
                                 <td>{{ rowNumber(index) }}/#{{ transaction.id }}</td>
@@ -482,7 +487,7 @@ const rowNumber = (index) =>
                                 <td>
                                     <div>{{ transaction.description ?? "-" }}</div>
                                     <small v-if="transaction.reference" class="text-muted">{{ transaction.reference }}</small>
-                                    <small v-if="transaction.status === 'reversed'" class="d-block text-warning">Հետվերադարձ</small>
+                                    <small v-if="transaction.status === 'reversed'" class="d-block text-warning">{{ t('staff_reports.refund') }}</small>
                                 </td>
                                 <td class="fw-semibold text-success">{{ transaction.direction === "income" ? money(transaction.amount) : "—" }}</td>
                                 <td class="fw-semibold text-danger">{{ transaction.direction === "expense" ? money(transaction.amount) : "—" }}</td>
@@ -493,10 +498,10 @@ const rowNumber = (index) =>
                                         type="button"
                                         class="btn btn-sm btn-outline-danger"
                                         @click="reverseTransaction(transaction)"
-                                    >Հետվերադարձ</button>
+                                    >{{ t('staff_reports.refund') }}</button>
                                 </td>
                             </tr>
-                            <tr v-if="!transactions.data?.length"><td colspan="9" class="text-center text-muted py-5">Գործարքներ չկան</td></tr>
+                            <tr v-if="!transactions.data?.length"><td colspan="9" class="text-center text-muted py-5">{{ t('people.no_transactions') }}</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -516,22 +521,21 @@ const rowNumber = (index) =>
                 <div class="modal-dialog modal-dialog-centered">
                     <form class="modal-content" @submit.prevent="submitReversal">
                         <div class="modal-header">
-                            <h5 class="modal-title">Հաստատել հետվերադարձը</h5>
+                            <h5 class="modal-title">{{ t('operations.confirm_refund') }}</h5>
                             <button
                                 type="button"
                                 class="btn-close"
-                                aria-label="Փակել"
+                                :aria-label="t('confirm.close')"
                                 :disabled="reversalProcessing"
                                 @click="closeReversalModal"
                             ></button>
                         </div>
                         <div class="modal-body">
                             <p class="text-muted mb-3">
-                                Գործարքը կհակադարձվի նոր ֆինանսական գրառումով։
-                                Նշեք հետվերադարձի պատճառը։
+                                {{ t('operations.reverse_transaction_notice') }}
                             </p>
                             <label for="reversal-reason" class="form-label">
-                                Հետվերադարձի պատճառ
+                                {{ t('operations.refund_reason') }}
                             </label>
                             <textarea
                                 id="reversal-reason"
@@ -554,7 +558,7 @@ const rowNumber = (index) =>
                                 :disabled="reversalProcessing"
                                 @click="closeReversalModal"
                             >
-                                Չեղարկել
+                                {{ t('confirm.cancel') }}
                             </button>
                             <button
                                 type="submit"
@@ -566,7 +570,7 @@ const rowNumber = (index) =>
                                     class="spinner-border spinner-border-sm me-1"
                                     aria-hidden="true"
                                 ></span>
-                                Հաստատել հետվերադարձը
+                                {{ t('operations.confirm_refund') }}
                             </button>
                         </div>
                     </form>

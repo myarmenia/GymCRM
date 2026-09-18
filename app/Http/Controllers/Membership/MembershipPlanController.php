@@ -24,7 +24,6 @@ class MembershipPlanController extends Controller
     {
         return inertia('MembershipPlans/Create', [
             ...$this->membershipPlanService->getCreateData(),
-            'langs' => ['hy', 'en', 'ru'],
         ]);
     }
 
@@ -34,14 +33,13 @@ class MembershipPlanController extends Controller
 
         return redirect()
             ->route('membership_plan.list', app()->getLocale())
-            ->with('success', 'Աբոնեմենտը հաջողությամբ ստեղծվեց։');
+            ->with('success', __('backend_messages.membership_created_successfully'));
     }
 
     public function edit(string $locale, int $id)
     {
         return inertia('MembershipPlans/Edit', [
             ...$this->membershipPlanService->edit($locale, $id),
-            'langs' => ['hy', 'en', 'ru'],
         ]);
     }
 
@@ -54,6 +52,6 @@ class MembershipPlanController extends Controller
 
         return redirect()
             ->route('membership_plan.list', ['locale' => $locale])
-            ->with('success', 'Աբոնեմենտը հաջողությամբ թարմացվեց։');
+            ->with('success', __('backend_messages.membership_updated_successfully'));
     }
 }

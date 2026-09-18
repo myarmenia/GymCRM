@@ -49,11 +49,11 @@ class StoreMembershipSaleRefundRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->boolean('is_partial_refund') && $this->boolean('is_full_refund')) {
-                $validator->errors()->add('is_full_refund', 'Ընտրեք կամ մասնակի, կամ ամբողջական վերադարձ։');
+                $validator->errors()->add('is_full_refund', __('backend.membership_sales.select_partial_or_full_refund'));
             }
 
             if (! $this->boolean('is_partial_refund') && ! $this->boolean('is_full_refund')) {
-                $validator->errors()->add('is_full_refund', 'Ընտրեք վերադարձի տեսակը։');
+                $validator->errors()->add('is_full_refund', __('backend.membership_sales.select_refund_type'));
             }
 
         });
@@ -62,23 +62,23 @@ class StoreMembershipSaleRefundRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'amount.required' => 'Վերադարձի գումարը պարտադիր է։',
-            'amount.numeric' => 'Վերադարձի գումարը պետք է լինի թիվ։',
-            'amount.gt' => 'Վերադարձի գումարը պետք է լինի 0-ից մեծ։',
-            'parent_payment_id.required' => 'Ընտրեք վերադարձվող վճարումը։',
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'amount.required' => __('backend.membership_sales.refund_amount_required'),
+            'amount.numeric' => __('backend.membership_sales.refund_amount_numeric'),
+            'amount.gt' => __('backend.membership_sales.refund_amount_positive'),
+            'parent_payment_id.required' => __('backend.membership_sales.select_refunded_payment'),
+            'integer' => __('validation.integer'),
+            'boolean' => __('validation.boolean'),
+            'exists' => __('validation.exists'),
+            'string' => __('validation.string'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'amount' => 'վերադարձի գումար',
-            'parent_payment_id' => 'վերադարձվող վճարում',
-            'refund_notes' => 'վերադարձի նշումներ',
+            'amount' => __('backend.attributes.refund_amount'),
+            'parent_payment_id' => __('backend.attributes.refunded_payment'),
+            'refund_notes' => __('backend.attributes.refund_notes'),
         ];
     }
 }

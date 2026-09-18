@@ -127,7 +127,7 @@ class TrainerService
 
             if ($salaries->count() !== count($salaryIds)) {
                 throw ValidationException::withMessages([
-                    'salary_ids' => 'Ընտրված աշխատավարձերից մեկը չի գտնվել։',
+                    'salary_ids' => __('backend_messages.one_selected_salaries_not_found'),
                 ]);
             }
 
@@ -135,7 +135,7 @@ class TrainerService
 
             if ($wrongTrainerExists) {
                 throw ValidationException::withMessages([
-                    'salary_ids' => 'Ընտրված աշխատավարձը չի պատկանում տվյալ մարզչին։',
+                    'salary_ids' => __('backend_messages.selected_salary_does_not_belong_this_trainer'),
                 ]);
             }
 
@@ -145,8 +145,8 @@ class TrainerService
             if ($invalidStatusExists) {
                 throw ValidationException::withMessages([
                     'salary_ids' => $action === 'pay'
-                        ? 'Միայն սպասման կամ փոխանցման կարգավիճակով աշխատավարձերը կարող են վճարվել։'
-                        : 'Միայն սպասման կամ փոխանցման կարգավիճակով աշխատավարձերը կարող են չեղարկվել։',
+                        ? __('backend_messages.only_pending_or_transferred_salaries_can_be_paid')
+                        : __('backend_messages.only_pending_or_transferred_salaries_can_be_cancelled'),
                 ]);
             }
 
@@ -172,7 +172,7 @@ class TrainerService
 
             if ((int) $salary->trainer_id !== (int) $trainerId) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Ընտրված աշխատավարձը չի պատկանում տվյալ մարզչին։',
+                    'salary_id' => __('backend_messages.selected_salary_does_not_belong_this_trainer'),
                 ]);
             }
 
@@ -180,7 +180,7 @@ class TrainerService
                 ! in_array($salary->status, ['pending', 'transfer'], true)
             ) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Միայն չվճարված աշխատավարձը կարող է փոխանցվել այլ մարզչի։',
+                    'salary_id' => __('backend_messages.only_unpaid_salary_can_be_transferred_another_trainer'),
                 ]);
             }
 
@@ -188,7 +188,7 @@ class TrainerService
 
             if (! $personMembership || ! $personMembership->trainer_id) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Աբոնեմենտի ընթացիկ մարզիչը չի գտնվել։',
+                    'salary_id' => __('backend_messages.current_membership_trainer_not_found'),
                 ]);
             }
 
@@ -196,7 +196,7 @@ class TrainerService
 
             if ($newTrainerId === (int) $salary->trainer_id) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Փոխանցումը հնարավոր չէ, քանի որ մարզիչը չի փոխվել։',
+                    'salary_id' => __('backend_messages.transfer_unavailable_because_trainer_has_not_changed'),
                 ]);
             }
 
@@ -209,7 +209,7 @@ class TrainerService
 
             if ($assignments->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'salary_id' => 'Փոխանցման ենթակա չվճարված մնացորդ չկա։',
+                    'salary_id' => __('backend_messages.there_no_unpaid_balance_transfer'),
                 ]);
             }
 
@@ -219,7 +219,7 @@ class TrainerService
                     $assignment,
                     [
                         'amount' => (float) $assignment->available_amount,
-                        'reason' => 'Փոխանցվել է մարզչի աշխատավարձերի էջից։',
+                        'reason' => __('backend_messages.transferred_from_trainer_salaries_page'),
                     ],
                 );
             }
@@ -248,7 +248,7 @@ class TrainerService
 
             if ($removedLockedScheduleIds->isNotEmpty()) {
                 throw ValidationException::withMessages([
-                    'schedule_names' => 'Այս ժամային գրաֆիկը կապված է վաճառված/ակտիվ աբոնեմենտի հետ և հնարավոր չէ հեռացնել։',
+                    'schedule_names' => __('backend_messages.this_timetable_linked_sold_or_active_membership_and_cannot_be_removed'),
                 ]);
             }
 
@@ -382,7 +382,7 @@ class TrainerService
             $trainerSchedule->setAttribute(
                 'lock_reason',
                 $isLocked
-                    ? 'Այս գրաֆիկը կապված է վաճառված/ակտիվ աբոնեմենտի հետ։'
+                    ? __('backend_messages.this_schedule_linked_sold_or_active_membership')
                     : null
             );
 
@@ -391,7 +391,7 @@ class TrainerService
                 $duration->setAttribute(
                     'lock_reason',
                     $isLocked
-                        ? 'Այս պարապունքի տեսակը կապված է վաճառված/ակտիվ աբոնեմենտի հետ։'
+                        ? __('backend_messages.this_training_type_linked_sold_or_active_membership')
                         : null
                 );
             });
