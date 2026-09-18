@@ -6,6 +6,7 @@ use App\Models\Gym;
 use App\Models\Lang;
 use App\Models\FinancialCategory;
 use App\Models\MeasurementUnit;
+use App\Models\MembershipCategory;
 use App\Models\ReminderCategory;
 use App\Models\User;
 use Database\Seeders\GymSeeder;
@@ -125,6 +126,39 @@ class LocaleSetupTest extends TestCase
             ->where('lang', 'en')
             ->where('translations.app.sidebar.profile', 'Profile')
             ->etc());
+    }
+
+    public function test_membership_category_edit_keeps_ui_and_record_translations_separate(): void
+    {
+        config()->set('sync.enabled', false);
+        $this->seed(LangSeeder::class);
+
+        $gym = Gym::query()->create(['name' => 'Main gym']);
+        $user = User::factory()->create(['gym_id' => $gym->id]);
+        $category = MembershipCategory::query()->create([
+            'gym_id' => $gym->id,
+            'slug' => 'group-training',
+            'active' => true,
+        ]);
+        $category->translations()->createMany([
+            ['locale' => 'hy', 'name' => 'Խմբային', 'description' => 'Հայերեն'],
+            ['locale' => 'en', 'name' => 'Group training', 'description' => 'English'],
+            ['locale' => 'ru', 'name' => 'Групповые', 'description' => 'Русский'],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('membership-category.edit', [
+                'locale' => 'en',
+                'id' => $category->id,
+            ], absolute: false))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('MembershipCategory/Edit')
+                ->where('translations.app.membership.category_edit', 'Edit category')
+                ->where('categoryTranslations.hy.name', 'Խմբային')
+                ->where('categoryTranslations.en.name', 'Group training')
+                ->where('categoryTranslations.ru.name', 'Групповые')
+                ->where('langs', ['hy', 'ru', 'en'])
+                ->etc());
     }
 
     public function test_authenticated_page_shares_only_active_gym_languages(): void

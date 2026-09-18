@@ -383,4 +383,5 @@ return [
     'your_membership_will_expire_soon' => 'Ձեր աբոնեմենտի ժամկետը շուտով կավարտվի։',
     'your_new_membership_added_successfully' => 'Ձեր նոր աբոնեմենտը հաջողությամբ ավելացվել է։',
     'your_user_account_not_linked_gym' => 'Ձեր օգտատերը կապված չէ մարզասրահի հետ։',
+    'select_at_least_one_gym_language' => 'Ընտրեք մարզասրահի առնվազն մեկ լեզու։',
 ];

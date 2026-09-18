@@ -7,6 +7,7 @@ use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
 use App\Services\Audit\PersonAuditService;
+use App\Services\EntryCodes\EntryCodeService;
 use App\Services\FileUploadService;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\UploadedFile;
@@ -24,6 +25,7 @@ class PersonService
         protected FileUploadService $fileUploadService,
         protected ReminderService $reminderService,
         protected PersonAuditService $personAuditService,
+        protected EntryCodeService $entryCodeService,
     ) {}
 
     public function getAllPaginated(array $filters = [])
@@ -92,7 +94,7 @@ class PersonService
 
         try {
             return DB::transaction(function () use ($data, $dataStore) {
-                $entryCode = $this->availableEntryCode((int) $data->entry_code_id);
+                $entryCode = $this->resolveEntryCode($data);
                 $person = $this->personRepository->create($dataStore);
 
                 $this->syncGyms($person);
@@ -112,6 +114,33 @@ class PersonService
 
             throw $exception;
         }
+    }
+
+    protected function resolveEntryCode($data): EntryCode
+    {
+        if ($data->entry_code_mode === 'new') {
+            $gymId = (int) (Auth::user()?->gym_id ?? 0);
+            $entryCodeToken = trim((string) $data->entry_code_token);
+
+            if ($gymId === 0 || $entryCodeToken === '') {
+                throw ValidationException::withMessages([
+                    'entry_code_token' => __('backend_messages.entry_code_required'),
+                ]);
+            }
+
+            return $this->entryCodeService->createForGym(
+                $gymId,
+                $entryCodeToken,
+            );
+        }
+
+        if ($data->entry_code_id === null) {
+            throw ValidationException::withMessages([
+                'entry_code_id' => __('backend_messages.entry_code_required'),
+            ]);
+        }
+
+        return $this->availableEntryCode((int) $data->entry_code_id);
     }
 
     public function update($id, $data)

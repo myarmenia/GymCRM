@@ -15,10 +15,7 @@ class StoreGymRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Լոգ ենք անում, որպեսզի տեսնենք՝ հարցումը ընդհանրապես հասա՞վ այստեղ, թե ոչ
-        Log::info('1. StoreGymRequest authorized checking...', $this->all());
-
-        return true;
+        return (bool) $this->user()?->hasRole('owner');
     }
 
     /**
@@ -41,6 +38,13 @@ class StoreGymRequest extends FormRequest
             ],
             'entry_code_type' => ['required', 'string', Rule::in(['rfId', 'FaceId'])],
             'trainer_salary_mode' => ['required', Rule::in(['prepaid', 'postpaid'])],
+            'language_codes' => ['required', 'array', 'min:1'],
+            'language_codes.*' => [
+                'required',
+                'string',
+                'distinct',
+                Rule::exists('langs', 'code'),
+            ],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
         ];
     }
@@ -57,6 +61,8 @@ class StoreGymRequest extends FormRequest
             'email.email' => 'Please enter a valid email address.',
             'trainer_salary_mode.required' => __('backend_messages.select_how_trainer_salary_calculated'),
             'trainer_salary_mode.in' => __('backend_messages.trainer_salary_calculation_method_invalid'),
+            'language_codes.required' => __('backend_messages.select_at_least_one_gym_language'),
+            'language_codes.min' => __('backend_messages.select_at_least_one_gym_language'),
         ];
     }
 

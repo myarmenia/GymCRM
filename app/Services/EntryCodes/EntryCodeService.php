@@ -3,8 +3,8 @@
 namespace App\Services\EntryCodes;
 
 use App\Interfaces\EntryCodes\EntryCodeInterface;
+use App\Models\EntryCode;
 use App\Models\Gym;
-use Illuminate\Support\Facades\Auth;
 
 class EntryCodeService
 {
@@ -24,7 +24,19 @@ class EntryCodeService
 
     public function create(array $data)
     {
+        $gym = Gym::query()->findOrFail((int) $data['gym_id']);
+        $data['type'] = $gym->resolvedEntryCodeType();
+
         return $this->entryCodeRepository->create($data);
+    }
+
+    public function createForGym(int $gymId, string $token): EntryCode
+    {
+        return $this->create([
+            'gym_id' => $gymId,
+            'token' => $token,
+            'activation' => false,
+        ]);
     }
 
     public function update(int $id, array $data)

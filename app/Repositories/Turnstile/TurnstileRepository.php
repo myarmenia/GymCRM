@@ -24,9 +24,9 @@ class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryC
 
         $message = 'success';
         $result = false;
-        $allowedEntryCodeType = Gym::query()
-            ->whereKey($gym_id)
-            ->value('entry_code_type') ?? 'rfId';
+        $allowedEntryCodeType = Gym::resolveEntryCodeType(
+            Gym::query()->whereKey($gym_id)->value('entry_code_type')
+        );
 
         $entry_code = EntryCode::where([
             'token' => $request_entry_code,

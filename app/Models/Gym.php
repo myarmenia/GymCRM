@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Traits\HasUuidAndVersion;
-use App\Support\SupportedLocales;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -12,6 +11,10 @@ use Illuminate\Support\Facades\Storage;
 class Gym extends Model
 {
     use HasUuidAndVersion, SoftDeletes;
+
+    public const DEFAULT_ENTRY_CODE_TYPE = 'rfId';
+
+    public const ENTRY_CODE_TYPES = [self::DEFAULT_ENTRY_CODE_TYPE, 'FaceId'];
 
     public const TRAINER_SALARY_MODE_PREPAID = 'prepaid';
 
@@ -29,6 +32,18 @@ class Gym extends Model
             'version' => 'integer',
             'trainer_salary_mode' => 'string',
         ];
+    }
+
+    public static function resolveEntryCodeType(?string $type): string
+    {
+        return in_array($type, self::ENTRY_CODE_TYPES, true)
+            ? $type
+            : self::DEFAULT_ENTRY_CODE_TYPE;
+    }
+
+    public function resolvedEntryCodeType(): string
+    {
+        return self::resolveEntryCodeType($this->entry_code_type);
     }
 
     public function warehouses()
@@ -95,7 +110,7 @@ class Gym extends Model
 
         static::created(function (Gym $gym) {
 
-            foreach (Lang::whereIn('code', SupportedLocales::CODES)->get() as $lang) {
+            foreach (Lang::query()->get() as $lang) {
                 $gym->languages()->attach($lang->id, [
                     'active' => true,
                 ]);
