@@ -51,7 +51,7 @@ class StoreUserRequest extends FormRequest
                     $gymId = request()->input('gym_id') ?? auth()->user()->gym_id;
                     $entryCode = EntryCode::find($value);
                     if ($entryCode && $gymId && $entryCode->gym_id != $gymId) {
-                        $fail('Ընտրված entry code-ը չի պատկանում այս մարզասրահին:');
+                        $fail(__('backend_messages.selected_entry_code_does_not_belong_this_gym'));
                     }
                 },
             ],

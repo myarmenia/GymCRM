@@ -44,7 +44,7 @@ class EntryExitReportService
             'columns' => $this->exportColumns(),
             'filters' => $filters,
             'filename' => 'entry-exit-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
-            'title' => 'Մուտք / Ելք հաշվետվություն',
+            'title' => __('backend_messages.entry_exit_report'),
             'summary' => $this->exportSummary($this->summary($user, $filters, $entries)),
         ];
     }
@@ -126,7 +126,7 @@ class EntryExitReportService
                 'duration' => $this->durationLabel($durationSeconds),
                 'duration_seconds' => $durationSeconds,
                 'visit_status' => $exit ? 'exited' : 'inside',
-                'visit_status_label' => $exit ? 'Դուրս է եկել' : 'Ներսում է',
+                'visit_status_label' => $exit ? __('backend_messages.exited') : __('backend_messages.inside'),
                 'created_at' => $entry->created_at?->toDateTimeString(),
                 'owner_type' => $entry->owner_type,
                 'owner_person_type' => $owner instanceof Person ? $owner->type : null,
@@ -263,12 +263,12 @@ class EntryExitReportService
     {
         return [
             'ownerTypes' => [
-                ['value' => 'person', 'label' => 'Հաճախորդ / հյուր'],
-                ['value' => 'user', 'label' => 'Աշխատակից'],
+                ['value' => 'person', 'label' => __('backend_messages.customer_guest')],
+                ['value' => 'user', 'label' => __('backend_messages.staff')],
             ],
             'personTypes' => [
-                ['value' => 'visitor', 'label' => 'Հաճախորդ'],
-                ['value' => 'guest', 'label' => 'Հյուր'],
+                ['value' => 'visitor', 'label' => __('backend_messages.client')],
+                ['value' => 'guest', 'label' => __('backend_messages.guest')],
             ],
             'clients' => $user->hasRole('owner')
                 ? Gym::query()->orderBy('name')->get(['id', 'name'])
@@ -280,33 +280,33 @@ class EntryExitReportService
     protected function exportColumns(): array
     {
         return [
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'guest', 'title' => 'Հյուր'],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'guest', 'title' => __('backend_messages.guest')],
             ['key' => 'entry_code', 'title' => 'Entry Code'],
-            ['key' => 'entry_at', 'title' => 'Մուտքի ժամանակ'],
-            ['key' => 'exit_at', 'title' => 'Ելքի ժամանակ'],
-            ['key' => 'duration', 'title' => 'Այցի տևողություն'],
-            ['key' => 'visit_status_label', 'title' => 'Կարգավիճակ'],
-            ['key' => 'created_at', 'title' => 'Ստեղծման ամսաթիվ'],
+            ['key' => 'entry_at', 'title' => __('backend_messages.entry_time')],
+            ['key' => 'exit_at', 'title' => __('backend_messages.exit_time')],
+            ['key' => 'duration', 'title' => __('backend_messages.visit_duration')],
+            ['key' => 'visit_status_label', 'title' => __('backend_messages.status')],
+            ['key' => 'created_at', 'title' => __('backend_messages.creation_date')],
         ];
     }
 
     protected function exportSummary(array $summary): array
     {
         return [
-            'title' => 'Ամփոփում',
+            'title' => __('backend_messages.summary'),
             'rows' => [
-                ['label' => 'Ընդհանուր մուտքերի քանակ', 'value' => $summary['entry_count']],
-                ['label' => 'Ընդհանուր ելքերի քանակ', 'value' => $summary['exit_count']],
-                ['label' => 'Եզակի հաճախորդներ', 'value' => $summary['unique_customers_count']],
-                ['label' => 'Այս պահին ներսում', 'value' => $summary['currently_inside_count']],
-                ['label' => 'Այս պահին ներսում գտնվող հյուրեր', 'value' => $summary['currently_inside_guests_count']],
-                ['label' => 'Ընդհանուր այցելություններ', 'value' => $summary['total_visits_count']],
-                ['label' => 'Նոր հաճախորդների այցելություններ', 'value' => $summary['new_customer_visits_count']],
-                ['label' => 'Կրկնակի այցելություններ', 'value' => $summary['repeat_visits_count']],
-                ['label' => 'Այսօրվա այցելություններ', 'value' => $summary['today_visits_count']],
-                ['label' => 'Այս շաբաթվա այցելություններ', 'value' => $summary['week_visits_count']],
-                ['label' => 'Այս ամսվա այցելություններ', 'value' => $summary['month_visits_count']],
+                ['label' => __('backend_messages.total_entries'), 'value' => $summary['entry_count']],
+                ['label' => __('backend_messages.total_exits'), 'value' => $summary['exit_count']],
+                ['label' => __('backend_messages.unique_customers'), 'value' => $summary['unique_customers_count']],
+                ['label' => __('backend_messages.currently_inside'), 'value' => $summary['currently_inside_count']],
+                ['label' => __('backend_messages.guests_currently_inside'), 'value' => $summary['currently_inside_guests_count']],
+                ['label' => __('backend_messages.total_visits'), 'value' => $summary['total_visits_count']],
+                ['label' => __('backend_messages.new_customer_visits'), 'value' => $summary['new_customer_visits_count']],
+                ['label' => __('backend_messages.repeat_visits'), 'value' => $summary['repeat_visits_count']],
+                ['label' => __('backend_messages.today_s_visits'), 'value' => $summary['today_visits_count']],
+                ['label' => __('backend_messages.visits_this_week'), 'value' => $summary['week_visits_count']],
+                ['label' => __('backend_messages.visits_this_month'), 'value' => $summary['month_visits_count']],
             ],
         ];
     }

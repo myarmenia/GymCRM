@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
@@ -11,6 +13,9 @@ import {
     parseYmdAsUtcDate,
     todayInYerevan,
 } from '@/utils/yerevanDate'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? 'hy')
@@ -41,28 +46,28 @@ const props = defineProps({
 })
 
 const weekDays = [
-    { key: 'Monday', label: 'Երկուշաբթի' },
-    { key: 'Tuesday', label: 'Երեքշաբթի' },
-    { key: 'Wednesday', label: 'Չորեքշաբթի' },
-    { key: 'Thursday', label: 'Հինգշաբթի' },
-    { key: 'Friday', label: 'Ուրբաթ' },
-    { key: 'Saturday', label: 'Շաբաթ' },
-    { key: 'Sunday', label: 'Կիրակի' },
+    { key: 'Monday', label: t('staff_reports.monday') },
+    { key: 'Tuesday', label: t('staff_reports.tuesday') },
+    { key: 'Wednesday', label: t('staff_reports.wednesday') },
+    { key: 'Thursday', label: t('staff_reports.thursday') },
+    { key: 'Friday', label: t('staff_reports.friday') },
+    { key: 'Saturday', label: t('staff_reports.saturday') },
+    { key: 'Sunday', label: t('staff_reports.sunday') },
 ]
 
 const monthNames = [
-    'հունվար',
-    'փետրվար',
-    'մարտ',
-    'ապրիլ',
-    'մայիս',
-    'հունիս',
-    'հուլիս',
-    'օգոստոս',
-    'սեպտեմբեր',
-    'հոկտեմբեր',
-    'նոյեմբեր',
-    'դեկտեմբեր',
+    t('operations.january'),
+    t('operations.february'),
+    t('operations.march'),
+    t('operations.april'),
+    t('operations.may'),
+    t('operations.june'),
+    t('operations.july'),
+    t('operations.august'),
+    t('operations.september'),
+    t('operations.october'),
+    t('operations.november'),
+    t('operations.december'),
 ]
 
 const selectedTrainer = computed(() => props.selectedTrainerId ? Number(props.selectedTrainerId) : '')
@@ -146,7 +151,7 @@ const loadCalendar = (week, trainerId = '') => {
 </script>
 
 <template>
-    <Head title="Մարզիչների զբաղվածության օրացույց" />
+    <Head :title="t('operations.trainer_occupancy_calendar')" />
 
     <Index>
         <CalendarHeader

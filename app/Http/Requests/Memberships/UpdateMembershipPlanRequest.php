@@ -33,9 +33,9 @@ class UpdateMembershipPlanRequest extends FormRequest
 
             'active' => ['boolean'],
 
-            'translations' => ['required', 'array'],
-            'translations.hy.name' => ['required', 'string', 'max:255'],
-            'translations.hy.description' => ['nullable', 'string'],
+            'translations' => ['required', 'array', 'min:1'],
+            'translations.*.name' => ['required', 'string', 'max:255'],
+            'translations.*.description' => ['nullable', 'string'],
 
             'schedule_name_id' => ['nullable', 'exists:schedule_names,id'],
 

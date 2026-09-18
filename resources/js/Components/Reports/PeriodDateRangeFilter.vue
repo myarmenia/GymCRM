@@ -1,4 +1,9 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 const props = defineProps({
     selectedPeriod: {
         type: String,
@@ -23,9 +28,9 @@ const emit = defineEmits([
 ])
 
 const periodOptions = [
-    { value: 'monthly', label: 'Ամսական' },
-    { value: 'quarterly', label: 'Եռամսյակային' },
-    { value: 'yearly', label: 'Տարեկան' },
+    { value: 'monthly', label: t('sales.monthly') },
+    { value: 'quarterly', label: t('operations.quarterly') },
+    { value: 'yearly', label: t('sales.yearly') },
 ]
 
 const changePeriod = period => {
@@ -56,7 +61,7 @@ const changePeriod = period => {
                         class="form-label"
                         for="report_start_date"
                     >
-                        Սկիզբ
+                        {{ t('people.start') }}
                     </label>
                     <input
                         id="report_start_date"
@@ -71,7 +76,7 @@ const changePeriod = period => {
                         class="form-label"
                         for="report_end_date"
                     >
-                        Ավարտ
+                        {{ t('people.end') }}
                     </label>
                     <input
                         id="report_end_date"
@@ -87,7 +92,7 @@ const changePeriod = period => {
                         class="btn btn-primary w-100"
                         @click="emit('apply')"
                     >
-                        Կիրառել
+                        {{ t('staff_reports.apply') }}
                     </button>
                 </div>
             </div>

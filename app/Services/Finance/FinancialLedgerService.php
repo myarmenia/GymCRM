@@ -67,7 +67,7 @@ class FinancialLedgerService
             'source_id' => $payment->id,
             'occurred_at' => $payment->created_at ?? now(),
             'created_by' => $createdBy,
-            'description' => 'Աբոնեմենտի '.($isRefund ? 'վերադարձ' : 'վճարում')." #{$payment->membership_sale_id}",
+            'description' => __('backend_messages.membership_genitive_prefix').($isRefund ? __('backend_messages.refund_lowercase') : __('backend_messages.payment_lowercase'))." #{$payment->membership_sale_id}",
             'idempotency_key' => $idempotencyKey,
         ], $connectionName);
     }
@@ -110,7 +110,7 @@ class FinancialLedgerService
             'source_id' => $purchase->id,
             'occurred_at' => $purchase->created_at ?? now(),
             'created_by' => $purchase->user_id,
-            'description' => "Ապրանքի վաճառք #{$purchase->id}",
+            'description' => __('backend_messages.product_sale_id', ['id' => $purchase->id]),
             'reference' => $purchase->token,
             'idempotency_key' => $idempotencyKey,
         ], $connectionName);
@@ -131,7 +131,7 @@ class FinancialLedgerService
             'source_id' => $refund->id,
             'occurred_at' => $refund->refunded_at,
             'created_by' => $refund->refunded_by,
-            'description' => "Ապրանքի վերադարձ #{$refund->id}",
+            'description' => __('backend_messages.product_refund_id', ['id' => $refund->id]),
             'reference' => $refund->reference ?? $refund->purchase->token,
             'idempotency_key' => "purchase-refund:{$refund->uuid}",
         ], $refund->getConnectionName());
@@ -149,7 +149,7 @@ class FinancialLedgerService
             'source_id' => $payout->id,
             'occurred_at' => $payout->paid_at,
             'created_by' => $payout->paid_by,
-            'description' => "Աշխատավարձի վճարում #{$payout->id}",
+            'description' => __('backend_messages.salary_payment_id', ['id' => $payout->id]),
             'reference' => $payout->reference,
             'idempotency_key' => "salary-payout:{$payout->uuid}",
         ], $payout->getConnectionName());
@@ -169,7 +169,7 @@ class FinancialLedgerService
             'source_id' => $refund->id,
             'occurred_at' => $refund->refunded_at,
             'created_by' => $refund->refunded_by,
-            'description' => "Աշխատավարձի վերադարձ #{$refund->id}",
+            'description' => __('backend_messages.salary_refund_id', ['id' => $refund->id]),
             'reference' => $refund->reference,
             'idempotency_key' => "salary-payout-refund:{$refund->uuid}",
         ], $refund->getConnectionName());
@@ -196,7 +196,7 @@ class FinancialLedgerService
 
         if (! $category) {
             throw ValidationException::withMessages([
-                'category_id' => 'Ընտրեք գործարքի տեսակին համապատասխան կատեգորիա։',
+                'category_id' => __('backend_messages.select_category_that_matches_transaction_type'),
             ]);
         }
 
@@ -242,7 +242,7 @@ class FinancialLedgerService
 
             if ($locked->reversal_of_id || $locked->reversal()->exists() || $locked->source_type !== 'manual') {
                 throw ValidationException::withMessages([
-                    'reason' => 'Միայն չհակադարձված ձեռքով գործարքը կարող է հակադարձվել։',
+                    'reason' => __('backend_messages.only_unreversed_manual_transaction_can_be_reversed'),
                 ]);
             }
 
@@ -258,7 +258,10 @@ class FinancialLedgerService
                 'reversal_of_id' => $locked->id,
                 'occurred_at' => now(),
                 'created_by' => $actor->id,
-                'description' => "Հակադարձում #{$locked->id}: {$reason}",
+                'description' => __('backend_messages.reversal_id_reason', [
+                    'id' => $locked->id,
+                    'reason' => $reason,
+                ]),
                 'idempotency_key' => "manual-reversal:{$locked->id}",
             ]);
 
@@ -366,7 +369,7 @@ class FinancialLedgerService
         $rows = $transactions->values()->map(function (FinancialTransaction $transaction, int $index) {
             $creator = $transaction->creator
                 ? trim("{$transaction->creator->name} {$transaction->creator->surname}")
-                : 'Համակարգ';
+                : __('backend_messages.system');
             $payment = $transaction->paymentMethod?->name ?? $transaction->paymentMethod?->slug ?? '-';
 
             if ($transaction->cardType) {
@@ -390,29 +393,29 @@ class FinancialLedgerService
             'rows' => $rows,
             'columns' => [
                 ['key' => 'number', 'title' => '#'],
-                ['key' => 'occurred_at', 'title' => 'Ամսաթիվ'],
-                ['key' => 'category', 'title' => 'Կատեգորիա'],
-                ['key' => 'payment', 'title' => 'Վճարում'],
-                ['key' => 'description', 'title' => 'Նկարագրություն'],
-                ['key' => 'reference', 'title' => 'Հղում / փաստաթուղթ'],
-                ['key' => 'income', 'title' => 'Մուտք'],
-                ['key' => 'expense', 'title' => 'Ելք'],
-                ['key' => 'creator', 'title' => 'Գրանցող'],
+                ['key' => 'occurred_at', 'title' => __('backend_messages.date')],
+                ['key' => 'category', 'title' => __('backend_messages.category')],
+                ['key' => 'payment', 'title' => __('backend_messages.payment')],
+                ['key' => 'description', 'title' => __('backend_messages.description')],
+                ['key' => 'reference', 'title' => __('backend_messages.reference_document')],
+                ['key' => 'income', 'title' => __('backend_messages.log')],
+                ['key' => 'expense', 'title' => __('backend_messages.exit')],
+                ['key' => 'creator', 'title' => __('backend_messages.recorded_by')],
             ],
             'filters' => $this->reportFilterLabels($filters),
             'summary' => [
-                'title' => 'Ամփոփում',
+                'title' => __('backend_messages.summary'),
                 'rows' => [
                     [
-                        'label' => 'Մուտք',
+                        'label' => __('backend_messages.log'),
                         'value' => round((float) $transactions->where('direction', 'income')->sum('amount'), 2),
                     ],
                     [
-                        'label' => 'Ելք',
+                        'label' => __('backend_messages.exit'),
                         'value' => round((float) $transactions->where('direction', 'expense')->sum('amount'), 2),
                     ],
                     [
-                        'label' => 'Տարբերություն',
+                        'label' => __('backend_messages.difference'),
                         'value' => round(
                             (float) $transactions->where('direction', 'income')->sum('amount')
                             - (float) $transactions->where('direction', 'expense')->sum('amount'),
@@ -529,33 +532,33 @@ class FinancialLedgerService
         $labels = [];
 
         if ($gymId = $filters['gym_id'] ?? null) {
-            $labels['Մարզասրահ'] = Gym::query()->whereKey($gymId)->value('name');
+            $labels[__('backend_messages.gym')] = Gym::query()->whereKey($gymId)->value('name');
         }
         if ($direction = $filters['direction'] ?? null) {
-            $labels['Ուղղություն'] = $direction === 'income' ? 'Մուտք' : 'Ելք';
+            $labels[__('backend_messages.direction')] = $direction === 'income' ? __('backend_messages.log') : __('backend_messages.exit');
         }
         if ($paymentMethodId = $filters['payment_method_id'] ?? null) {
-            $labels['Վճարման եղանակ'] = PaymentMethod::query()
+            $labels[__('backend_messages.payment_method')] = PaymentMethod::query()
                 ->with('translations')
                 ->find($paymentMethodId)?->name;
         }
         if ($categoryId = $filters['category_id'] ?? null) {
-            $labels['Կատեգորիա'] = FinancialCategory::query()->whereKey($categoryId)->value('name');
+            $labels[__('backend_messages.category')] = FinancialCategory::query()->find($categoryId)?->name;
         }
         if ($creatorId = $filters['creator_id'] ?? null) {
             $creator = User::query()->find($creatorId);
-            $labels['Գրանցող'] = $creator
+            $labels[__('backend_messages.recorded_by')] = $creator
                 ? trim("{$creator->name} {$creator->surname}")
                 : null;
         }
         if ($startDate = $filters['start_date'] ?? null) {
-            $labels['Սկսած'] = $startDate;
+            $labels[__('backend_messages.from')] = $startDate;
         }
         if ($endDate = $filters['end_date'] ?? null) {
-            $labels['Մինչև'] = $endDate;
+            $labels[__('backend_messages.message')] = $endDate;
         }
         if ($search = $filters['search'] ?? null) {
-            $labels['Որոնում'] = $search;
+            $labels[__('backend_messages.search')] = $search;
         }
 
         return array_filter($labels, fn ($value) => $value !== null && $value !== '');
@@ -569,7 +572,7 @@ class FinancialLedgerService
 
         if (! $cardTypeId || ! $method->cardTypes->contains('id', (int) $cardTypeId)) {
             throw ValidationException::withMessages([
-                'card_type_id' => 'Ընտրեք վճարման եղանակին համապատասխան քարտի տեսակ։',
+                'card_type_id' => __('backend_messages.select_matching_card_type_alternate'),
             ]);
         }
 

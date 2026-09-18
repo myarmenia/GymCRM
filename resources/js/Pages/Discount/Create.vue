@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -63,12 +68,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ստեղծել զեղչ" />
+    <Head :title="t('operations.create_discount')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Ստեղծել զեղչ
+                {{ t('operations.create_discount') }}
             </h2>
         </template>
 
@@ -79,23 +84,23 @@ const submit = () => {
             >
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Տեսակ" />
+                        <InputLabel :value="t('people.type')" />
                         <select
                             v-model="form.type"
                             class="form-select"
                         >
                             <option value="percent">
-                                Տոկոս
+                                {{ t('staff_reports.percent') }}
                             </option>
                             <option value="fixed">
-                                Ֆիքսված
+                                {{ t('staff_reports.fixed') }}
                             </option>
                         </select>
                         <InputError :message="form.errors.type" />
                     </div>
 
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Արժեք" />
+                        <InputLabel :value="t('membership.cost')" />
                         <input
                             v-model="form.value"
                             type="number"
@@ -109,7 +114,7 @@ const submit = () => {
 
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Սկսման ամսաթիվ" />
+                        <InputLabel :value="t('operations.start_date')" />
                         <input
                             v-model="form.start_date"
                             type="datetime-local"
@@ -119,7 +124,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Ավարտի ամսաթիվ" />
+                        <InputLabel :value="t('operations.end_date')" />
                         <input
                             v-model="form.end_date"
                             type="datetime-local"
@@ -130,7 +135,7 @@ const submit = () => {
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Անդամակցության պլաններ" />
+                    <InputLabel :value="t('operations.membership_plans')" />
                     <select
                         v-model="form.membership_plan_ids"
                         class="form-select"
@@ -157,7 +162,7 @@ const submit = () => {
                     </h5>
 
                     <div class="mb-3">
-                        <InputLabel value="Անվանում" />
+                        <InputLabel :value="t('membership.title')" />
                         <input
                             v-model="form.translations[code].name"
                             class="form-control"
@@ -167,7 +172,7 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <InputLabel value="Նկարագրություն" />
+                        <InputLabel :value="t('people.description')" />
                         <textarea
                             v-model="form.translations[code].description"
                             class="form-control"
@@ -183,14 +188,14 @@ const submit = () => {
                             class="form-check-input"
                         />
                         <span class="form-check-label">
-                            Ակտիվ
+                            {{ t('status.active') }}
                         </span>
                     </label>
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :disabled="form.processing">
-                        Պահպանել
+                        {{ t('common.save') }}
                     </PrimaryButton>
                 </div>
             </form>

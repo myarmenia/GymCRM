@@ -2,10 +2,12 @@
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
+import { translate } from '/resources/js/trans'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import { todayInYerevan } from '@/utils/yerevanDate'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -30,7 +32,7 @@ const selectedReminderMembership = ref(null)
 const reminderForm = useForm({
     reminder_scheduled_at: '',
     reminder_recipient_ids: [...props.defaultReminderRecipientIds],
-    reminder_title: 'Աբոնեմենտի վճարման հիշեցում',
+    reminder_title: t('reminder_title'),
     reminder_description: '',
 })
 
@@ -51,26 +53,26 @@ const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const formatAmount = value => Number(value || 0).toFixed(2)
 
 const personTypeLabel = type => ({
-    visitor: 'Այցելու',
-    guest: 'Հյուր',
+    visitor: t('visitor'),
+    guest: t('guest'),
 }[type] ?? type ?? '-')
 
 const genderLabel = gender => ({
-    male: 'Արական',
-    female: 'Իգական',
+    male: t('male'),
+    female: t('female'),
 }[gender] ?? gender ?? '-')
 
 const personStatusLabel = computed(() => props.person?.deleted_at || props.person?.mobile_deleted
-    ? 'Ապաակտիվ'
-    : 'Ակտիվ')
+    ? t('inactive')
+    : t('active'))
 
 const membershipStatusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    expired: 'Ժամկետանց',
-    deleted: 'Ջնջված',
-    cancelled: 'Չեղարկված',
+    waiting: t('waiting'),
+    active: t('active'),
+    frozen: t('frozen'),
+    expired: t('expired'),
+    deleted: t('deleted'),
+    cancelled: t('cancelled'),
 }[status] ?? status ?? '-')
 
 const membershipStatusClass = status => ({
@@ -83,22 +85,22 @@ const membershipStatusClass = status => ({
 }[status] ?? 'bg-label-secondary')
 
 const transactionTypeLabel = type => ({
-    payment: 'Վճարում',
-    refund: 'Վերադարձ',
+    payment: t('payment'),
+    refund: t('refund'),
 }[type] ?? type ?? '-')
 
 const paymentStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('unpaid'),
+    pending: t('waiting'),
+    paid: t('paid'),
+    cancelled: t('cancelled'),
 }[status] ?? status ?? '-')
 
 const trainerName = trainer => trainer ? fullName(trainer) : '-'
 const guestName = guestRecord => fullName(guestRecord?.guest)
 const membershipPlanName = membership => translatedName(membership?.membership_plan)
 const salePlanName = sale => translatedName(sale?.membership_plan)
-const trainerStatusLabel = trainer => trainer?.status ? 'Ակտիվ' : 'Չնշված'
+const trainerStatusLabel = trainer => trainer?.status ? t('active') : t('not_specified')
 const trainerRoleNames = trainer => {
     const roles = trainer?.roles ?? []
 
@@ -170,9 +172,9 @@ const membershipPaymentStatus = membership => {
     return 'unpaid'
 }
 const membershipPaymentStatusLabel = membership => ({
-    paid: 'Վճարված',
-    partial: 'Մասնակի վճարված',
-    unpaid: 'Չվճարված',
+    paid: t('paid'),
+    partial: t('partial_paid'),
+    unpaid: t('unpaid'),
 }[membershipPaymentStatus(membership)] ?? '-')
 const membershipPaymentStatusClass = membership => ({
     paid: 'bg-label-success',
@@ -187,7 +189,7 @@ const openPaymentReminder = membership => {
     reminderForm.clearErrors()
     reminderForm.reminder_scheduled_at = ''
     reminderForm.reminder_recipient_ids = [...props.defaultReminderRecipientIds]
-    reminderForm.reminder_title = 'Աբոնեմենտի վճարման հիշեցում'
+    reminderForm.reminder_title = t('reminder_title')
     reminderForm.reminder_description = ''
     reminderModalOpen.value = true
 }
@@ -200,11 +202,11 @@ const submitPaymentReminder = () => {
     reminderForm.clearErrors()
 
     if (!reminderForm.reminder_scheduled_at) {
-        reminderForm.setError('reminder_scheduled_at', 'Նշեք վճարման հիշեցման օրն ու ժամը։')
+        reminderForm.setError('reminder_scheduled_at', t('reminder_time_required'))
     }
 
     if (!reminderForm.reminder_recipient_ids.length) {
-        reminderForm.setError('reminder_recipient_ids', 'Ընտրեք առնվազն մեկ ստացող։')
+        reminderForm.setError('reminder_recipient_ids', t('recipient_required'))
     }
 
     if (reminderForm.errors.reminder_scheduled_at || reminderForm.errors.reminder_recipient_ids) {
@@ -259,37 +261,37 @@ const initials = computed(() => {
 })
 
 const visitStats = computed(() => [
-    { label: 'Այցելություններ', value: '0', icon: 'tabler-walk', className: 'bg-label-primary' },
-    { label: 'Այս ամիս', value: '0', icon: 'tabler-calendar-stats', className: 'bg-label-info' },
-    { label: 'Վերջին այց', value: '-', icon: 'tabler-clock', className: 'bg-label-warning' },
-    { label: 'Ակտիվ աբոնեմենտներ', value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success' },
+    { label: t('visits'), value: '0', icon: 'tabler-walk', className: 'bg-label-primary' },
+    { label: t('this_month'), value: '0', icon: 'tabler-calendar-stats', className: 'bg-label-info' },
+    { label: t('last_visit'), value: '-', icon: 'tabler-clock', className: 'bg-label-warning' },
+    { label: t('active_memberships'), value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success' },
 ])
 
 const primaryInfoItems = computed(() => [
-    { label: 'Անուն', value: props.person?.name || '-', icon: 'tabler-user' },
-    { label: 'Ազգանուն', value: props.person?.surname || '-', icon: 'tabler-user' },
-    { label: 'Հեռախոսահամար', value: props.person?.phone || '-', icon: 'tabler-phone' },
-    { label: 'Էլ․ փոստ', value: props.person?.email || '-', icon: 'tabler-mail' },
-    { label: 'Մուտքի կոդ', value: props.entryCode?.token || '-', icon: 'tabler-key' },
+    { label: t('name'), value: props.person?.name || '-', icon: 'tabler-user' },
+    { label: t('surname'), value: props.person?.surname || '-', icon: 'tabler-user' },
+    { label: t('phone_number'), value: props.person?.phone || '-', icon: 'tabler-phone' },
+    { label: t('email_alt'), value: props.person?.email || '-', icon: 'tabler-mail' },
+    { label: t('entry_code'), value: props.entryCode?.token || '-', icon: 'tabler-key' },
 ])
 const secondaryInfoItems = computed(() => [
-    { label: 'Տեսակ', value: personTypeLabel(props.person?.type), icon: 'tabler-users' },
-    { label: 'Կարգավիճակ', value: personStatusLabel.value, icon: 'tabler-circle-check' },
-    { label: 'Ծննդյան ամսաթիվ', value: formatDate(props.person?.birth_date), icon: 'tabler-calendar' },
-    { label: 'Սեռ', value: genderLabel(props.person?.gender), icon: 'tabler-gender-bigender' },
-    { label: 'Մարզասրահ', value: props.person?.gyms?.length ? props.person.gyms.map(gym => gym.name).join(', ') : '-', icon: 'tabler-building' },
+    { label: t('type'), value: personTypeLabel(props.person?.type), icon: 'tabler-users' },
+    { label: t('status'), value: personStatusLabel.value, icon: 'tabler-circle-check' },
+    { label: t('birth_date'), value: formatDate(props.person?.birth_date), icon: 'tabler-calendar' },
+    { label: t('gender'), value: genderLabel(props.person?.gender), icon: 'tabler-gender-bigender' },
+    { label: t('gym'), value: props.person?.gyms?.length ? props.person.gyms.map(gym => gym.name).join(', ') : '-', icon: 'tabler-building' },
 ])
 </script>
 
 <template>
-    <Head title="Անձի պրոֆիլ" />
+    <Head :title="t('profile')" />
 
     <Index>
         <template #header>
             <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 mb-1">
-                        Անձի պրոֆիլ
+                        {{ t('profile') }}
                     </h2>
                     <div class="text-muted">
                         {{ fullName(person) }}
@@ -299,7 +301,7 @@ const secondaryInfoItems = computed(() => [
                     class="btn btn-secondary"
                     :href="route('person.list', { locale: currentLocale })"
                 >
-                    Վերադառնալ
+                    {{ t('back') }}
                 </Link>
             </div>
         </template>
@@ -361,15 +363,15 @@ const secondaryInfoItems = computed(() => [
         <div class="card mb-4">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <div>
-                    <h5 class="mb-0">Անձնական տվյալներ</h5>
-                    <small class="text-muted">Հիմնական տվյալներ և նույնականացում</small>
+                    <h5 class="mb-0">{{ t('personal_information') }}</h5>
+                    <small class="text-muted">{{ t('basic_information') }}</small>
                 </div>
             </div>
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-lg-6">
                         <div class="profile-info-group h-100">
-                            <h6 class="mb-3">Կոնտակտային տվյալներ</h6>
+                            <h6 class="mb-3">{{ t('contact_information') }}</h6>
                             <div
                                 v-for="item in primaryInfoItems"
                                 :key="item.label"
@@ -387,7 +389,7 @@ const secondaryInfoItems = computed(() => [
                     </div>
                     <div class="col-lg-6">
                         <div class="profile-info-group h-100">
-                            <h6 class="mb-3">Լրացուցիչ տվյալներ</h6>
+                            <h6 class="mb-3">{{ t('additional_information') }}</h6>
                             <div
                                 v-for="item in secondaryInfoItems"
                                 :key="item.label"
@@ -418,7 +420,7 @@ const secondaryInfoItems = computed(() => [
                             @click="activeTab = 'memberships'"
                         >
                             <i class="icon-base ti tabler-id-badge-2 me-1"></i>
-                            Աբոնեմենտներ
+                            {{ t('memberships') }}
                         </button>
                     </li>
                     <li class="nav-item">
@@ -429,7 +431,7 @@ const secondaryInfoItems = computed(() => [
                             @click="activeTab = 'finance'"
                         >
                             <i class="icon-base ti tabler-wallet me-1"></i>
-                            Ֆինանսական մաս
+                            {{ t('financial') }}
                         </button>
                     </li>
                 </ul>
@@ -458,11 +460,11 @@ const secondaryInfoItems = computed(() => [
                                 </div>
                                 <div class="membership-header-section membership-period">
                                     <div>
-                                        <div class="text-muted small">Սկիզբ</div>
+                                        <div class="text-muted small">{{ t('start') }}</div>
                                         <div class="fw-semibold">{{ formatDate(membership.start_date) }}</div>
                                     </div>
                                     <div>
-                                        <div class="text-muted small">Ավարտ</div>
+                                        <div class="text-muted small">{{ t('end') }}</div>
                                         <div class="fw-semibold">{{ formatDate(membership.valid_at || membership.end_date) }}</div>
                                     </div>
                                 </div>
@@ -483,7 +485,7 @@ const secondaryInfoItems = computed(() => [
                                             })"
                                         >
                                             <i class="icon-base ti tabler-cash me-1"></i>
-                                            Վճարումներ
+                                            {{ t('payments') }}
                                         </Link>
                                         <button
                                             v-if="membershipPaymentStatus(membership) === 'partial'"
@@ -492,20 +494,20 @@ const secondaryInfoItems = computed(() => [
                                             @click="openPaymentReminder(membership)"
                                         >
                                             <i class="icon-base ti tabler-calendar-plus me-1"></i>
-                                            Ավելացնել հիշեցում
+                                            {{ t('add_reminder') }}
                                         </button>
                                     </div>
                                     <div
                                         v-if="membershipHasDebt(membership)"
                                         class="text-danger fw-semibold"
                                     >
-                                        Պարտք՝ {{ formatAmount(saleDebtAmount(saleForMembership(membership))) }}
+                                        {{ t('debt_amount', { amount: formatAmount(saleDebtAmount(saleForMembership(membership))) }) }}
                                     </div>
                                     <div
                                         v-else
                                         class="text-success fw-semibold"
                                     >
-                                        Պարտք չկա
+                                        {{ t('debt_none') }}
                                     </div>
                                 </div>
                             </div>
@@ -520,7 +522,7 @@ const secondaryInfoItems = computed(() => [
                                             <i class="icon-base ti tabler-user-star"></i>
                                         </div>
                                         <div>
-                                            <div class="text-muted small mb-1">Մարզիչ</div>
+                                            <div class="text-muted small mb-1">{{ t('trainer') }}</div>
                                             <h6 class="mb-2">{{ trainerName(membership.trainer) }}</h6>
                                             <div
                                                 v-if="membership.trainer"
@@ -552,7 +554,7 @@ const secondaryInfoItems = computed(() => [
                                             disabled
                                         >
                                             <i class="icon-base ti tabler-eye me-1"></i>
-                                            Դիտել մարզչի պրոֆիլը
+                                            {{ t('view_trainer_profile') }}
                                         </button>
                                         <button
                                             type="button"
@@ -560,7 +562,7 @@ const secondaryInfoItems = computed(() => [
                                             disabled
                                         >
                                             <i class="icon-base ti tabler-chart-bar me-1"></i>
-                                            Մարզչի վիճակագրություն
+                                            {{ t('trainer_statistics') }}
                                         </button>
                                     </div>
                                 </div>
@@ -569,25 +571,25 @@ const secondaryInfoItems = computed(() => [
                             <div class="row g-3 mb-4">
                                 <div class="col-md-4">
                                     <div class="metric-box">
-                                        <div class="text-muted small">Այցեր</div>
+                                        <div class="text-muted small">{{ t('visit_count') }}</div>
                                         <div class="fw-semibold">
-                                            {{ membership.visits_left ?? 0 }} մնացել / {{ membership.visits_used ?? 0 }} օգտագործվել
+                                            {{ t('visits_left_used', { left: membership.visits_left ?? 0, used: membership.visits_used ?? 0 }) }}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="metric-box">
-                                        <div class="text-muted small">Հյուրեր</div>
+                                        <div class="text-muted small">{{ t('guests') }}</div>
                                         <div class="fw-semibold">
-                                            {{ membership.guest_left ?? 0 }} մնացել / {{ membership.guests?.length ?? 0 }} գրառում
+                                            {{ t('items_left_records', { left: membership.guest_left ?? 0, count: membership.guests?.length ?? 0 }) }}
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="metric-box">
-                                        <div class="text-muted small">Սառեցումներ</div>
+                                        <div class="text-muted small">{{ t('freezes') }}</div>
                                         <div class="fw-semibold">
-                                            {{ membership.freeze_left ?? 0 }} մնացել / {{ membership.freezes?.length ?? 0 }} գրառում
+                                            {{ t('items_left_records', { left: membership.freeze_left ?? 0, count: membership.freezes?.length ?? 0 }) }}
                                         </div>
                                     </div>
                                 </div>
@@ -597,7 +599,7 @@ const secondaryInfoItems = computed(() => [
                                 <div class="col-lg-6">
                                     <div class="subsection">
                                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-                                            <h6 class="mb-0">Սառեցումներ</h6>
+                                            <h6 class="mb-0">{{ t('freezes') }}</h6>
                                             <Link
                                                 v-if="canFreezeMembership(membership)"
                                                 class="btn btn-sm btn-outline-primary"
@@ -607,7 +609,7 @@ const secondaryInfoItems = computed(() => [
                                                 })"
                                             >
                                                 <i class="icon-base ti tabler-snowflake me-1"></i>
-                                                Սառեցնել աբոնեմենտը
+                                                {{ t('freeze_membership') }}
                                             </Link>
                                         </div>
                                         <div
@@ -617,9 +619,9 @@ const secondaryInfoItems = computed(() => [
                                             <table class="table table-sm table-bordered mb-0">
                                                 <thead>
                                                     <tr>
-                                                        <th>Սկիզբ</th>
-                                                        <th>Ավարտ</th>
-                                                        <th>Նշումներ</th>
+                                                        <th>{{ t('start') }}</th>
+                                                        <th>{{ t('end') }}</th>
+                                                        <th>{{ t('notes') }}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -638,7 +640,7 @@ const secondaryInfoItems = computed(() => [
                                             v-else
                                             class="empty-state"
                                         >
-                                            Սառեցումներ չկան
+                                            {{ t('no_freezes') }}
                                         </div>
                                     </div>
                                 </div>
@@ -646,7 +648,7 @@ const secondaryInfoItems = computed(() => [
                                 <div class="col-lg-6">
                                     <div class="subsection">
                                         <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3">
-                                            <h6 class="mb-0">Հյուրեր</h6>
+                                            <h6 class="mb-0">{{ t('guests') }}</h6>
                                             <Link
                                                 v-if="canAddGuest(membership)"
                                                 class="btn btn-sm btn-outline-secondary"
@@ -656,7 +658,7 @@ const secondaryInfoItems = computed(() => [
                                                 })"
                                             >
                                                 <i class="icon-base ti tabler-user-plus me-1"></i>
-                                                Ավելացնել հյուր
+                                                {{ t('add_guest') }}
                                             </Link>
                                         </div>
                                         <div
@@ -666,9 +668,9 @@ const secondaryInfoItems = computed(() => [
                                             <table class="table table-sm table-bordered mb-0">
                                                 <thead>
                                                     <tr>
-                                                        <th>Անուն Ազգանուն</th>
-                                                        <th>Հեռախոսահամար</th>
-                                                        <th>Ավելացվել է</th>
+                                                        <th>{{ t('full_name') }}</th>
+                                                        <th>{{ t('phone_number') }}</th>
+                                                        <th>{{ t('added_at') }}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -687,7 +689,7 @@ const secondaryInfoItems = computed(() => [
                                             v-else
                                             class="empty-state"
                                         >
-                                            Հյուրեր չկան
+                                            {{ t('no_guests') }}
                                         </div>
                                     </div>
                                 </div>
@@ -698,7 +700,7 @@ const secondaryInfoItems = computed(() => [
                         v-else
                         class="empty-state py-5"
                     >
-                        Աբոնեմենտներ չկան
+                        {{ t('no_memberships') }}
                     </div>
                 </div>
 
@@ -706,31 +708,31 @@ const secondaryInfoItems = computed(() => [
                     <div class="row g-4 mb-4">
                         <div class="col-md-6 col-xl">
                             <div class="finance-card border-danger">
-                                <div class="text-muted small">Ընդհանուր պարտք</div>
+                                <div class="text-muted small">{{ t('total_debt') }}</div>
                                 <div class="h4 mb-0 text-danger">{{ formatAmount(totalDebt) }}</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl">
                             <div class="finance-card">
-                                <div class="text-muted small">Պետք է վճարի</div>
+                                <div class="text-muted small">{{ t('amount_due') }}</div>
                                 <div class="h4 mb-0">{{ formatAmount(finalPriceTotal) }}</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl">
                             <div class="finance-card border-success">
-                                <div class="text-muted small">Վճարել է</div>
+                                <div class="text-muted small">{{ t('amount_paid') }}</div>
                                 <div class="h4 mb-0 text-success">{{ formatAmount(netPaidAmount) }}</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl">
                             <div class="finance-card border-warning">
-                                <div class="text-muted small">Վերադարձված գումար</div>
+                                <div class="text-muted small">{{ t('refunded_amount') }}</div>
                                 <div class="h4 mb-0 text-warning">{{ formatAmount(refundedAmount) }}</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-xl">
                             <div class="finance-card border-info">
-                                <div class="text-muted small">Վերադարձման ենթակա գումար</div>
+                                <div class="text-muted small">{{ t('refund_due') }}</div>
                                 <div class="h4 mb-0 text-info">{{ formatAmount(refundDueAmount) }}</div>
                             </div>
                         </div>
@@ -741,13 +743,13 @@ const secondaryInfoItems = computed(() => [
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Տեսակ</th>
-                                    <th>Աբոնեմենտ</th>
-                                    <th>Գումար</th>
-                                    <th>Վիճակ</th>
-                                    <th>Վճարման եղանակ</th>
-                                    <th>Ամսաթիվ</th>
-                                    <th>Նշումներ</th>
+                                    <th>{{ t('type') }}</th>
+                                    <th>{{ t('membership') }}</th>
+                                    <th>{{ t('amount') }}</th>
+                                    <th>{{ t('state') }}</th>
+                                    <th>{{ t('payment_method') }}</th>
+                                    <th>{{ t('date') }}</th>
+                                    <th>{{ t('notes') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -770,7 +772,7 @@ const secondaryInfoItems = computed(() => [
                                         colspan="8"
                                         class="text-center text-muted"
                                     >
-                                        Գործարքներ չկան
+                                        {{ t('no_transactions') }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -791,7 +793,7 @@ const secondaryInfoItems = computed(() => [
             :users="reminderUsers"
             :errors="reminderForm.errors"
             :processing="reminderForm.processing"
-            confirm-text="Պլանավորել հիշեցումը"
+            :confirm-text="t('schedule_reminder')"
             @close="closePaymentReminder"
             @confirm="submitPaymentReminder"
         />

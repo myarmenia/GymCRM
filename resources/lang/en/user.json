@@ -3,11 +3,12 @@
     "roles": {
         "super_admin": "Super admin",
         "admin": "Admin",
-        "manager": "Managaer",
+        "manager": "Manager",
         "staff": "Staff",
         "accountant": "Accountant",
         "owner": "Owner",
         "cleaner": "Cleaner",
-        "trainer": "Trainer"
+        "trainer": "Trainer",
+        "sales_manager": "Sales manager"
     }
 }

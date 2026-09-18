@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\SupportedLocales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -40,27 +41,21 @@ class HandleInertiaRequests extends Middleware
         // ];
         $user = Auth::user();
 
-        // $lang = in_array(request()->segment(1), ['hy', 'ru', 'en']) ? request()->segment(1) : 'hy';
-        // $langs = ['en', 'ru', 'hy'];
-
         $gym = $user?->gym;
 
-        $gymLangs = $gym
-            ? $gym->languages()->wherePivot('active', true)->get()
-            : collect();
+        $langs = $gym
+            ? $gym->languages()
+                ->wherePivot('active', true)
+                ->pluck('code')
+                ->values()
+                ->all()
+            : SupportedLocales::CODES;
 
-        $langs = $gymLangs->pluck('code')->values()->toArray();
-
-        if (empty($langs)) {
+        if ($langs === []) {
             $langs = ['hy'];
         }
 
-
-        $langFromUrl = request()->segment(1);
-
-        $lang = in_array($langFromUrl, $langs)
-            ? $langFromUrl
-            : $langs[0];
+        $lang = app()->getLocale();
 
         $roleName = $user?->roles?->first()?->name;
 
@@ -110,6 +105,7 @@ class HandleInertiaRequests extends Middleware
                 'app' => File::exists($app) ? File::json($app) : [],
 
             ],
+            'locale' => $lang,
             'lang' => $lang,
             'langs' => $langs,
             'err' => function () use ($request) {

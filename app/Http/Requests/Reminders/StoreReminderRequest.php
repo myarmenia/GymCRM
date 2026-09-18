@@ -63,7 +63,7 @@ class StoreReminderRequest extends FormRequest
                 ->exists();
 
             if ($invalidRecipients) {
-                $validator->errors()->add('recipient_ids', 'Ընտրված ստացողներից մեկը հասանելի չէ։');
+                $validator->errors()->add('recipient_ids', __('backend_messages.one_selected_recipients_unavailable'));
             }
         });
     }

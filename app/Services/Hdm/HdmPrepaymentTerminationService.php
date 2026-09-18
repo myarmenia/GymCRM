@@ -66,17 +66,17 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
         $reason = null;
         if ($sale->is_hdm !== true) {
-            $reason = 'Կանխավճարի ՀԴՄ վերադարձը հասանելի է միայն ՀԴՄ վաճառքի համար։';
+            $reason = __('backend_messages.cash_register_advance_refund_available_only_cash_register_sale');
         } elseif ($activeFinalReceipt) {
-            $reason = 'Վերջնական ՀԴՄ կտրոնն արդեն տպված է։ Օգտագործեք սովորական կտրոնի վերադարձը։';
+            $reason = __('backend_messages.final_cash_register_receipt_has_already_been_printed_use_regular_receipt_refund');
         } elseif ($returnedFinalReceipt) {
-            $reason = 'Վերջնական ՀԴՄ կտրոնն արդեն վերադարձված է։ Կրկնակի վերադարձ չի թույլատրվում։';
+            $reason = __('backend_messages.final_cash_register_receipt_has_already_been_refunded_duplicate_refund_not_allowed');
         } elseif ($sourceResult['unprinted_count'] > 0) {
-            $reason = 'Վճարումը չունի հաջող ՀԴՄ կտրոն։ Նախ ավարտեք կտրոնի տպումը։';
+            $reason = __('backend_messages.payment_has_no_successful_cash_register_receipt_complete_receipt_printing_first');
         } elseif ($pendingRefundExists) {
-            $reason = 'Առկա է չավարտված վերադարձ։ Նախ ավարտեք այն։';
+            $reason = __('backend_messages.there_unfinished_refund_complete_it_first');
         } elseif ($available <= 0 && ! $pendingWorkflow) {
-            $reason = 'Վերադարձվող ՀԴՄ կանխավճար չկա։';
+            $reason = __('backend_messages.there_no_cash_register_advance_payment_refund');
         }
 
         $requiresWorkflow = $pendingWorkflow !== null
@@ -123,33 +123,33 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
             if ($sale->is_hdm !== true) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Այս գործողությունը հասանելի է միայն ՀԴՄ վաճառքի համար։',
+                    'refund_amount' => __('backend_messages.this_action_available_only_cash_register_sale'),
                 ]);
             }
 
             if ($this->activeFinalReceipt($sale)) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վերջնական ՀԴՄ կտրոնն արդեն տպված է։ Օգտագործեք սովորական կտրոնի վերադարձը։',
+                    'refund_amount' => __('backend_messages.final_cash_register_receipt_has_already_been_printed_use_regular_receipt_refund'),
                 ]);
             }
 
             if ($this->returnedFinalReceipt($sale)) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վերջնական ՀԴՄ կտրոնն արդեն վերադարձված է։ Կրկնակի վերադարձ չի թույլատրվում։',
+                    'refund_amount' => __('backend_messages.final_cash_register_receipt_has_already_been_refunded_duplicate_refund_not_allowed'),
                 ]);
             }
 
             if ($sale->payments->contains(fn (MembershipPlanPayment $payment): bool => $payment->type === 'refund'
                 && $payment->status === 'pending')) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Առկա է չավարտված վերադարձ։ Նախ ավարտեք այն։',
+                    'refund_amount' => __('backend_messages.there_unfinished_refund_complete_it_first'),
                 ]);
             }
 
             $sourceResult = $this->prepaymentSources($sale);
             if ($sourceResult['unprinted_count'] > 0) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վճարումը չունի հաջող ՀԴՄ կտրոն։ Նախ ավարտեք կտրոնի տպումը։',
+                    'refund_amount' => __('backend_messages.payment_has_no_successful_cash_register_receipt_complete_receipt_printing_first'),
                 ]);
             }
 
@@ -160,13 +160,13 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
             if ($prepaymentAmount <= 0) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վերադարձվող ՀԴՄ կանխավճար չկա։',
+                    'refund_amount' => __('backend_messages.there_no_cash_register_advance_payment_refund'),
                 ]);
             }
 
             if ($refundAmount <= 0 || $refundAmount > $prepaymentAmount) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վերադարձի գումարը պետք է լինի 0-ից մեծ և չգերազանցի հասանելի կանխավճարը։',
+                    'refund_amount' => __('backend_messages.refund_must_be_greater_than_zero_and_not_exceed_available_prepayment'),
                 ]);
             }
 
@@ -207,7 +207,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
             if ($allocations === []) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => 'Վերադարձի գումարը չի բաշխվել կանխավճարների միջև։',
+                    'refund_amount' => __('backend_messages.refund_amount_not_allocated_among_advance_payments'),
                 ]);
             }
 
@@ -283,7 +283,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
         if (! $workflow) {
             throw ValidationException::withMessages([
-                'refund_amount' => 'Չավարտված կանխավճարի վերադարձ չի գտնվել։',
+                'refund_amount' => __('backend_messages.no_unfinished_advance_refund_found'),
             ]);
         }
 
@@ -364,7 +364,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
         if (! $device || ! $device->status || ! $cashier) {
             throw ValidationException::withMessages([
-                'refund_amount' => 'Սկզբնական կանխավճարի ՀԴՄ սարքը կամ գանձապահը հասանելի չէ։',
+                'refund_amount' => __('backend_messages.cash_register_device_or_cashier_original_advance_payment_unavailable'),
             ]);
         }
 
@@ -402,7 +402,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
         if (! $device || ! $device->status || ! $cashier) {
             throw ValidationException::withMessages([
-                'refund_amount' => 'Սկզբնական կանխավճարի ՀԴՄ սարքը կամ գանձապահը հասանելի չէ։',
+                'refund_amount' => __('backend_messages.cash_register_device_or_cashier_original_advance_payment_unavailable'),
             ]);
         }
 
@@ -452,7 +452,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
         if (! $device || ! $device->status || ! $cashier) {
             throw ValidationException::withMessages([
-                'refund_amount' => 'ՀԴՄ սարքը կամ գանձապահը հասանելի չէ։',
+                'refund_amount' => __('backend_messages.cash_register_device_or_cashier_unavailable'),
             ]);
         }
 
@@ -483,16 +483,16 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         $name = $plan?->translations
             ?->firstWhere('locale', 'hy')?->name
             ?? $plan?->translations?->first()?->name
-            ?? ('Աբոնեմենտ #'.($plan?->id ?? $sale->membership_plan_id));
+            ?? (__('backend_messages.membership_number_prefix').($plan?->id ?? $sale->membership_plan_id));
 
         return [
             'qty' => 1,
             'price' => round($serviceAmount, 2),
             'productCode' => str_pad((string) ($plan?->id ?? 0), 3, '0', STR_PAD_LEFT),
-            'productName' => mb_substr($name.' (օգտագործված մաս)', 0, 50),
+            'productName' => mb_substr($name.__('backend_messages.used_portion'), 0, 50),
             'dep' => 1,
             'adgCode' => $plan?->adg_code ?? '93.13',
-            'unit' => $plan?->armenian_unit ?? 'հատ',
+            'unit' => $plan?->armenian_unit ?? __('backend_messages.pcs'),
         ];
     }
 

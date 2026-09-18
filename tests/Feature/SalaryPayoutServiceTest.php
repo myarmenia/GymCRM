@@ -149,7 +149,7 @@ class SalaryPayoutServiceTest extends TestCase
         $this->assertDatabaseCount('salary_payout_refunds', 1);
 
         $export = $service->historyExportData($actor);
-        $this->assertSame('Չեղարկված', $export['rows']->first()['status']);
+        $this->assertSame(__('backend.salary_payouts.cancelled'), $export['rows']->first()['status']);
     }
 
     public function test_partial_payment_and_refund_reopen_only_the_refunded_balance(): void
@@ -210,7 +210,7 @@ class SalaryPayoutServiceTest extends TestCase
             'net_amount' => 2500.0,
         ], $page['historySummary']);
         $export = $service->historyExportData($actor, ['tab' => 'history']);
-        $this->assertSame('Մասնակի վերադարձ', $export['rows']->first()['status']);
+        $this->assertSame(__('backend.salary_payouts.partially_refunded'), $export['rows']->first()['status']);
         $this->assertSame(2500.0, $export['summary']['rows'][3]['value']);
     }
 

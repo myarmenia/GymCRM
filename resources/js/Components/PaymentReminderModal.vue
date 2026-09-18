@@ -2,6 +2,8 @@
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import MultiSelect from '@/Components/MultiSelect.vue'
+import { usePage } from '@inertiajs/vue3'
+import { translate } from '/resources/js/trans'
 
 defineProps({
     show: {
@@ -46,9 +48,12 @@ defineProps({
     },
     confirmText: {
         type: String,
-        default: 'Պլանավորել հիշեցումը',
+        default: '',
     },
 })
+
+const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements)
 
 const emit = defineEmits([
     'close',
@@ -78,10 +83,10 @@ const emit = defineEmits([
                         id="payment-reminder-title"
                         class="mb-1"
                     >
-                        Աբոնեմենտի վճարման հիշեցում
+                        {{ t('reminder_title') }}
                     </h4>
                     <div class="text-muted">
-                        Մնացորդ՝
+                        {{ t('balance') }}
                         <strong class="text-danger">
                             {{ Number(debtAmount || 0).toFixed(2) }}
                         </strong>
@@ -90,7 +95,7 @@ const emit = defineEmits([
                 <button
                     type="button"
                     class="btn btn-icon btn-sm btn-label-secondary"
-                    aria-label="Փակել"
+                    :aria-label="t('close')"
                     @click="emit('close')"
                 >
                     <i class="icon-base ti tabler-x"></i>
@@ -99,16 +104,16 @@ const emit = defineEmits([
 
             <div class="card-body">
                 <div class="mb-4">
-                    <InputLabel value="Կատեգորիա" />
+                    <InputLabel :value="t('category')" />
                     <input
                         class="form-control"
-                        value="Աբոնեմենտի վճարման օր"
+                        :value="t('payment_day')"
                         readonly
                     >
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Ում մասին է" />
+                    <InputLabel :value="t('about_person')" />
                     <input
                         class="form-control"
                         :value="personName"
@@ -117,7 +122,7 @@ const emit = defineEmits([
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Ուղարկման օր և ժամ" />
+                    <InputLabel :value="t('send_at')" />
                     <input
                         :value="scheduledAt"
                         type="datetime-local"
@@ -128,11 +133,11 @@ const emit = defineEmits([
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Ստացողներ" />
+                    <InputLabel :value="t('recipients')" />
                     <MultiSelect
                         :model-value="recipientIds"
                         :options="users"
-                        placeholder="Ընտրեք ստացողներին"
+                        :placeholder="t('choose_recipients')"
                         @update:model-value="emit('update:recipientIds', $event)"
                     />
                     <InputError
@@ -141,7 +146,7 @@ const emit = defineEmits([
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Վերնագիր" />
+                    <InputLabel :value="t('title')" />
                     <input
                         :value="title"
                         type="text"
@@ -152,12 +157,12 @@ const emit = defineEmits([
                 </div>
 
                 <div class="mb-0">
-                    <InputLabel value="Նկարագրություն" />
+                    <InputLabel :value="t('description')" />
                     <textarea
                         :value="description"
                         class="form-control"
                         rows="3"
-                        placeholder="Դատարկ թողնելու դեպքում տեքստը կկազմվի ավտոմատ"
+                        :placeholder="t('description_auto')"
                         @input="emit('update:description', $event.target.value)"
                     />
                     <InputError :message="errors.reminder_description" />
@@ -170,7 +175,7 @@ const emit = defineEmits([
                     class="btn btn-label-secondary"
                     @click="emit('close')"
                 >
-                    Փակել
+                    {{ t('close') }}
                 </button>
                 <button
                     type="button"
@@ -178,7 +183,7 @@ const emit = defineEmits([
                     :disabled="processing"
                     @click="emit('confirm')"
                 >
-                    {{ confirmText }}
+                    {{ confirmText || t('schedule_reminder') }}
                 </button>
             </div>
         </div>

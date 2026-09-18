@@ -48,15 +48,15 @@ class UpdateMembershipSaleRequest extends FormRequest
             }
 
             if (!$this->filled('discount_type')) {
-                $validator->errors()->add('discount_type', 'Զեղչի տեսակը պարտադիր է։');
+                $validator->errors()->add('discount_type', __('backend.membership_sales.discount_type_required'));
             }
 
             if (!$this->filled('discount_value')) {
-                $validator->errors()->add('discount_value', 'Զեղչի արժեքը պարտադիր է։');
+                $validator->errors()->add('discount_value', __('backend.membership_sales.discount_value_required'));
             }
 
             if ($this->input('discount_type') === 'percent' && (float) $this->input('discount_value') > 100) {
-                $validator->errors()->add('discount_value', 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։');
+                $validator->errors()->add('discount_value', __('backend.membership_sales.percentage_discount_max'));
             }
         });
     }
@@ -64,23 +64,23 @@ class UpdateMembershipSaleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+            'integer' => __('validation.integer'),
+            'numeric' => __('validation.numeric'),
+            'min.numeric' => __('validation.min.numeric'),
+            'array' => __('validation.array'),
+            'boolean' => __('validation.boolean'),
+            'exists' => __('validation.exists'),
+            'in' => __('validation.exists'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'membership_discount_ids' => 'աբոնեմենտի զեղչեր',
-            'membership_discount_ids.*' => 'աբոնեմենտի զեղչ',
-            'discount_type' => 'զեղչի տեսակ',
-            'discount_value' => 'զեղչի արժեք',
+            'membership_discount_ids' => __('backend.attributes.membership_discounts'),
+            'membership_discount_ids.*' => __('backend.attributes.membership_discount'),
+            'discount_type' => __('backend.attributes.discount_type'),
+            'discount_value' => __('backend.attributes.discount_value'),
         ];
     }
 

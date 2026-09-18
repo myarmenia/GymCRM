@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { onMounted, computed, nextTick, watch } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
@@ -7,6 +9,9 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { router } from '@inertiajs/vue3';
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
@@ -63,7 +68,7 @@ onMounted(async () => {
     if ($gyms.length) {
         $gyms.select2({
             width: '100%',
-            placeholder: 'Ընտրել մարզասրահը'
+            placeholder: t('operations.select_gym_2')
         });
         if (form.gym_id) {
             $gyms.val(form.gym_id).trigger('change');
@@ -87,24 +92,24 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Խմբագրել մուտքի կոդ" />
+    <Head :title="t('operations.edit_entry_code')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մուտքի կոդ / Խմբագրել
+                {{ t('operations.entry_code_edit') }}
             </h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Խմբագրել կոդը</h5>
+            <h5 class="card-header">{{ t('operations.edit_code') }}</h5>
             <form @submit.prevent="submit" class="card-body">
                 <!-- Gym dropdown – visible only for owner (same logic as create) -->
                 <div class="row mb-3" v-if="$page.props.auth.user.roles.some(r => r.name === 'owner')">
-                    <label class="col-sm-3 col-form-label">Մարզասրահ</label>
+                    <label class="col-sm-3 col-form-label">{{ t('people.gym') }}</label>
                     <div class="col-sm-9 select2-primary">
                         <select v-model="form.gym_id" class="form-select">
-                            <option value="" disabled>Ընտրել մարզասրահը</option>
+                            <option value="" disabled>{{ t('operations.select_gym_2') }}</option>
 
 
                             <option
@@ -121,13 +126,13 @@ const submit = () => {
 
                 <!-- Token -->
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Թոքեն</label>
+                    <label class="col-sm-3 col-form-label">{{ t('operations.token') }}</label>
                     <div class="col-sm-9">
                         <TextInput
                             type="text"
                             class="form-control"
                             v-model="form.token"
-                            placeholder="Մուտքագրել թոքենը"
+                            :placeholder="t('operations.enter_token')"
                         />
                         <InputError :message="form.errors.token" />
                     </div>
@@ -135,21 +140,21 @@ const submit = () => {
 
                 <!-- Type (only for owner) -->
                 <div class="row mb-3" >
-                    <label class="col-sm-3 col-form-label">Տեսակ</label>
+                    <label class="col-sm-3 col-form-label">{{ t('people.type') }}</label>
                     <div class="col-sm-9">
                         <select class="form-select" v-model="form.type">
                             <option :value="allowedEntryCodeType">
                                 {{ allowedEntryCodeType === 'rfId' ? 'RF ID' : 'Face ID' }}
                             </option>
                         </select>
-                        <div class="form-text">The type is defined by the selected gym.</div>
+                        <div class="form-text">{{ t('ui.entry_code_type_help') }}</div>
                         <InputError :message="form.errors.type" />
                     </div>
                 </div>
 
                 <!-- Status (active/inactive) -->
                 <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label">Կարգավիճակ</label>
+                    <label class="col-sm-3 col-form-label">{{ t('status.status') }}</label>
                     <div class="col-sm-9">
                         <div class="form-check form-switch">
                             <input
@@ -159,7 +164,7 @@ const submit = () => {
                                 :checked="form.status"
                             />
                             <label class="form-check-label">
-                                {{ form.status ? 'Ակտիվ է' : 'Ակտիվ չէ' }}
+                                {{ form.status ? t('operations.active') : t('operations.inactive') }}
                             </label>
                         </div>
                         <InputError :message="form.errors.status" />
@@ -174,7 +179,7 @@ const submit = () => {
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"
                     >
-                        Թարմացնել
+                        {{ t('people.update') }}
                     </PrimaryButton>
                     <button
                         type="button"
@@ -183,7 +188,7 @@ const submit = () => {
                             router.get(route('entry-code.list', { locale: currentLocale }));
                         }"
                     >
-                        Չեղարկել
+                        {{ t('confirm.cancel') }}
                     </button>
                 </div>
             </form>

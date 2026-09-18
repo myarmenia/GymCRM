@@ -46,14 +46,14 @@ class NotificationController extends Controller
 
         return redirect()
             ->route('notifications.index', ['locale' => $locale])
-            ->with('success', "Ուղարկվել է {$count} ծանուցում։");
+            ->with('success', __('backend_messages.count_notifications_sent', ['count' => $count]));
     }
 
     public function destroyAll(string $locale)
     {
         $count = $this->notificationService->deleteAllReceived(auth()->user());
 
-        return back()->with('success', "Ջնջվել է {$count} ծանուցում։");
+        return back()->with('success', __('backend_messages.count_notifications_deleted', ['count' => $count]));
     }
 
     public function destroy(string $locale, int $notification)
@@ -62,7 +62,7 @@ class NotificationController extends Controller
 
         return back()->with(
             $deleted ? 'success' : 'error',
-            $deleted ? 'Ծանուցումը ջնջվել է։' : 'Ծանուցումը չի գտնվել։'
+            $deleted ? __('backend_messages.notification_deleted') : __('backend_messages.notification_not_found')
         );
     }
 }

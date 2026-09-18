@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, useForm, usePage } from "@inertiajs/vue3";
@@ -13,12 +14,22 @@ import {
 } from "@/utils/membershipSalary.js";
 
 const page = usePage();
+const t = (key, replacements = {}) => translate(page.props.translations, `app.membership.${key}`, replacements);
 const currentLocale = computed(() => page.props.lang ?? "hy");
 
 const props = defineProps({
     membershipCategories: Array,
     scheduleNames: Array,
+    langs: {
+        type: Array,
+        default: null,
+    },
 });
+
+const availableLangs = computed(() =>
+    Array.isArray(props.langs) && props.langs.length ? props.langs : ["hy"],
+);
+
 
 const form = useForm({
     membership_category_id: "",
@@ -38,12 +49,15 @@ const form = useForm({
 
     active: true,
 
-    translations: {
-        hy: {
-            name: "",
-            description: "",
-        },
-    },
+    translations: Object.fromEntries(
+        availableLangs.value.map((code) => [
+            code,
+            {
+                name: "",
+                description: "",
+            },
+        ]),
+    ),
 
     schedule_name_id: "",
 
@@ -56,13 +70,13 @@ watch(currentLocale, () => {
     form.errors = {};
 });
 
-const durationTypes = [
-    { value: "day", label: "Օրերով" },
-    { value: "month", label: "Ամիսներով" },
-    { value: "year", label: "Տարիներով" },
-    { value: "visit", label: "Այցերի քանակով" },
-    { value: "period", label: "Ժամանակահատվածով" },
-];
+const durationTypes = computed(() => [
+    { value: "day", label: t('by_days') },
+    { value: "month", label: t('by_months') },
+    { value: "year", label: t('by_years') },
+    { value: "visit", label: t('by_visits') },
+    { value: "period", label: t('by_period') },
+]);
 
 const showDurationValue = computed(() =>
     ["day", "month", "year"].includes(form.duration_type),
@@ -218,25 +232,25 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Նոր աբոնեմենտ" />
+    <Head :title="t('plan_new')" />
 
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold">Նոր աբոնեմենտ</h2>
+            <h2 class="text-xl font-semibold">{{ t('plan_new') }}</h2>
         </template>
 
         <div class="card">
-            <h5 class="card-header">Ավելացնել նոր աբոնեմենտ</h5>
+            <h5 class="card-header">{{ t('plan_add') }}</h5>
 
             <form class="card-body" @submit.prevent="submit">
                 <div class="mb-4">
-                    <InputLabel value="Կատեգորիա" />
+                    <InputLabel :value="t('category')" />
 
                     <select
                         v-model="form.membership_category_id"
                         class="form-select"
                     >
-                        <option value="">Ընտրել</option>
+                        <option value="">{{ t('select') }}</option>
 
                         <option
                             v-for="category in membershipCategories"
@@ -250,42 +264,48 @@ const submit = () => {
                     <InputError :message="form.errors.membership_category_id" />
                 </div>
 
-                <div class="border rounded p-3 mb-4">
-                    <h5>Հայերեն</h5>
+                <div
+                    v-for="code in availableLangs"
+                    :key="code"
+                    class="border rounded p-3 mb-4"
+                >
+                    <h5>{{ code.toUpperCase() }}</h5>
 
                     <div class="mb-3">
-                        <InputLabel value="Անվանում" />
+                        <InputLabel :value="t('title')" />
 
                         <input
-                            v-model="form.translations.hy.name"
+                            v-model="form.translations[code].name"
                             class="form-control"
                             type="text"
                             @wheel.prevent
                         />
 
                         <InputError
-                            :message="form.errors['translations.hy.name']"
+                            :message="form.errors[`translations.${code}.name`]"
                         />
                     </div>
 
                     <div>
-                        <InputLabel value="Նկարագրություն" />
+                        <InputLabel :value="t('description')" />
 
                         <textarea
-                            v-model="form.translations.hy.description"
+                            v-model="form.translations[code].description"
                             class="form-control"
                         />
 
                         <InputError
                             :message="
-                                form.errors['translations.hy.description']
+                                form.errors[
+                                    `translations.${code}.description`
+                                ]
                             "
                         />
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Գին" />
+                    <InputLabel :value="t('price')" />
 
                     <input
                         v-model.number="form.price"
@@ -300,7 +320,7 @@ const submit = () => {
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <InputLabel value="Աշխատավարձ (%)" />
+                        <InputLabel :value="t('salary_percent')" />
 
                         <input
                             v-model.number="form.price_value"
@@ -317,7 +337,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-6">
-                        <InputLabel value="Աշխատավարձ (ֆիքսված)" />
+                        <InputLabel :value="t('salary_fixed')" />
 
                         <input
                             v-model.number="salaryFixedAmount"
@@ -334,7 +354,7 @@ const submit = () => {
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Աբոնեմենտի տեսակ" />
+                    <InputLabel :value="t('plan_type')" />
 
                     <select v-model="form.duration_type" class="form-select">
                         <option
@@ -353,10 +373,10 @@ const submit = () => {
                     <InputLabel
                         :value="
                             form.duration_type === 'day'
-                                ? 'Օրերի քանակ'
+                                ? t('day_count')
                                 : form.duration_type === 'month'
-                                  ? 'Ամիսների քանակ'
-                                  : 'Տարիների քանակ'
+                                  ? t('month_count')
+                                  : t('year_count')
                         "
                     />
 
@@ -372,7 +392,7 @@ const submit = () => {
 
                 <template v-if="showVisitFields">
                     <div class="mb-4">
-                        <InputLabel value="Այցերի քանակ" />
+                        <InputLabel :value="t('visit_count')" />
 
                         <input
                             v-model="form.visits_limit"
@@ -385,7 +405,7 @@ const submit = () => {
                     </div>
 
                     <div class="mb-4">
-                        <InputLabel value="Քանի ամիս ուժի մեջ կլինի" />
+                        <InputLabel :value="t('valid_months')" />
 
                         <input
                             v-model="form.duration_value"
@@ -400,7 +420,7 @@ const submit = () => {
 
                 <div v-if="showPeriodFields" class="row">
                     <div class="col-md-6">
-                        <InputLabel value="Սկիզբ" />
+                        <InputLabel :value="t('start')" />
 
                         <input
                             v-model="form.start_date"
@@ -412,7 +432,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-6">
-                        <InputLabel value="Ավարտ" />
+                        <InputLabel :value="t('end')" />
 
                         <input
                             v-model="form.end_date"
@@ -426,7 +446,7 @@ const submit = () => {
 
                 <div class="row mt-4">
                     <div class="col-md-6">
-                        <InputLabel value="Հյուրերի քանակ" />
+                        <InputLabel :value="t('guest_count')" />
 
                         <input
                             v-model="form.guest_limit"
@@ -439,7 +459,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-6">
-                        <InputLabel value="Սառեցումների քանակ" />
+                        <InputLabel :value="t('freeze_count')" />
 
                         <input
                             v-model="form.freeze_limit"
@@ -453,17 +473,17 @@ const submit = () => {
                 </div>
 
                 <div class="mt-4 border rounded p-3">
-                    <h5 class="mb-3">Գրաֆիկ և մարզիչներ</h5>
+                    <h5 class="mb-3">{{ t('schedule_trainers') }}</h5>
 
                     <div class="mb-4">
-                        <InputLabel value="Գրաֆիկ *" />
+                        <InputLabel :value="t('schedule_required')" />
 
                         <select
                             v-model="form.schedule_name_id"
                             class="form-select"
                             required
                         >
-                            <option value="">Ընտրել գրաֆիկ</option>
+                            <option value="">{{ t('choose_schedule') }}</option>
 
                             <option
                                 v-for="schedule in scheduleNames"
@@ -478,20 +498,20 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <InputLabel value="Գրաֆիկին կցված մարզիչներ" />
+                        <InputLabel :value="t('schedule_trainers_label')" />
 
                         <div
                             v-if="!form.schedule_name_id"
                             class="alert alert-info mb-0"
                         >
-                            Նախ ընտրեք գրաֆիկը։
+                            {{ t('choose_schedule_first') }}
                         </div>
 
                         <div
                             v-else-if="scheduleTrainers.length === 0"
                             class="alert alert-warning mb-0"
                         >
-                            Այս գրաֆիկին մարզիչ կցված չէ։
+                            {{ t('no_schedule_trainers') }}
                         </div>
 
                         <div v-else class="row g-3">
@@ -517,7 +537,7 @@ const submit = () => {
                                             </h6>
 
                                             <small class="text-muted">
-                                                Սեղմեք ընտրելու համար
+                                                {{ t('click_to_select') }}
                                             </small>
                                         </div>
 
@@ -525,14 +545,14 @@ const submit = () => {
                                             v-if="isTrainerSelected(trainer.id)"
                                             class="badge"
                                         >
-                                            Ընտրված է
+                                            {{ t('selected') }}
                                         </span>
 
                                         <span
                                             v-else
                                             class="badge bg-light text-dark"
                                         >
-                                            Ընտրված չէ
+                                            {{ t('not_selected') }}
                                         </span>
                                     </div>
 
@@ -542,7 +562,7 @@ const submit = () => {
                                         @click.stop
                                     >
                                         <div class="mb-3">
-                                            <InputLabel value="Աշխատավարձ (%)" />
+                                            <InputLabel :value="t('salary_percent')" />
 
                                             <input
                                                 v-model.number="
@@ -579,7 +599,7 @@ const submit = () => {
                                         </div>
 
                                         <div>
-                                            <InputLabel value="Աշխատավարձ (ֆիքսված)" />
+                                            <InputLabel :value="t('salary_fixed')" />
 
                                             <input
                                                 v-model.number="
@@ -627,13 +647,13 @@ const submit = () => {
                             class="form-check-input"
                         />
 
-                        <span class="form-check-label"> Ակտիվ </span>
+                        <span class="form-check-label"> {{ t('active') }} </span>
                     </label>
                 </div>
 
                 <div class="mt-4 d-flex justify-content-end">
                     <PrimaryButton :disabled="form.processing">
-                        Պահպանել
+                        {{ t('save') }}
                     </PrimaryButton>
                 </div>
             </form>

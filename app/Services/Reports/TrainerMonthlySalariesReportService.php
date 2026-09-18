@@ -44,7 +44,7 @@ class TrainerMonthlySalariesReportService
             'columns' => $this->exportColumns(),
             'filters' => $filters,
             'filename' => 'trainer-monthly-salaries-report-'.now()->format('Y-m-d-H-i-s').'.xls',
-            'title' => 'Մարզիչների աշխատավարձերի հաշվետվություն',
+            'title' => __('backend_messages.trainer_salaries_report'),
             'summary' => $this->exportSummary($this->summary($salaries)),
         ];
     }
@@ -110,12 +110,12 @@ class TrainerMonthlySalariesReportService
                 ])
                 ->values(),
             'statuses' => [
-                ['value' => 'pending', 'label' => 'Սպասման մեջ'],
-                ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
-                ['value' => 'paid', 'label' => 'Վճարված'],
-                ['value' => 'transferred', 'label' => 'Փոխանցված'],
-                ['value' => 'cancel', 'label' => 'Չեղարկված'],
-                ['value' => 'reject', 'label' => 'Մերժված'],
+                ['value' => 'pending', 'label' => __('backend_messages.pending')],
+                ['value' => 'partial', 'label' => __('backend_messages.partially_paid')],
+                ['value' => 'paid', 'label' => __('backend_messages.paid')],
+                ['value' => 'transferred', 'label' => __('backend_messages.transferred')],
+                ['value' => 'cancel', 'label' => __('backend_messages.cancelled')],
+                ['value' => 'reject', 'label' => __('backend_messages.rejected')],
             ],
         ];
     }
@@ -123,17 +123,17 @@ class TrainerMonthlySalariesReportService
     protected function exportColumns(): array
     {
         return [
-            ['key' => 'trainer', 'title' => 'Մարզիչ'],
-            ['key' => 'membership_customer', 'title' => 'Աբոնեմենտ / հաճախորդ'],
-            ['key' => 'salary_month', 'title' => 'Աշխատավարձի ամիս'],
-            ['key' => 'price', 'title' => 'Մարզչին վերագրված'],
-            ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
-            ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
-            ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
-            ['key' => 'transferred_in_amount', 'title' => 'Փոխանցված մուտք'],
-            ['key' => 'transferred_out_amount', 'title' => 'Փոխանցված ելք'],
-            ['key' => 'status', 'title' => 'Կարգավիճակ'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'trainer', 'title' => __('backend_messages.trainer')],
+            ['key' => 'membership_customer', 'title' => __('backend_messages.membership_customer')],
+            ['key' => 'salary_month', 'title' => __('backend_messages.salary_month')],
+            ['key' => 'price', 'title' => __('backend_messages.assigned_trainer')],
+            ['key' => 'net_paid_amount', 'title' => __('backend_messages.net_paid')],
+            ['key' => 'outstanding_amount', 'title' => __('backend_messages.unpaid_balance')],
+            ['key' => 'refunded_amount', 'title' => __('backend_messages.refunded')],
+            ['key' => 'transferred_in_amount', 'title' => __('backend_messages.transferred_entry')],
+            ['key' => 'transferred_out_amount', 'title' => __('backend_messages.transferred_exit')],
+            ['key' => 'status', 'title' => __('backend_messages.status')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 
@@ -163,18 +163,18 @@ class TrainerMonthlySalariesReportService
     protected function exportSummary(array $summary): array
     {
         return [
-            'title' => 'Ամփոփում',
+            'title' => __('backend_messages.summary'),
             'rows' => [
-                ['label' => 'Գրանցումների քանակ', 'value' => $summary['salaries_count']],
-                ['label' => 'Մարզիչների բաժինների քանակ', 'value' => $summary['parts_count']],
-                ['label' => 'Ընդհանուր գումար', 'value' => $summary['total_price']],
-                ['label' => 'Վճարված գումար', 'value' => $summary['paid_price']],
-                ['label' => 'Սպասող գումար', 'value' => $summary['pending_price']],
-                ['label' => 'Վերադարձված գումար', 'value' => $summary['refunded_price']],
-                ['label' => 'Փոխանցված մուտք', 'value' => $summary['transferred_in_price']],
-                ['label' => 'Փոխանցված ելք', 'value' => $summary['transferred_out_price']],
-                ['label' => 'Չեղարկված գումար', 'value' => $summary['cancelled_price']],
-                ['label' => 'Մերժված գումար', 'value' => $summary['rejected_price']],
+                ['label' => __('backend_messages.record_count'), 'value' => $summary['salaries_count']],
+                ['label' => __('backend_messages.trainer_portions'), 'value' => $summary['parts_count']],
+                ['label' => __('backend_messages.total_amount'), 'value' => $summary['total_price']],
+                ['label' => __('backend_messages.paid_amount'), 'value' => $summary['paid_price']],
+                ['label' => __('backend_messages.pending_amount'), 'value' => $summary['pending_price']],
+                ['label' => __('backend_messages.refunded_amount'), 'value' => $summary['refunded_price']],
+                ['label' => __('backend_messages.transferred_entry'), 'value' => $summary['transferred_in_price']],
+                ['label' => __('backend_messages.transferred_exit'), 'value' => $summary['transferred_out_price']],
+                ['label' => __('backend_messages.cancelled_amount'), 'value' => $summary['cancelled_price']],
+                ['label' => __('backend_messages.rejected_amount'), 'value' => $summary['rejected_price']],
             ],
         ];
     }

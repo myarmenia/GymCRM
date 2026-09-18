@@ -337,7 +337,7 @@ class PurchaseController extends Controller
         $gymId = auth()->user()->gym_id ?? auth()->user()->gym?->id;
         $this->purchaseService->refund($purchase, $validated, (int) $gymId, (int) auth()->id());
 
-        return back()->with('success', 'Ապրանքի վերադարձը հաջողությամբ գրանցվեց։');
+        return back()->with('success', __('backend_messages.product_refund_recorded_successfully'));
     }
 
     // public function sell(Request $request, string $locale)
@@ -525,14 +525,14 @@ class PurchaseController extends Controller
                 userId: auth()->id()
             );
 
-            return back()->with('success', 'Վաճառքը հաջողությամբ ավարտվեց։');
+            return back()->with('success', __('backend_messages.sale_completed_successfully'));
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
             report($e);
 
             return back()->withErrors([
-                'sell' => 'Վաճառքը չհաջողվեց կատարել։',
+                'sell' => __('backend_messages.sale_could_not_be_completed'),
             ]);
         }
     }

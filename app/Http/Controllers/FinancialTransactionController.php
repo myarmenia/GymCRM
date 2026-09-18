@@ -40,7 +40,7 @@ class FinancialTransactionController extends Controller
             $report['columns'],
             $report['filters'],
             'dramarkgh-'.now()->format('Y-m-d-H-i-s').'.xls',
-            'Դրամարկղ',
+            __('backend_messages.cash_register'),
             $report['summary'],
         );
     }
@@ -77,7 +77,7 @@ class FinancialTransactionController extends Controller
 
         $this->financialLedgerService->createManual($request->user(), $validated);
 
-        return back()->with('success', 'Ֆինանսական գործարքը գրանցվեց։');
+        return back()->with('success', __('backend_messages.financial_transaction_recorded'));
     }
 
     public function storeCategory(Request $request): RedirectResponse
@@ -95,7 +95,7 @@ class FinancialTransactionController extends Controller
 
         $this->financialLedgerService->createCategory($request->user(), $validated);
 
-        return back()->with('success', 'Ֆինանսական կատեգորիան ստեղծվեց։');
+        return back()->with('success', __('backend_messages.financial_category_created'));
     }
 
     public function reverse(
@@ -113,6 +113,6 @@ class FinancialTransactionController extends Controller
             $validated['reason'],
         );
 
-        return back()->with('success', 'Գործարքը հակադարձվեց։');
+        return back()->with('success', __('backend_messages.transaction_reversed'));
     }
 }

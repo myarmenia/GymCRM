@@ -377,31 +377,31 @@ class MembershipSaleGuestService
 
     protected function ownerCannotBeGuestMessage(): string
     {
-        return 'Չեք կարող նույն հաճախորդին ավելացնել որպես հյուր իր սեփական աբոնեմենտին։';
+        return __('backend.membership_sales.guest_cannot_be_owner');
     }
 
     protected function guestRequiresActiveMembershipMessage(): string
     {
-        return 'Հյուր ավելացնել հնարավոր է միայն ակտիվ աբոնեմենտի համար։';
+        return __('backend.membership_sales.guest_active_only');
     }
 
     protected function guestLimitReachedMessage(): string
     {
-        return 'Հյուրերի թույլատրելի քանակը սպառված է։';
+        return __('backend.membership_sales.guest_limit_reached');
     }
 
     protected function guestAlreadyAddedMessage(): string
     {
-        return 'Այս հյուրը արդեն ավելացված է տվյալ աբոնեմենտին։';
+        return __('backend.membership_sales.guest_already_added');
     }
 
     protected function duplicatePersonEmailMessage(): string
     {
-        return 'Այս էլ. հասցեով անձ արդեն գոյություն ունի։';
+        return __('backend.membership_sales.email_already_exists');
     }
 
     protected function entryCodeUnavailableMessage(): string
     {
-        return 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր';
+        return __('backend.membership_sales.entry_code_unavailable_create');
     }
 }

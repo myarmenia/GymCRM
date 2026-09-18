@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -66,20 +71,20 @@ const exportHref = computed(() => route('reports.trainer-commissions.export', {
 const filterFields = computed(() => [
     {
         name: 'trainer_id',
-        label: 'Մարզիչ',
-        placeholder: 'Բոլոր մարզիչները',
+        label: t('roles.trainer'),
+        placeholder: t('sales.all_trainers'),
         options: props.filterOptions.trainers ?? [],
     },
     {
         name: 'membership_plan_id',
-        label: 'Աբոնեմենտի տեսակ',
-        placeholder: 'Բոլոր աբոնեմենտները',
+        label: t('membership.plan_type'),
+        placeholder: t('sales.all_memberships'),
         options: props.filterOptions.membershipPlans ?? [],
     },
     {
         name: 'status',
-        label: 'Կարգավիճակ',
-        placeholder: 'Բոլոր կարգավիճակները',
+        label: t('status.status'),
+        placeholder: t('staff_reports.all_statuses'),
         options: props.filterOptions.statuses ?? [],
     },
 ])
@@ -91,15 +96,15 @@ const filterValues = computed(() => ({
 }))
 
 const summaryCards = computed(() => [
-    { label: 'Գրանցումների քանակ', value: props.summary.commissions_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
-    { label: 'Միջնորդավճար', value: formatAmount(props.summary.total_commission_amount), icon: 'tabler-cash', class: 'bg-label-success text-success' },
-    { label: 'Վճարված միջնորդավճար', value: formatAmount(props.summary.paid_commission_amount), icon: 'tabler-check', class: 'bg-label-info text-info' },
-    { label: 'Սպասող միջնորդավճար', value: formatAmount(props.summary.pending_commission_amount), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
-    { label: 'Վերադարձված', value: formatAmount(props.summary.refunded_commission_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
-    { label: 'Չվաստակած՝ չեղարկված', value: formatAmount(props.summary.cancelled_unearned_commission_amount), icon: 'tabler-ban', class: 'bg-label-danger text-danger' },
-    { label: 'Փոխանցված մուտք', value: formatAmount(props.summary.transferred_in_amount), icon: 'tabler-arrow-down-left', class: 'bg-label-success text-success' },
-    { label: 'Փոխանցված ելք', value: formatAmount(props.summary.transferred_out_amount), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
-    { label: 'Պահված միջնորդավճարներ', value: props.summary.kept_commissions_count ?? 0, icon: 'tabler-lock', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.record_count'), value: props.summary.commissions_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.commission'), value: formatAmount(props.summary.total_commission_amount), icon: 'tabler-cash', class: 'bg-label-success text-success' },
+    { label: t('staff_reports.paid_commission'), value: formatAmount(props.summary.paid_commission_amount), icon: 'tabler-check', class: 'bg-label-info text-info' },
+    { label: t('staff_reports.pending_commission'), value: formatAmount(props.summary.pending_commission_amount), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
+    { label: t('sales.refunded'), value: formatAmount(props.summary.refunded_commission_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: t('staff_reports.unearned_cancelled'), value: formatAmount(props.summary.cancelled_unearned_commission_amount), icon: 'tabler-ban', class: 'bg-label-danger text-danger' },
+    { label: t('staff_reports.transferred_entry'), value: formatAmount(props.summary.transferred_in_amount), icon: 'tabler-arrow-down-left', class: 'bg-label-success text-success' },
+    { label: t('staff_reports.transferred_exit'), value: formatAmount(props.summary.transferred_out_amount), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.saved_commissions'), value: props.summary.kept_commissions_count ?? 0, icon: 'tabler-lock', class: 'bg-label-secondary text-secondary' },
 ])
 
 const updateFilters = payload => {
@@ -160,16 +165,16 @@ const formatAmount = value => Number(value || 0).toLocaleString('hy-AM', {
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
 const salaryTypeLabel = type => ({
-    fixed: 'Ֆիքսված',
-    percent: 'Տոկոս',
+    fixed: t('staff_reports.fixed'),
+    percent: t('staff_reports.percent'),
 }[type] ?? type ?? '-')
 
 const statusLabel = status => ({
-    pending: 'Սպասման մեջ',
-    partial: 'Մասնակի վճարված',
-    paid: 'Վճարված',
-    transferred: 'Փոխանցված',
-    cancelled: 'Գեներացումը դադարեցված',
+    pending: t('status.pending'),
+    partial: t('people.partial_paid'),
+    paid: t('people.paid'),
+    transferred: t('staff_reports.transferred'),
+    cancelled: t('staff_reports.generation_is_stopped'),
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -182,12 +187,12 @@ const statusClass = status => ({
 </script>
 
 <template>
-    <Head title="Մարզիչների միջնորդավճարներ" />
+    <Head :title="t('sidebar.trainer_commissions')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Մարզիչների միջնորդավճարներ</h2>
+                <h2 class="mb-1">{{ t('sidebar.trainer_commissions') }}</h2>
                 <div class="text-muted">
                     {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
                 </div>
@@ -197,7 +202,7 @@ const statusClass = status => ({
                 class="btn btn-outline-success"
             >
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -245,30 +250,30 @@ const statusClass = status => ({
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Մարզիչների միջնորդավճարներ</h5>
-                <span class="badge bg-label-primary">{{ commissions.total ?? commissions.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('sidebar.trainer_commissions') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: commissions.total ?? commissions.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Մարզիչ</th>
-                            <th>Աբոնեմենտ</th>
-                            <th>Հաճախորդ</th>
-                            <th>Միջնորդավճարի տեսակ</th>
-                            <th>Միջնորդավճարի արժեք</th>
-                            <th>Սկզբնական միջնորդավճար</th>
-                            <th>Ընդհանուր վերագրված</th>
-                            <th>Չվաստակած՝ չեղարկված</th>
-                            <th>Զուտ վճարված</th>
-                            <th>Չվճարված մնացորդ</th>
-                            <th>Վերադարձված</th>
-                            <th>Փոխանցված մուտք</th>
-                            <th>Փոխանցված ելք</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Գեներացման դադարեցում</th>
-                            <th>Պահված է</th>
-                            <th>Ստեղծվել է</th>
+                            <th>{{ t('roles.trainer') }}</th>
+                            <th>{{ t('people.membership') }}</th>
+                            <th>{{ t('sales.client') }}</th>
+                            <th>{{ t('staff_reports.commission_type') }}</th>
+                            <th>{{ t('staff_reports.commission_value') }}</th>
+                            <th>{{ t('staff_reports.initial_commission') }}</th>
+                            <th>{{ t('staff_reports.total_reassigned') }}</th>
+                            <th>{{ t('staff_reports.unearned_cancelled') }}</th>
+                            <th>{{ t('sales.net_paid') }}</th>
+                            <th>{{ t('staff_reports.unpaid_balance') }}</th>
+                            <th>{{ t('sales.refunded') }}</th>
+                            <th>{{ t('staff_reports.transferred_entry') }}</th>
+                            <th>{{ t('staff_reports.transferred_exit') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('staff_reports.generation_stopped') }}</th>
+                            <th>{{ t('staff_reports.saved') }}</th>
+                            <th>{{ t('inventory.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -304,7 +309,7 @@ const statusClass = status => ({
                                 </template>
                                 <span v-else>-</span>
                             </td>
-                            <td>{{ commission.is_kept ? 'Այո' : 'Ոչ' }}</td>
+                            <td>{{ commission.is_kept ? t('membership.yes') : t('people.no') }}</td>
                             <td>{{ formatDate(commission.created_at) }}</td>
                         </tr>
                         <tr v-if="!commissions.data.length">
@@ -312,7 +317,7 @@ const statusClass = status => ({
                                 colspan="17"
                                 class="text-center text-muted py-4"
                             >
-                                Տվյալներ չկան։
+                                {{ t('staff_reports.no_data_2') }}
                             </td>
                         </tr>
                     </tbody>

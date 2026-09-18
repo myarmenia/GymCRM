@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import AppLayout from "@/Layouts/Index.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     data: {
@@ -137,7 +142,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ժամանակի գրաֆիկի խմբագրում" />
+    <Head :title="t('operations.edit_time_schedule')" />
 
     <AppLayout>
         <main id="main" class="main">
@@ -145,7 +150,7 @@ const submit = () => {
                 <div>
                     <h1>
                         <i class="bi bi-pencil-square me-1"></i>
-                        Աշխատանքային ժամանակի խմբագրում
+                        {{ t('operations.edit_working_time') }}
                     </h1>
 
                     <nav>
@@ -158,11 +163,11 @@ const submit = () => {
                                         })
                                     "
                                 >
-                                    Ժամային գրաֆիկ
+                                    {{ t('sidebar.schedule') }}
                                 </Link>
                             </li>
 
-                            <li class="breadcrumb-item active">Խմբագրել</li>
+                            <li class="breadcrumb-item active">{{ t('action.edit') }}</li>
                         </ol>
                     </nav>
                 </div>
@@ -179,7 +184,7 @@ const submit = () => {
                                             <div class="row mt-3">
                                                 <div>
                                                     <label class="form-label">
-                                                        Անվանում
+                                                        {{ t('membership.title') }}
                                                     </label>
 
                                                     <input
@@ -209,7 +214,7 @@ const submit = () => {
                                                 <label
                                                     class="col-4 col-form-label"
                                                 >
-                                                    Ակտիվացում
+                                                    {{ t('operations.activation') }}
                                                 </label>
 
                                                 <div class="col-1">
@@ -244,7 +249,7 @@ const submit = () => {
                                         @click="openCopyModal"
                                     >
                                         <i class="bi bi-copy me-1"></i>
-                                        Տարածել շաբաթվա օրերի վրա
+                                        {{ t('operations.apply_to_weekdays') }}
                                     </button>
                                 </div>
 
@@ -283,7 +288,7 @@ const submit = () => {
                                                         <i
                                                             class="bi bi-trash me-1"
                                                         ></i>
-                                                        Ջնջել օրը
+                                                        {{ t('operations.delete_day') }}
                                                     </button>
                                                 </div>
 
@@ -294,7 +299,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Աշխատանքային ժամի սկիզբ
+                                                        {{ t('operations.working_time_start') }}
                                                     </label>
 
                                                     <input
@@ -308,7 +313,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Աշխատանքային ժամի ավարտ
+                                                        {{ t('operations.working_time_end') }}
                                                     </label>
 
                                                     <input
@@ -322,7 +327,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Ընդմիջում
+                                                        {{ t('staff_reports.break') }}
                                                     </label>
 
                                                     <div class="d-flex gap-2">
@@ -351,7 +356,7 @@ const submit = () => {
                                                             <i
                                                                 class="bi bi-cup-hot"
                                                             ></i>
-                                                            Ընդմիջման ժամ
+                                                            {{ t('operations.break_time') }}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -386,8 +391,7 @@ const submit = () => {
                                                                     <i
                                                                         class="bi bi-cup-hot me-1"
                                                                     ></i>
-                                                                    Ընդմիջման
-                                                                    ժամ
+                                                                    {{ t('operations.break_time') }}
                                                                 </h6>
 
                                                                 <button
@@ -402,7 +406,7 @@ const submit = () => {
                                                                     <i
                                                                         class="bi bi-trash me-1"
                                                                     ></i>
-                                                                    Ջնջել
+                                                                    {{ t('action.delete') }}
                                                                 </button>
                                                             </div>
 
@@ -413,7 +417,7 @@ const submit = () => {
                                                                     <label
                                                                         class="form-label"
                                                                     >
-                                                                        Սկիզբ
+                                                                        {{ t('people.start') }}
                                                                     </label>
 
                                                                     <input
@@ -431,7 +435,7 @@ const submit = () => {
                                                                     <label
                                                                         class="form-label"
                                                                     >
-                                                                        Ավարտ
+                                                                        {{ t('people.end') }}
                                                                     </label>
 
                                                                     <input
@@ -477,7 +481,7 @@ const submit = () => {
                                             :disabled="form.processing"
                                         >
                                             <i class="bi bi-save me-1"></i>
-                                            Պահպանել
+                                            {{ t('common.save') }}
                                         </button>
 
                                         <Link
@@ -491,7 +495,7 @@ const submit = () => {
                                             <i
                                                 class="bi bi-arrow-left me-1"
                                             ></i>
-                                            Հետ
+                                            {{ t('operations.back') }}
                                         </Link>
                                     </div>
                                 </div>
@@ -510,7 +514,7 @@ const submit = () => {
                 <div class="modal-dialog modal-sm modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Տարածել օրերի վրա</h5>
+                            <h5 class="modal-title">{{ t('operations.apply_to_days') }}</h5>
 
                             <button
                                 type="button"
@@ -520,7 +524,7 @@ const submit = () => {
                         </div>
 
                         <div class="modal-body">
-                            <label class="form-label">Ընտրիր օրերը</label>
+                            <label class="form-label">{{ t('operations.select_days') }}</label>
 
                             <div
                                 v-for="(day, index) in form.week_days"
@@ -550,7 +554,7 @@ const submit = () => {
                                 class="btn btn-secondary"
                                 @click="showCopyModal = false"
                             >
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
 
                             <button
@@ -558,7 +562,7 @@ const submit = () => {
                                 class="btn btn-primary"
                                 @click="copyToSelectedDays"
                             >
-                                Տարածել
+                                {{ t('operations.apply') }}
                             </button>
                         </div>
                     </div>

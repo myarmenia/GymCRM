@@ -115,7 +115,7 @@ class ScheduleService
         if ($schedule->is_locked) {
             throw ValidationException::withMessages([
                 'schedule' => $schedule->lock_reason
-                    ?? 'Այս ժամային գրաֆիկը հնարավոր չէ փոփոխել։',
+                    ?? __('backend_messages.this_timetable_cannot_be_changed'),
             ]);
         }
     }

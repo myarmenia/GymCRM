@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Gym;
 use App\Models\Lang;
 use App\Support\StableUuid;
+use App\Support\SupportedLocales;
 use Illuminate\Database\Seeder;
 
 class GymSeeder extends Seeder
@@ -23,13 +24,11 @@ class GymSeeder extends Seeder
             ...StableUuid::seedIdentity('gyms', 'default'),
         ]);
 
-        $hyLang = Lang::where('code', 'hy')->first();
-
-        if ($hyLang) {
-            $gym->languages()->attach($hyLang->id, [
+        foreach (Lang::whereIn('code', SupportedLocales::CODES)->get() as $lang) {
+            $gym->languages()->syncWithoutDetaching([$lang->id => [
                 'active' => true,
-                ...StableUuid::seedIdentity('gym-languages', 'default:hy'),
-            ]);
+                ...StableUuid::seedIdentity('gym-languages', "default:{$lang->code}"),
+            ]]);
         }
     }
 }

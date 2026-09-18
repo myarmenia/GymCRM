@@ -106,12 +106,12 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->boolean('is_partial_payment') && $this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
+                $validator->errors()->add('is_full_payment', __('backend.membership_sales.select_partial_or_full_payment'));
             }
 
             if (! $this->boolean('stay_debt')) {
                 if ($this->submittedPaymentAmount() > 0 && ! $this->filled('payment_method_id')) {
-                    $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
+                    $validator->errors()->add('payment_method_id', __('backend.membership_sales.payment_method_required'));
                 }
 
                 $paymentMethod = $this->filled('payment_method_id')
@@ -122,11 +122,11 @@ class StoreMembershipSaleRequest extends FormRequest
                     $requiresCardType = $paymentMethod->cardTypes->count() > 0;
 
                     if ($requiresCardType && ! $this->filled('card_type_id')) {
-                        $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
+                        $validator->errors()->add('card_type_id', __('backend.membership_sales.card_type_required'));
                     }
 
                     if ($this->filled('card_type_id') && ! $paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
-                        $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
+                        $validator->errors()->add('card_type_id', __('backend.membership_sales.card_type_mismatch'));
                     }
                 }
             }
@@ -148,7 +148,7 @@ class StoreMembershipSaleRequest extends FormRequest
                     ->exists();
 
                 if ($hasInvalidRecipient) {
-                    $validator->errors()->add('reminder_recipient_ids', 'Ընտրված հիշեցման ստացողներից մեկը հասանելի չէ։');
+                    $validator->errors()->add('reminder_recipient_ids', __('backend.membership_sales.reminder_recipient_unavailable'));
                 }
             }
 
@@ -157,15 +157,15 @@ class StoreMembershipSaleRequest extends FormRequest
             }
 
             if (! $this->filled('discount_type')) {
-                $validator->errors()->add('discount_type', 'Զեղչի տեսակը պարտադիր է։');
+                $validator->errors()->add('discount_type', __('backend.membership_sales.discount_type_required'));
             }
 
             if (! $this->filled('discount_value')) {
-                $validator->errors()->add('discount_value', 'Զեղչի արժեքը պարտադիր է։');
+                $validator->errors()->add('discount_value', __('backend.membership_sales.discount_value_required'));
             }
 
             if ($this->input('discount_type') === 'percent' && (float) $this->input('discount_value') > 100) {
-                $validator->errors()->add('discount_value', 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։');
+                $validator->errors()->add('discount_value', __('backend.membership_sales.percentage_discount_max'));
             }
 
         });
@@ -174,46 +174,46 @@ class StoreMembershipSaleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'array' => ':attribute դաշտը պետք է լինի ցուցակ։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
-            'after_or_equal' => ':attribute-ը պետք է լինի :date-ից ոչ շուտ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'required' => __('validation.required'),
+            'integer' => __('validation.integer'),
+            'numeric' => __('validation.numeric'),
+            'min.numeric' => __('validation.min.numeric'),
+            'array' => __('validation.array'),
+            'boolean' => __('validation.boolean'),
+            'date' => __('validation.date'),
+            'after_or_equal' => __('validation.after_or_equal'),
+            'exists' => __('validation.exists'),
+            'in' => __('validation.exists'),
+            'string' => __('validation.string'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'person_id' => 'հաճախորդ',
-            'membership_plan_id' => 'աբոնեմենտ',
-            'start_date' => 'սկիզբ',
-            'end_date' => 'ավարտ',
-            'membership_discount_ids' => 'աբոնեմենտի զեղչեր',
-            'membership_discount_ids.*' => 'աբոնեմենտի զեղչ',
-            'discount_type' => 'զեղչի տեսակ',
-            'discount_value' => 'զեղչի արժեք',
-            'is_hdm' => 'ՀԴՄ',
-            'notes' => 'նշումներ',
-            'trainer_id' => 'մարզիչ',
-            'stay_debt' => 'մնալ պարտք',
-            'amount' => 'վճարվող գումար',
-            'payment_amount' => 'վճարվող գումար',
-            'payment_method_id' => 'վճարման եղանակ',
-            'card_type_id' => 'քարտի տեսակ',
-            'payment_type' => 'վճարման տեսակ',
-            'payment_record_status' => 'վճարման կարգավիճակ',
-            'payment_notes' => 'վճարման նշումներ',
-            'reminder_scheduled_at' => 'հիշեցման օր և ժամ',
-            'reminder_recipient_ids' => 'հիշեցման ստացողներ',
-            'reminder_title' => 'հիշեցման վերնագիր',
-            'reminder_description' => 'հիշեցման նկարագրություն',
+            'person_id' => __('backend.attributes.person'),
+            'membership_plan_id' => __('backend.attributes.membership_plan'),
+            'start_date' => __('backend.attributes.start'),
+            'end_date' => __('backend.attributes.end'),
+            'membership_discount_ids' => __('backend.attributes.membership_discounts'),
+            'membership_discount_ids.*' => __('backend.attributes.membership_discount'),
+            'discount_type' => __('backend.attributes.discount_type'),
+            'discount_value' => __('backend.attributes.discount_value'),
+            'is_hdm' => __('backend.attributes.cash_register'),
+            'notes' => __('backend.attributes.notes'),
+            'trainer_id' => __('backend.attributes.trainer'),
+            'stay_debt' => __('backend.attributes.stay_debt'),
+            'amount' => __('backend.attributes.payment_amount'),
+            'payment_amount' => __('backend.attributes.payment_amount'),
+            'payment_method_id' => __('backend.attributes.payment_method'),
+            'card_type_id' => __('backend.attributes.card_type'),
+            'payment_type' => __('backend.attributes.payment_type'),
+            'payment_record_status' => __('backend.attributes.payment_status'),
+            'payment_notes' => __('backend.attributes.payment_notes'),
+            'reminder_scheduled_at' => __('backend.attributes.reminder_scheduled_at'),
+            'reminder_recipient_ids' => __('backend.attributes.reminder_recipients'),
+            'reminder_title' => __('backend.attributes.reminder_title'),
+            'reminder_description' => __('backend.attributes.reminder_description'),
         ];
     }
 

@@ -74,30 +74,17 @@ class ProductsService
                 $product->update(['image' => $this->storeImage($data['image'], $product->uuid)]);
             }
 
-            $translations = [];
-
-            //foreach (['hy', 'ru', 'en'] as $locale) {
-            //
-            //    $translations[] = [
-            //        'locale' => $locale,
-            //        'name' => $data['name'][$locale] ?? null,
-            //        'description' => $data['description'][$locale] ?? null,
-            //    ];
-            //}
-
-            foreach (['hy', 'en', 'ru'] as $locale) {
-                if (empty($data['name'][$locale])) {
+            foreach (($data['name'] ?? []) as $locale => $name) {
+                if ($name === null || $name === '') {
                     continue;
                 }
 
                 $product->translations()->create([
                     'locale' => $locale,
-                    'name' => $data['name'][$locale],
+                    'name' => $name,
                     'description' => $data['description'][$locale] ?? null,
                 ]);
             }
-
-            //$product->translations()->createMany($translations);
 
             $this->warehouseStockRepository->create([
                 'gym_id' => $hotelId,
@@ -152,15 +139,13 @@ class ProductsService
                 'status' => filter_var($data['status'], FILTER_VALIDATE_BOOLEAN),
             ]);
 
-            foreach (['hy', 'ru', 'en'] as $locale) {
+            foreach (($data['name'] ?? []) as $locale => $name) {
                 $product->translations()->updateOrCreate(
+                    ['locale' => $locale],
                     [
-                        'locale' => $locale,
-                    ],
-                    [
-                        'name' => $data['name'][$locale] ?? '',
+                        'name' => $name,
                         'description' => $data['description'][$locale] ?? null,
-                    ]
+                    ],
                 );
             }
 

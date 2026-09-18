@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
@@ -7,6 +9,9 @@ import ToggleStatus from '@/Components/ToggleStatus.vue'
 import DeleteButton from '@/Components/DeleteButton.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -43,22 +48,22 @@ const planNames = discount => {
 }
 
 const discountTypeLabel = type => {
-    return type === 'percent' ? 'Տոկոս' : 'Ֆիքսված'
+    return type === 'percent' ? t('staff_reports.percent') : t('staff_reports.fixed')
 }
 const discountFilterSelectFields = computed(() => [
     {
         name: 'type',
-        label: 'Զեղչի տեսակ',
-        placeholder: 'Բոլոր տեսակները',
+        label: t('sales.discount_type'),
+        placeholder: t('staff_reports.all_types'),
         options: [
-            { value: 'percent', label: 'Տոկոս' },
-            { value: 'fixed', label: 'Ֆիքսված' },
+            { value: 'percent', label: t('staff_reports.percent') },
+            { value: 'fixed', label: t('staff_reports.fixed') },
         ],
     },
     {
         name: 'membership_plan_id',
-        label: 'Անդամակցության պլան',
-        placeholder: 'Բոլոր պլանները',
+        label: t('operations.membership_plan'),
+        placeholder: t('operations.all_plans'),
         options: props.membershipPlans.map(plan => ({
             value: plan.id,
             label: plan.translations?.find(item => item.locale === currentLocale.value)?.name
@@ -69,8 +74,8 @@ const discountFilterSelectFields = computed(() => [
 ])
 
 const discountFilterDateFields = [
-    { value: 'start_date', label: 'Սկսման ամսաթիվ' },
-    { value: 'end_date', label: 'Ավարտի ամսաթիվ' },
+    { value: 'start_date', label: t('operations.start_date') },
+    { value: 'end_date', label: t('operations.end_date') },
 ]
 
 watch(
@@ -111,12 +116,12 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Զեղչեր" />
+    <Head :title="t('sidebar.discounts')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Զեղչեր
+                {{ t('sidebar.discounts') }}
             </h2>
         </template>
 
@@ -133,7 +138,7 @@ const resetFilters = () => {
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    Զեղչերի ցանկ
+                    {{ t('operations.discount_list') }}
                 </h5>
 
                 <Link
@@ -145,7 +150,7 @@ const resetFilters = () => {
                     <span class="d-flex align-items-center gap-2">
                         <i class="icon-base ti tabler-plus icon-sm"></i>
                         <span class="d-none d-sm-inline-block">
-                            Ստեղծել նոր զեղչ
+                            {{ t('operations.create_new_discount') }}
                         </span>
                     </span>
                 </Link>
@@ -157,14 +162,14 @@ const resetFilters = () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Անվանում</th>
-                                <th>Տեսակ</th>
-                                <th>Արժեք</th>
-                                <th>Սկիզբ</th>
-                                <th>Ավարտ</th>
-                                <th>Անդամակցության պլաններ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('membership.title') }}</th>
+                                <th>{{ t('people.type') }}</th>
+                                <th>{{ t('membership.cost') }}</th>
+                                <th>{{ t('people.start') }}</th>
+                                <th>{{ t('people.end') }}</th>
+                                <th>{{ t('operations.membership_plans') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('action.action') }}</th>
                             </tr>
                         </thead>
 
@@ -224,7 +229,7 @@ const resetFilters = () => {
                                                 :href="route('discount.edit', { locale: currentLocale, id: discount.id })"
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('action.edit') }}
                                             </Link>
 
                                             <a

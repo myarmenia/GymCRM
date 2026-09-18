@@ -1,5 +1,5 @@
 <script setup>
-// import { useTrans } from '/resources/js/trans';
+import { useTrans } from '/resources/js/trans';
 
 </script>
 
@@ -12,7 +12,7 @@
             <!-- <script>
             document.write(new Date().getFullYear());
             </script> -->
-            , made with ❤️ by <a href="https://webex.am" target="_blank" class="footer-link">Webex.am</a>
+            {{ useTrans('app.ui.made_by') }} <a href="https://webex.am" target="_blank" class="footer-link">Webex.am</a>
         </div>
         <!-- <div class="d-none d-lg-inline-block">
 
@@ -29,4 +29,3 @@
     </div>
     </footer>
 </template>
-

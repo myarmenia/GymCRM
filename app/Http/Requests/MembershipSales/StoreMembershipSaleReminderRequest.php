@@ -55,7 +55,7 @@ class StoreMembershipSaleReminderRequest extends FormRequest
                 ->exists();
 
             if ($invalidRecipients) {
-                $validator->errors()->add('reminder_recipient_ids', 'Ընտրված ստացողներից մեկը հասանելի չէ։');
+                $validator->errors()->add('reminder_recipient_ids', __('backend.membership_sales.recipient_unavailable'));
             }
         });
     }

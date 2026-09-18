@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Link, router, usePage } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import { useAuth } from '@/composables/useAuth'
 import { useTrans } from '/resources/js/trans'
+import LanguageSwitcher from '@/Components/LanguageSwitcher.vue'
 
 const page = usePage()
 const { user } = useAuth()
@@ -27,17 +28,6 @@ const userInitials = computed(() => {
 
     return `${firstInitial}${lastInitial}` || firstInitial || 'U'
 })
-
-const changeLanguage = lang => {
-    const path = window.location.pathname.split('/')
-    path[1] = lang
-
-    const searchParams = new URLSearchParams(window.location.search)
-    const query = searchParams.toString()
-    const newUrl = `${path.join('/')}${query ? `?${query}` : ''}`
-
-    router.get(newUrl, {}, { preserveState: true, preserveScroll: true })
-}
 
 const handleNotification = event => {
     unreadCount.value = Number(event?.unread_count ?? unreadCount.value + 1)
@@ -96,42 +86,9 @@ onBeforeUnmount(() => {
             </div>
 
             <ul class="navbar-nav flex-row align-items-center ms-md-auto">
-                <!-- <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
-                    <a
-                        class="nav-link dropdown-toggle hide-arrow"
-                        href="javascript:void(0);"
-                        data-bs-toggle="dropdown"
-                    >
-                        <i class="icon-base ti tabler-language icon-22px text-heading"></i>
-                    </a>
-
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <button
-                                class="dropdown-item"
-                                @click="changeLanguage('hy')"
-                            >
-                                HY
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dropdown-item"
-                                @click="changeLanguage('en')"
-                            >
-                                EN
-                            </button>
-                        </li>
-                        <li>
-                            <button
-                                class="dropdown-item"
-                                @click="changeLanguage('ru')"
-                            >
-                                RU
-                            </button>
-                        </li>
-                    </ul>
-                </li> -->
+                <li class="nav-item me-3">
+                    <LanguageSwitcher />
+                </li>
 
                 <li class="nav-item me-2 me-xl-0">
                     <Link
@@ -160,9 +117,9 @@ onBeforeUnmount(() => {
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
-                            <a
+                            <Link
                                 class="dropdown-item mt-0"
-                                href="javascript:void(0);"
+                                :href="route('profile.edit', { locale: currentLocale })"
                             >
                                 <div class="d-flex align-items-center">
                                     <div class="flex-shrink-0 me-2">
@@ -183,7 +140,7 @@ onBeforeUnmount(() => {
                                         </div>
                                     </div>
                                 </div>
-                            </a>
+                            </Link>
                         </li>
                         <li>
                             <div class="dropdown-divider my-1 mx-n2"></div>
@@ -195,7 +152,7 @@ onBeforeUnmount(() => {
                                     method="post"
                                     class="btn btn-sm btn-danger d-flex"
                                 >
-                                    <small class="align-middle">Դուրս գալ</small>
+                                    <small class="align-middle">{{ useTrans("app.action.logout") }}</small>
                                     <i class="icon-base ti tabler-logout ms-2 icon-14px"></i>
                                 </Link>
                             </div>

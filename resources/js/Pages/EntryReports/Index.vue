@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     reports: {
@@ -54,49 +59,49 @@ const filterForm = ref({
 
 const summaryCards = computed(() => [
     {
-        label: "Ընդհանուր",
+        label: t('staff_reports.total'),
         value: props.summary.total_count ?? 0,
         icon: "tabler-clipboard-list",
         class: "bg-label-primary",
     },
     {
-        label: "Հաջողված",
+        label: t('staff_reports.successful'),
         value: props.summary.success_count ?? 0,
         icon: "tabler-circle-check",
         class: "bg-label-success",
     },
     {
-        label: "Մերժված",
+        label: t('staff_reports.rejected'),
         value: props.summary.denied_count ?? 0,
         icon: "tabler-circle-x",
         class: "bg-label-danger",
     },
     {
-        label: "Մուտքեր",
+        label: t('staff_reports.entries'),
         value: props.summary.entry_count ?? 0,
         icon: "tabler-door-enter",
         class: "bg-label-info",
     },
     {
-        label: "Ելքեր",
+        label: t('staff_reports.exits'),
         value: props.summary.exit_count ?? 0,
         icon: "tabler-door-exit",
         class: "bg-label-warning",
     },
     {
-        label: "Սխալ կոդեր",
+        label: t('staff_reports.invalid_codes'),
         value: props.summary.invalid_code_count ?? 0,
         icon: "tabler-qrcode-off",
         class: "bg-label-danger",
     },
     {
-        label: "Աբոնեմենտը լրացած",
+        label: t('staff_reports.membership_expired'),
         value: props.summary.expired_subscription_count ?? 0,
         icon: "tabler-alert-triangle",
         class: "bg-label-warning",
     },
     {
-        label: "Այսօր",
+        label: t('staff_reports.today'),
         value: props.summary.today_count ?? 0,
         icon: "tabler-calendar",
         class: "bg-label-secondary",
@@ -155,7 +160,7 @@ const closeDetails = () => {
 
 const ownerDisplayName = (report) => {
     if (!report.owner) {
-        return "Չի գտնվել";
+        return t('staff_reports.not_found');
     }
 
     return `${report.owner.name ?? ""} ${report.owner.surname ?? ""}`.trim();
@@ -163,7 +168,7 @@ const ownerDisplayName = (report) => {
 
 const ownerMeta = (report) => {
     if (!report.owner) {
-        return "Owner տվյալ չկա";
+        return t('staff_reports.no_owner_data');
     }
 
     return report.owner_type === "user"
@@ -172,7 +177,7 @@ const ownerMeta = (report) => {
 };
 
 const accessLabel = (report) => {
-    return report.access_allowed ? "Թույլատրված" : "Մերժված";
+    return report.access_allowed ? t('staff_reports.allowed') : t('staff_reports.rejected');
 };
 
 const accessClass = (report) => {
@@ -196,25 +201,25 @@ const exportHref = computed(() => {
 </script>
 
 <template>
-    <Head title="Մուտք/ելք հաշվետվություն" />
+    <Head :title="t('sidebar.entry_report')" />
 
     <AppLayout>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
-                <h4 class="mb-1">Մուտք/ելք հաշվետվություն</h4>
+                <h4 class="mb-1">{{ t('sidebar.entry_report') }}</h4>
                 <p class="text-muted mb-0">
-                    Turnstile մուտքերի, ելքերի և մերժված փորձերի ամբողջական ցուցակ
+                    {{ t('staff_reports.complete_list_of_turnstile_entries_exits_and_rejected_attempts') }}
                 </p>
             </div>
 
             <div class="d-flex gap-2">
                 <a :href="exportHref" class="btn btn-outline-success">
                     <i class="icon-base ti tabler-file-export me-1"></i>
-                    Export CSV
+                    {{ t('ui.export_csv') }}
                 </a>
                 <button class="btn btn-outline-secondary" @click="resetFilters">
                     <i class="icon-base ti tabler-refresh me-1"></i>
-                    Մաքրել ֆիլտրերը
+                    {{ t('inventory.clear_filters') }}
                 </button>
             </div>
         </div>
@@ -249,20 +254,20 @@ const exportHref = computed(() => {
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Որոնում</label>
+                        <label class="form-label">{{ t('inventory.search_2') }}</label>
                         <input
                             v-model="filterForm.search"
                             type="text"
                             class="form-control"
-                            placeholder="Կոդ, MAC, անուն, հեռախոս..."
+                            :placeholder="t('staff_reports.code_mac_name_phone')"
                             @keyup.enter="applyFilters"
                         />
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Կարգավիճակ</label>
+                        <label class="form-label">{{ t('status.status') }}</label>
                         <select v-model="filterForm.status" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="status in options.statuses"
                                 :key="status.value"
@@ -274,9 +279,9 @@ const exportHref = computed(() => {
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Գործողություն</label>
+                        <label class="form-label">{{ t('people.action') }}</label>
                         <select v-model="filterForm.action" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="action in options.actions"
                                 :key="action.value"
@@ -288,9 +293,9 @@ const exportHref = computed(() => {
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Owner</label>
+                        <label class="form-label">{{ t('ui.owner') }}</label>
                         <select v-model="filterForm.owner_type" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="ownerType in options.ownerTypes"
                                 :key="ownerType.value"
@@ -302,18 +307,18 @@ const exportHref = computed(() => {
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Մուտք</label>
+                        <label class="form-label">{{ t('ui.access') }}</label>
                         <select v-model="filterForm.access_allowed" class="form-select">
-                            <option value="">Բոլորը</option>
-                            <option value="1">Թույլատրված</option>
-                            <option value="0">Մերժված</option>
+                            <option value="">{{ t('common.all') }}</option>
+                            <option value="1">{{ t('staff_reports.allowed') }}</option>
+                            <option value="0">{{ t('staff_reports.rejected') }}</option>
                         </select>
                     </div>
 
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Պատճառ</label>
+                        <label class="form-label">{{ t('inventory.reason') }}</label>
                         <select v-model="filterForm.reason" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="reason in options.reasons"
                                 :key="reason.value"
@@ -325,9 +330,9 @@ const exportHref = computed(() => {
                     </div>
 
                     <div v-if="canSelectClient" class="col-12 col-md-3">
-                        <label class="form-label">Մասնաճյուղ</label>
+                        <label class="form-label">{{ t('staff_reports.branch') }}</label>
                         <select v-model="filterForm.client_id" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="client in options.clients"
                                 :key="client.id"
@@ -339,17 +344,17 @@ const exportHref = computed(() => {
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Սկիզբ</label>
+                        <label class="form-label">{{ t('people.start') }}</label>
                         <input v-model="filterForm.start_date" type="date" class="form-control" />
                     </div>
 
                     <div class="col-6 col-md-2">
-                        <label class="form-label">Ավարտ</label>
+                        <label class="form-label">{{ t('people.end') }}</label>
                         <input v-model="filterForm.end_date" type="date" class="form-control" />
                     </div>
 
                     <div class="col-6 col-md-1">
-                        <label class="form-label">Քանակ</label>
+                        <label class="form-label">{{ t('inventory.quantity') }}</label>
                         <select v-model="filterForm.per_page" class="form-select">
                             <option value="10">10</option>
                             <option value="25">25</option>
@@ -361,7 +366,7 @@ const exportHref = computed(() => {
                     <div class="col-12 col-md-2 d-flex align-items-end">
                         <button class="btn btn-primary w-100" @click="applyFilters">
                             <i class="icon-base ti tabler-search me-1"></i>
-                            Որոնել
+                            {{ t('inventory.search') }}
                         </button>
                     </div>
                 </div>
@@ -374,16 +379,16 @@ const exportHref = computed(() => {
                     <thead class="table-light">
                         <tr>
                             <th>#</th>
-                            <th>Ժամանակ</th>
-                            <th>Owner</th>
-                            <th>Տեսակ</th>
-                            <th>Entry code</th>
-                            <th>Action</th>
-                            <th>Status</th>
-                            <th>Reason</th>
-                            <th>Access</th>
+                            <th>{{ t('staff_reports.time') }}</th>
+                            <th>{{ t('ui.owner') }}</th>
+                            <th>{{ t('people.type') }}</th>
+                            <th>{{ t('people.entry_code') }}</th>
+                            <th>{{ t('action.action') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('inventory.reason') }}</th>
+                            <th>{{ t('ui.access') }}</th>
                             <th>MAC</th>
-                            <th class="text-end">Details</th>
+                            <th class="text-end">{{ t('ui.details') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -401,7 +406,7 @@ const exportHref = computed(() => {
                                         class="rounded-circle object-fit-cover"
                                         width="34"
                                         height="34"
-                                        alt="Owner"
+                                        :alt="t('ui.owner')"
                                     />
                                     <span
                                         v-else
@@ -449,7 +454,7 @@ const exportHref = computed(() => {
                                     @click="openDetails(report)"
                                 >
                                     <i class="icon-base ti tabler-eye me-1"></i>
-                                    Դիտել
+                                    {{ t('staff_reports.view') }}
                                 </button>
                             </td>
                         </tr>
@@ -457,7 +462,7 @@ const exportHref = computed(() => {
                         <tr v-if="!reports.data.length">
                             <td colspan="11" class="text-center py-5">
                                 <i class="icon-base ti tabler-database-off me-1"></i>
-                                Տվյալներ չկան
+                                {{ t('staff_reports.no_data') }}
                             </td>
                         </tr>
                     </tbody>
@@ -479,7 +484,7 @@ const exportHref = computed(() => {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">
-                            Report #{{ selectedReport.id }}
+                            {{ t('ui.report_number', { id: selectedReport.id }) }}
                         </h5>
                         <button type="button" class="btn-close" @click="closeDetails"></button>
                     </div>
@@ -493,30 +498,30 @@ const exportHref = computed(() => {
                             "
                             class="alert alert-warning"
                         >
-                            Մուտքը մերժված է․ aboniment-ի ժամկետը լրացել է կամ active aboniment չկա
+                            {{ t('staff_reports.entry_denied_the_membership_has_expired_or_there_is_no_active_me') }}
                         </div>
 
                         <div
                             v-if="selectedReport.reason === 'invalid_entry_code'"
                             class="alert alert-danger"
                         >
-                            Մուտքը մերժված է․ սխալ կամ չգրանցված մուտքի կոդ
+                            {{ t('staff_reports.entry_denied_invalid_or_unregistered_entry_code') }}
                         </div>
 
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <div class="border rounded p-3 h-100">
-                                    <h6 class="mb-3">Owner</h6>
+                                    <h6 class="mb-3">{{ t('ui.owner') }}</h6>
                                     <p class="mb-1">
-                                        <strong>Անուն:</strong>
+                                        <strong>{{ t('staff_reports.name') }}</strong>
                                         {{ ownerDisplayName(selectedReport) }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>Email/Հեռախոս:</strong>
+                                        <strong>{{ t('staff_reports.email_phone') }}</strong>
                                         {{ ownerMeta(selectedReport) }}
                                     </p>
                                     <p class="mb-0">
-                                        <strong>Տեսակ:</strong>
+                                        <strong>{{ t('staff_reports.type') }}</strong>
                                         {{ selectedReport.owner_type || "unknown" }}
                                     </p>
                                 </div>
@@ -524,21 +529,21 @@ const exportHref = computed(() => {
 
                             <div class="col-md-6">
                                 <div class="border rounded p-3 h-100">
-                                    <h6 class="mb-3">Report</h6>
+                                    <h6 class="mb-3">{{ t('ui.report') }}</h6>
                                     <p class="mb-1">
-                                        <strong>Entry code:</strong>
+                                        <strong>{{ t('people.entry_code') }}:</strong>
                                         {{ selectedReport.entry_code || "-" }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>Status:</strong>
+                                        <strong>{{ t('status.status') }}:</strong>
                                         {{ selectedReport.status_label }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>Action:</strong>
+                                        <strong>{{ t('action.action') }}:</strong>
                                         {{ selectedReport.action_label }}
                                     </p>
                                     <p class="mb-1">
-                                        <strong>Reason:</strong>
+                                        <strong>{{ t('inventory.reason') }}:</strong>
                                         {{ selectedReport.reason_label }}
                                     </p>
                                     <p class="mb-0">
@@ -551,21 +556,21 @@ const exportHref = computed(() => {
 
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <strong>Device time:</strong>
+                                <strong>{{ t('ui.device_time') }}:</strong>
                                 <div>{{ selectedReport.device_time || "-" }}</div>
                             </div>
                             <div class="col-md-4">
-                                <strong>Detected at:</strong>
+                                <strong>{{ t('ui.detected_at') }}:</strong>
                                 <div>{{ selectedReport.detected_at || "-" }}</div>
                             </div>
                             <div class="col-md-4">
-                                <strong>Created at:</strong>
+                                <strong>{{ t('inventory.created_at') }}:</strong>
                                 <div>{{ selectedReport.created_at || "-" }}</div>
                             </div>
                         </div>
 
                         <div class="border rounded p-3 mb-4">
-                            <h6 class="mb-3">Աբոնեմենտներ</h6>
+                            <h6 class="mb-3">{{ t('sidebar.membership_plans') }}</h6>
 
                             <div
                                 v-if="selectedReport.memberships?.length"
@@ -578,13 +583,14 @@ const exportHref = computed(() => {
                                 >
                                     <div>
                                         <div class="fw-medium">
-                                            {{ membership.plan_name || "Անանուն աբոնեմենտ" }}
+                                            {{ membership.plan_name || t('staff_reports.unnamed_membership') }}
                                         </div>
                                         <small class="text-muted">
-                                            Մնացած այցեր:
-                                            {{ membership.visits_left ?? "Անսահմանափակ" }}
+                                            {{ t('staff_reports.remaining_visits', {
+                                                count: membership.visits_left ?? t('people.unlimited'),
+                                            }) }}
                                             <template v-if="membership.valid_at || membership.end_date">
-                                                · Վավեր մինչև {{ membership.valid_at || membership.end_date }}
+                                                · {{ t('staff_reports.valid_until', { date: membership.valid_at || membership.end_date }) }}
                                             </template>
                                         </small>
                                     </div>
@@ -595,17 +601,17 @@ const exportHref = computed(() => {
                             </div>
 
                             <div v-else class="text-muted small">
-                                Այս մուտքը կամ ելքը աբոնեմենտի հետ կապված չէ։
+                                {{ t('staff_reports.this_entry_or_exit_is_not_linked_to_a_membership') }}
                             </div>
                         </div>
 
-                        <h6>Payload JSON</h6>
+                        <h6>{{ t('ui.payload_json') }}</h6>
                         <pre class="bg-light border rounded p-3 mb-0"><code>{{ formatPayload(selectedReport.payload) }}</code></pre>
                     </div>
 
                     <div class="modal-footer">
                         <button class="btn btn-secondary" @click="closeDetails">
-                            Փակել
+                            {{ t('confirm.close') }}
                         </button>
                     </div>
                 </div>

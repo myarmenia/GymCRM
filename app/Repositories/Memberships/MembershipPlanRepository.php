@@ -163,6 +163,16 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
                 'description' => $translation?->description ?? '',
             ],
 
+            'translations' => $membershipPlan->translations
+                ->mapWithKeys(fn ($item) => [
+                    $item->locale => [
+                        'name' => $item->name,
+                        'description' => $item->description,
+                    ],
+                ])
+                ->all(),
+
+
             'trainers' => $membershipPlan->trainers
                 ->map(function ($trainer) {
                     return [

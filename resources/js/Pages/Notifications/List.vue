@@ -3,7 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import { useConfirm } from '@/composables/useConfirm'
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import NotificationCard from './NotificationCard.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -28,7 +33,7 @@ const isReceivedTab = computed(() => activeTab.value === 'received')
 const tabLinks = computed(() => [
     {
         key: 'received',
-        label: 'Ստացված notification-ները',
+        label: t('operations.received_notifications_2'),
         href: route('notifications.index', {
             locale: currentLocale.value,
             tab: 'received',
@@ -36,7 +41,7 @@ const tabLinks = computed(() => [
     },
     {
         key: 'sent',
-        label: 'Իմ ուղարկած notification-ները',
+        label: t('operations.notifications_i_sent'),
         href: route('notifications.index', {
             locale: currentLocale.value,
             tab: 'sent',
@@ -44,14 +49,14 @@ const tabLinks = computed(() => [
     },
     {
         key: 'reminders',
-        label: 'Հիշեցումներ',
+        label: t('operations.reminders'),
         href: route('reminders.index', {
             locale: currentLocale.value,
         }),
     },
 ])
-const pageTitle = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ' : 'Իմ ուղարկած notification-ները')
-const emptyText = computed(() => isReceivedTab.value ? 'Ստացված notification-ներ չկան։' : 'Ուղարկած notification-ներ չկան։')
+const pageTitle = computed(() => isReceivedTab.value ? t('operations.received_notifications') : t('operations.notifications_i_sent'))
+const emptyText = computed(() => isReceivedTab.value ? t('operations.there_are_no_received_notifications') : t('operations.there_are_no_sent_notifications'))
 
 watch(
     () => props.notifications?.data,
@@ -80,10 +85,8 @@ const handleNotification = event => {
 }
 
 const deleteNotification = async notification => {
-    const ok = await confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել այս notification-ը։', {
-        title: 'Ջնջել ծանուցումը',
-        confirmText: 'Հաստատել',
-        cancelText: 'Չեղարկել',
+    const ok = await confirm(translate(page.props.translations, 'app.confirm.delete_notification_message'), {
+        title: translate(page.props.translations, 'app.confirm.delete_notification_title'),
         confirmClass: 'btn-danger',
     })
 
@@ -100,10 +103,8 @@ const deleteNotification = async notification => {
 }
 
 const deleteAllNotifications = async () => {
-    const ok = await confirm('Վստա՞հ եք, որ ցանկանում եք ջնջել բոլոր notification-ները։', {
-        title: 'Ջնջել բոլոր ծանուցումները',
-        confirmText: 'Հաստատել',
-        cancelText: 'Չեղարկել',
+    const ok = await confirm(translate(page.props.translations, 'app.confirm.delete_all_notifications_message'), {
+        title: translate(page.props.translations, 'app.confirm.delete_all_notifications_title'),
         confirmClass: 'btn-danger',
     })
 
@@ -139,13 +140,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head title="Ծանուցումներ" />
+    <Head :title="t('sidebar.notifications')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Ծանուցումներ</h2>
-                <div class="text-muted">Չկարդացված՝ {{ unreadCount }}</div>
+                <h2 class="mb-1">{{ t('sidebar.notifications') }}</h2>
+                <div class="text-muted">{{ t('operations.unread_count', { count: unreadCount }) }}</div>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button
@@ -156,13 +157,13 @@ onBeforeUnmount(() => {
                     @click="deleteAllNotifications"
                 >
                     <i class="icon-base ti tabler-trash me-1"></i>
-                    Ջնջել բոլորը
+                    {{ t('operations.delete_all') }}
                 </button>
                 <Link
                     class="btn btn-primary"
                     :href="route('notifications.create', { locale: currentLocale })"
                 >
-                    Ուղարկել ծանուցում
+                    {{ t('operations.send_notification') }}
                 </Link>
             </div>
         </div>

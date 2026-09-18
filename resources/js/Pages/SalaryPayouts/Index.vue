@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -361,12 +366,12 @@ const togglePayout = payoutId => {
 const isPayoutExpanded = payoutId => expandedPayoutIds.value.includes(payoutId)
 
 const payoutStatusLabel = payout => payout.status === 'voided'
-    ? 'Չեղարկված'
+    ? t('people.cancelled')
     : Number(payout.refunded_amount) >= Number(payout.amount)
-        ? 'Ամբողջությամբ վերադարձված'
+        ? t('operations.fully_refunded')
     : payout.refunded_amount > 0
-        ? 'Մասնակի վերադարձ'
-        : 'Վճարված'
+        ? t('sales.partial_refund')
+        : t('people.paid')
 
 const payoutStatusClass = payout => payout.status === 'voided'
     ? 'bg-label-danger'
@@ -374,7 +379,7 @@ const payoutStatusClass = payout => payout.status === 'voided'
         ? 'bg-label-warning'
         : 'bg-label-success'
 
-const payableTypeLabel = type => type === 'trainer_monthly_salary' ? 'Մարզիչ' : 'Վաճառող'
+const payableTypeLabel = type => type === 'trainer_monthly_salary' ? t('roles.trainer') : t('staff_reports.salesperson')
 
 const hasAuditNotes = payout => Boolean(
     payout.notes
@@ -385,19 +390,19 @@ const hasAuditNotes = payout => Boolean(
 </script>
 
 <template>
-    <Head title="Աշխատավարձերի վճարումներ" />
+    <Head :title="t('sidebar.salary_payouts')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Աշխատավարձերի վճարումներ</h2>
+                <h2 class="mb-1">{{ t('sidebar.salary_payouts') }}</h2>
                 <div class="text-muted">
-                    Մարզիչների և վաճառողների բոլոր վճարման ենթակա գումարները մեկ տեղում
+                    {{ t('operations.all_payable_amounts_for_trainers_and_salespeople_in_one_place') }}
                 </div>
             </div>
             <a v-if="activeTab === 'history'" :href="exportHref" class="btn btn-outline-success">
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -410,7 +415,7 @@ const hasAuditNotes = payout => Boolean(
                     @click="changeTab('payables')"
                 >
                     <i class="icon-base ti tabler-list-check me-1"></i>
-                    Վճարման ենթակա աշխատավարձեր
+                    {{ t('operations.salaries_payable') }}
                     <span class="badge bg-label-primary ms-1">{{ payables.total ?? 0 }}</span>
                 </button>
             </li>
@@ -422,7 +427,7 @@ const hasAuditNotes = payout => Boolean(
                     @click="changeTab('history')"
                 >
                     <i class="icon-base ti tabler-history me-1"></i>
-                    Վճարումների պատմություն
+                    {{ t('operations.payment_history') }}
                     <span class="badge bg-label-secondary ms-1">{{ payouts.total ?? 0 }}</span>
                 </button>
             </li>
@@ -436,7 +441,7 @@ const hasAuditNotes = payout => Boolean(
                             <i class="icon-base ti tabler-list-check"></i>
                         </div>
                         <div>
-                            <div class="text-muted small">Վճարման ենթակա գրառումներ</div>
+                            <div class="text-muted small">{{ t('operations.records_payable') }}</div>
                             <div class="h4 mb-0">{{ summary.payable_count ?? 0 }}</div>
                         </div>
                     </div>
@@ -449,7 +454,7 @@ const hasAuditNotes = payout => Boolean(
                             <i class="icon-base ti tabler-cash"></i>
                         </div>
                         <div>
-                            <div class="text-muted small">Ընդհանուր վճարման ենթակա գումար</div>
+                            <div class="text-muted small">{{ t('operations.total_amount_payable') }}</div>
                             <div class="h4 mb-0">{{ formatAmount(summary.payable_amount) }} AMD</div>
                         </div>
                     </div>
@@ -460,25 +465,25 @@ const hasAuditNotes = payout => Boolean(
         <div v-if="activeTab === 'history'" class="row g-4 mb-4">
             <div class="col-6 col-xl-3">
                 <div class="card h-100"><div class="card-body">
-                    <div class="text-muted small">Վճարումների քանակ</div>
+                    <div class="text-muted small">{{ t('operations.payment_count') }}</div>
                     <div class="h4 mb-0">{{ historySummary.payout_count ?? 0 }}</div>
                 </div></div>
             </div>
             <div class="col-6 col-xl-3">
                 <div class="card h-100"><div class="card-body">
-                    <div class="text-muted small">Ընդհանուր վճարված</div>
+                    <div class="text-muted small">{{ t('sales.total_paid') }}</div>
                     <div class="h4 mb-0">{{ formatAmount(historySummary.paid_amount) }} AMD</div>
                 </div></div>
             </div>
             <div class="col-6 col-xl-3">
                 <div class="card h-100"><div class="card-body">
-                    <div class="text-muted small">Վերադարձված</div>
+                    <div class="text-muted small">{{ t('sales.refunded') }}</div>
                     <div class="h4 mb-0 text-warning">{{ formatAmount(historySummary.refunded_amount) }} AMD</div>
                 </div></div>
             </div>
             <div class="col-6 col-xl-3">
                 <div class="card h-100"><div class="card-body">
-                    <div class="text-muted small">Զուտ վճարված</div>
+                    <div class="text-muted small">{{ t('sales.net_paid') }}</div>
                     <div class="h4 mb-0 text-success">{{ formatAmount(historySummary.net_amount) }} AMD</div>
                 </div></div>
             </div>
@@ -486,14 +491,14 @@ const hasAuditNotes = payout => Boolean(
 
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Ֆիլտրեր</h5>
+                <h5 class="mb-0">{{ t('operations.filters') }}</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Աշխատակից</label>
+                        <label class="form-label">{{ t('roles.staff') }}</label>
                         <select v-model="filters.payee_id" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="option in filterOptions.payees"
                                 :key="option.value"
@@ -504,9 +509,9 @@ const hasAuditNotes = payout => Boolean(
                         </select>
                     </div>
                     <div class="col-12 col-md-2">
-                        <label class="form-label">Տեսակ</label>
+                        <label class="form-label">{{ t('people.type') }}</label>
                         <select v-model="filters.type" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="option in filterOptions.types"
                                 :key="option.value"
@@ -517,18 +522,18 @@ const hasAuditNotes = payout => Boolean(
                         </select>
                     </div>
                     <div v-if="activeTab === 'history'" class="col-12 col-md-2">
-                        <label class="form-label">Կարգավիճակ</label>
+                        <label class="form-label">{{ t('status.status') }}</label>
                         <select v-model="filters.history_status" class="form-select">
-                            <option value="">Բոլորը</option>
-                            <option value="paid">Վճարված</option>
-                            <option value="refunded">Մասնակի վերադարձ</option>
-                            <option value="voided">Չեղարկված</option>
+                            <option value="">{{ t('common.all') }}</option>
+                            <option value="paid">{{ t('people.paid') }}</option>
+                            <option value="refunded">{{ t('sales.partial_refund') }}</option>
+                            <option value="voided">{{ t('people.cancelled') }}</option>
                         </select>
                     </div>
                     <div v-if="activeTab === 'history'" class="col-12 col-md-2">
-                        <label class="form-label">Վճարման եղանակ</label>
+                        <label class="form-label">{{ t('people.payment_method') }}</label>
                         <select v-model="filters.payment_method_id" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="option in filterOptions.paymentMethods"
                                 :key="option.value"
@@ -542,9 +547,9 @@ const hasAuditNotes = payout => Boolean(
                         v-if="filterOptions.gyms?.length > 1"
                         class="col-12 col-md-2"
                     >
-                        <label class="form-label">Մարզասրահ</label>
+                        <label class="form-label">{{ t('people.gym') }}</label>
                         <select v-model="filters.gym_id" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="option in filterOptions.gyms"
                                 :key="option.value"
@@ -556,22 +561,22 @@ const hasAuditNotes = payout => Boolean(
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label">
-                            {{ activeTab === 'history' ? 'Վճարված՝ սկսած' : 'Սկսած' }}
+                            {{ activeTab === 'history' ? t('operations.paid_from') : t('operations.from') }}
                         </label>
                         <input v-model="filters.start_date" type="date" class="form-control">
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label">
-                            {{ activeTab === 'history' ? 'Վճարված՝ մինչև' : 'Մինչև' }}
+                            {{ activeTab === 'history' ? t('operations.paid_to') : t('operations.to') }}
                         </label>
                         <input v-model="filters.end_date" type="date" class="form-control">
                     </div>
                     <div class="col-12 col-md-auto d-flex gap-2">
                         <button type="button" class="btn btn-primary" @click="applyFilters">
-                            Կիրառել
+                            {{ t('staff_reports.apply') }}
                         </button>
                         <button type="button" class="btn btn-outline-secondary" @click="resetFilters">
-                            Մաքրել
+                            {{ t('inventory.clear') }}
                         </button>
                     </div>
                 </div>
@@ -584,9 +589,9 @@ const hasAuditNotes = payout => Boolean(
         >
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h5 class="mb-1">Նոր վճարում</h5>
+                    <h5 class="mb-1">{{ t('sales.new_payment') }}</h5>
                     <div class="text-muted">
-                        {{ selectedPayee }} · {{ selectedGym }} · {{ selectedPayables.length }} տող
+                        {{ t('operations.selected_payables_summary', { payee: selectedPayee, gym: selectedGym, count: selectedPayables.length }) }}
                     </div>
                 </div>
                 <div class="h4 text-primary mb-0">{{ formatAmount(selectedTotal) }} AMD</div>
@@ -594,7 +599,7 @@ const hasAuditNotes = payout => Boolean(
             <div class="card-body">
                 <div class="row g-3">
                     <div v-if="selectedPayables.length === 1" class="col-12 col-md-3">
-                        <label class="form-label">Վճարման գումար *</label>
+                        <label class="form-label">{{ t('operations.payment_amount') }}</label>
                         <input
                             v-model="singlePaymentAmount"
                             type="number"
@@ -604,17 +609,17 @@ const hasAuditNotes = payout => Boolean(
                             class="form-control"
                         >
                         <small class="text-muted">
-                            Հասանելի՝ {{ formatAmount(selectedPayables[0].amount) }} AMD
+                            {{ t('operations.available_amount', { amount: formatAmount(selectedPayables[0].amount) }) }}
                         </small>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Վճարման եղանակ *</label>
+                        <label class="form-label">{{ t('operations.payment_method') }}</label>
                         <select
                             v-model="payoutForm.payment_method_id"
                             class="form-select"
                             :class="{ 'is-invalid': payoutForm.errors.payment_method_id }"
                         >
-                            <option value="">Ընտրել</option>
+                            <option value="">{{ t('people.select') }}</option>
                             <option
                                 v-for="option in filterOptions.paymentMethods"
                                 :key="option.value"
@@ -626,7 +631,7 @@ const hasAuditNotes = payout => Boolean(
                         <div class="invalid-feedback">{{ payoutForm.errors.payment_method_id }}</div>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Վճարման ամսաթիվ *</label>
+                        <label class="form-label">{{ t('operations.payment_date_2') }}</label>
                         <input
                             v-model="payoutForm.paid_at"
                             type="datetime-local"
@@ -636,7 +641,7 @@ const hasAuditNotes = payout => Boolean(
                         <div class="invalid-feedback">{{ payoutForm.errors.paid_at }}</div>
                     </div>
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Հղում / փաստաթղթի համար</label>
+                        <label class="form-label">{{ t('inventory.reference_document_number') }}</label>
                         <input
                             v-model="payoutForm.reference"
                             type="text"
@@ -645,7 +650,7 @@ const hasAuditNotes = payout => Boolean(
                         >
                     </div>
                     <div class="col-12 col-md-3">
-                        <label class="form-label">Նշումներ</label>
+                        <label class="form-label">{{ t('people.notes') }}</label>
                         <input
                             v-model="payoutForm.notes"
                             type="text"
@@ -667,7 +672,7 @@ const hasAuditNotes = payout => Boolean(
                         :disabled="payoutForm.processing"
                         @click="selectedKeys = []"
                     >
-                        Չեղարկել ընտրությունը
+                        {{ t('operations.clear_selection') }}
                     </button>
                     <button
                         type="button"
@@ -679,7 +684,7 @@ const hasAuditNotes = payout => Boolean(
                         @click="submitPayout"
                     >
                         <i class="icon-base ti tabler-cash me-1"></i>
-                        Վճարել {{ formatAmount(selectedTotal) }} AMD
+                        {{ t('operations.pay_amount', { amount: formatAmount(selectedTotal) }) }}
                     </button>
                 </div>
             </div>
@@ -688,12 +693,12 @@ const hasAuditNotes = payout => Boolean(
         <div v-if="activeTab === 'payables'" class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
-                    <h5 class="mb-1">Վճարման ենթակա աշխատավարձեր</h5>
+                    <h5 class="mb-1">{{ t('operations.salaries_payable') }}</h5>
                     <small class="text-muted">
-                        Մեկ վճարման մեջ ընտրեք միայն նույն աշխատակցի տողերը
+                        {{ t('operations.select_only_rows_for_the_same_employee_in_one_payment') }}
                     </small>
                 </div>
-                <span class="badge bg-label-primary">{{ payables.total ?? 0 }} գրառում</span>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: payables.total ?? 0 }) }}</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
@@ -708,13 +713,13 @@ const hasAuditNotes = payout => Boolean(
                                     @change="toggleAll"
                                 >
                             </th>
-                            <th>Աշխատակից</th>
-                            <th>Տեսակ</th>
-                            <th>Հիմք</th>
-                            <th>Ամսաթիվ / ամիս</th>
-                            <th>Գեներացվել է</th>
-                            <th class="text-end">Գումար</th>
-                            <th class="text-end">Գործողություն</th>
+                            <th>{{ t('roles.staff') }}</th>
+                            <th>{{ t('people.type') }}</th>
+                            <th>{{ t('operations.basis') }}</th>
+                            <th>{{ t('operations.date_month') }}</th>
+                            <th>{{ t('operations.generated') }}</th>
+                            <th class="text-end">{{ t('people.amount') }}</th>
+                            <th class="text-end">{{ t('people.action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -755,7 +760,7 @@ const hasAuditNotes = payout => Boolean(
                                     v-if="Number(item.assigned_amount) !== Number(item.amount)"
                                     class="text-muted"
                                 >
-                                    Բաժնի սկզբնական՝ {{ formatAmount(item.assigned_amount) }}
+                                    {{ t('operations.section_initial_amount', { amount: formatAmount(item.assigned_amount) }) }}
                                 </small>
                             </td>
                             <td class="text-end">
@@ -764,17 +769,17 @@ const hasAuditNotes = payout => Boolean(
                                     type="button"
                                     class="btn btn-sm btn-outline-info"
                                     :disabled="transferForm.processing"
-                                    :title="`Փոխանցել ${item.transfer_target}-ին`"
+                                    :title="t('operations.transfer_to_target', { target: item.transfer_target })"
                                     @click="openTransferModal(item)"
                                 >
                                     <i class="icon-base ti tabler-transfer me-1"></i>
-                                    Փոխանցել
+                                    {{ t('operations.transfer') }}
                                 </button>
                             </td>
                         </tr>
                         <tr v-if="!(payables.data ?? []).length">
                             <td colspan="8" class="text-center text-muted py-4">
-                                Վճարման ենթակա աշխատավարձեր չկան։
+                                {{ t('operations.there_are_no_salaries_payable') }}
                             </td>
                         </tr>
                     </tbody>
@@ -788,21 +793,21 @@ const hasAuditNotes = payout => Boolean(
         <div v-if="activeTab === 'history'" class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
-                    <h5 class="mb-1">Վճարումների պատմություն</h5>
-                    <small class="text-muted">Վճարված և չեղարկված գործարքների audit trail</small>
+                    <h5 class="mb-1">{{ t('operations.payment_history') }}</h5>
+                    <small class="text-muted">{{ t('operations.audit_trail_of_paid_and_cancelled_transactions') }}</small>
                 </div>
-                <span class="badge bg-label-secondary">{{ payouts.total ?? 0 }} վճարում</span>
+                <span class="badge bg-label-secondary">{{ t('operations.payment_count_value', { count: payouts.total ?? 0 }) }}</span>
             </div>
             <div class="history-list">
                 <div class="history-grid history-grid-header d-none d-xl-grid">
                     <span></span>
                     <span>#</span>
-                    <span>Աշխատակից</span>
-                    <span>Եղանակ</span>
-                    <span>Վճարել է</span>
-                    <span>Վճարման ամսաթիվ</span>
-                    <span>Կարգավիճակ</span>
-                    <span class="text-end">Գումար</span>
+                    <span>{{ t('roles.staff') }}</span>
+                    <span>{{ t('sales.method') }}</span>
+                    <span>{{ t('people.amount_paid') }}</span>
+                    <span>{{ t('operations.payment_date') }}</span>
+                    <span>{{ t('status.status') }}</span>
+                    <span class="text-end">{{ t('people.amount') }}</span>
                     <span></span>
                 </div>
 
@@ -828,18 +833,18 @@ const hasAuditNotes = payout => Boolean(
                         <div class="fw-semibold">#{{ payout.id }}</div>
                         <div>
                             <div class="fw-semibold">{{ payout.payee }}</div>
-                            <small class="text-muted">{{ payout.items_count }} տող</small>
+                            <small class="text-muted">{{ t('operations.row_count_value', { count: payout.items_count }) }}</small>
                         </div>
                         <div>
-                            <small class="history-mobile-label">Եղանակ</small>
+                            <small class="history-mobile-label">{{ t('sales.method') }}</small>
                             {{ payout.payment_method }}
                         </div>
                         <div>
-                            <small class="history-mobile-label">Վճարել է</small>
+                            <small class="history-mobile-label">{{ t('people.amount_paid') }}</small>
                             {{ payout.paid_by }}
                         </div>
                         <div>
-                            <small class="history-mobile-label">Ամսաթիվ</small>
+                            <small class="history-mobile-label">{{ t('filter.date') }}</small>
                             {{ formatDateTime(payout.paid_at) }}
                         </div>
                         <div>
@@ -858,8 +863,7 @@ const hasAuditNotes = payout => Boolean(
                                 {{ formatAmount(payout.amount) }} {{ payout.currency }}
                             </div>
                             <small v-if="payout.refunded_amount > 0" class="text-muted">
-                                Վերադարձ՝ {{ formatAmount(payout.refunded_amount) }} ·
-                                Զուտ՝ {{ formatAmount(payout.net_amount) }}
+                                {{ t('operations.refund_net_summary', { refund: formatAmount(payout.refunded_amount), net: formatAmount(payout.net_amount) }) }}
                             </small>
                         </div>
                         <div class="text-xl-end">
@@ -870,7 +874,7 @@ const hasAuditNotes = payout => Boolean(
                                 :disabled="voidForm.processing"
                                 @click="openVoidModal(payout)"
                             >
-                                Չեղարկել
+                                {{ t('confirm.cancel') }}
                             </button>
                         </div>
                     </div>
@@ -878,11 +882,11 @@ const hasAuditNotes = payout => Boolean(
                     <div v-if="isPayoutExpanded(payout.id)" class="history-details">
                         <div class="d-flex justify-content-between gap-3 flex-wrap mb-3">
                             <div>
-                                <span class="text-muted">Reference:</span>
-                                <span class="ms-1 fw-medium">{{ payout.reference || 'նշված չէ' }}</span>
+                                <span class="text-muted">{{ t('logs.reference') }}:</span>
+                                <span class="ms-1 fw-medium">{{ payout.reference || t('operations.not_specified') }}</span>
                             </div>
                             <div class="text-muted">
-                                {{ payout.items_count }} աշխատավարձային տող
+                                {{ t('operations.salary_row_count', { count: payout.items_count }) }}
                             </div>
                         </div>
 
@@ -907,7 +911,7 @@ const hasAuditNotes = payout => Boolean(
                                         {{ formatAmount(item.amount) }} {{ payout.currency }}
                                     </div>
                                     <small v-if="item.refunded_amount > 0" class="text-warning">
-                                        Վերադարձ՝ {{ formatAmount(item.refunded_amount) }}
+                                        {{ t('inventory.refund_amount', { amount: formatAmount(item.refunded_amount) }) }}
                                     </small>
                                 </div>
                                 <button
@@ -917,7 +921,7 @@ const hasAuditNotes = payout => Boolean(
                                     :disabled="refundForm.processing"
                                     @click="openRefundModal(payout, item)"
                                 >
-                                    Մասնակի վերադարձ
+                                    {{ t('sales.partial_refund') }}
                                 </button>
                             </div>
                         </div>
@@ -925,16 +929,16 @@ const hasAuditNotes = payout => Boolean(
                         <div v-if="hasAuditNotes(payout)" class="audit-notes mt-4">
                             <h6 class="mb-3">
                                 <i class="icon-base ti tabler-notes me-1"></i>
-                                Նշումներ և պատճառներ
+                                {{ t('operations.notes_and_reasons') }}
                             </h6>
 
                             <div v-if="payout.notes" class="audit-note">
-                                <span class="badge bg-label-primary">Վճարման նշում</span>
+                                <span class="badge bg-label-primary">{{ t('operations.payment_note') }}</span>
                                 <div class="mt-2">{{ payout.notes }}</div>
                             </div>
 
                             <div v-if="payout.void_reason" class="audit-note audit-note-danger">
-                                <span class="badge bg-label-danger">Չեղարկման պատճառ</span>
+                                <span class="badge bg-label-danger">{{ t('operations.cancellation_reason') }}</span>
                                 <div class="mt-2">{{ payout.void_reason }}</div>
                                 <small class="text-muted">
                                     {{ payout.voided_by }} · {{ formatDateTime(payout.voided_at) }}
@@ -948,7 +952,7 @@ const hasAuditNotes = payout => Boolean(
                             >
                                 <div class="d-flex justify-content-between gap-2 flex-wrap">
                                     <span class="badge bg-label-warning">
-                                        Վերադարձ #{{ refund.id }}
+                                        {{ t('operations.refund_number', { id: refund.id }) }}
                                     </span>
                                     <strong>{{ formatAmount(refund.amount) }} {{ payout.currency }}</strong>
                                 </div>
@@ -970,14 +974,14 @@ const hasAuditNotes = payout => Boolean(
                             >
                                 <div class="d-flex justify-content-between gap-2 flex-wrap">
                                     <span class="badge bg-label-info">
-                                        Փոխանցում #{{ transfer.id }}
+                                        {{ t('operations.transfer_number', { id: transfer.id }) }}
                                     </span>
                                     <strong>{{ formatAmount(transfer.amount) }} {{ payout.currency }}</strong>
                                 </div>
                                 <div class="mt-2">
                                     {{ transfer.from_payee }} → {{ transfer.to_payee }}
                                 </div>
-                                <div>{{ transfer.reason || 'Փոխանցման պատճառ չի նշվել' }}</div>
+                                <div>{{ transfer.reason || t('operations.no_transfer_reason_specified') }}</div>
                                 <small class="text-muted">
                                     {{ transfer.transferred_by }} ·
                                     {{ formatDateTime(transfer.transferred_at) }}
@@ -991,7 +995,7 @@ const hasAuditNotes = payout => Boolean(
                     v-if="!(payouts.data ?? []).length"
                     class="text-center text-muted py-5"
                 >
-                    Վճարումների պատմություն դեռ չկա։
+                    {{ t('operations.there_is_no_payment_history_yet') }}
                 </div>
             </div>
             <div v-if="payouts.links?.length" class="card-footer">
@@ -1011,7 +1015,7 @@ const hasAuditNotes = payout => Boolean(
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h5 class="modal-title">Փոխանցել աշխատավարձը</h5>
+                            <h5 class="modal-title">{{ t('operations.transfer_salary') }}</h5>
                             <small class="text-muted">
                                 {{ transferContext.payee }} → {{ transferContext.transfer_target }}
                             </small>
@@ -1026,11 +1030,11 @@ const hasAuditNotes = payout => Boolean(
                     <form @submit.prevent="submitTransfer">
                         <div class="modal-body">
                             <div class="alert alert-info">
-                                Հասանելի փոխանցման գումար՝
+                                {{ t('operations.amount_available_for_transfer') }}
                                 <strong>{{ formatAmount(transferContext.amount) }} AMD</strong>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Փոխանցվող գումար *</label>
+                                <label class="form-label">{{ t('operations.transfer_amount') }}</label>
                                 <input
                                     v-model="transferForm.amount"
                                     type="number"
@@ -1043,7 +1047,7 @@ const hasAuditNotes = payout => Boolean(
                                 <div class="invalid-feedback">{{ transferForm.errors.amount }}</div>
                             </div>
                             <div>
-                                <label class="form-label">Փոխանցման պատճառ</label>
+                                <label class="form-label">{{ t('operations.transfer_reason') }}</label>
                                 <textarea
                                     v-model="transferForm.reason"
                                     rows="3"
@@ -1061,7 +1065,7 @@ const hasAuditNotes = payout => Boolean(
                                 :disabled="transferForm.processing"
                                 @click="closeTransferModal"
                             >
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
                             <button
                                 type="submit"
@@ -1074,7 +1078,7 @@ const hasAuditNotes = payout => Boolean(
                                     v-if="transferForm.processing"
                                     class="spinner-border spinner-border-sm me-1"
                                 ></span>
-                                Հաստատել փոխանցումը
+                                {{ t('operations.confirm_transfer') }}
                             </button>
                         </div>
                     </form>
@@ -1094,10 +1098,9 @@ const hasAuditNotes = payout => Boolean(
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h5 class="modal-title">Մասնակի վերադարձ</h5>
+                            <h5 class="modal-title">{{ t('sales.partial_refund') }}</h5>
                             <small class="text-muted">
-                                Վճարում #{{ refundContext.payout.id }} ·
-                                առավելագույնը՝ {{ formatAmount(refundContext.item.refundable_amount) }} AMD
+                                {{ t('operations.payment_maximum', { id: refundContext.payout.id, amount: formatAmount(refundContext.item.refundable_amount) }) }}
                             </small>
                         </div>
                         <button
@@ -1110,7 +1113,7 @@ const hasAuditNotes = payout => Boolean(
                     <form @submit.prevent="submitRefund">
                         <div class="modal-body">
                             <div class="mb-3">
-                                <label class="form-label">Վերադարձվող գումար *</label>
+                                <label class="form-label">{{ t('operations.refund_amount') }}</label>
                                 <input
                                     v-model="refundForm.amount"
                                     type="number"
@@ -1123,13 +1126,13 @@ const hasAuditNotes = payout => Boolean(
                                 <div class="invalid-feedback">{{ refundForm.errors.amount }}</div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Վերադարձի եղանակ *</label>
+                                <label class="form-label">{{ t('inventory.refund_method') }}</label>
                                 <select
                                     v-model="refundForm.payment_method_id"
                                     class="form-select"
                                     :class="{ 'is-invalid': refundForm.errors.payment_method_id }"
                                 >
-                                    <option value="">Ընտրել</option>
+                                    <option value="">{{ t('people.select') }}</option>
                                     <option
                                         v-for="option in filterOptions.paymentMethods"
                                         :key="option.value"
@@ -1143,7 +1146,7 @@ const hasAuditNotes = payout => Boolean(
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Վերադարձի ամսաթիվ *</label>
+                                <label class="form-label">{{ t('operations.refund_date') }}</label>
                                 <input
                                     v-model="refundForm.refunded_at"
                                     type="datetime-local"
@@ -1153,7 +1156,7 @@ const hasAuditNotes = payout => Boolean(
                                 <div class="invalid-feedback">{{ refundForm.errors.refunded_at }}</div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Հղում / փաստաթղթի համար</label>
+                                <label class="form-label">{{ t('inventory.reference_document_number') }}</label>
                                 <input
                                     v-model="refundForm.reference"
                                     type="text"
@@ -1164,7 +1167,7 @@ const hasAuditNotes = payout => Boolean(
                                 <div class="invalid-feedback">{{ refundForm.errors.reference }}</div>
                             </div>
                             <div>
-                                <label class="form-label">Պատճառ *</label>
+                                <label class="form-label">{{ t('operations.reason') }}</label>
                                 <textarea
                                     v-model="refundForm.reason"
                                     rows="3"
@@ -1182,7 +1185,7 @@ const hasAuditNotes = payout => Boolean(
                                 :disabled="refundForm.processing"
                                 @click="closeRefundModal"
                             >
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
                             <button
                                 type="submit"
@@ -1197,7 +1200,7 @@ const hasAuditNotes = payout => Boolean(
                                     v-if="refundForm.processing"
                                     class="spinner-border spinner-border-sm me-1"
                                 ></span>
-                                Գրանցել վերադարձը
+                                {{ t('inventory.record_the_refund') }}
                             </button>
                         </div>
                     </form>
@@ -1217,9 +1220,9 @@ const hasAuditNotes = payout => Boolean(
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h5 class="modal-title">Չեղարկել վճարումը</h5>
+                            <h5 class="modal-title">{{ t('operations.cancel_payment') }}</h5>
                             <small class="text-muted">
-                                Վճարում #{{ voidContext.id }} ·
+                                {{ t('operations.payment_number', { id: voidContext.id }) }} ·
                                 {{ formatAmount(voidContext.net_amount) }} {{ voidContext.currency }}
                             </small>
                         </div>
@@ -1233,9 +1236,9 @@ const hasAuditNotes = payout => Boolean(
                     <form @submit.prevent="submitVoid">
                         <div class="modal-body">
                             <div class="alert alert-warning">
-                                Գործողությունը կվերադարձնի վճարված մնացորդը համապատասխան աշխատավարձերին։
+                                {{ t('operations.this_action_will_return_the_paid_balance_to_the_corresponding_sa') }}
                             </div>
-                            <label class="form-label">Չեղարկման պատճառ *</label>
+                            <label class="form-label">{{ t('operations.cancellation_reason_2') }}</label>
                             <textarea
                                 v-model="voidForm.reason"
                                 rows="4"
@@ -1252,7 +1255,7 @@ const hasAuditNotes = payout => Boolean(
                                 :disabled="voidForm.processing"
                                 @click="closeVoidModal"
                             >
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
                             <button
                                 type="submit"
@@ -1263,7 +1266,7 @@ const hasAuditNotes = payout => Boolean(
                                     v-if="voidForm.processing"
                                     class="spinner-border spinner-border-sm me-1"
                                 ></span>
-                                Հաստատել չեղարկումը
+                                {{ t('operations.confirm_cancellation') }}
                             </button>
                         </div>
                     </form>
