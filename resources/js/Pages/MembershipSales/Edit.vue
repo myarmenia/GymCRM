@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
@@ -7,6 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -117,42 +119,42 @@ const paymentMethodName = method => method?.translations?.find(item => item.loca
 const cardTypeName = cardType => cardType?.name ?? cardType?.slug ?? (cardType?.id ? `#${cardType.id}` : '-')
 
 const discountTypeLabel = type => ({
-    fixed: 'Ֆիքսված գումար',
-    percent: 'Տոկոս %',
+    fixed: t('sales.fixed_amount'),
+    percent: t('sales.percent'),
 }[type] ?? type ?? '-')
 
 const paymentTypeLabel = type => ({
-    payment: 'Վճարում',
-    refund: 'Վերադարձ',
+    payment: t('people.payment'),
+    refund: t('people.refund'),
 }[type] ?? type ?? '-')
 
 const paymentStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    pending: t('people.waiting'),
+    paid: t('people.paid'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 
 const saleStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    partial: 'Մասնակի',
-    paid: 'Վճարված',
-    refunded: 'Վերադարձված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    partial: t('sales.partial'),
+    paid: t('people.paid'),
+    refunded: t('sales.refunded'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const planTypeLabel = type => ({
-    day: 'Օրական',
-    month: 'Ամսական',
-    year: 'Տարեկան',
-    visit: 'Այցելություններով',
-    period: 'Ժամանակահատված',
+    day: t('sales.daily'),
+    month: t('sales.monthly'),
+    year: t('sales.yearly'),
+    visit: t('sales.by_visits'),
+    period: t('membership.period'),
 }[type] ?? type ?? '-')
 const membershipStatusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    expired: 'Ժամկետանց',
-    cancelled: 'Չեղարկված',
+    waiting: t('people.waiting'),
+    active: t('membership.active'),
+    frozen: t('people.frozen'),
+    expired: t('people.expired'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const membershipPlanName = membershipItem => planName(membershipItem?.membership_plan)
@@ -346,12 +348,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Խմբագրել աբոնեմենտի վաճառքը" />
+    <Head :title="t('sales.edit_membership_sale')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Խմբագրել աբոնեմենտի վաճառքը
+                {{ t('sales.edit_membership_sale') }}
             </h2>
         </template>
 
@@ -362,7 +364,7 @@ const submit = () => {
             >
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Հաճախորդ" />
+                        <InputLabel :value="t('sales.client')" />
                         <input
                             class="form-control"
                             :value="formatPerson(selectedPerson)"
@@ -372,7 +374,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Աբոնեմենտ" />
+                        <InputLabel :value="t('people.membership')" />
                         <input
                             class="form-control"
                             :value="planName(selectedPlan)"
@@ -384,7 +386,7 @@ const submit = () => {
 
                 <div class="row">
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Գին" />
+                        <InputLabel :value="t('membership.price')" />
                         <input
                             class="form-control"
                             :value="planPrice.toFixed(2)"
@@ -393,7 +395,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Սկիզբ" />
+                        <InputLabel :value="t('membership.start')" />
                         <input
                             class="form-control"
                             :value="form.start_date"
@@ -403,7 +405,7 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Ավարտ" />
+                        <InputLabel :value="t('membership.end')" />
                         <input
                             class="form-control"
                             :value="form.end_date"
@@ -418,37 +420,37 @@ const submit = () => {
                     class="border rounded p-4 mb-4"
                 >
                     <h5 class="mb-4">
-                        Աբոնեմենտի տվյալներ
+                        {{ t('sales.membership_details') }}
                     </h5>
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <span class="text-muted d-block">Տեսակ</span>
+                            <span class="text-muted d-block">{{ t('people.type') }}</span>
                             <strong>{{ planTypeLabel(selectedPlan.duration_type) }}</strong>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <span class="text-muted d-block">Ամիսների քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.month_count') }}</span>
                             <strong>{{ durationLabel(selectedPlan) }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.visits_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Այցելությունների քանակ</span>
+                            <span class="text-muted d-block">{{ t('sales.number_of_visits') }}</span>
                             <strong>{{ selectedPlan.visits_limit }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.guest_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Հյուրերի քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.guest_count') }}</span>
                             <strong>{{ selectedPlan.guest_limit }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.freeze_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Սառեցումների քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.freeze_count') }}</span>
                             <strong>{{ selectedPlan.freeze_limit }}</strong>
                         </div>
                     </div>
@@ -459,7 +461,7 @@ const submit = () => {
                     class="border rounded p-4 mb-4"
                 >
                     <h5 class="mb-4">
-                        Հաճախորդի ընթացիկ աբոնեմենտներ
+                        {{ t('sales.client_s_current_memberships') }}
                     </h5>
 
                     <div class="row">
@@ -473,30 +475,30 @@ const submit = () => {
                                     {{ membershipPlanName(membershipItem) }}
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Կարգավիճակ</span>
+                                    <span class="text-muted">{{ t('membership.status') }}</span>
                                     <span>{{ membershipStatusLabel(membershipItem.status) }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Սկիզբ</span>
+                                    <span class="text-muted">{{ t('membership.start') }}</span>
                                     <span>{{ formatDate(membershipItem.start_date) }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Ավարտ / վավեր է մինչև</span>
+                                    <span class="text-muted">{{ t('sales.end_valid_until') }}</span>
                                     <span>{{ formatDate(membershipValidityDate(membershipItem)) }}</span>
                                 </div>
                                 <div
                                     v-if="membershipItem.visits_left !== null"
                                     class="small d-flex justify-content-between mb-1"
                                 >
-                                    <span class="text-muted">Մնացած այցելություններ</span>
+                                    <span class="text-muted">{{ t('sales.remaining_visits') }}</span>
                                     <span>{{ membershipItem.visits_left }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Մնացած հյուրեր</span>
+                                    <span class="text-muted">{{ t('sales.remaining_guests') }}</span>
                                     <span>{{ membershipItem.guest_left ?? 0 }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between">
-                                    <span class="text-muted">Մնացած սառեցումներ</span>
+                                    <span class="text-muted">{{ t('sales.remaining_freezes') }}</span>
                                     <span>{{ membershipItem.freeze_left ?? 0 }}</span>
                                 </div>
                             </div>
@@ -506,7 +508,7 @@ const submit = () => {
 
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Մարզիչ" />
+                        <InputLabel :value="t('people.trainer')" />
                         <div
                             v-if="selectedTrainer"
                             class="trainer-card readonly mt-2"
@@ -523,13 +525,13 @@ const submit = () => {
                             v-else
                             class="alert alert-secondary mt-2 mb-0"
                         >
-                            Առանց մարզչի
+                            {{ t('sales.without_trainer') }}
                         </div>
                         <InputError :message="form.errors.trainer_id" />
                     </div>
 
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Նշումներ" />
+                        <InputLabel :value="t('people.notes')" />
                         <textarea
                             class="form-control"
                             rows="4"
@@ -542,14 +544,14 @@ const submit = () => {
 
                 <div class="border rounded p-4 mb-4">
                     <h5 class="mb-4">
-                        Աբոնեմենտի զեղչեր
+                        {{ t('sales.membership_discounts') }}
                     </h5>
 
                     <div
                         v-if="discountsLocked"
                         class="alert alert-warning"
                     >
-                        Վերջնական վճարումն արդեն կատարված է։ Այս վաճառքի զեղչերը հնարավոր չէ ավելացնել կամ փոփոխել։
+                        {{ t('sales.the_final_payment_is_complete_discounts_on_this_sale_cannot_be_a') }}
                     </div>
 
                     <div
@@ -557,7 +559,7 @@ const submit = () => {
                         class="mb-4"
                     >
                         <h6 class="mb-3">
-                            Կիրառված զեղչեր
+                            {{ t('sales.applied_discounts') }}
                         </h6>
                         <div class="discount-grid">
                             <div
@@ -570,15 +572,15 @@ const submit = () => {
                                     {{ discountName(discount) }}
                                 </div>
                                 <div class="d-flex justify-content-between mb-2 w-100">
-                                    <span>Տեսակ</span>
+                                    <span>{{ t('people.type') }}</span>
                                     <span>{{ discountTypeLabel(discount.type) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2 w-100">
-                                    <span>Արժեք</span>
+                                    <span>{{ t('membership.cost') }}</span>
                                     <span>{{ discount.value }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between w-100">
-                                    <span>Հաշվարկված զեղչ</span>
+                                    <span>{{ t('sales.calculated_discount') }}</span>
                                     <strong>{{ membershipDiscountRowAmount(discount).toFixed(2) }}</strong>
                                 </div>
                             </div>
@@ -590,7 +592,7 @@ const submit = () => {
                         class="mb-4"
                     >
                         <h6 class="mb-3">
-                            Ավելացնել զեղչ
+                            {{ t('sales.add_discount') }}
                         </h6>
                         <div class="discount-grid">
                             <div
@@ -605,15 +607,15 @@ const submit = () => {
                                     {{ discountName(discount) }}
                                 </div>
                                 <div class="d-flex justify-content-between mb-2 w-100">
-                                    <span>Տեսակ</span>
+                                    <span>{{ t('people.type') }}</span>
                                     <span>{{ discountTypeLabel(discount.type) }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2 w-100">
-                                    <span>Արժեք</span>
+                                    <span>{{ t('membership.cost') }}</span>
                                     <span>{{ discount.value }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between w-100">
-                                    <span>Հաշվարկված զեղչ</span>
+                                    <span>{{ t('sales.calculated_discount') }}</span>
                                     <strong>{{ membershipDiscountRowAmount(discount).toFixed(2) }}</strong>
                                 </div>
                             </div>
@@ -624,37 +626,37 @@ const submit = () => {
                         v-if="!existingMembershipDiscounts.length && !availableMembershipDiscounts.length"
                         class="alert alert-secondary mb-4"
                     >
-                        Այս աբոնեմենտի համար զեղչեր չկան
+                        {{ t('sales.no_discounts_for_this_membership') }}
                     </div>
 
                     <div class="alert alert-info mb-0">
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Աբոնեմենտի զեղչեր</span>
+                            <span>{{ t('sales.membership_discounts') }}</span>
                             <strong>{{ membershipDiscountAmount.toFixed(2) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Զեղչված գին</span>
+                            <span>{{ t('sales.discounted_price') }}</span>
                             <strong>{{ membershipDiscountedPrice.toFixed(2) }}</strong>
                         </div>
                     </div>
                 </div>
 
                 <div class="border rounded p-4 mb-4">
-                    <InputLabel value="Ձեռքով զեղչ" />
+                    <InputLabel :value="t('sales.manual_discount')" />
                     <div
                         v-if="hasExistingManualDiscount"
                         class="alert alert-secondary mt-3 mb-0"
                     >
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Զեղչի տեսակ</span>
+                            <span>{{ t('sales.discount_type') }}</span>
                             <strong>{{ discountTypeLabel(membershipSale.discount_type) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Զեղչի արժեք</span>
+                            <span>{{ t('sales.discount_value') }}</span>
                             <strong>{{ membershipSale.discount_value ?? '-' }}</strong>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Ձեռքով զեղչ</span>
+                            <span>{{ t('sales.manual_discount') }}</span>
                             <strong>{{ manualDiscountAmount.toFixed(2) }}</strong>
                         </div>
                     </div>
@@ -669,14 +671,14 @@ const submit = () => {
                             class="form-check-input"
                         />
                         <span class="form-check-label">
-                            Կիրառել ձեռքով զեղչ
+                            {{ t('sales.apply_manual_discount') }}
                         </span>
                     </label>
                     <div
                         v-else
                         class="alert alert-warning mt-3 mb-0"
                     >
-                        Վերջնական վճարումից հետո ձեռքով զեղչ ավելացնել հնարավոր չէ։
+                        {{ t('sales.a_manual_discount_cannot_be_added_after_the_final_payment') }}
                     </div>
                     <InputError :message="form.errors.apply_discount" />
 
@@ -686,7 +688,7 @@ const submit = () => {
                     >
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <InputLabel value="Զեղչի տեսակ" />
+                                <InputLabel :value="t('sales.discount_type')" />
                                 <select
                                     v-model="form.discount_type"
                                     class="form-select"
@@ -703,7 +705,7 @@ const submit = () => {
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <InputLabel value="Զեղչի արժեք" />
+                                <InputLabel :value="t('sales.discount_value')" />
                                 <input
                                     v-model="form.discount_value"
                                     type="number"
@@ -718,7 +720,7 @@ const submit = () => {
 
                         <div class="alert alert-info mb-0">
                             <div class="d-flex justify-content-between">
-                                <span>Ձեռքով զեղչ</span>
+                                <span>{{ t('sales.manual_discount') }}</span>
                                 <strong>{{ manualDiscountAmount.toFixed(2) }}</strong>
                             </div>
                         </div>
@@ -729,46 +731,46 @@ const submit = () => {
                     <div class="col-lg-6 mb-4">
                         <div class="border rounded p-4 h-100">
                             <h5 class="mb-4">
-                                Վճարում
+                                {{ t('people.payment') }}
                             </h5>
 
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարման եղանակ</span>
+                                <span>{{ t('people.payment_method') }}</span>
                                 <strong>{{ paymentMethodName(selectedPaymentMethod) }}</strong>
                             </div>
                             <div
                                 v-if="selectedCardType"
                                 class="d-flex justify-content-between mb-2"
                             >
-                                <span>Քարտի տեսակ</span>
+                                <span>{{ t('sales.card_type') }}</span>
                                 <strong>{{ cardTypeName(selectedCardType) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարման տեսակ</span>
+                                <span>{{ t('sales.payment_type') }}</span>
                                 <strong>{{ paymentTypeLabel(payment?.type) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարման կարգավիճակ</span>
+                                <span>{{ t('sales.payment_status') }}</span>
                                 <strong>{{ paymentStatusLabel(payment?.status) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Ընդհանուր վճարված</span>
+                                <span>{{ t('sales.total_paid') }}</span>
                                 <strong>{{ paidAmount.toFixed(2) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Ընդհանուր վերադարձված</span>
+                                <span>{{ t('sales.total_refunded') }}</span>
                                 <strong>{{ refundedAmount.toFixed(2) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Զուտ վճարված</span>
+                                <span>{{ t('sales.net_paid') }}</span>
                                 <strong>{{ netPaidAmount.toFixed(2) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>ՀԴՄ</span>
-                                <strong>{{ form.is_hdm ? 'Այո' : 'Ոչ' }}</strong>
+                                <span>{{ t('sales.fiscal_receipt_2') }}</span>
+                                <strong>{{ form.is_hdm ? t('membership.yes') : t('membership.no') }}</strong>
                             </div>
                             <div class="mt-3">
-                                <InputLabel value="Վճարման նշումներ" />
+                                <InputLabel :value="t('sales.payment_notes')" />
                                 <textarea
                                     class="form-control"
                                     rows="2"
@@ -782,56 +784,56 @@ const submit = () => {
                     <div class="col-lg-6 mb-4">
                         <div class="border rounded p-4 h-100">
                             <h5 class="mb-4">
-                                Գնի հաշվարկ
+                                {{ t('sales.price_calculation') }}
                             </h5>
 
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Աբոնեմենտի գին</span>
+                                <span>{{ t('sales.membership_price') }}</span>
                                 <span>{{ planPrice.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Աբոնեմենտի զեղչ</span>
+                                <span>{{ t('sales.membership_discount') }}</span>
                                 <span>- {{ membershipDiscountAmount.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Զեղչված գին</span>
+                                <span>{{ t('sales.discounted_price') }}</span>
                                 <span>{{ membershipDiscountedPrice.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Ձեռքով զեղչ</span>
+                                <span>{{ t('sales.manual_discount') }}</span>
                                 <span>- {{ manualDiscountAmount.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Ընդհանուր զեղչ</span>
+                                <span>{{ t('sales.total_discount') }}</span>
                                 <span>- {{ discountAmount.toFixed(2) }}</span>
                             </div>
 
                             <hr>
 
                             <div class="d-flex justify-content-between fw-bold mb-2">
-                                <span>Վերջնական գին</span>
+                                <span>{{ t('sales.final_price') }}</span>
                                 <span class="text-primary">{{ finalTotal.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Ընդհանուր վճարված</span>
+                                <span>{{ t('sales.total_paid') }}</span>
                                 <span class="text-success">{{ paidAmount.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Ընդհանուր վերադարձված</span>
+                                <span>{{ t('sales.total_refunded') }}</span>
                                 <span>- {{ refundedAmount.toFixed(2) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Զուտ վճարված</span>
+                                <span>{{ t('sales.net_paid') }}</span>
                                 <span>{{ netPaidAmount.toFixed(2) }}</span>
                             </div>
                             <div class="alert alert-success mt-3 mb-3 py-3">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">Մնացորդ</span>
+                                    <span class="fw-bold">{{ t('sales.balance') }}</span>
                                     <span class="fw-bold fs-4">{{ remaining.toFixed(2) }}</span>
                                 </div>
                             </div>
                             <div class="small text-muted d-flex justify-content-between">
-                                <span>Վաճառքի կարգավիճակ</span>
+                                <span>{{ t('sales.sale_status') }}</span>
                                 <span>{{ saleStatusLabel(calculatedSaleStatus) }}</span>
                             </div>
                         </div>
@@ -843,10 +845,10 @@ const submit = () => {
                         class="btn btn-label-secondary"
                         :href="route('membership_sale.list', { locale: currentLocale })"
                     >
-                        Վերադառնալ ցանկին
+                        {{ t('sales.back_to_list') }}
                     </Link>
                     <PrimaryButton :disabled="form.processing">
-                        Թարմացնել
+                        {{ t('membership.update') }}
                     </PrimaryButton>
                 </div>
             </form>

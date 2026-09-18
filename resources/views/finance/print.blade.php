@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="hy">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Դրամարկղ</title>
+    <title>{{ __('backend_messages.cash_register') }}</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 24px; color: #222; font-family: DejaVu Sans, Arial, sans-serif; font-size: 12px; }
@@ -24,13 +24,13 @@
     </style>
 </head>
 <body>
-    <h1>Դրամարկղ</h1>
-    <div class="printed-at">Տպվել է՝ {{ now()->format('d.m.Y H:i') }}</div>
+    <h1>{{ __('backend_messages.cash_register') }}</h1>
+    <div class="printed-at">{{ __('backend_messages.printed_date', ['date' => now()->format('d.m.Y H:i')]) }}</div>
 
     @if (!empty($filters))
         <div class="filters">
             @foreach ($filters as $label => $value)
-                <div><strong>{{ $label }}՝</strong> {{ $value }}</div>
+                <div><strong>{{ $label }}:</strong> {{ $value }}</div>
             @endforeach
         </div>
     @endif
@@ -38,7 +38,7 @@
     <div class="summary">
         @foreach ($summary['rows'] as $item)
             <div>
-                <strong>{{ $item['label'] }}՝</strong>
+                <strong>{{ $item['label'] }}:</strong>
                 {{ number_format((float) $item['value'], 0, '.', ' ') }} ֏
             </div>
         @endforeach
@@ -71,7 +71,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ count($columns) }}" class="empty">Գործարքներ չկան</td>
+                    <td colspan="{{ count($columns) }}" class="empty">{{ __('backend_messages.no_transactions') }}</td>
                 </tr>
             @endforelse
         </tbody>

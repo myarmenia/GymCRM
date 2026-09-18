@@ -28,13 +28,13 @@ class ReminderController extends Controller
 
         return redirect()
             ->route('reminders.index', ['locale' => $locale])
-            ->with('success', 'Հիշեցումը պլանավորվել է։');
+            ->with('success', __('backend_messages.reminder_scheduled'));
     }
 
     public function cancel(Request $request, string $locale, Reminder $reminder)
     {
         $this->reminderService->cancel($request->user(), $reminder);
 
-        return back()->with('success', 'Հիշեցումը չեղարկվել է։');
+        return back()->with('success', __('backend_messages.reminder_cancelled'));
     }
 }

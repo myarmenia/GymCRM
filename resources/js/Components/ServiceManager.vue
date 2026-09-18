@@ -5,6 +5,7 @@ import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import { useAlert } from '@/composables/useAlert';
 import { useConfirm } from '@/composables/useConfirm';
+import { translate } from '/resources/js/trans';
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -223,7 +224,7 @@ const resetForm = () => {
 
 // Удаление услуги
 const removeService = async (service) => {
-    const confirmed = await confirm(`Remove "${service.name}" from this booking?`);
+    const confirmed = await confirm(translate(page.props.translations, 'app.confirm.remove_service', { name: service.name }));
 
     if (!confirmed) return;
 

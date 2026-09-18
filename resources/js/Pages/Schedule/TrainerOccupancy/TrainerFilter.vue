@@ -1,4 +1,9 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 defineProps({
     trainers: {
         type: Array,
@@ -28,7 +33,7 @@ const handleChange = event => {
                 class="form-label"
                 for="trainer-filter"
             >
-                Մարզիչ
+                {{ t('roles.trainer') }}
             </label>
             <select
                 id="trainer-filter"
@@ -36,7 +41,7 @@ const handleChange = event => {
                 :value="selectedTrainer"
                 @change="handleChange"
             >
-                <option value="">Բոլոր մարզիչները</option>
+                <option value="">{{ t('sales.all_trainers') }}</option>
                 <option
                     v-for="trainer in trainers"
                     :key="trainer.id"

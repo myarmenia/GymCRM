@@ -71,16 +71,16 @@ class StoreNotificationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'send_to_all.required' => 'Ուղարկման տեսակը պարտադիր է։',
-            'send_to_all.boolean' => 'Ուղարկման տեսակը սխալ է։',
-            'recipient_ids.required' => 'Ընտրեք առնվազն մեկ ստացող։',
-            'recipient_ids.array' => 'Ստացողների տվյալները սխալ են։',
-            'recipient_ids.min' => 'Ընտրեք առնվազն մեկ ստացող։',
-            'recipient_ids.*.exists' => 'Ընտրված ստացողներից մեկը չի գտնվել։',
-            'about_id.exists' => 'Ընտրված հաճախորդը չի գտնվել։',
-            'title.required' => 'Վերնագիրը պարտադիր է։',
-            'title.max' => 'Վերնագիրը չափազանց երկար է։',
-            'description.required' => 'Նկարագրությունը պարտադիր է։',
+            'send_to_all.required' => __('backend_messages.delivery_type_required'),
+            'send_to_all.boolean' => __('backend_messages.delivery_type_invalid'),
+            'recipient_ids.required' => __('backend_messages.select_least_one_recipient'),
+            'recipient_ids.array' => __('backend_messages.recipient_data_invalid'),
+            'recipient_ids.min' => __('backend_messages.select_least_one_recipient'),
+            'recipient_ids.*.exists' => __('backend_messages.one_selected_recipients_not_found'),
+            'about_id.exists' => __('backend_messages.selected_customer_not_found'),
+            'title.required' => __('backend_messages.title_required'),
+            'title.max' => __('backend_messages.title_too_long'),
+            'description.required' => __('backend_messages.description_required'),
         ];
     }
 }

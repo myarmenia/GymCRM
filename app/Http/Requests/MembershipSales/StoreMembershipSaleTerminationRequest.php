@@ -22,9 +22,9 @@ class StoreMembershipSaleTerminationRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'refund_amount.required' => 'Վերադարձի գումարը պարտադիր է։',
-            'refund_amount.numeric' => 'Վերադարձի գումարը պետք է լինի թիվ։',
-            'refund_amount.gt' => 'Վերադարձի գումարը պետք է լինի 0-ից մեծ։',
+            'refund_amount.required' => __('backend.membership_sales.refund_amount_required'),
+            'refund_amount.numeric' => __('backend.membership_sales.refund_amount_numeric'),
+            'refund_amount.gt' => __('backend.membership_sales.refund_amount_positive'),
         ];
     }
 }

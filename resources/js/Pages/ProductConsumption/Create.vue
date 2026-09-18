@@ -1,6 +1,11 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { Head, useForm, usePage } from "@inertiajs/vue3";
 import AppLayout from "@/Layouts/Index.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     products: {
@@ -57,11 +62,11 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Create Product Consumption" />
+    <Head :title="t('sidebar.product_consumption')" />
     <AppLayout>
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Ապրանքների սպառում</h5>
+                <h5 class="mb-0">{{ t('sidebar.product_consumption') }}</h5>
             </div>
 
             <div class="card-body">
@@ -70,13 +75,13 @@ const submit = () => {
                         <table class="table table-bordered align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Ապրանք</th>
-                                    <th>Չափման միավոր</th>
-                                    <th>Հասանելի քանակ</th>
-                                    <th>Սպառմամ քանակ</th>
-                                    <th>Նկարագրություն</th>
-                                    <th>Գնման գնով</th>
-                                    <th>Վաճառքի գնով</th>
+                                    <th>{{ t('inventory.product') }}</th>
+                                    <th>{{ t('inventory.unit_of_measure') }}</th>
+                                    <th>{{ t('inventory.available_quantity') }}</th>
+                                    <th>{{ t('inventory.consumption_quantity') }}</th>
+                                    <th>{{ t('people.description') }}</th>
+                                    <th>{{ t('inventory.at_purchase_price') }}</th>
+                                    <th>{{ t('inventory.at_sale_price') }}</th>
                                 </tr>
                             </thead>
 
@@ -99,7 +104,7 @@ const submit = () => {
                                             min="0"
                                             class="form-control"
                                             :max="product.available_quantity"
-                                            placeholder="Enter quantity"
+                                            :placeholder="t('ui.enter_quantity')"
                                             @input="calculatePrices(product)"
                                             @wheel.prevent
                                         />
@@ -113,8 +118,7 @@ const submit = () => {
                                             "
                                             class="text-danger mt-1 small"
                                         >
-                                            Քանակը չի կարող լինել ավելի մեծ, քան
-                                            պաշարը
+                                            {{ t('inventory.quantity_exceeds_stock') }}
                                         </div>
 
                                         <div
@@ -124,7 +128,7 @@ const submit = () => {
                                             "
                                             class="text-danger mt-1 small"
                                         >
-                                            Քանակը պետք է մեծ լինի 0-ից
+                                            {{ t('inventory.quantity_must_be_greater_than_0') }}
                                         </div>
 
                                         <div class="text-danger mt-1 small">
@@ -141,7 +145,7 @@ const submit = () => {
                                             v-model="product.description"
                                             class="form-control"
                                             rows="2"
-                                            placeholder="Description"
+                                            :placeholder="t('people.description')"
                                         ></textarea>
 
                                         <div class="text-danger mt-1 small">
@@ -164,7 +168,7 @@ const submit = () => {
 
                                 <tr v-if="!form.products.length">
                                     <td colspan="5" class="text-center">
-                                        Ընտրված ապրանքներ չկան
+                                        {{ t('inventory.no_products_selected') }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -180,7 +184,7 @@ const submit = () => {
                         class="btn btn-primary mt-3"
                         :disabled="form.processing || hasInvalidProducts()"
                     >
-                        Պահպանել սպառումը
+                        {{ t('inventory.save_consumption') }}
                     </button>
                 </form>
             </div>

@@ -1,4 +1,9 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 defineProps({
     event: {
         type: Object,
@@ -24,15 +29,15 @@ defineProps({
 
         <div class="event-details">
             <div>
-                <span class="text-muted">Մարզիչ՝</span>
+                <span class="text-muted">{{ t('operations.trainer') }}</span>
                 {{ event.trainer_name }}
             </div>
             <div>
-                <span class="text-muted">Ժամ՝</span>
+                <span class="text-muted">{{ t('operations.time') }}</span>
                 {{ event.start_time }} - {{ event.end_time }}
             </div>
             <div>
-                <span class="text-muted">Գրաֆիկ՝</span>
+                <span class="text-muted">{{ t('operations.schedule') }}</span>
                 {{ event.schedule_name }}
             </div>
         </div>

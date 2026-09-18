@@ -47,7 +47,7 @@ class MembershipCategory extends Model
     public function getLockReasonAttribute(): ?string
     {
         return $this->is_locked
-            ? 'Այս կատեգորիային կցված են աբոնեմենտներ։ Այն հնարավոր չէ ջնջել կամ տեղափոխել այլ մարզասրահ։'
+            ? __('backend_messages.memberships_assigned_this_category_it_cannot_be_deleted_or_moved_another_gym')
             : null;
     }
 }

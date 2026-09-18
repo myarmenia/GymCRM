@@ -64,7 +64,7 @@ class UpdateEntryCodeRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'token.unique' => 'Այս token-ն արդեն գոյություն ունի այս մարզադահլիճի համար:',
+            'token.unique' => __('backend_messages.this_token_already_exists_this_gym'),
         ];
     }
 }

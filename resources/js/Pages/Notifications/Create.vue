@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, watch } from 'vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
@@ -6,6 +8,9 @@ import InputError from '@/Components/InputError.vue'
 import MultiSelect from '@/Components/MultiSelect.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import PersonSelect from './PersonSelect.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -82,16 +87,16 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ուղարկել ծանուցում" />
+    <Head :title="t('operations.send_notification')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
-            <h2 class="mb-0">Ուղարկել ծանուցում</h2>
+            <h2 class="mb-0">{{ t('operations.send_notification') }}</h2>
             <Link
                 class="btn btn-secondary"
                 :href="route('notifications.index', { locale: currentLocale })"
             >
-                Վերադառնալ
+                {{ t('people.back') }}
             </Link>
         </div>
 
@@ -102,7 +107,7 @@ const submit = () => {
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-12">
-                        <label class="form-label">Ուղարկման տեսակ</label>
+                        <label class="form-label">{{ t('operations.delivery_type') }}</label>
                         <div class="d-flex gap-4">
                             <label class="form-check">
                                 <input
@@ -111,7 +116,7 @@ const submit = () => {
                                     type="radio"
                                     value="now"
                                 >
-                                <span class="form-check-label">Ուղարկել հիմա</span>
+                                <span class="form-check-label">{{ t('operations.send_now') }}</span>
                             </label>
                             <label class="form-check">
                                 <input
@@ -120,7 +125,7 @@ const submit = () => {
                                     type="radio"
                                     value="scheduled"
                                 >
-                                <span class="form-check-label">Պլանավորել որպես հիշեցում</span>
+                                <span class="form-check-label">{{ t('operations.schedule_as_reminder') }}</span>
                             </label>
                         </div>
                     </div>
@@ -138,7 +143,7 @@ const submit = () => {
                                 class="form-check-label"
                                 for="send_to_all"
                             >
-                                Ուղարկել բոլոր օգտատերերին
+                                {{ t('operations.send_to_all_users') }}
                             </label>
                         </div>
                     </div>
@@ -147,12 +152,12 @@ const submit = () => {
                         v-if="form.delivery_mode === 'scheduled'"
                         class="col-md-6"
                     >
-                        <label class="form-label">Կատեգորիա</label>
+                        <label class="form-label">{{ t('people.category') }}</label>
                         <select
                             v-model="form.category_id"
                             class="form-select"
                         >
-                            <option value="" disabled>Ընտրեք կատեգորիան</option>
+                            <option value="" disabled>{{ t('operations.select_category') }}</option>
                             <option
                                 v-for="category in reminderCategories"
                                 :key="category.value"
@@ -168,7 +173,7 @@ const submit = () => {
                         v-if="form.delivery_mode === 'scheduled'"
                         class="col-md-6"
                     >
-                        <label class="form-label">Ուղարկման օր և ժամ</label>
+                        <label class="form-label">{{ t('people.send_at') }}</label>
                         <input
                             v-model="form.scheduled_at"
                             type="datetime-local"
@@ -181,21 +186,21 @@ const submit = () => {
                         v-if="!form.send_to_all"
                         class="col-12"
                     >
-                        <label class="form-label">Ստացող օգտատերեր</label>
+                        <label class="form-label">{{ t('operations.recipient_users') }}</label>
                         <MultiSelect
                             v-model="form.recipient_ids"
                             :options="form.delivery_mode === 'scheduled' ? reminderUsers : users"
-                            placeholder="Ընտրեք օգտատերերին"
+                            :placeholder="t('operations.select_users')"
                         />
                         <InputError :message="form.errors.recipient_ids || form.errors['recipient_ids.0']" />
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Հաճախորդ</label>
+                        <label class="form-label">{{ t('sales.client') }}</label>
                         <PersonSelect
                             v-model="form.about_id"
                             :options="people"
-                            placeholder="Որոնել կամ ընտրել հաճախորդին"
+                            :placeholder="t('operations.search_or_select_a_customer')"
                         />
                         <InputError :message="form.errors.about_id" />
                     </div>
@@ -205,7 +210,7 @@ const submit = () => {
                             class="form-label"
                             for="title"
                         >
-                            Վերնագիր
+                            {{ t('people.title') }}
                         </label>
                         <input
                             id="title"
@@ -221,7 +226,7 @@ const submit = () => {
                             class="form-label"
                             for="description"
                         >
-                            Նկարագրություն
+                            {{ t('people.description') }}
                         </label>
                         <textarea
                             id="description"
@@ -238,10 +243,10 @@ const submit = () => {
                         class="btn btn-label-secondary"
                         :href="route('notifications.index', { locale: currentLocale })"
                     >
-                        Չեղարկել
+                        {{ t('confirm.cancel') }}
                     </Link>
                     <PrimaryButton :disabled="form.processing">
-                        {{ form.delivery_mode === 'scheduled' ? 'Պլանավորել' : 'Ուղարկել' }}
+                        {{ form.delivery_mode === 'scheduled' ? t('operations.schedule_2') : t('operations.send') }}
                     </PrimaryButton>
                 </div>
             </div>

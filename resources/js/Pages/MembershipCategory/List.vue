@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
@@ -8,6 +9,7 @@ import DeleteButton from '@/Components/DeleteButton.vue'
 import Pagination from '@/Components/Pagination.vue'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.membership.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -25,12 +27,12 @@ const categoryName = category => {
 </script>
 
 <template>
-    <Head title="Կատեգորիաներ" />
+    <Head :title="t('categories')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Կատեգորիաներ
+                {{ t('categories') }}
             </h2>
         </template>
 
@@ -39,7 +41,7 @@ const categoryName = category => {
                 class="card-header d-flex justify-content-between align-items-center"
             >
                 <h5 class="mb-0">
-                    Ցանկ
+                    {{ t('list') }}
                 </h5>
 
                 <Link
@@ -53,7 +55,7 @@ const categoryName = category => {
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block">
-                                Ստեղծել նոր կատեգորիա
+                                {{ t('category_create') }}
                             </span>
                         </span>
                     </span>
@@ -66,10 +68,10 @@ const categoryName = category => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Slug</th>
-                                <th>Անվանում</th>
-                                <th>Ակտիվ</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('slug') }}</th>
+                                <th>{{ t('title') }}</th>
+                                <th>{{ t('active') }}</th>
+                                <th>{{ t('actions') }}</th>
                             </tr>
                         </thead>
 
@@ -132,7 +134,7 @@ const categoryName = category => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('edit') }}
                                             </Link>
 
                                             <a

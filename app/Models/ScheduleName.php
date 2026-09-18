@@ -95,7 +95,7 @@ class ScheduleName extends Model
     public function getLockReasonAttribute(): ?string
     {
         return $this->is_locked
-            ? 'Այս ժամային գրաֆիկը կապված է մարզչի և այցելուների ակտիվ բաժանորդագրությունների հետ։'
+            ? __('backend_messages.this_timetable_linked_active_trainer_and_customer_memberships')
             : null;
     }
 }

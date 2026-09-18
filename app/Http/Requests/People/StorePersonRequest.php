@@ -40,9 +40,9 @@ class StorePersonRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'entry_code_id.required' => 'Մուտքի կոդը պարտադիր է։',
-            'entry_code_id.exists' => 'Ընտրված մուտքի կոդը չի գտնվել։ Ստեղծիր',
-            'phone.unique' => 'Այս հեռախոսահամարով անձ արդեն գոյություն ունի։',
+            'entry_code_id.required' => __('backend_messages.entry_code_required'),
+            'entry_code_id.exists' => __('backend_messages.selected_entry_code_not_found_create_one'),
+            'phone.unique' => __('backend_messages.person_with_this_phone_number_already_exists'),
         ];
     }
 }

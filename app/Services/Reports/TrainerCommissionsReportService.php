@@ -42,7 +42,7 @@ class TrainerCommissionsReportService
             'columns' => $this->exportColumns(),
             'filters' => $filters,
             'filename' => 'trainer-commissions-report-'.now()->format('Y-m-d-H-i-s').'.xls',
-            'title' => 'Մարզիչների միջնորդավճարների հաշվետվություն',
+            'title' => __('backend_messages.trainer_commissions_report'),
             'summary' => $this->exportSummary($this->summary($commissions)),
         ];
     }
@@ -114,11 +114,11 @@ class TrainerCommissionsReportService
                 ])
                 ->values(),
             'statuses' => [
-                ['value' => 'pending', 'label' => 'Սպասման մեջ'],
-                ['value' => 'partial', 'label' => 'Մասնակի վճարված'],
-                ['value' => 'paid', 'label' => 'Վճարված'],
-                ['value' => 'transferred', 'label' => 'Փոխանցված'],
-                ['value' => 'cancelled', 'label' => 'Գեներացումը դադարեցված'],
+                ['value' => 'pending', 'label' => __('backend_messages.pending')],
+                ['value' => 'partial', 'label' => __('backend_messages.partially_paid')],
+                ['value' => 'paid', 'label' => __('backend_messages.paid')],
+                ['value' => 'transferred', 'label' => __('backend_messages.transferred')],
+                ['value' => 'cancelled', 'label' => __('backend_messages.generation_stopped')],
             ],
         ];
     }
@@ -126,24 +126,24 @@ class TrainerCommissionsReportService
     protected function exportColumns(): array
     {
         return [
-            ['key' => 'trainer', 'title' => 'Մարզիչ'],
-            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'salary_type', 'title' => 'Միջնորդավճարի տեսակ'],
-            ['key' => 'salary_value', 'title' => 'Միջնորդավճարի արժեք'],
-            ['key' => 'initial_commission_amount', 'title' => 'Սկզբնական միջնորդավճար'],
-            ['key' => 'salary_amount', 'title' => 'Ընդհանուր վերագրված'],
-            ['key' => 'cancelled_unearned_amount', 'title' => 'Չվաստակած՝ չեղարկված'],
-            ['key' => 'net_paid_amount', 'title' => 'Զուտ վճարված'],
-            ['key' => 'outstanding_amount', 'title' => 'Չվճարված մնացորդ'],
-            ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
-            ['key' => 'transferred_in_amount', 'title' => 'Փոխանցված մուտք'],
-            ['key' => 'transferred_out_amount', 'title' => 'Փոխանցված ելք'],
-            ['key' => 'status', 'title' => 'Կարգավիճակ'],
-            ['key' => 'is_kept', 'title' => 'Պահված է'],
-            ['key' => 'generation_stopped_reason', 'title' => 'Դադարեցման պատճառ'],
-            ['key' => 'generation_stopped_at', 'title' => 'Գեներացումը դադարեցվել է'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'trainer', 'title' => __('backend_messages.trainer')],
+            ['key' => 'membership_plan', 'title' => __('backend_messages.membership')],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'salary_type', 'title' => __('backend_messages.commission_type')],
+            ['key' => 'salary_value', 'title' => __('backend_messages.commission_value')],
+            ['key' => 'initial_commission_amount', 'title' => __('backend_messages.initial_commission')],
+            ['key' => 'salary_amount', 'title' => __('backend_messages.total_reassigned')],
+            ['key' => 'cancelled_unearned_amount', 'title' => __('backend_messages.unearned_cancelled')],
+            ['key' => 'net_paid_amount', 'title' => __('backend_messages.net_paid')],
+            ['key' => 'outstanding_amount', 'title' => __('backend_messages.unpaid_balance')],
+            ['key' => 'refunded_amount', 'title' => __('backend_messages.refunded')],
+            ['key' => 'transferred_in_amount', 'title' => __('backend_messages.transferred_entry')],
+            ['key' => 'transferred_out_amount', 'title' => __('backend_messages.transferred_exit')],
+            ['key' => 'status', 'title' => __('backend_messages.status')],
+            ['key' => 'is_kept', 'title' => __('backend_messages.saved_status')],
+            ['key' => 'generation_stopped_reason', 'title' => __('backend_messages.reason_stopped')],
+            ['key' => 'generation_stopped_at', 'title' => __('backend_messages.generation_stopped_at')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 
@@ -179,17 +179,17 @@ class TrainerCommissionsReportService
     protected function exportSummary(array $summary): array
     {
         return [
-            'title' => 'Ամփոփում',
+            'title' => __('backend_messages.summary'),
             'rows' => [
-                ['label' => 'Գրանցումների քանակ', 'value' => $summary['commissions_count']],
-                ['label' => 'Միջնորդավճարի ընդհանուր գումար', 'value' => $summary['total_commission_amount']],
-                ['label' => 'Վճարված միջնորդավճար', 'value' => $summary['paid_commission_amount']],
-                ['label' => 'Սպասող միջնորդավճար', 'value' => $summary['pending_commission_amount']],
-                ['label' => 'Վերադարձված միջնորդավճար', 'value' => $summary['refunded_commission_amount']],
-                ['label' => 'Չվաստակած՝ չեղարկված', 'value' => $summary['cancelled_unearned_commission_amount']],
-                ['label' => 'Փոխանցված մուտք', 'value' => $summary['transferred_in_amount']],
-                ['label' => 'Փոխանցված ելք', 'value' => $summary['transferred_out_amount']],
-                ['label' => 'Պահված միջնորդավճարներ', 'value' => $summary['kept_commissions_count']],
+                ['label' => __('backend_messages.record_count'), 'value' => $summary['commissions_count']],
+                ['label' => __('backend_messages.total_commission_amount'), 'value' => $summary['total_commission_amount']],
+                ['label' => __('backend_messages.paid_commission'), 'value' => $summary['paid_commission_amount']],
+                ['label' => __('backend_messages.pending_commission'), 'value' => $summary['pending_commission_amount']],
+                ['label' => __('backend_messages.refunded_commission'), 'value' => $summary['refunded_commission_amount']],
+                ['label' => __('backend_messages.unearned_cancelled'), 'value' => $summary['cancelled_unearned_commission_amount']],
+                ['label' => __('backend_messages.transferred_entry'), 'value' => $summary['transferred_in_amount']],
+                ['label' => __('backend_messages.transferred_exit'), 'value' => $summary['transferred_out_amount']],
+                ['label' => __('backend_messages.saved_commissions'), 'value' => $summary['kept_commissions_count']],
             ],
         ];
     }
@@ -218,7 +218,7 @@ class TrainerCommissionsReportService
             'status' => $metrics['status'],
             'is_kept' => (bool) $commission->is_kept,
             'generation_stopped_reason' => $commission->generation_stopped_reason === 'membership_cancelled'
-                ? 'Աբոնեմենտի չեղարկում'
+                ? __('backend_messages.membership_cancellation')
                 : ($commission->generation_stopped_reason ?? '-'),
             'generation_stopped_at' => $commission->generation_stopped_at?->toDateTimeString(),
             'created_at' => $commission->created_at?->toDateTimeString(),

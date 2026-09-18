@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 import LogValueNode from "./LogValueNode.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     log: {
@@ -18,23 +23,23 @@ const currentLocale = computed(
 const hasOldValues = computed(() => hasContent(props.log.old_values));
 const hasNewValues = computed(() => hasContent(props.log.new_values));
 const actionLabels = {
-    "person.created": "Անձի գրանցում",
-    "membership_sale.created": "Աբոնեմենտի վաճառք",
-    "membership_sale.payment_added": "Վճարման ավելացում",
-    "membership_sale.refund_added": "Գումարի վերադարձ",
-    "membership_sale.cancelled": "Աբոնեմենտի չեղարկում",
-    "membership_sale.trainer_changed": "Մարզչի փոփոխություն",
-    "membership_sale.frozen": "Աբոնեմենտի սառեցում",
-    "membership_sale.updated": "Աբոնեմենտի խմբագրում",
+    "person.created": t('logs.person_registration'),
+    "membership_sale.created": t('staff_reports.membership_sale'),
+    "membership_sale.payment_added": t('logs.payment_addition'),
+    "membership_sale.refund_added": t('logs.refund'),
+    "membership_sale.cancelled": t('logs.membership_cancellation'),
+    "membership_sale.trainer_changed": t('logs.trainer_change'),
+    "membership_sale.frozen": t('logs.membership_freeze'),
+    "membership_sale.updated": t('logs.membership_edit'),
 };
 const details = computed(() => [
     {
-        label: "Գործողություն",
+        label: t('people.action'),
         value: actionLabels[props.log.action] ?? props.log.action,
     },
-    { label: "Մոդել / Օբյեկտ", value: props.log.subject },
-    { label: "Օգտատեր", value: props.log.user },
-    { label: "Ստեղծվել է", value: props.log.created_at },
+    { label: t('logs.model_object'), value: props.log.subject },
+    { label: t('logs.user'), value: props.log.user },
+    { label: t('inventory.created_at'), value: props.log.created_at },
 ]);
 
 function hasContent(value) {
@@ -51,7 +56,7 @@ function hasContent(value) {
 </script>
 
 <template>
-    <Head :title="`Մատյանի մանրամասներ #${log.id}`" />
+    <Head :title="t('logs.log_details_number', { id: log.id })" />
 
     <Index>
         <template #header>
@@ -62,7 +67,7 @@ function hasContent(value) {
                     <h2
                         class="text-xl font-semibold leading-tight text-gray-800 mb-1"
                     >
-                        Մատյանի մանրամասներ
+                        {{ t('logs.log_details') }}
                     </h2>
                     <div class="text-muted small">{{ log.title }}</div>
                 </div>
@@ -72,7 +77,7 @@ function hasContent(value) {
                     class="btn btn-sm btn-outline-secondary"
                 >
                     <i class="icon-base ti tabler-arrow-left me-1"></i>
-                    Վերադառնալ մատյաններ
+                    {{ t('logs.return_to_logs') }}
                 </Link>
             </div>
         </template>
@@ -107,7 +112,7 @@ function hasContent(value) {
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                Հին արժեքներ
+                                {{ t('logs.old_values') }}
                             </h5>
                         </div>
                         <div class="card-body">
@@ -124,7 +129,7 @@ function hasContent(value) {
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="mb-0">
-                                Նոր արժեքներ
+                                {{ t('logs.new_values') }}
                             </h5>
                         </div>
                         <div class="card-body">

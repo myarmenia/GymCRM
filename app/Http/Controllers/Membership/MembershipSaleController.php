@@ -224,7 +224,7 @@ class MembershipSaleController extends Controller
     {
         $this->membershipSaleService->createPaymentReminder((int) $id, $request->validated());
 
-        return back()->with('success', 'Հիշեցումը պլանավորվել է։');
+        return back()->with('success', __('backend_messages.reminder_scheduled'));
     }
 
     public function storeRefund(StoreMembershipSaleRefundRequest $request, $locale, $id)

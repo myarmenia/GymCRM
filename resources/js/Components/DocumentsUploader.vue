@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { ref, onMounted } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     ownerType: String, // user / guest
@@ -54,7 +59,7 @@ const removePreview = (index) => {
 };
 
 const submitDocuments = async () => {
-    if (!documentForm.type) return alert('Ընտրեք տեսակը');
+    if (!documentForm.type) return alert(t('operations.select_type_2'));
 
     const formData = new FormData();
     formData.append('type', documentForm.type);
@@ -80,23 +85,23 @@ const removeUploaded = async (index) => {
 
 <template>
 <div class="card mb-6">
-    <h5 class="card-header">Փաստաթղթեր</h5>
+    <h5 class="card-header">{{ t('operations.documents') }}</h5>
     <div class="card-body">
 
         <!-- ՎԵՐԲԵՌՆՈՒՄ -->
         <div class="mb-3">
-            <label class="form-label">Տեսակ</label>
+            <label class="form-label">{{ t('people.type') }}</label>
             <select v-model="documentForm.type" class="form-select">
-                <option value="" disabled>Ընտրել տեսակը</option>
-                <option value="passport">Անձնագիր</option>
-                <option value="id_card">Նույնականացման քարտ</option>
-                <option value="contract">Պայմանագիր</option>
+                <option value="" disabled>{{ t('operations.select_type') }}</option>
+                <option value="passport">{{ t('operations.passport') }}</option>
+                <option value="id_card">{{ t('operations.identity_card') }}</option>
+                <option value="contract">{{ t('operations.contract') }}</option>
             </select>
         </div>
 
         <div class="mb-3">
             <label class="btn btn-primary">
-                Վերբեռնել ֆայլեր
+                {{ t('operations.upload_files') }}
                 <input type="file" hidden multiple @change="handleUpload" />
             </label>
         </div>
@@ -108,18 +113,18 @@ const removeUploaded = async (index) => {
                     <img v-if="item.file.type.startsWith('image/')" :src="item.url" class="rounded mb-2" style="width: 100%; height: 120px; object-fit: cover;">
                     <div v-else>📄 PDF</div>
                     <small class="d-block text-truncate">{{ item.file.name }}</small>
-                    <button class="btn btn-danger btn-sm mt-2" @click="removePreview(index)">Հեռացնել</button>
+                    <button class="btn btn-danger btn-sm mt-2" @click="removePreview(index)">{{ t('operations.remove') }}</button>
                 </div>
             </div>
         </div>
 
         <button v-if="previews.length" class="btn btn-success" @click="submitDocuments">
-            Վերբեռնել {{ previews.length }} ֆայլ(եր)
+            {{ t('operations.upload_file_count', { count: previews.length }) }}
         </button>
 
         <!-- ՎԵՐԲԵՌՆՎԱԾ ՖԱՅԼԵՐ -->
         <div v-if="uploaded.length" class="mt-4">
-            <h6>Վերբեռնվածներ</h6>
+            <h6>{{ t('operations.uploads') }}</h6>
 
             <div class="row g-3">
                 <div
@@ -139,10 +144,10 @@ const removeUploaded = async (index) => {
 
                             <div class="d-flex gap-2 justify-content-center">
                                 <a :href="doc.file_url" target="_blank" class="btn btn-sm btn-primary">
-                                    Դիտել
+                                    {{ t('staff_reports.view') }}
                                 </a>
                                 <a :href="doc.file_url" download class="btn btn-sm btn-success">
-                                    Ներբեռնել
+                                    {{ t('operations.download') }}
                                 </a>
                             </div>
                         </div>
@@ -151,7 +156,7 @@ const removeUploaded = async (index) => {
                         <div v-else class="mb-2">
                             📄
                             <a :href="doc.file_url" target="_blank">
-                                Բացել ֆայլը
+                                {{ t('operations.open_file') }}
                             </a>
                         </div>
 
@@ -159,7 +164,7 @@ const removeUploaded = async (index) => {
                             class="btn btn-danger btn-sm mt-2"
                             @click="removeUploaded(index)"
                         >
-                            Ջնջել
+                            {{ t('action.delete') }}
                         </button>
 
                     </div>

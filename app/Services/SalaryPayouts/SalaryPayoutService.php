@@ -103,26 +103,26 @@ class SalaryPayoutService
             'rows' => $rows,
             'columns' => [
                 ['key' => 'id', 'title' => '#'],
-                ['key' => 'paid_at', 'title' => 'Վճարման ամսաթիվ'],
-                ['key' => 'payee', 'title' => 'Աշխատակից'],
-                ['key' => 'gym', 'title' => 'Մարզասրահ'],
-                ['key' => 'payment_method', 'title' => 'Վճարման եղանակ'],
-                ['key' => 'paid_by', 'title' => 'Վճարել է'],
-                ['key' => 'amount', 'title' => 'Ընդհանուր վճարված'],
-                ['key' => 'refunded_amount', 'title' => 'Վերադարձված'],
-                ['key' => 'net_amount', 'title' => 'Զուտ վճարված'],
-                ['key' => 'status', 'title' => 'Կարգավիճակ'],
-                ['key' => 'reference', 'title' => 'Հղում / փաստաթուղթ'],
-                ['key' => 'notes', 'title' => 'Նշումներ'],
+                ['key' => 'paid_at', 'title' => __('backend.salary_payouts.paid_at')],
+                ['key' => 'payee', 'title' => __('backend.salary_payouts.payee')],
+                ['key' => 'gym', 'title' => __('backend.salary_payouts.gym')],
+                ['key' => 'payment_method', 'title' => __('backend.salary_payouts.payment_method')],
+                ['key' => 'paid_by', 'title' => __('backend.salary_payouts.paid_by')],
+                ['key' => 'amount', 'title' => __('backend.salary_payouts.total_paid')],
+                ['key' => 'refunded_amount', 'title' => __('backend.salary_payouts.refunded')],
+                ['key' => 'net_amount', 'title' => __('backend.salary_payouts.net_paid')],
+                ['key' => 'status', 'title' => __('backend.salary_payouts.status')],
+                ['key' => 'reference', 'title' => __('backend.salary_payouts.reference')],
+                ['key' => 'notes', 'title' => __('backend.salary_payouts.notes')],
             ],
             'filters' => $filters,
             'summary' => [
-                'title' => 'Ամփոփում',
+                'title' => __('backend.salary_payouts.summary'),
                 'rows' => [
-                    ['label' => 'Վճարումների քանակ', 'value' => $summary['payout_count']],
-                    ['label' => 'Ընդհանուր վճարված', 'value' => $summary['paid_amount']],
-                    ['label' => 'Վերադարձված', 'value' => $summary['refunded_amount']],
-                    ['label' => 'Զուտ վճարված', 'value' => $summary['net_amount']],
+                    ['label' => __('backend.salary_payouts.payout_count'), 'value' => $summary['payout_count']],
+                    ['label' => __('backend.salary_payouts.total_paid'), 'value' => $summary['paid_amount']],
+                    ['label' => __('backend.salary_payouts.refunded'), 'value' => $summary['refunded_amount']],
+                    ['label' => __('backend.salary_payouts.net_paid'), 'value' => $summary['net_amount']],
                 ],
             ],
         ];
@@ -142,7 +142,7 @@ class SalaryPayoutService
 
         if ($selected->count() !== count($data['items'])) {
             throw ValidationException::withMessages([
-                'items' => 'Նույն վճարման ենթակա գրառումը կրկնվել է։',
+                'items' => __('backend.salary_payouts.duplicate_item'),
             ]);
         }
 
@@ -156,7 +156,7 @@ class SalaryPayoutService
 
             if ($assignments->count() !== $selected->count()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Ընտրված վճարման ենթակա գրառումներից մեկը չի գտնվել։',
+                    'items' => __('backend.salary_payouts.item_not_found'),
                 ]);
             }
 
@@ -173,7 +173,7 @@ class SalaryPayoutService
                 || $assignments->pluck('gym_id')->unique()->count() !== 1
             ) {
                 throw ValidationException::withMessages([
-                    'items' => 'Մեկ վճարման մեջ թույլատրվում են միայն նույն աշխատակցի և նույն մարզասրահի դրական գումարներ։',
+                    'items' => __('backend.salary_payouts.same_payee_gym_positive'),
                 ]);
             }
 
@@ -184,7 +184,7 @@ class SalaryPayoutService
 
                 if ($item['amount'] <= 0 || $item['amount'] > $available) {
                     throw ValidationException::withMessages([
-                        'items' => 'Վճարման գումարը գերազանցում է հասանելի չվճարված մնացորդը։',
+                        'items' => __('backend.salary_payouts.amount_exceeds_balance'),
                     ]);
                 }
             }
@@ -254,7 +254,7 @@ class SalaryPayoutService
 
             if ($lockedPayout->status !== 'paid') {
                 throw ValidationException::withMessages([
-                    'reason' => 'Միայն ակտիվ վճարումը կարող է չեղարկվել։',
+                    'reason' => __('backend.salary_payouts.active_cancel_only'),
                 ]);
             }
 
@@ -267,7 +267,7 @@ class SalaryPayoutService
 
             if ($refundable->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'reason' => 'Վճարումն արդեն ամբողջությամբ վերադարձված է։',
+                    'reason' => __('backend.salary_payouts.already_fully_refunded'),
                 ]);
             }
 
@@ -304,7 +304,7 @@ class SalaryPayoutService
 
             if ($lockedPayout->status !== 'paid') {
                 throw ValidationException::withMessages([
-                    'amount' => 'Միայն ակտիվ վճարումից կարելի է վերադարձ կատարել։',
+                    'amount' => __('backend.salary_payouts.active_refund_only'),
                 ]);
             }
 
@@ -332,7 +332,7 @@ class SalaryPayoutService
 
             if ($locked->source_type !== 'trainer_monthly_salary') {
                 throw ValidationException::withMessages([
-                    'amount' => 'Միայն մարզչի աշխատավարձը կարող է փոխանցվել։',
+                    'amount' => __('backend.salary_payouts.trainer_salary_transfer_only'),
                 ]);
             }
 
@@ -349,7 +349,7 @@ class SalaryPayoutService
                 || $targetTrainerId === (int) $locked->payee_id
             ) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Փոխանցման գումարը կամ աբոնեմենտի ընթացիկ մարզիչը վավեր չէ։',
+                    'amount' => __('backend.salary_payouts.invalid_transfer'),
                 ]);
             }
 
@@ -367,13 +367,13 @@ class SalaryPayoutService
 
             if (! $newCommission) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Աբոնեմենտի ընթացիկ մարզչի կոմիսիան չի գտնվել։',
+                    'amount' => __('backend.salary_payouts.current_commission_not_found'),
                 ]);
             }
 
             if (round((float) $oldCommission->salary_amount, 2) < $amount) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Հին մարզչի կոմիսիայի մնացորդը բավարար չէ փոխանցման համար։',
+                    'amount' => __('backend.salary_payouts.old_commission_insufficient'),
                 ]);
             }
 
@@ -436,7 +436,7 @@ class SalaryPayoutService
 
         if ($items->count() !== $requestedAmounts->count()) {
             throw ValidationException::withMessages([
-                'payout_item_id' => 'Վճարման ընտրված տողը չի գտնվել։',
+                'payout_item_id' => __('backend.salary_payouts.payout_item_not_found'),
             ]);
         }
 
@@ -453,7 +453,7 @@ class SalaryPayoutService
 
             if ($amount <= 0 || $amount > $refundable || ! $item->assignment) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Վերադարձի գումարը գերազանցում է տվյալ վճարման վերադարձման ենթակա մնացորդը։',
+                    'amount' => __('backend.salary_payouts.refund_exceeds_balance'),
                 ]);
             }
 
@@ -596,8 +596,8 @@ class SalaryPayoutService
                     'label' => $method->name ?? $method->slug,
                 ])->values(),
             'types' => [
-                ['value' => 'trainer_monthly_salary', 'label' => 'Մարզիչ'],
-                ['value' => 'salesperson_commission', 'label' => 'Վաճառող'],
+                ['value' => 'trainer_monthly_salary', 'label' => __('backend.salary_payouts.trainer')],
+                ['value' => 'salesperson_commission', 'label' => __('backend.salary_payouts.salesperson')],
             ],
         ];
     }
@@ -630,7 +630,7 @@ class SalaryPayoutService
         return [
             'key' => "assignment:{$assignment->id}",
             'type' => $assignment->source_type,
-            'type_label' => $assignment->source_type === 'trainer_monthly_salary' ? 'Մարզիչ' : 'Վաճառող',
+            'type_label' => $assignment->source_type === 'trainer_monthly_salary' ? __('backend.salary_payouts.trainer') : __('backend.salary_payouts.salesperson'),
             'id' => $assignment->id,
             'source_id' => $assignment->trainer_monthly_salary_id ?? $assignment->salesperson_commission_id,
             'payee_id' => (int) $assignment->payee_id,
@@ -695,7 +695,7 @@ class SalaryPayoutService
 
         if ($remaining < 0) {
             throw ValidationException::withMessages([
-                'items' => 'Մարզչի կոմիսիայի մնացորդը բավարար չէ վճարման համար։',
+                'items' => __('backend.salary_payouts.commission_insufficient'),
             ]);
         }
 
@@ -916,18 +916,18 @@ class SalaryPayoutService
     protected function payoutStatusLabel(array $payout): string
     {
         if ($payout['status'] === 'voided') {
-            return 'Չեղարկված';
+            return __('backend.salary_payouts.cancelled');
         }
 
         if ((float) $payout['refunded_amount'] >= (float) $payout['amount']) {
-            return 'Ամբողջությամբ վերադարձված';
+            return __('backend.salary_payouts.fully_refunded');
         }
 
         if ((float) $payout['refunded_amount'] > 0) {
-            return 'Մասնակի վերադարձ';
+            return __('backend.salary_payouts.partially_refunded');
         }
 
-        return 'Վճարված';
+        return __('backend.salary_payouts.paid');
     }
 
     protected function filterOptions(User $actor, QueryBuilder $basePayables): array
@@ -968,8 +968,8 @@ class SalaryPayoutService
                 ])
                 ->values(),
             'types' => [
-                ['value' => 'trainer_monthly_salary', 'label' => 'Մարզիչ'],
-                ['value' => 'salesperson_commission', 'label' => 'Վաճառող'],
+                ['value' => 'trainer_monthly_salary', 'label' => __('backend.salary_payouts.trainer')],
+                ['value' => 'salesperson_commission', 'label' => __('backend.salary_payouts.salesperson')],
             ],
         ];
     }
@@ -978,19 +978,19 @@ class SalaryPayoutService
     {
         if ($items->isEmpty()) {
             throw ValidationException::withMessages([
-                'items' => 'Ընտրեք առնվազն մեկ վճարման ենթակա գրառում։',
+                'items' => __('backend.salary_payouts.select_item'),
             ]);
         }
 
         if ($items->pluck('payee_id')->unique()->count() !== 1) {
             throw ValidationException::withMessages([
-                'items' => 'Մեկ վճարման մեջ կարելի է ներառել միայն մեկ աշխատակցի գումարները։',
+                'items' => __('backend.salary_payouts.single_payee'),
             ]);
         }
 
         if ($items->pluck('gym_id')->unique()->count() !== 1) {
             throw ValidationException::withMessages([
-                'items' => 'Մեկ վճարման մեջ կարելի է ներառել միայն մեկ մարզասրահի գումարները։',
+                'items' => __('backend.salary_payouts.single_gym'),
             ]);
         }
 
@@ -1008,7 +1008,7 @@ class SalaryPayoutService
 
         if ($invalid) {
             throw ValidationException::withMessages([
-                'items' => 'Ընտրված գրառումներից մեկը վճարման ենթակա չէ կամ արդեն վճարված է։',
+                'items' => __('backend.salary_payouts.item_not_payable'),
             ]);
         }
     }
@@ -1022,7 +1022,7 @@ class SalaryPayoutService
 
             if (! $commission || $amount > round((float) $commission->salary_amount, 2)) {
                 throw ValidationException::withMessages([
-                    'items' => 'Մարզչի կոմիսիայի չվճարված մնացորդը բավարար չէ ընտրված աշխատավարձը վճարելու համար։',
+                    'items' => __('backend.salary_payouts.commission_balance_insufficient'),
                 ]);
             }
         }
@@ -1109,7 +1109,7 @@ class SalaryPayoutService
         return [
             'key' => "trainer_monthly_salary:{$salary->id}",
             'type' => $data['source_type'],
-            'type_label' => 'Մարզիչ',
+            'type_label' => __('backend.salary_payouts.trainer'),
             'id' => $salary->id,
             'payee_id' => $data['payee_id'],
             'payee' => $this->userName($salary->trainer),
@@ -1129,7 +1129,7 @@ class SalaryPayoutService
         return [
             'key' => "salesperson_commission:{$commission->id}",
             'type' => $data['source_type'],
-            'type_label' => 'Վաճառող',
+            'type_label' => __('backend.salary_payouts.salesperson'),
             'id' => $commission->id,
             'payee_id' => $data['payee_id'],
             'payee' => $this->userName($commission->salesperson),

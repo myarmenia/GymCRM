@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { ref, computed, watch } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
 import { useAuth } from "@/composables/useAuth";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     products: Object,
@@ -213,14 +218,14 @@ console.log(props.products.data);
 </script>
 
 <template>
-    <Head title="Ապրանքների ցուցակ" />
+    <Head :title="t('inventory.product_list')" />
 
     <AppLayout>
         <div class="card">
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Ապրանքներ</h5>
+                <h5 class="mb-0">{{ t('sidebar.products') }}</h5>
 
                 <div class="d-flex gap-2">
                     <button
@@ -235,7 +240,7 @@ console.log(props.products.data);
                         :disabled="!hasSelectedProducts"
                         @click="goToProductConsumption"
                     >
-                        Ապրանքի սպառում
+                        {{ t('inventory.product_consumption') }}
                     </button>
 
                     <Link
@@ -246,7 +251,7 @@ console.log(props.products.data);
                         "
                     >
                         <i class="icon-base ti tabler-plus icon-sm"></i>
-                        Ավելացնել ապրանք
+                        {{ t('inventory.add_product') }}
                     </Link>
                 </div>
             </div>
@@ -258,14 +263,14 @@ console.log(props.products.data);
             v-model="name"
             type="text"
             class="form-control"
-            placeholder="Որոնել անունով..."
+            :placeholder="t('inventory.search_by_name')"
             @keyup.enter="search"
         />
     </div>
 
     <div class="col-md-2 mb-2">
         <select v-model="warehouseId" class="form-control">
-            <option value="">Բոլոր պահեստները</option>
+            <option value="">{{ t('inventory.all_warehouses') }}</option>
 
             <option
                 v-for="warehouse in localWarehouses"
@@ -279,7 +284,7 @@ console.log(props.products.data);
 
     <div class="col-md-2 mb-2">
         <select v-model="categoryId" class="form-control">
-            <option value="">Բոլոր կատեգորիաները</option>
+            <option value="">{{ t('inventory.all_categories') }}</option>
 
             <option
                 v-for="category in localCategories"
@@ -304,7 +309,7 @@ console.log(props.products.data);
                 filteredSubCategories.length === 0
             "
         >
-            <option value="">Բոլոր ենթակատեգորիաները</option>
+            <option value="">{{ t('inventory.all_subcategories') }}</option>
 
             <option
                 v-for="sub in filteredSubCategories"
@@ -322,7 +327,7 @@ console.log(props.products.data);
 
     <div class="col-md-4 mb-2 d-flex gap-2">
         <button class="btn btn-secondary w-100" @click="search">
-            Որոնել
+            {{ t('inventory.search') }}
         </button>
 
         <button
@@ -348,16 +353,16 @@ console.log(props.products.data);
                                     />
                                 </th>
                                 <th>ID</th>
-                                <th>Անուն</th>
+                                <th>{{ t('auth.name') }}</th>
                                 <!-- <th>Measurement</th> -->
                                 <!-- <th>SKU</th>
                                 <th>Barcode</th> -->
-                                <th>Քանակ</th>
-                                <th>Ամրագրված քանակ</th>
-                                <th>Նվազագույն պահեստի զգուշացում</th>
-                                <th>Գնման գին</th>
-                                <th>Վաճառքի գին</th>
-                                <th width="140">Գործողություն</th>
+                                <th>{{ t('inventory.quantity') }}</th>
+                                <th>{{ t('inventory.reserved_quantity') }}</th>
+                                <th>{{ t('inventory.low_stock_warning') }}</th>
+                                <th>{{ t('inventory.purchase_price') }}</th>
+                                <th>{{ t('inventory.sale_price') }}</th>
+                                <th width="140">{{ t('people.action') }}</th>
                             </tr>
                         </thead>
 
@@ -446,7 +451,7 @@ console.log(props.products.data);
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
                                                 <span class="edit-span"
-                                                    >Խմբագրել</span
+                                                    >{{ t('action.edit') }}</span
                                                 >
                                             </Link>
 
@@ -468,7 +473,7 @@ console.log(props.products.data);
 
                             <tr v-if="!productsData.length">
                                 <td colspan="11" class="text-center">
-                                    Չկա ապրանք
+                                    {{ t('inventory.no_product') }}
                                 </td>
                             </tr>
                         </tbody>
@@ -488,7 +493,7 @@ console.log(props.products.data);
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 rounded-4">
                     <div class="modal-header">
-                        <h5 class="modal-title text-danger">Ջնջել չհաջողվեց</h5>
+                        <h5 class="modal-title text-danger">{{ t('inventory.could_not_delete') }}</h5>
 
                         <button
                             type="button"
@@ -507,7 +512,7 @@ console.log(props.products.data);
                             class="btn btn-secondary"
                             data-bs-dismiss="modal"
                         >
-                            Փակել
+                            {{ t('confirm.close') }}
                         </button>
                     </div>
                 </div>

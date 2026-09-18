@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
@@ -9,6 +11,9 @@ import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import { useAuth } from "@/composables/useAuth";
 import TableFilter from "@/Components/TableFilter.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     users: Object,
@@ -87,12 +92,12 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Օգտատերերի ցուցակ" />
+    <Head :title="t('operations.user_list')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Օգտատերերի ցուցակ
+                {{ t('operations.user_list') }}
             </h2>
         </template>
 
@@ -109,7 +114,7 @@ const resetFilters = () => {
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Օգտատերերի ցուցակ</h5>
+                <h5 class="mb-0">{{ t('operations.user_list') }}</h5>
                 <Link
                     v-if="canManageUsers"
                     class="btn create-new btn-primary"
@@ -122,7 +127,7 @@ const resetFilters = () => {
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Ավելացնել նոր աշխատակից</span
+                                >{{ t('operations.add_new_employee') }}</span
                             >
                         </span>
                     </span>
@@ -134,13 +139,13 @@ const resetFilters = () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Անուն</th>
-                                <th>Ազգանուն</th>
-                                <th>Հեռախոս</th>
-                                <th>Էլ. հասցե</th>
-                                <th>Դերեր</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('auth.name') }}</th>
+                                <th>{{ t('filter.surname') }}</th>
+                                <th>{{ t('filter.phone') }}</th>
+                                <th>{{ t('auth.email') }}</th>
+                                <th>{{ t('staff_reports.roles') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('action.action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -223,7 +228,7 @@ const resetFilters = () => {
                                                 <i
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
-                                                Խմբագրել
+                                                {{ t('action.edit') }}
                                             </Link>
                                             <Link
                                                 v-if="canViewUsers"
@@ -233,7 +238,7 @@ const resetFilters = () => {
                                                 <i
                                                     class="icon-base ti tabler-eye me-1"
                                                 ></i>
-                                                Դիտել
+                                                {{ t('staff_reports.view') }}
                                             </Link>
                                            
                                             <a

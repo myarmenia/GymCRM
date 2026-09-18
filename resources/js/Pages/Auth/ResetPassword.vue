@@ -1,5 +1,6 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import { useTrans } from '/resources/js/trans';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -33,11 +34,11 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Reset Password" />
+        <Head :title="useTrans('app.auth.reset_password')" />
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="useTrans('app.auth.email')" />
 
                 <TextInput
                     id="email"
@@ -53,7 +54,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="useTrans('app.auth.password')" />
 
                 <TextInput
                     id="password"
@@ -70,7 +71,7 @@ const submit = () => {
             <div class="mt-4">
                 <InputLabel
                     for="password_confirmation"
-                    value="Confirm Password"
+                    :value="useTrans('app.auth.confirm_password')"
                 />
 
                 <TextInput
@@ -93,7 +94,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Reset Password
+                    {{ useTrans("app.auth.reset_password") }}
                 </PrimaryButton>
             </div>
         </form>

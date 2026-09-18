@@ -1,7 +1,11 @@
 import { usePage } from '@inertiajs/vue3';
 
 export function useTrans(value, replacements = {}) {
-    const array = usePage().props.translations;
+    return translate(usePage().props.translations, value, replacements);
+}
+
+export function translate(translations, value, replacements = {}) {
+    const array = translations;
 
     // Находим перевод по ключу
     let translation = value.split('.').reduce((t, k) => t?.[k] ?? value, array);

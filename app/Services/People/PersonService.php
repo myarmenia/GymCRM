@@ -224,7 +224,7 @@ class PersonService
 
         if (! $entryCode || $assignedElsewhere || ((bool) $entryCode->activation && ! $currentPersonOwnsCode)) {
             throw ValidationException::withMessages([
-                'entry_code_id' => 'Ընտրված մուտքի կոդը հասանելի չէ։ Ստեղծիր',
+                'entry_code_id' => __('backend_messages.selected_entry_code_unavailable_create_one'),
             ]);
         }
 

@@ -6,11 +6,13 @@ import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { useAlert } from '@/composables/useAlert'
 import { useConfirm } from '@/composables/useConfirm'
+import { translate } from '/resources/js/trans'
 import { printHdmReceipt } from '@/composables/useHdmPrint'
 import axios from 'axios'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const { confirm } = useConfirm()
 const alert = useAlert()
@@ -173,7 +175,7 @@ const partialPaymentError = computed(() => {
 
     return amount > 0 && amount < remainingDebt
         ? ''
-        : 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և մնացած պարտքից փոքր։'
+        : t('sales.the_partial_payment_must_be_greater_than_zero_and_less_than_the_4')
 })
 const isMembershipCancelled = computed(() => membership.value?.status === 'cancelled')
 const selectedPaymentMethod = computed(() => props.paymentMethods.find(method => Number(method.id) === Number(actionForm.payment_method_id)))
@@ -182,28 +184,28 @@ const availableCardTypes = computed(() => selectedPaymentMethod.value?.card_type
 const actionText = computed(() => {
     if (isRefundMode.value) {
         return {
-            title: 'Նոր վերադարձ',
-            amount: 'Վերադարձի գումար',
-            method: 'Վերադարձի եղանակ',
-            methodPlaceholder: 'Ընտրել վերադարձի եղանակ',
-            notes: 'Վերադարձի նշումներ',
-            button: 'Պահպանել վերադարձը',
-            info: 'Վերադարձի գումար',
-            full: 'Ամբողջական վերադարձ',
-            partial: 'Մասնակի վերադարձ',
+            title: t('sales.new_refund'),
+            amount: t('sales.refund_amount'),
+            method: t('sales.refund_method'),
+            methodPlaceholder: t('sales.select_refund_method'),
+            notes: t('sales.refund_notes'),
+            button: t('sales.save_refund'),
+            info: t('sales.refund_amount'),
+            full: t('sales.full_refund'),
+            partial: t('sales.partial_refund'),
         }
     }
 
     return {
-        title: 'Նոր վճարում',
-        amount: 'Վճարման գումար',
-        method: 'Վճարման եղանակ',
-        methodPlaceholder: 'Ընտրել վճարման եղանակ',
-        notes: 'Վճարման նշումներ',
-        button: 'Պահպանել վճարումը',
-        info: 'Վճարման գումար',
-        full: 'Ամբողջական վճարում',
-        partial: 'Մասնակի վճարում',
+        title: t('sales.new_payment'),
+        amount: t('sales.payment_amount'),
+        method: t('people.payment_method'),
+        methodPlaceholder: t('sales.select_payment_method'),
+        notes: t('sales.payment_notes'),
+        button: t('sales.save_payment'),
+        info: t('sales.payment_amount'),
+        full: t('sales.full_payment'),
+        partial: t('sales.partial_payment'),
     }
 })
 
@@ -221,27 +223,27 @@ const translatedName = item => item?.translations?.find(translation => translati
 
 const discountName = discount => translatedName(discount?.discount ?? discount)
 const discountTypeLabel = type => ({
-    fixed: 'Ֆիքսված գումար',
-    fix: 'Ֆիքսված գումար',
-    percent: 'Տոկոս %',
-    '%': 'Տոկոս %',
+    fixed: t('sales.fixed_amount'),
+    fix: t('sales.fixed_amount'),
+    percent: t('sales.percent'),
+    '%': t('sales.percent'),
 }[type] ?? type ?? '-')
 const saleStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    partial: 'Մասնակի',
-    paid: 'Վճարված',
-    refunded: 'Վերադարձված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    partial: t('sales.partial'),
+    paid: t('people.paid'),
+    refunded: t('sales.refunded'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const paymentStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    pending: t('people.waiting'),
+    paid: t('people.paid'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const transactionTypeLabel = type => ({
-    payment: 'Վճարում',
-    refund: 'Վերադարձ',
+    payment: t('people.payment'),
+    refund: t('people.refund'),
 }[type] ?? type ?? '-')
 
 const membershipDiscountAmount = computed(() => {
@@ -386,17 +388,17 @@ watch(() => terminationForm.refund_amount, value => {
 const printTerminationSteps = async steps => {
     for (const step of steps ?? []) {
         alert.info(step.kind === 'service'
-            ? 'Տպվում է մատուցված ծառայության ՀԴՄ կտրոնը։'
-            : 'Տպվում է կանխավճարի վերադարձի ՀԴՄ կտրոնը։')
+            ? t('sales.the_provided_service_fiscal_receipt_is_printing')
+            : t('sales.the_prepayment_refund_fiscal_receipt_is_printing'))
 
         const result = await printHdmReceipt(step.data, props.gateway, currentLocale.value)
         if (!result.success) {
-            alert.warning(`ՀԴՄ գործողությունը չի ավարտվել։ Կարող եք շարունակել նույն էջից։ ${result.message}`)
+            alert.warning(t('sales.fiscal_operation_incomplete_with_message', { message: result.message }))
             return false
         }
     }
 
-    alert.success('Պայմանագրի խզումը և կանխավճարի վերադարձը հաջողությամբ ավարտվել են։')
+    alert.success(t('sales.contract_terminated_and_prepayment_refunded_successfully'))
     return true
 }
 
@@ -405,16 +407,17 @@ const submitTermination = async () => {
 
     const amount = Number(terminationForm.refund_amount || 0)
     if (amount <= 0 || amount > terminationPrepayment.value) {
-        terminationForm.setError('refund_amount', 'Վերադարձի գումարը պետք է լինի 0-ից մեծ և չգերազանցի հասանելի կանխավճարը։')
+        terminationForm.setError('refund_amount', t('sales.the_refund_must_be_greater_than_zero_and_not_exceed_the_availabl'))
         return
     }
 
     const approved = await confirm(
-        `Վերադարձնել ${formatAmount(amount)}, իսկ ${formatAmount(terminationServiceAmount.value)} գումարը ձևակերպել որպես մատուցված ծառայությո՞ւն։`,
+        translate(page.props.translations, 'app.confirm.termination_message', {
+            refund: formatAmount(amount),
+            service: formatAmount(terminationServiceAmount.value),
+        }),
         {
-            title: 'Պայմանագրի խզում',
-            confirmText: 'Հաստատել',
-            cancelText: 'Չեղարկել',
+            title: translate(page.props.translations, 'app.confirm.termination_title'),
             confirmClass: 'btn-danger',
         },
     )
@@ -441,7 +444,7 @@ const submitTermination = async () => {
             return
         }
 
-        alert.error(error.response?.data?.message ?? 'Չհաջողվեց սկսել պայմանագրի խզումը։')
+        alert.error(error.response?.data?.message ?? t('sales.could_not_start_contract_termination'))
     } finally {
         terminationForm.processing = false
     }
@@ -458,7 +461,7 @@ const resumeTermination = async () => {
         await printTerminationSteps(response.data.print_steps)
         router.visit(response.data.redirect)
     } catch (error) {
-        alert.error(error.response?.data?.message ?? 'Չհաջողվեց շարունակել ՀԴՄ գործողությունը։')
+        alert.error(error.response?.data?.message ?? t('sales.could_not_resume_the_fiscal_operation'))
     } finally {
         terminationForm.processing = false
     }
@@ -475,23 +478,23 @@ const retryHdmPaymentReceipt = async payment => {
         }))
 
         if (!response.data.need_print || !response.data.print_data) {
-            alert.success('ՀԴՄ կտրոնն արդեն տպված է։')
+            alert.success(t('sales.fiscal_receipt_has_already_been_printed'))
             router.visit(response.data.redirect)
             return
         }
 
-        alert.info(`Տպվում է #${payment.id} վճարման ՀԴՄ կտրոնը։`)
+        alert.info(t('sales.printing_payment_receipt', { id: payment.id }))
         const result = await printHdmReceipt(response.data.print_data, props.gateway, currentLocale.value)
 
         if (result.success) {
-            alert.success('ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+            alert.success(t('sales.fiscal_receipt_printed_successfully'))
         } else {
-            alert.warning(`ՀԴՄ կտրոնը չի տպվել։ ${result.message}`)
+            alert.warning(t('sales.receipt_print_failed_with_message', { message: result.message }))
         }
 
         router.visit(response.data.redirect)
     } catch (error) {
-        alert.error(error.response?.data?.message ?? 'Չհաջողվեց պատրաստել ՀԴՄ կտրոնի կրկնակի տպումը։')
+        alert.error(error.response?.data?.message ?? t('sales.could_not_prepare_the_fiscal_receipt_reprint'))
     } finally {
         retryingHdmPaymentId.value = null
     }
@@ -539,8 +542,8 @@ const submitAction = async () => {
 
         if (response.data.need_print && response.data.print_data) {
             alert.info(isRefundMode.value
-                ? 'Վերադարձը պահպանվել է, ՀԴՄ վերադարձի կտրոնը տպվում է։'
-                : 'Վճարումը պահպանվել է, ՀԴՄ կտրոնը տպվում է։')
+                ? t('sales.refund_saved_the_fiscal_refund_receipt_is_printing')
+                : t('sales.payment_saved_the_fiscal_receipt_is_printing'))
             const printResult = await printHdmReceipt(
                 response.data.print_data,
                 props.gateway,
@@ -549,17 +552,17 @@ const submitAction = async () => {
 
             if (printResult.success) {
                 alert.success(isRefundMode.value
-                    ? 'Վերադարձի ՀԴՄ կտրոնը հաջողությամբ տպվել է։'
-                    : 'Վճարման ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+                    ? t('sales.fiscal_refund_receipt_printed_successfully')
+                    : t('sales.fiscal_payment_receipt_printed_successfully'))
             } else {
-                alert.warning(`Գործողությունը պահպանվել է, սակայն ՀԴՄ կտրոնը չի տպվել։ ${printResult.message}`)
+                alert.warning(t('sales.operation_saved_receipt_failed', { message: printResult.message }))
             }
         } else if (response.data.print_error) {
             alert.warning(response.data.message)
         } else {
             alert.success(isRefundMode.value
-                ? 'Վերադարձը հաջողությամբ պահպանվել է։'
-                : 'Վճարումը հաջողությամբ պահպանվել է։')
+                ? t('sales.refund_saved_successfully')
+                : t('sales.payment_saved_successfully'))
         }
 
         router.visit(response.data.redirect)
@@ -571,17 +574,14 @@ const submitAction = async () => {
             return
         }
 
-        alert.error(error.response?.data?.message ?? 'Չհաջողվեց պահպանել գործողությունը։')
+        alert.error(error.response?.data?.message ?? t('sales.could_not_save_the_operation'))
     } finally {
         actionForm.processing = false
     }
 }
 
 const cancelMembership = async () => {
-    const approved = await confirm('Համոզվա՞ծ եք, որ ցանկանում եք չեղարկել աբոնեմենտը', {
-        title: 'Հաստատում',
-        confirmText: 'Հաստատել',
-        cancelText: 'Չեղարկել',
+    const approved = await confirm(translate(page.props.translations, 'app.confirm.cancel_membership'), {
         confirmClass: 'btn-danger',
     })
 
@@ -597,12 +597,12 @@ const cancelMembership = async () => {
 </script>
 
 <template>
-    <Head title="Վճարումներ" />
+    <Head :title="t('people.payments')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Վճարումներ
+                {{ t('people.payments') }}
             </h2>
         </template>
 
@@ -610,36 +610,36 @@ const cancelMembership = async () => {
             <div class="col-lg-5 mb-4">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Վաճառքի տվյալներ</h5>
+                        <h5 class="mb-0">{{ t('sales.sale_details') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Հաճախորդ</span>
+                            <span class="text-muted">{{ t('sales.client') }}</span>
                             <strong>{{ personName(membershipSale.person) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Աբոնեմենտ</span>
+                            <span class="text-muted">{{ t('people.membership') }}</span>
                             <strong>{{ translatedName(membershipSale.membership_plan) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Մարզիչ</span>
+                            <span class="text-muted">{{ t('people.trainer') }}</span>
                             <strong>{{ userName(membership?.trainer) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Վաճառքի օր</span>
+                            <span class="text-muted">{{ t('sales.sale_date') }}</span>
                             <strong>{{ formatDate(membershipSale.sold_at) }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Կարգավիճակ</span>
+                            <span class="text-muted">{{ t('membership.status') }}</span>
                             <span class="badge bg-label-primary">{{ saleStatusLabel(membershipSale.payment_status) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted">Աբոնեմենտի կարգավիճակ</span>
+                            <span class="text-muted">{{ t('sales.membership_status') }}</span>
                             <span
                                 class="badge"
                                 :class="isMembershipCancelled ? 'bg-label-danger' : 'bg-label-success'"
                             >
-                                {{ isMembershipCancelled ? 'Չեղարկված' : 'Ակտիվ' }}
+                                {{ isMembershipCancelled ? t('people.cancelled') : t('membership.active') }}
                             </span>
                         </div>
                         <button
@@ -649,7 +649,7 @@ const cancelMembership = async () => {
                             :disabled="cancelForm.processing"
                             @click="cancelMembership"
                         >
-                            Չեղարկել աբոնեմենտը
+                            {{ t('sales.cancel_membership') }}
                         </button>
                     </div>
                 </div>
@@ -658,51 +658,51 @@ const cancelMembership = async () => {
             <div class="col-lg-7 mb-4">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Գնի հաշվարկ</h5>
+                        <h5 class="mb-0">{{ t('sales.price_calculation') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Աբոնեմենտի գին</span>
+                            <span>{{ t('sales.membership_price') }}</span>
                             <span>{{ formatAmount(membershipSale.total_price) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Աբոնեմենտի զեղչ</span>
+                            <span>{{ t('sales.membership_discount') }}</span>
                             <span>- {{ formatAmount(membershipDiscountAmount) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Ձեռքով զեղչ</span>
+                            <span>{{ t('sales.manual_discount') }}</span>
                             <span>- {{ formatAmount(membershipSale.discount_amount) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Ընդհանուր զեղչ</span>
+                            <span>{{ t('sales.total_discount') }}</span>
                             <span>- {{ formatAmount(Number(membershipDiscountAmount || 0) + Number(membershipSale.discount_amount || 0)) }}</span>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between fw-bold mb-2">
-                            <span>Վերջնական վճարման ենթակա գումար</span>
+                            <span>{{ t('sales.final_amount_due') }}</span>
                             <span class="text-primary">{{ formatAmount(membershipSale.final_price) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Ընդհանուր վճարված</span>
+                            <span>{{ t('sales.total_paid') }}</span>
                             <span class="text-success">- {{ formatAmount(paid) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2 text-danger">
-                            <span>Ընդհանուր վերադարձված</span>
+                            <span>{{ t('sales.total_refunded') }}</span>
                             <span>- {{ formatAmount(refunded) }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Զուտ վճարված</span>
+                            <span>{{ t('sales.net_paid') }}</span>
                             <span>{{ formatAmount(netPaid) }}</span>
                         </div>
                         <div class="alert alert-success mt-3 mb-0 py-3">
                             <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold">Պարտք</span>
+                                <span class="fw-bold">{{ t('sales.debt') }}</span>
                                 <span class="fw-bold fs-4">{{ formatAmount(debt) }}</span>
                             </div>
                         </div>
                         <div class="alert alert-warning mt-3 mb-0 py-3">
                             <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold">Հասանելի վերադարձ</span>
+                                <span class="fw-bold">{{ t('sales.available_refund') }}</span>
                                 <span class="fw-bold fs-4">{{ formatAmount(availableRefund) }}</span>
                             </div>
                         </div>
@@ -716,24 +716,25 @@ const cancelMembership = async () => {
             class="card border-warning mb-4"
         >
             <div class="card-header">
-                <h5 class="mb-0">Պայմանագրի խզում և կանխավճարի վերադարձ</h5>
+                <h5 class="mb-0">{{ t('sales.contract_termination_and_prepayment_refund') }}</h5>
             </div>
             <div class="card-body">
                 <div v-if="pendingTermination" class="alert alert-warning mb-3">
-                    <div class="fw-bold mb-1">ՀԴՄ գործողությունը դեռ ավարտված չէ։</div>
-                    <div>
-                        Մատուցված ծառայություն՝ {{ formatAmount(prepaymentTermination.workflow.service_amount) }},
-                        վերադարձ՝ {{ formatAmount(prepaymentTermination.workflow.refund_amount) }}։
-                    </div>
+                    <div class="fw-bold mb-1">{{ t('sales.the_fiscal_operation_has_not_finished_yet') }}</div>
+                    <div>{{ t('sales.service_refund_summary', {
+                        service: formatAmount(prepaymentTermination.workflow.service_amount),
+                        refund: formatAmount(prepaymentTermination.workflow.refund_amount),
+                    }) }}</div>
                 </div>
 
                 <div
                     v-else-if="prepaymentTermination.workflow?.status === 'success'"
                     class="alert alert-success mb-0"
                 >
-                    Պայմանագրի խզումը ավարտված է։ Մատուցված ծառայություն՝
-                    {{ formatAmount(prepaymentTermination.workflow.service_amount) }},
-                    վերադարձ՝ {{ formatAmount(prepaymentTermination.workflow.refund_amount) }}։
+                    {{ t('sales.termination_completed_summary', {
+                        service: formatAmount(prepaymentTermination.workflow.service_amount),
+                        refund: formatAmount(prepaymentTermination.workflow.refund_amount),
+                    }) }}
                 </div>
 
                 <div v-else-if="prepaymentTermination.reason" class="alert alert-danger mb-0">
@@ -747,29 +748,29 @@ const cancelMembership = async () => {
                             :disabled="retryingHdmPaymentId !== null"
                             @click="retryHdmPaymentReceipt(payment)"
                         >
-                            Տպել #{{ payment.id }} վճարման ՀԴՄ կտրոնը
+                            {{ t('sales.print_payment_receipt_with_id', { id: payment.id }) }}
                         </button>
                     </div>
                     <div
                         v-else-if="unprintedHdmPayments.some(payment => payment.hdm_print_status === 'pending')"
                         class="mt-2 small"
                     >
-                        ՀԴՄ գործողությունը դեռ սպասման մեջ է։ Նախ ստուգեք դրա կարգավիճակը։
+                        {{ t('sales.the_fiscal_operation_is_pending_check_its_status_first') }}
                     </div>
                 </div>
 
                 <form v-else-if="prepaymentTermination.can_start" @submit.prevent="submitTermination">
                     <div class="alert alert-info py-2">
-                        Այցելությունների ավտոմատ հաշվարկը դեռ չի կիրառվում։ Վերադարձի գումարը որոշում է գանձապահը։
+                        {{ t('sales.visits_are_not_calculated_automatically_yet_the_cashier_sets_the') }}
                     </div>
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <InputLabel value="Հասանելի կանխավճար" />
+                            <InputLabel :value="t('sales.available_prepayment')" />
                             <div class="form-control bg-light fw-bold">{{ formatAmount(terminationPrepayment) }}</div>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <InputLabel value="Վերադարձի գումար" />
+                            <InputLabel :value="t('sales.refund_amount')" />
                             <input
                                 v-model="terminationForm.refund_amount"
                                 type="number"
@@ -781,7 +782,7 @@ const cancelMembership = async () => {
                             <InputError :message="terminationForm.errors.refund_amount" />
                         </div>
                         <div class="col-md-4 mb-3">
-                            <InputLabel value="Մատուցված ծառայության գումար" />
+                            <InputLabel :value="t('sales.provided_service_amount')" />
                             <div class="form-control bg-light fw-bold">{{ formatAmount(terminationServiceAmount) }}</div>
                         </div>
                     </div>
@@ -790,9 +791,9 @@ const cancelMembership = async () => {
                         <table class="table table-sm table-bordered mb-0">
                             <thead>
                                 <tr>
-                                    <th>Սկզբնական վճարում</th>
-                                    <th>Վերադարձի եղանակ</th>
-                                    <th>Վերադարձ</th>
+                                    <th>{{ t('sales.initial_payment') }}</th>
+                                    <th>{{ t('sales.refund_method') }}</th>
+                                    <th>{{ t('people.refund') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -809,14 +810,14 @@ const cancelMembership = async () => {
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel value="Նշումներ" />
+                        <InputLabel :value="t('people.notes')" />
                         <textarea v-model="terminationForm.notes" class="form-control" rows="2" />
                         <InputError :message="terminationForm.errors.notes" />
                     </div>
 
                     <div class="d-flex justify-content-end">
                         <PrimaryButton :disabled="terminationForm.processing">
-                            Խզել պայմանագիրը և կատարել վերադարձ
+                            {{ t('sales.terminate_contract_and_issue_refund') }}
                         </PrimaryButton>
                     </div>
                 </form>
@@ -828,7 +829,7 @@ const cancelMembership = async () => {
                         :disabled="terminationForm.processing"
                         @click="resumeTermination"
                     >
-                        Շարունակել ՀԴՄ գործողությունը
+                        {{ t('sales.resume_fiscal_operation') }}
                     </button>
                 </div>
             </div>
@@ -836,7 +837,7 @@ const cancelMembership = async () => {
 
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Գործարքների պատմություն</h5>
+                <h5 class="mb-0">{{ t('sales.transaction_history') }}</h5>
             </div>
             <div class="card-body">
                 <div
@@ -846,14 +847,14 @@ const cancelMembership = async () => {
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Գումար</th>
-                                <th>Եղանակ</th>
-                                <th>Քարտ</th>
-                                <th>Տեսակ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>ՀԴՄ</th>
-                                <th>Ամսաթիվ</th>
-                                <th>Գործողություն</th>
+                                <th>{{ t('people.amount') }}</th>
+                                <th>{{ t('sales.method') }}</th>
+                                <th>{{ t('sales.card') }}</th>
+                                <th>{{ t('people.type') }}</th>
+                                <th>{{ t('membership.status') }}</th>
+                                <th>{{ t('sales.fiscal_receipt_2') }}</th>
+                                <th>{{ t('people.date') }}</th>
+                                <th>{{ t('people.action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -867,20 +868,20 @@ const cancelMembership = async () => {
                                 <td>{{ transaction.card_type?.name ?? transaction.card_type?.slug ?? '-' }}</td>
                                 <td>{{ transactionTypeLabel(transaction.type) }}</td>
                                 <td>{{ paymentStatusLabel(transaction.status) }}</td>
-                                <td>{{ transaction.is_hdm ? 'Այո' : 'Ոչ' }}</td>
+                                <td>{{ transaction.is_hdm ? t('membership.yes') : t('membership.no') }}</td>
                                 <td>{{ formatDate(transaction.created_at) }}</td>
                                 <td>
                                     <span
                                         v-if="transaction.type === 'payment' && transaction.hdm_payment_closed_by_return"
                                         class="badge bg-label-secondary"
                                     >
-                                        ՀԴՄ կտրոնն ամբողջությամբ վերադարձված է
+                                        {{ t('sales.fiscal_receipt_fully_refunded') }}
                                     </span>
                                     <span
                                         v-else-if="transaction.type === 'payment' && transaction.hdm_prepayment_consumed"
                                         class="badge bg-label-info"
                                     >
-                                        Ներառված է վերջնական ՀԴՄ կտրոնում
+                                        {{ t('sales.included_in_the_final_fiscal_receipt') }}
                                     </span>
                                     <button
                                         v-else-if="transaction.can_retry_hdm_receipt"
@@ -889,7 +890,7 @@ const cancelMembership = async () => {
                                         :disabled="retryingHdmPaymentId !== null"
                                         @click="retryHdmPaymentReceipt(transaction)"
                                     >
-                                        Տպել ՀԴՄ կտրոնը
+                                        {{ t('sales.print_fiscal_receipt') }}
                                     </button>
                                     <button
                                         v-else-if="transaction.type === 'payment' && Number(transaction.refundable_amount || 0) > 0"
@@ -897,7 +898,7 @@ const cancelMembership = async () => {
                                         class="btn btn-sm btn-outline-warning"
                                         @click="selectRefundPayment(transaction.id)"
                                     >
-                                        Վերադարձնել {{ formatAmount(transactionRefundableAmount(transaction)) }}-ից
+                                        {{ t('sales.refund_up_to_amount', { amount: formatAmount(transactionRefundableAmount(transaction)) }) }}
                                     </button>
                                     <span v-else>-</span>
                                 </td>
@@ -909,7 +910,7 @@ const cancelMembership = async () => {
                     v-else
                     class="text-muted"
                 >
-                    Գործարքներ չկան
+                    {{ t('people.no_transactions') }}
                 </div>
             </div>
         </div>
@@ -918,7 +919,7 @@ const cancelMembership = async () => {
             <div :class="actionMode ? 'col-lg-7 mb-4' : 'col-12 mb-4'">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Կիրառված աբոնեմենտի զեղչեր</h5>
+                        <h5 class="mb-0">{{ t('sales.applied_membership_discounts') }}</h5>
                     </div>
                     <div class="card-body">
                         <div
@@ -928,10 +929,10 @@ const cancelMembership = async () => {
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Զեղչ</th>
-                                        <th>Տեսակ</th>
-                                        <th>Արժեք</th>
-                                        <th>Գումար</th>
+                                        <th>{{ t('sales.discount') }}</th>
+                                        <th>{{ t('people.type') }}</th>
+                                        <th>{{ t('membership.cost') }}</th>
+                                        <th>{{ t('people.amount') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -951,7 +952,7 @@ const cancelMembership = async () => {
                             v-else
                             class="text-muted"
                         >
-                            Աբոնեմենտի զեղչեր չկան
+                            {{ t('sales.no_membership_discounts') }}
                         </div>
                     </div>
                 </div>
@@ -974,7 +975,7 @@ const cancelMembership = async () => {
                                 :class="isPaymentMode ? 'btn-primary' : 'btn-outline-primary'"
                                 @click="selectActionMode('payment')"
                             >
-                                Վճարում
+                                {{ t('people.payment') }}
                             </button>
                             <button
                                 type="button"
@@ -982,7 +983,7 @@ const cancelMembership = async () => {
                                 :class="isRefundMode ? 'btn-warning' : 'btn-outline-warning'"
                                 @click="selectActionMode('refund')"
                             >
-                                Վերադարձ
+                                {{ t('people.refund') }}
                             </button>
                         </div>
                     </div>
@@ -994,12 +995,12 @@ const cancelMembership = async () => {
                             v-if="isRefundMode"
                             class="mb-3"
                         >
-                            <InputLabel value="Վճարում, որից կատարվում է վերադարձը" />
+                            <InputLabel :value="t('sales.payment_being_refunded')" />
                             <select
                                 v-model="actionForm.parent_payment_id"
                                 class="form-select"
                             >
-                                <option value="">Ընտրել վճարումը</option>
+                                <option value="">{{ t('sales.select_payment') }}</option>
                                 <option
                                     v-for="payment in refundablePayments"
                                     :key="payment.id"
@@ -1007,8 +1008,8 @@ const cancelMembership = async () => {
                                 >
                                     #{{ payment.id }} — {{ formatAmount(payment.amount) }} —
                                     {{ translatedName(payment.payment_method) }} —
-                                    վերադարձի մնացորդ {{ formatAmount(transactionRefundableAmount(payment)) }}
-                                    {{ payment.is_hdm ? '(ՀԴՄ)' : '' }}
+                                    {{ t('sales.refund_balance_amount', { amount: formatAmount(transactionRefundableAmount(payment)) }) }}
+                                    {{ payment.is_hdm ? t('sales.fiscal_receipt') : '' }}
                                 </option>
                             </select>
                             <InputError :message="actionForm.errors.parent_payment_id" />
@@ -1054,7 +1055,7 @@ const cancelMembership = async () => {
                             v-if="isRefundMode && requiresFullHdmRefund"
                             class="alert alert-info py-2"
                         >
-                            Վերջնական ՀԴՄ կտրոնը ներառում է աբոնեմենտի բոլոր վճարումները և վերադարձվում է միայն ամբողջությամբ։
+                            {{ t('sales.the_final_fiscal_receipt_includes_all_membership_payments_and_ca') }}
                         </div>
                         <InputError :message="actionForm.errors.is_full_payment || actionForm.errors.is_full_refund" />
                         <InputError :message="actionForm.errors.is_partial_payment || actionForm.errors.is_partial_refund" />
@@ -1084,14 +1085,14 @@ const cancelMembership = async () => {
                             v-if="availableCardTypes.length"
                             class="mb-3"
                         >
-                            <InputLabel value="Քարտի տեսակ" />
+                            <InputLabel :value="t('sales.card_type')" />
                             <select
                                 v-model="actionForm.card_type_id"
                                 class="form-select"
                                 :disabled="isRefundMode"
                             >
                                 <option value="">
-                                    Ընտրել քարտի տեսակը
+                                    {{ t('sales.select_card_type') }}
                                 </option>
                                 <option
                                     v-for="cardType in availableCardTypes"
@@ -1124,7 +1125,7 @@ const cancelMembership = async () => {
                             v-else
                             class="alert alert-info py-2"
                         >
-                            {{ actionText.info }}՝ <strong>{{ formatAmount(actionLimit) }}</strong>
+                            {{ actionText.info }}: <strong>{{ formatAmount(actionLimit) }}</strong>
                         </div>
 
                         <div class="mb-3">
@@ -1138,7 +1139,7 @@ const cancelMembership = async () => {
                         </div>
 
                         <div class="mb-4">
-                            <InputLabel value="ՀԴՄ" />
+                            <InputLabel :value="t('sales.fiscal_receipt_2')" />
                             <label class="form-check mt-2">
                                 <input
                                     v-model="actionForm.is_hdm"
@@ -1147,12 +1148,12 @@ const cancelMembership = async () => {
                                     disabled
                                 />
                                 <span class="form-check-label">
-                                    ՀԴՄ կտրոն
+                                    {{ t('sales.fiscal_receipt_3') }}
                                 </span>
                             </label>
                             <InputError :message="actionForm.errors.is_hdm" />
                             <p v-if="membershipSale.is_hdm === null" class="text-danger mt-2">
-                                Այս հին վաճառքի ՀԴՄ ռեժիմը որոշված չէ։ Անհրաժեշտ է ստուգել վճարումների պատմությունը։
+                                {{ t('sales.the_fiscal_mode_of_this_older_sale_is_unknown_check_its_payment') }}
                             </p>
                         </div>
 
@@ -1161,7 +1162,7 @@ const cancelMembership = async () => {
                                 class="btn btn-label-secondary"
                                 :href="route('membership_sale.list', { locale: currentLocale })"
                             >
-                                Վերադառնալ
+                                {{ t('people.back') }}
                             </Link>
                             <PrimaryButton :disabled="actionForm.processing">
                                 {{ actionText.button }}

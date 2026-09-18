@@ -56,7 +56,7 @@ class MembershipSalesReportService
             'columns' => $this->exportColumns(),
             'filters' => array_merge($period, $reportFilters),
             'filename' => 'membership-sales-report-' . now()->format('Y-m-d-H-i-s') . '.xls',
-            'title' => 'Աբոնեմենտների հաշվետվություն',
+            'title' => __('backend_messages.membership_report'),
             'summary' => $this->exportSummary($this->summary($sales)),
         ];
     }
@@ -121,36 +121,36 @@ class MembershipSalesReportService
     {
         return [
             ['key' => 'id', 'title' => 'ID'],
-            ['key' => 'customer', 'title' => 'Հաճախորդ'],
-            ['key' => 'membership_plan', 'title' => 'Աբոնեմենտ'],
-            ['key' => 'trainer', 'title' => 'Մարզիչ'],
-            ['key' => 'start_date', 'title' => 'Սկիզբ'],
-            ['key' => 'end_date', 'title' => 'Ավարտ'],
-            ['key' => 'total_price', 'title' => 'Գին'],
-            ['key' => 'manual_discount_amount', 'title' => 'Ձեռքով զեղչ'],
-            ['key' => 'membership_discount_amount', 'title' => 'Աբոնեմենտի զեղչ'],
-            ['key' => 'final_price', 'title' => 'Վերջնական'],
-            ['key' => 'paid_amount', 'title' => 'Վճարված'],
-            ['key' => 'debt', 'title' => 'Պարտք'],
-            ['key' => 'refund_due_amount', 'title' => 'Հետվերադարձ'],
-            ['key' => 'status', 'title' => 'Վճարման վիճակ'],
-            ['key' => 'created_at', 'title' => 'Ստեղծվել է'],
+            ['key' => 'customer', 'title' => __('backend_messages.client')],
+            ['key' => 'membership_plan', 'title' => __('backend_messages.membership')],
+            ['key' => 'trainer', 'title' => __('backend_messages.trainer')],
+            ['key' => 'start_date', 'title' => __('backend_messages.start')],
+            ['key' => 'end_date', 'title' => __('backend_messages.end')],
+            ['key' => 'total_price', 'title' => __('backend_messages.price_label')],
+            ['key' => 'manual_discount_amount', 'title' => __('backend_messages.manual_discount')],
+            ['key' => 'membership_discount_amount', 'title' => __('backend_messages.membership_discount')],
+            ['key' => 'final_price', 'title' => __('backend_messages.final')],
+            ['key' => 'paid_amount', 'title' => __('backend_messages.paid')],
+            ['key' => 'debt', 'title' => __('backend_messages.debt')],
+            ['key' => 'refund_due_amount', 'title' => __('backend_messages.refund')],
+            ['key' => 'status', 'title' => __('backend_messages.payment_state')],
+            ['key' => 'created_at', 'title' => __('backend_messages.created')],
         ];
     }
 
     protected function exportSummary(array $summary): array
     {
         return [
-            'title' => 'Այս էջի ամփոփում',
+            'title' => __('backend_messages.this_page_summary'),
             'rows' => [
-                ['label' => 'Վաճառված աբոնեմենտներ', 'value' => $summary['sold_memberships_count']],
-                ['label' => 'Նախնական գումար', 'value' => $summary['total_amount']],
-                ['label' => 'Ձեռքով զեղչ', 'value' => $summary['manual_discount_amount']],
-                ['label' => 'Աբոնեմենտի զեղչ', 'value' => $summary['membership_discount_amount']],
-                ['label' => 'Վերջնական գումար', 'value' => $summary['final_amount']],
-                ['label' => 'Վճարված գումար', 'value' => $summary['paid_amount']],
-                ['label' => 'Պարտք', 'value' => $summary['debt']],
-                ['label' => 'Հետվերադարձ', 'value' => $summary['refund_due_amount']],
+                ['label' => __('backend_messages.memberships_sold'), 'value' => $summary['sold_memberships_count']],
+                ['label' => __('backend_messages.initial_amount'), 'value' => $summary['total_amount']],
+                ['label' => __('backend_messages.manual_discount'), 'value' => $summary['manual_discount_amount']],
+                ['label' => __('backend_messages.membership_discount'), 'value' => $summary['membership_discount_amount']],
+                ['label' => __('backend_messages.final_amount'), 'value' => $summary['final_amount']],
+                ['label' => __('backend_messages.paid_amount'), 'value' => $summary['paid_amount']],
+                ['label' => __('backend_messages.debt'), 'value' => $summary['debt']],
+                ['label' => __('backend_messages.refund'), 'value' => $summary['refund_due_amount']],
             ],
         ];
     }

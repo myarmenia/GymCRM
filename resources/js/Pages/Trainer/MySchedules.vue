@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from "vue";
 import { Head } from "@inertiajs/vue3";
 import Index from "@/Layouts/Index.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     schedules: {
@@ -11,13 +16,13 @@ const props = defineProps({
 });
 
 const weekdays = {
-    Monday: "Երկուշաբթի",
-    Tuesday: "Երեքշաբթի",
-    Wednesday: "Չորեքշաբթի",
-    Thursday: "Հինգշաբթի",
-    Friday: "Ուրբաթ",
-    Saturday: "Շաբաթ",
-    Sunday: "Կիրակի",
+    Monday: t('staff_reports.monday'),
+    Tuesday: t('staff_reports.tuesday'),
+    Wednesday: t('staff_reports.wednesday'),
+    Thursday: t('staff_reports.thursday'),
+    Friday: t('staff_reports.friday'),
+    Saturday: t('staff_reports.saturday'),
+    Sunday: t('staff_reports.sunday'),
 };
 
 const normalizedSchedules = computed(() => props.schedules ?? []);
@@ -25,21 +30,21 @@ const normalizedSchedules = computed(() => props.schedules ?? []);
 const time = (value) => (value ? String(value).slice(0, 5) : "-");
 const weekday = (value) => weekdays[value] ?? value ?? "-";
 const sessionType = (value) =>
-    ({ individual: "Անհատական", group: "Խմբային" })[value] ?? value ?? "-";
+    ({ individual: t('staff_reports.individual'), group: t('staff_reports.group') })[value] ?? value ?? "-";
 </script>
 
 <template>
-    <Head title="Իմ գրաֆիկները" />
+    <Head :title="t('sidebar.my_schedules')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Իմ գրաֆիկները
+                {{ t('sidebar.my_schedules') }}
             </h2>
         </template>
 
         <div v-if="!normalizedSchedules.length" class="alert alert-info">
-            Ձեզ դեռ ժամային գրաֆիկ կցված չէ։
+            {{ t('staff_reports.no_hourly_schedule_has_been_assigned_to_you_yet') }}
         </div>
 
         <div
@@ -49,12 +54,12 @@ const sessionType = (value) =>
         >
             <div class="card-header">
                 <h5 class="mb-0">
-                    {{ trainerSchedule.schedule?.name ?? "Անանուն գրաֆիկ" }}
+                    {{ trainerSchedule.schedule?.name ?? t('staff_reports.unnamed_schedule') }}
                 </h5>
             </div>
 
             <div class="card-body">
-                <h6 class="mb-3">Աշխատանքային ժամեր</h6>
+                <h6 class="mb-3">{{ t('staff_reports.working_hours') }}</h6>
                 <div
                     v-if="trainerSchedule.schedule?.schedule_details?.length"
                     class="table-responsive mb-4"
@@ -62,9 +67,9 @@ const sessionType = (value) =>
                     <table class="table table-sm table-bordered mb-0">
                         <thead>
                             <tr>
-                                <th>Օր</th>
-                                <th>Ժամեր</th>
-                                <th>Ընդմիջում</th>
+                                <th>{{ t('membership.day') }}</th>
+                                <th>{{ t('staff_reports.hours') }}</th>
+                                <th>{{ t('staff_reports.break') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -91,10 +96,10 @@ const sessionType = (value) =>
                     </table>
                 </div>
                 <p v-else class="text-muted mb-4">
-                    Այս գրաֆիկում ժամեր նշված չեն։
+                    {{ t('staff_reports.no_hours_are_specified_in_this_schedule') }}
                 </p>
 
-                <h6 class="mb-3">Պարապունքի տեսակներ</h6>
+                <h6 class="mb-3">{{ t('staff_reports.training_types') }}</h6>
                 <div v-if="trainerSchedule.session_durations?.length" class="row g-3">
                     <div
                         v-for="duration in trainerSchedule.session_durations"
@@ -103,10 +108,10 @@ const sessionType = (value) =>
                     >
                         <div class="border rounded p-3 h-100">
                             <div class="fw-semibold">
-                                {{ duration.title || "Անվերնագիր" }}
+                                {{ duration.title || t('staff_reports.untitled') }}
                             </div>
                             <div class="text-muted small mb-2">
-                                {{ duration.minutes }} րոպե · {{ sessionType(duration.type) }}
+                                {{ t('staff_reports.minutes_and_type', { minutes: duration.minutes, type: sessionType(duration.type) }) }}
                             </div>
                             <div v-if="duration.slots?.length" class="d-flex flex-wrap gap-2">
                                 <span
@@ -114,18 +119,18 @@ const sessionType = (value) =>
                                     :key="slot.id"
                                     class="badge bg-label-primary"
                                 >
-                                    {{ weekday(slot.week_day) }}՝
+                                    {{ weekday(slot.week_day) }}:
                                     {{ time(slot.start_time) }} - {{ time(slot.end_time) }}
                                 </span>
                             </div>
                             <span v-else class="text-muted small">
-                                Առանձին ժամեր նշված չեն։
+                                {{ t('staff_reports.no_individual_hours_are_specified') }}
                             </span>
                         </div>
                     </div>
                 </div>
                 <p v-else class="text-muted mb-0">
-                    Պարապունքի տեսակներ ավելացված չեն։
+                    {{ t('staff_reports.no_training_types_have_been_added') }}
                 </p>
             </div>
         </div>

@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from "vue";
+import { translate } from '/resources/js/trans'
+import { computed, ref } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
 import { Link, usePage } from "@inertiajs/vue3";
@@ -13,31 +14,32 @@ const props = defineProps({
 });
 
 const page = usePage();
-const currentLocale = page.props.locale ?? "hy";
+const t = (key, replacements = {}) => translate(page.props.translations, `app.membership.${key}`, replacements);
+const currentLocale = computed(() => page.props.locale ?? "hy");
 const membershipPlansList = ref(props.membershipPlans.data);
 const pagination = ref(props.membershipPlans);
-const durationTypes = [
-    { value: 'day', label: 'Օր' },
-    { value: 'month', label: 'Ամիս' },
-    { value: 'year', label: 'Տարի' },
-    { value: 'visit', label: 'Անգամյա' },
-    { value: 'period', label: 'Ժամանակահատված' },
-]
+const durationTypes = computed(() => [
+    { value: 'day', label: t('day') },
+    { value: 'month', label: t('month') },
+    { value: 'year', label: t('year') },
+    { value: 'visit', label: t('single_visit') },
+    { value: 'period', label: t('period') },
+]);
 
 
 function findingDurationType(value) {
-    const type = durationTypes.find(type => type.value === value);
+    const type = durationTypes.value.find(type => type.value === value);
     return type ? type.label : value;
 }
 </script>
 
 <template>
-    <Head title="Աբոնեմենտներ" />
+    <Head :title="t('plans')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Աբոնեմենտներ
+                {{ t('plans') }}
             </h2>
         </template>
 
@@ -45,7 +47,7 @@ function findingDurationType(value) {
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Ցանկ</h5>
+                <h5 class="mb-0">{{ t('list') }}</h5>
                 <Link
                     class="btn create-new btn-primary"
                     tabindex="0"
@@ -57,7 +59,7 @@ function findingDurationType(value) {
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Ստեղծել նոր աբոնեմենտ</span
+                                >{{ t('plan_create') }}</span
                             >
                         </span>
                     </span>
@@ -69,13 +71,13 @@ function findingDurationType(value) {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Անուն</th>
-                                <th>Կատեգորիա</th>
-                                <th>Արժեք</th>
-                                <th>Տևողություն</th>
-                                <th>has person</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('name') }}</th>
+                                <th>{{ t('category') }}</th>
+                                <th>{{ t('cost') }}</th>
+                                <th>{{ t('duration') }}</th>
+                                <th>{{ t('linked_to_client') }}</th>
+                                <th>{{ t('status') }}</th>
+                                <th>{{ t('actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -96,8 +98,8 @@ function findingDurationType(value) {
                                     >
                                         {{
                                             membershipPlan.is_locked
-                                                ? 'yes'
-                                                : 'no'
+                                                ? t('yes')
+                                                : t('no')
                                         }}
                                     </span>
                                 </td>
@@ -164,7 +166,7 @@ function findingDurationType(value) {
                                                 <i
                                                     class="icon-base ti tabler-pencil me-1"
                                                 ></i>
-                                                Edit
+                                                {{ t('edit') }}
                                             </Link>
                                             <a
                                                 v-if="!membershipPlan.is_locked"

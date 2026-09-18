@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import Index from "@/Layouts/Index.vue";
 import { Head, useForm, usePage, router } from "@inertiajs/vue3";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -23,13 +28,13 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ավելացնել նոր պահեստ" />
+    <Head :title="t('inventory.add_new_warehouse_2')" />
     <Index>
         <div class="card mb-6">
-            <h5 class="card-header">Ավելացնել նոր պահեստ</h5>
+            <h5 class="card-header">{{ t('inventory.add_new_warehouse_2') }}</h5>
             <form @submit.prevent="submit" class="card-body row g-6">
                 <div class="col-md-6">
-                    <InputLabel for="name" value="Պահեստի անուն" />
+                    <InputLabel for="name" :value="t('inventory.warehouse_name')" />
                     <TextInput
                         id="name"
                         type="text"
@@ -40,19 +45,19 @@ const submit = () => {
                 </div>
 
                 <div class="col-md-6">
-                    <InputLabel for="type" value="Տիպ" />
+                    <InputLabel for="type" :value="t('inventory.type')" />
 
                     <select id="type" class="form-select" v-model="form.type">
-                        <option value="">ընտրել տիպը</option>
-                        <option value="main">Հիմնական</option>
-                        <option value="cashier">Վաճառքի</option>
+                        <option value="">{{ t('inventory.select_type') }}</option>
+                        <option value="main">{{ t('inventory.main') }}</option>
+                        <option value="cashier">{{ t('inventory.sale') }}</option>
                     </select>
 
                     <InputError class="mt-2" :message="form.errors.type" />
                 </div>
 
                 <div class="col-md-6">
-                    <InputLabel for="phone" value="Հեռախոս" />
+                    <InputLabel for="phone" :value="t('filter.phone')" />
                     <TextInput
                         id="phone"
                         type="text"
@@ -63,7 +68,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-md-6">
-                    <InputLabel for="address" value="Հասցե" />
+                    <InputLabel for="address" :value="t('inventory.address')" />
                     <TextInput
                         id="address"
                         type="text"
@@ -74,7 +79,7 @@ const submit = () => {
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label d-block">Կարգավիճակ (Ակտիվ)</label>
+                    <label class="form-label d-block">{{ t('inventory.status_active') }}</label>
                     <div class="form-check form-switch pt-2">
                         <input
                             class="form-check-input"
@@ -86,7 +91,7 @@ const submit = () => {
 
                 <div class="pt-6 d-flex justify-content-end">
                     <PrimaryButton :disabled="form.processing" class="me-4"
-                        >Հաստատել</PrimaryButton
+                        >{{ t('confirm.accept') }}</PrimaryButton
                     >
                     <button
                         type="button"
@@ -99,7 +104,7 @@ const submit = () => {
                         "
                         class="btn btn-label-secondary"
                     >
-                        Չեղարկել
+                        {{ t('confirm.cancel') }}
                     </button>
                 </div>
             </form>

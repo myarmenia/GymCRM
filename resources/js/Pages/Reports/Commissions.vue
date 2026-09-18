@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -59,7 +64,7 @@ const cleanQuery = query => Object.fromEntries(
 const tabs = computed(() => [
     {
         key: 'trainer',
-        label: 'Մարզիչների միջնորդավճարներ',
+        label: t('sidebar.trainer_commissions'),
         href: route('reports.commissions', {
             locale: currentLocale.value,
             ...withoutPageParams(filters.value),
@@ -68,7 +73,7 @@ const tabs = computed(() => [
     },
     {
         key: 'salesperson',
-        label: 'Վաճառողների միջնորդավճարներ',
+        label: t('sidebar.salesperson_commissions'),
         href: route('reports.commissions', {
             locale: currentLocale.value,
             ...withoutPageParams(filters.value),
@@ -104,20 +109,20 @@ const activeFilterKeys = computed(() => activeTab.value === 'salesperson'
 const trainerFilterFields = computed(() => [
     {
         name: 'trainer_membership_plan_id',
-        label: 'Աբոնեմենտի տեսակ',
-        placeholder: 'Բոլոր աբոնեմենտները',
+        label: t('membership.plan_type'),
+        placeholder: t('sales.all_memberships'),
         options: props.filterOptions.membershipPlans ?? [],
     },
     {
         name: 'trainer_status',
-        label: 'Կարգավիճակ',
-        placeholder: 'Բոլոր կարգավիճակները',
+        label: t('status.status'),
+        placeholder: t('staff_reports.all_statuses'),
         options: props.filterOptions.trainerStatuses ?? [],
     },
     {
         name: 'trainer_id',
-        label: 'Մարզիչ',
-        placeholder: 'Բոլոր մարզիչները',
+        label: t('roles.trainer'),
+        placeholder: t('sales.all_trainers'),
         options: props.filterOptions.trainers ?? [],
     },
 ])
@@ -125,20 +130,20 @@ const trainerFilterFields = computed(() => [
 const salespersonFilterFields = computed(() => [
     {
         name: 'salesperson_membership_plan_id',
-        label: 'Աբոնեմենտի տեսակ',
-        placeholder: 'Բոլոր աբոնեմենտները',
+        label: t('membership.plan_type'),
+        placeholder: t('sales.all_memberships'),
         options: props.filterOptions.membershipPlans ?? [],
     },
     {
         name: 'salesperson_status',
-        label: 'Կարգավիճակ',
-        placeholder: 'Բոլոր կարգավիճակները',
+        label: t('status.status'),
+        placeholder: t('staff_reports.all_statuses'),
         options: props.filterOptions.salespersonStatuses ?? [],
     },
     {
         name: 'salesperson_id',
-        label: 'Վաճառող',
-        placeholder: 'Բոլոր վաճառողները',
+        label: t('staff_reports.salesperson'),
+        placeholder: t('staff_reports.all_salespeople'),
         options: props.filterOptions.salespeople ?? [],
     },
 ])
@@ -239,14 +244,14 @@ const formatAmount = value => {
 const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ') : '-'
 
 const salaryTypeLabel = type => ({
-    fixed: 'Ֆիքսված',
-    percent: 'Տոկոս',
+    fixed: t('staff_reports.fixed'),
+    percent: t('staff_reports.percent'),
 }[type] ?? type ?? '-')
 
 const statusLabel = status => ({
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    cancelled: 'Չեղարկված',
+    pending: t('status.pending'),
+    paid: t('people.paid'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -257,20 +262,20 @@ const statusClass = status => ({
 </script>
 
 <template>
-    <Head title="Միջնորդավճարների հաշվետվություն" />
+    <Head :title="t('staff_reports.commission_report')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Միջնորդավճարների հաշվետվություն</h2>
-                <div class="text-muted">Մարզիչների և վաճառողների միջնորդավճարներ</div>
+                <h2 class="mb-1">{{ t('staff_reports.commission_report') }}</h2>
+                <div class="text-muted">{{ t('staff_reports.trainer_and_salesperson_commissions') }}</div>
             </div>
             <a
                 :href="exportHref"
                 class="btn btn-outline-success"
             >
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -312,24 +317,24 @@ const statusClass = status => ({
             class="card"
         >
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Մարզիչների միջնորդավճարներ</h5>
-                <span class="badge bg-label-primary">{{ trainerCommissions.total ?? trainerCommissions.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('sidebar.trainer_commissions') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: trainerCommissions.total ?? trainerCommissions.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Մարզիչ</th>
-                            <th>Հաճախորդ</th>
-                            <th>Աբոնեմենտ</th>
-                            <th>Տեսակ</th>
-                            <th>Արժեք</th>
-                            <th>Գումար</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Պահված է</th>
-                            <th>Վճարվել է</th>
-                            <th>Ստեղծվել է</th>
+                            <th>{{ t('roles.trainer') }}</th>
+                            <th>{{ t('sales.client') }}</th>
+                            <th>{{ t('people.membership') }}</th>
+                            <th>{{ t('people.type') }}</th>
+                            <th>{{ t('membership.cost') }}</th>
+                            <th>{{ t('people.amount') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('staff_reports.saved') }}</th>
+                            <th>{{ t('staff_reports.paid') }}</th>
+                            <th>{{ t('inventory.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -352,7 +357,7 @@ const statusClass = status => ({
                                     {{ statusLabel(commission.status) }}
                                 </span>
                             </td>
-                            <td>{{ commission.is_kept ? 'Այո' : 'Ոչ' }}</td>
+                            <td>{{ commission.is_kept ? t('membership.yes') : t('people.no') }}</td>
                             <td>{{ formatDate(commission.paid_at) }}</td>
                             <td>{{ formatDate(commission.created_at) }}</td>
                         </tr>
@@ -361,7 +366,7 @@ const statusClass = status => ({
                                 colspan="11"
                                 class="text-center text-muted py-4"
                             >
-                                Մարզիչների միջնորդավճարներ չկան։
+                                {{ t('staff_reports.there_are_no_trainer_commissions') }}
                             </td>
                         </tr>
                     </tbody>
@@ -380,24 +385,24 @@ const statusClass = status => ({
             class="card"
         >
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Վաճառողների միջնորդավճարներ</h5>
-                <span class="badge bg-label-primary">{{ salespersonCommissions.total ?? salespersonCommissions.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('sidebar.salesperson_commissions') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: salespersonCommissions.total ?? salespersonCommissions.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Վաճառող</th>
-                            <th>Հաճախորդ</th>
-                            <th>Աբոնեմենտ</th>
-                            <th>Տեսակ</th>
-                            <th>Արժեք</th>
-                            <th>Վաճառքի գումար</th>
-                            <th>Միջնորդավճար</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Վճարվել է</th>
-                            <th>Ստեղծվել է</th>
+                            <th>{{ t('staff_reports.salesperson') }}</th>
+                            <th>{{ t('sales.client') }}</th>
+                            <th>{{ t('people.membership') }}</th>
+                            <th>{{ t('people.type') }}</th>
+                            <th>{{ t('membership.cost') }}</th>
+                            <th>{{ t('staff_reports.sale_amount') }}</th>
+                            <th>{{ t('staff_reports.commission') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('staff_reports.paid') }}</th>
+                            <th>{{ t('inventory.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -429,7 +434,7 @@ const statusClass = status => ({
                                 colspan="11"
                                 class="text-center text-muted py-4"
                             >
-                                Վաճառողների միջնորդավճարներ չկան։
+                                {{ t('staff_reports.there_are_no_salesperson_commissions') }}
                             </td>
                         </tr>
                     </tbody>

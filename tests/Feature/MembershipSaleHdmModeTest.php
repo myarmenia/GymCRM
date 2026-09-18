@@ -491,7 +491,10 @@ class MembershipSaleHdmModeTest extends TestCase
 
         $this->assertFalse($pageData['requires_workflow']);
         $this->assertFalse($pageData['can_start']);
-        $this->assertStringContainsString('վերադարձված', $pageData['reason']);
+        $this->assertSame(
+            __('backend_messages.final_cash_register_receipt_has_already_been_refunded_duplicate_refund_not_allowed'),
+            $pageData['reason'],
+        );
     }
 
     public function test_cashier_can_terminate_hdm_prepayment_with_a_manual_refund_amount(): void

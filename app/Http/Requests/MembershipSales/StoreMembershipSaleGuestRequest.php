@@ -49,26 +49,26 @@ class StoreMembershipSaleGuestRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
-            'max' => ':attribute դաշտը չի կարող գերազանցել :max նիշը։',
-            'email' => ':attribute դաշտը պետք է լինի վավեր էլ. հասցե։',
-            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
-            'entry_code_id.exists' => 'Ընտրված մուտքի կոդը չի գտնվել։ Ստեղծիր',
+            'required' => __('validation.required'),
+            'string' => __('validation.string'),
+            'max' => __('validation.max.string'),
+            'email' => __('validation.email'),
+            'date' => __('validation.date'),
+            'in' => __('validation.exists'),
+            'entry_code_id.exists' => __('backend.membership_sales.entry_code_not_found_create'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'name' => 'անուն',
-            'surname' => 'ազգանուն',
-            'email' => 'էլ. հասցե',
-            'phone' => 'հեռախոսահամար',
-            'entry_code_id' => 'մուտքի կոդ',
-            'birth_date' => 'ծննդյան ամսաթիվ',
-            'gender' => 'սեռ',
+            'name' => __('backend.attributes.name'),
+            'surname' => __('backend.attributes.surname'),
+            'email' => __('backend.attributes.email'),
+            'phone' => __('backend.attributes.phone'),
+            'entry_code_id' => __('backend.attributes.entry_code'),
+            'birth_date' => __('backend.attributes.birth_date'),
+            'gender' => __('backend.attributes.gender'),
         ];
     }
 }

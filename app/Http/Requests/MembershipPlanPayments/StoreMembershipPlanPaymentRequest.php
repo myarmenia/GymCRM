@@ -29,28 +29,28 @@ class StoreMembershipPlanPaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'required' => __('backend_messages.attribute_field_required'),
+            'integer' => __('backend_messages.attribute_must_be_integer'),
+            'numeric' => __('backend_messages.attribute_must_be_number'),
+            'min.numeric' => __('backend_messages.attribute_must_be_least_min'),
+            'boolean' => __('backend_messages.attribute_field_must_be_true_or_false'),
+            'exists' => __('backend_messages.selected_attribute_invalid'),
+            'in' => __('backend_messages.selected_attribute_invalid'),
+            'string' => __('backend_messages.attribute_must_be_string'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'membership_sale_id' => 'աբոնեմենտի վաճառք',
-            'amount' => 'գումար',
-            'payment_method_id' => 'վճարման եղանակ',
-            'card_type_id' => 'քարտի տեսակ',
-            'status' => 'կարգավիճակ',
-            'type' => 'վճարման տեսակ',
-            'is_hdm' => 'ՀԴՄ',
-            'notes' => 'նշումներ',
+            'membership_sale_id' => __('backend_messages.membership_sale_lowercase'),
+            'amount' => __('backend_messages.amount_lowercase'),
+            'payment_method_id' => __('backend_messages.payment_method_lowercase'),
+            'card_type_id' => __('backend_messages.card_type'),
+            'status' => __('backend_messages.status_lowercase'),
+            'type' => __('backend_messages.payment_type'),
+            'is_hdm' => __('backend_messages.fiscal_receipt'),
+            'notes' => __('backend_messages.notes'),
         ];
     }
 }

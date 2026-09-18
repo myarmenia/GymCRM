@@ -1,4 +1,9 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 defineProps({
     summaries: {
         type: Array,
@@ -22,16 +27,16 @@ const formatHours = value => Number(value || 0).toFixed(2)
                         <div>
                             <h5 class="mb-1">{{ summary.first_name }} {{ summary.last_name }}</h5>
                             <div class="text-muted small">
-                                {{ summary.email || summary.phone || 'Կապի տվյալներ չկան' }}
+                                {{ summary.email || summary.phone || t('operations.no_contact_details') }}
                             </div>
                         </div>
                         <span class="badge bg-label-primary align-self-start">
-                            {{ formatHours(summary.weekly_occupied_hours) }} ժ
+                            {{ t('operations.hours_short', { hours: formatHours(summary.weekly_occupied_hours) }) }}
                         </span>
                     </div>
 
                     <div class="mt-3">
-                        <div class="text-muted small mb-2">Կցված աբոնեմենտներ</div>
+                        <div class="text-muted small mb-2">{{ t('operations.assigned_memberships') }}</div>
                         <div class="plan-list">
                             <span
                                 v-for="plan in summary.membership_plans"
@@ -44,7 +49,7 @@ const formatHours = value => Number(value || 0).toFixed(2)
                                 v-if="!summary.membership_plans.length"
                                 class="text-muted small"
                             >
-                                Աբոնեմենտներ չկան
+                                {{ t('people.no_memberships') }}
                             </span>
                         </div>
                     </div>
@@ -57,7 +62,7 @@ const formatHours = value => Number(value || 0).toFixed(2)
             class="col-12"
         >
             <div class="alert alert-warning mb-0">
-                Ընտրված շաբաթվա համար վաճառված աբոնեմենտներով մարզիչների գրաֆիկներ չկան։
+                {{ t('operations.there_are_no_trainer_schedules_with_sold_memberships_for_the_sel') }}
             </div>
         </div>
     </div>

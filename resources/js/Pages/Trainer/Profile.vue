@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -31,17 +36,17 @@ const initials = computed(() => {
     return `${first}${last}`.toUpperCase() || '#'
 })
 
-const trainerStatusLabel = computed(() => props.trainer?.deleted_at ? 'Ապաակտիվ' : 'Ակտիվ')
+const trainerStatusLabel = computed(() => props.trainer?.deleted_at ? t('people.inactive') : t('status.active'))
 const trainerStatusClass = computed(() => props.trainer?.deleted_at ? 'bg-label-danger' : 'bg-label-success')
 const roleNames = computed(() => (props.trainer?.roles ?? []).map(role => role.name ?? role.title ?? `#${role.id}`))
 
 const membershipStatusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    expired: 'Ավարտված',
-    deleted: 'Ջնջված',
-    cancelled: 'Չեղարկված',
+    waiting: t('status.pending'),
+    active: t('status.active'),
+    frozen: t('people.frozen'),
+    expired: t('staff_reports.completed'),
+    deleted: t('status.deleted'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
@@ -52,15 +57,15 @@ const membershipStatusClass = status => ({
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 const commissionTypeLabel = type => ({
-    fixed: 'Ֆիքսված',
-    percent: 'Տոկոս',
+    fixed: t('staff_reports.fixed'),
+    percent: t('staff_reports.percent'),
 }[type] ?? type ?? '-')
 const salaryStatusLabel = status => ({
-    pending: 'Սպասման մեջ',
-    paid: 'Վճարված',
-    transfer: 'Փոխանցում',
-    cancel: 'Չեղարկված',
-    reject: 'Մերժված',
+    pending: t('status.pending'),
+    paid: t('people.paid'),
+    transfer: t('staff_reports.transfer'),
+    cancel: t('people.cancelled'),
+    reject: t('staff_reports.rejected'),
 }[status] ?? status ?? '-')
 const salaryStatusClass = status => ({
     pending: 'bg-label-warning',
@@ -79,13 +84,13 @@ const pendingSalaries = computed(() => monthlySalaries.value
     .filter(item => item.status === 'pending')
     .reduce((total, item) => total + Number(item.price || 0), 0))
 const stats = computed(() => [
-    { label: 'Ընդհանուր աբոնեմենտներ', value: memberships.value.length, icon: 'tabler-id-badge-2', className: 'bg-label-primary' },
-    { label: 'Ակտիվ աբոնեմենտներ', value: memberships.value.filter(item => item.status === 'active').length, icon: 'tabler-circle-check', className: 'bg-label-success' },
-    { label: 'Ավարտված աբոնեմենտներ', value: memberships.value.filter(item => ['expired', 'cancelled', 'deleted'].includes(item.status)).length, icon: 'tabler-circle-x', className: 'bg-label-secondary' },
-    { label: 'Ընդհանուր կոմիսիաներ', value: formatAmount(totalCommissions.value), icon: 'tabler-cash', className: 'bg-label-info' },
-    { label: 'Ամսական աշխատավարձեր', value: formatAmount(totalMonthlySalaries.value), icon: 'tabler-calendar-dollar', className: 'bg-label-primary' },
-    { label: 'Վճարված աշխատավարձեր', value: formatAmount(paidSalaries.value), icon: 'tabler-check', className: 'bg-label-success' },
-    { label: 'Սպասման աշխատավարձեր', value: formatAmount(pendingSalaries.value), icon: 'tabler-clock', className: 'bg-label-warning' },
+    { label: t('staff_reports.total_memberships'), value: memberships.value.length, icon: 'tabler-id-badge-2', className: 'bg-label-primary' },
+    { label: t('people.active_memberships'), value: memberships.value.filter(item => item.status === 'active').length, icon: 'tabler-circle-check', className: 'bg-label-success' },
+    { label: t('staff_reports.completed_memberships'), value: memberships.value.filter(item => ['expired', 'cancelled', 'deleted'].includes(item.status)).length, icon: 'tabler-circle-x', className: 'bg-label-secondary' },
+    { label: t('staff_reports.total_commissions'), value: formatAmount(totalCommissions.value), icon: 'tabler-cash', className: 'bg-label-info' },
+    { label: t('staff_reports.monthly_salaries'), value: formatAmount(totalMonthlySalaries.value), icon: 'tabler-calendar-dollar', className: 'bg-label-primary' },
+    { label: t('staff_reports.paid_salaries'), value: formatAmount(paidSalaries.value), icon: 'tabler-check', className: 'bg-label-success' },
+    { label: t('staff_reports.pending_salaries'), value: formatAmount(pendingSalaries.value), icon: 'tabler-clock', className: 'bg-label-warning' },
 ])
 
 const customerName = membership => fullName(membership?.person)
@@ -95,14 +100,14 @@ const salaryMembership = salary => salary?.person_membership
 </script>
 
 <template>
-    <Head title="Մարզչի պրոֆիլ" />
+    <Head :title="t('staff_reports.trainer_profile')" />
 
     <Index>
         <template #header>
             <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 mb-1">
-                        Մարզչի պրոֆիլ
+                        {{ t('staff_reports.trainer_profile') }}
                     </h2>
                     <div class="text-muted">{{ fullName(trainer) }}</div>
                 </div>
@@ -110,7 +115,7 @@ const salaryMembership = salary => salary?.person_membership
                     class="btn btn-secondary"
                     :href="route('trainer.index', { locale: currentLocale })"
                 >
-                    Վերադառնալ
+                    {{ t('people.back') }}
                 </Link>
             </div>
         </template>
@@ -182,20 +187,20 @@ const salaryMembership = salary => salary?.person_membership
 
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Մարզչի տվյալներ</h5>
-                <small class="text-muted">Կոնտակտային և աշխատանքային տվյալներ</small>
+                <h5 class="mb-0">{{ t('staff_reports.trainer_details') }}</h5>
+                <small class="text-muted">{{ t('staff_reports.contact_and_employment_details') }}</small>
             </div>
             <div class="card-body">
                 <div class="row g-4">
                     <div class="col-lg-6">
                         <div class="profile-info-group h-100">
-                            <h6 class="mb-3">Կոնտակտային տվյալներ</h6>
+                            <h6 class="mb-3">{{ t('people.contact_information') }}</h6>
                             <div class="profile-info-row">
                                 <div class="profile-info-icon bg-label-primary">
                                     <i class="icon-base ti tabler-user"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Անուն Ազգանուն</div>
+                                    <div class="text-muted small">{{ t('people.full_name') }}</div>
                                     <div class="fw-semibold">{{ fullName(trainer) }}</div>
                                 </div>
                             </div>
@@ -204,7 +209,7 @@ const salaryMembership = salary => salary?.person_membership
                                     <i class="icon-base ti tabler-phone"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Հեռախոս</div>
+                                    <div class="text-muted small">{{ t('filter.phone') }}</div>
                                     <div class="fw-semibold">{{ trainer?.phone || '-' }}</div>
                                 </div>
                             </div>
@@ -213,7 +218,7 @@ const salaryMembership = salary => salary?.person_membership
                                     <i class="icon-base ti tabler-mail"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Էլ․ հասցե</div>
+                                    <div class="text-muted small">{{ t('staff_reports.email_address') }}</div>
                                     <div class="fw-semibold">{{ trainer?.email || '-' }}</div>
                                 </div>
                             </div>
@@ -221,13 +226,13 @@ const salaryMembership = salary => salary?.person_membership
                     </div>
                     <div class="col-lg-6">
                         <div class="profile-info-group h-100">
-                            <h6 class="mb-3">Աշխատանքային տվյալներ</h6>
+                            <h6 class="mb-3">{{ t('staff_reports.employment_details') }}</h6>
                             <div class="profile-info-row">
                                 <div class="profile-info-icon bg-label-info">
                                     <i class="icon-base ti tabler-building"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Մարզասրահ</div>
+                                    <div class="text-muted small">{{ t('people.gym') }}</div>
                                     <div class="fw-semibold">{{ trainer?.gym?.name || '-' }}</div>
                                 </div>
                             </div>
@@ -236,7 +241,7 @@ const salaryMembership = salary => salary?.person_membership
                                     <i class="icon-base ti tabler-circle-check"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Կարգավիճակ</div>
+                                    <div class="text-muted small">{{ t('status.status') }}</div>
                                     <div class="fw-semibold">{{ trainerStatusLabel }}</div>
                                 </div>
                             </div>
@@ -245,7 +250,7 @@ const salaryMembership = salary => salary?.person_membership
                                     <i class="icon-base ti tabler-shield-check"></i>
                                 </div>
                                 <div>
-                                    <div class="text-muted small">Դերեր</div>
+                                    <div class="text-muted small">{{ t('staff_reports.roles') }}</div>
                                     <div class="fw-semibold">{{ roleNames.length ? roleNames.join(', ') : '-' }}</div>
                                 </div>
                             </div>
@@ -266,7 +271,7 @@ const salaryMembership = salary => salary?.person_membership
                             @click="activeTab = 'memberships'"
                         >
                             <i class="icon-base ti tabler-id-badge-2 me-1"></i>
-                            Աբոնեմենտներ
+                            {{ t('sidebar.membership_plans') }}
                         </button>
                     </li>
                     <li class="nav-item">
@@ -277,7 +282,7 @@ const salaryMembership = salary => salary?.person_membership
                             @click="activeTab = 'commissions'"
                         >
                             <i class="icon-base ti tabler-cash me-1"></i>
-                            Կոմիսիաներ
+                            {{ t('staff_reports.commissions') }}
                         </button>
                     </li>
                     <li class="nav-item">
@@ -288,7 +293,7 @@ const salaryMembership = salary => salary?.person_membership
                             @click="activeTab = 'monthly_salaries'"
                         >
                             <i class="icon-base ti tabler-calendar-dollar me-1"></i>
-                            Ամսական աշխատավարձեր
+                            {{ t('staff_reports.monthly_salaries') }}
                         </button>
                     </li>
                 </ul>
@@ -299,11 +304,11 @@ const salaryMembership = salary => salary?.person_membership
                     <table class="table table-bordered align-middle">
                         <thead>
                             <tr>
-                                <th>Հաճախորդ</th>
-                                <th>Աբոնեմենտ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Սկիզբ</th>
-                                <th>Ավարտ</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('people.membership') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('people.start') }}</th>
+                                <th>{{ t('people.end') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -326,7 +331,7 @@ const salaryMembership = salary => salary?.person_membership
                             </tr>
                             <tr v-if="!memberships.length">
                                 <td colspan="5" class="text-center text-muted">
-                                    Աբոնեմենտներ չկան
+                                    {{ t('people.no_memberships') }}
                                 </td>
                             </tr>
                         </tbody>
@@ -338,11 +343,11 @@ const salaryMembership = salary => salary?.person_membership
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Հաշվարկման տեսակ</th>
-                                <th>Հաշվարկման արժեք</th>
-                                <th>Գումար</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Աբոնեմենտ</th>
+                                <th>{{ t('staff_reports.calculation_type') }}</th>
+                                <th>{{ t('staff_reports.calculation_value') }}</th>
+                                <th>{{ t('people.amount') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('people.membership') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -359,7 +364,7 @@ const salaryMembership = salary => salary?.person_membership
                             </tr>
                             <tr v-if="!commissions.length">
                                 <td colspan="6" class="text-center text-muted">
-                                    Կոմիսիաներ չկան
+                                    {{ t('staff_reports.no_commissions') }}
                                 </td>
                             </tr>
                         </tbody>
@@ -371,10 +376,10 @@ const salaryMembership = salary => salary?.person_membership
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Ամիս</th>
-                                <th>Գումար</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Աբոնեմենտ</th>
+                                <th>{{ t('membership.month') }}</th>
+                                <th>{{ t('people.amount') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('people.membership') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -397,7 +402,7 @@ const salaryMembership = salary => salary?.person_membership
                             </tr>
                             <tr v-if="!monthlySalaries.length">
                                 <td colspan="5" class="text-center text-muted">
-                                    Ամսական աշխատավարձեր չկան
+                                    {{ t('staff_reports.no_monthly_salaries') }}
                                 </td>
                             </tr>
                         </tbody>

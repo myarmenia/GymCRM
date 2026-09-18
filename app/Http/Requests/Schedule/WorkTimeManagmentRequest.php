@@ -41,7 +41,7 @@ class WorkTimeManagmentRequest extends FormRequest
                         if ($hasWorkStartOrEnd && !$hasFullWorkDay) {
                             $fail(
                                 "week_days.$dayIndex.day_time",
-                                'Աշխատանքային ժամի սկիզբն ու ավարտը պարտադիր են։'
+                                __('backend_messages.start_and_end_working_hours_required')
                             );
 
                             continue;
@@ -50,14 +50,14 @@ class WorkTimeManagmentRequest extends FormRequest
                         if ($hasFullWorkDay && $dayEnd <= $dayStart) {
                             $fail(
                                 "week_days.$dayIndex.day_time",
-                                'Աշխատանքային ավարտը պետք է մեծ լինի սկիզբից։'
+                                __('backend_messages.end_working_hours_must_be_later_than_start')
                             );
                         }
 
                         if ($hasBreak && !$hasFullWorkDay) {
                             $fail(
                                 "week_days.$dayIndex.day_time",
-                                'Ընդմիջման ժամ ավելացնելու դեպքում տվյալ օրվա աշխատանքային ժամերը պարտադիր են։'
+                                __('backend_messages.working_hours_required_day_that_has_break')
                             );
 
                             continue;
@@ -67,17 +67,17 @@ class WorkTimeManagmentRequest extends FormRequest
                             if (!$breakStart || !$breakEnd) {
                                 $fail(
                                     "week_days.$dayIndex.break_time",
-                                    'Ընդմիջման սկիզբն ու ավարտը պարտադիր են։'
+                                    __('backend_messages.break_start_and_end_times_required')
                                 );
                             } elseif ($breakEnd <= $breakStart) {
                                 $fail(
                                     "week_days.$dayIndex.break_time",
-                                    'Ընդմիջման ավարտը պետք է մեծ լինի սկիզբից։'
+                                    __('backend_messages.break_end_time_must_be_later_than_its_start_time')
                                 );
                             } elseif ($breakStart < $dayStart || $breakEnd > $dayEnd) {
                                 $fail(
                                     "week_days.$dayIndex.break_time",
-                                    'Ընդմիջման ժամը պետք է լինի աշխատանքային ժամերի միջակայքում։'
+                                    __('backend_messages.break_must_fall_within_working_hours')
                                 );
                             }
                         }
@@ -86,7 +86,7 @@ class WorkTimeManagmentRequest extends FormRequest
                     if (!$hasAtLeastOneWorkDay) {
                         $fail(
                             'week_days',
-                            'Անհրաժեշտ է լրացնել առնվազն մեկ օրվա աշխատանքային ժամի սկիզբը և ավարտը։'
+                            __('backend_messages.enter_start_and_end_working_hours_least_one_day')
                         );
                     }
                 },
@@ -97,7 +97,7 @@ class WorkTimeManagmentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Անվանում դաշտը պարտադիր է։',
+            'name.required' => __('backend_messages.name_field_required'),
         ];
     }
 }

@@ -75,19 +75,19 @@ class TrainerController extends Controller
             'salary_ids.*' => ['integer', 'exists:trainer_monthly_salaries,id'],
             'action' => ['required', 'in:cancel'],
         ], [
-            'salary_ids.required' => 'Ընտրեք առնվազն մեկ աշխատավարձ։',
-            'salary_ids.array' => 'Ընտրված աշխատավարձերի տվյալները սխալ են։',
-            'salary_ids.min' => 'Ընտրեք առնվազն մեկ աշխատավարձ։',
-            'salary_ids.*.exists' => 'Ընտրված աշխատավարձը չի գտնվել։',
-            'action.required' => 'Գործողությունը պարտադիր է։',
-            'action.in' => 'Ընտրված գործողությունը սխալ է։',
+            'salary_ids.required' => __('backend_messages.select_least_one_salary'),
+            'salary_ids.array' => __('backend_messages.selected_salary_data_invalid'),
+            'salary_ids.min' => __('backend_messages.select_least_one_salary'),
+            'salary_ids.*.exists' => __('backend_messages.selected_salary_not_found'),
+            'action.required' => __('backend_messages.action_required'),
+            'action.in' => __('backend_messages.selected_action_invalid'),
         ]);
 
         $this->trainerService->updateMonthlySalaryStatuses($id, $validated['salary_ids'], $validated['action']);
 
         return redirect()
             ->route('trainer.salary', ['locale' => $locale, 'id' => $id])
-            ->with('success', 'Աշխատավարձերի կարգավիճակը թարմացվեց։');
+            ->with('success', __('backend_messages.salary_statuses_updated'));
     }
 
     public function transferSalary(Request $request, string $locale, int $id)
@@ -95,16 +95,16 @@ class TrainerController extends Controller
         $validated = $request->validate([
             'salary_id' => ['required', 'integer', 'exists:trainer_monthly_salaries,id'],
         ], [
-            'salary_id.required' => 'Ընտրեք փոխանցվող աշխատավարձը։',
-            'salary_id.integer' => 'Ընտրված աշխատավարձը սխալ է։',
-            'salary_id.exists' => 'Ընտրված աշխատավարձը չի գտնվել։',
+            'salary_id.required' => __('backend_messages.select_salary_transfer'),
+            'salary_id.integer' => __('backend_messages.selected_salary_invalid'),
+            'salary_id.exists' => __('backend_messages.selected_salary_not_found'),
         ]);
 
         $this->trainerService->transferMonthlySalary($id, (int) $validated['salary_id']);
 
         return redirect()
             ->route('trainer.salary', ['locale' => $locale, 'id' => $id])
-            ->with('success', 'Աշխատավարձը հաջողությամբ փոխանցվեց նոր մարզչին։');
+            ->with('success', __('backend_messages.salary_transferred_new_trainer_successfully'));
     }
 
     public function update(StoreTrainerScheduleRequest $request, string $locale, int $id)
@@ -116,7 +116,7 @@ class TrainerController extends Controller
 
         return redirect()
             ->route('trainer.edit', ['locale' => $locale, 'id' => $id])
-            ->with('success', 'Թարմացվեց');
+            ->with('success', __('backend_messages.updated'));
     }
 
     public function show($locale, $userId)
@@ -143,6 +143,6 @@ class TrainerController extends Controller
 
         return redirect()
             ->route('trainer.edit', ['locale' => $locale, 'id' => $id])
-            ->with('success', 'Պահպանվեց');
+            ->with('success', __('backend_messages.saved'));
     }
 }

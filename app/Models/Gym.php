@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasUuidAndVersion;
+use App\Support\SupportedLocales;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -94,10 +95,8 @@ class Gym extends Model
 
         static::created(function (Gym $gym) {
 
-            $hyLang = Lang::where('code', 'hy')->first();
-
-            if ($hyLang) {
-                $gym->languages()->attach($hyLang->id, [
+            foreach (Lang::whereIn('code', SupportedLocales::CODES)->get() as $lang) {
+                $gym->languages()->attach($lang->id, [
                     'active' => true,
                 ]);
             }
