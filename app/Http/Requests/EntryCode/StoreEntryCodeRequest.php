@@ -28,11 +28,13 @@ class StoreEntryCodeRequest extends FormRequest
                 'string',
                 'in:rfId,FaceId',
                 function (string $attribute, mixed $value, \Closure $fail): void {
-                    $allowedType = Gym::query()
-                        ->whereKey($this->input('gym_id'))
-                        ->value('entry_code_type');
+                    $allowedType = Gym::resolveEntryCodeType(
+                        Gym::query()
+                            ->whereKey($this->input('gym_id'))
+                            ->value('entry_code_type')
+                    );
 
-                    if ($allowedType !== null && $value !== $allowedType) {
+                    if ($value !== $allowedType) {
                         $fail('This gym only allows '.$allowedType.' entry codes.');
                     }
                 },

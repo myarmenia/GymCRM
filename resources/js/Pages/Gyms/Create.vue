@@ -15,12 +15,24 @@ const t = (key, replacements = {}) => translate(translationPage.props.translatio
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
 
+const props = defineProps({
+    availableLanguages: {
+        type: Array,
+        default: () => [],
+    },
+    selectedLanguageCodes: {
+        type: Array,
+        default: () => [],
+    },
+});
+
 const form = useForm({
     name: '',
     address: '',
     phone: '',
     email: '',
     entry_code_type: 'rfId',
+    language_codes: [...props.selectedLanguageCodes],
     logo: null,
     trainer_salary_mode: 'prepaid',
 });
@@ -130,6 +142,29 @@ const cancel = () => {
                             <option value="postpaid">{{ t('sales.postpaid') }}</option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.trainer_salary_mode" />
+                    </div>
+
+                    <div class="col-12">
+                        <InputLabel class="form-label" :value="t('ui.gym_languages')" />
+                        <div class="form-text mb-3">{{ t('ui.gym_languages_help') }}</div>
+                        <div class="d-flex flex-wrap gap-4">
+                            <label
+                                v-for="language in props.availableLanguages"
+                                :key="language.code"
+                                class="form-check"
+                            >
+                                <input
+                                    v-model="form.language_codes"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    :value="language.code"
+                                />
+                                <span class="form-check-label">
+                                    {{ language.name }} ({{ language.code.toUpperCase() }})
+                                </span>
+                            </label>
+                        </div>
+                        <InputError class="mt-2" :message="form.errors.language_codes" />
                     </div>
 
                     <div class="col-md-6">

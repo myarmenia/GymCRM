@@ -32,7 +32,7 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    translations: {
+    discountTranslations: {
         type: Object,
         default: () => ({}),
     },
@@ -43,8 +43,8 @@ const preparedTranslations = {}
 
 availableLangs.value.forEach(code => {
     preparedTranslations[code] = {
-        name: props.translations?.[code]?.name ?? '',
-        description: props.translations?.[code]?.description ?? '',
+        name: props.discountTranslations?.[code]?.name ?? '',
+        description: props.discountTranslations?.[code]?.description ?? '',
     }
 })
 

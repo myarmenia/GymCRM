@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\People\StorePersonVisitRequest;
 use App\Http\Requests\People\StorePersonRequest;
 use App\Http\Requests\People\UpdatePersonRequest;
+use App\Models\Gym;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
 use App\Services\People\PersonService;
@@ -63,6 +64,7 @@ class PersonController extends Controller
         return Inertia::render('People/Create', [
             'initialGymId' => $user->gym_id,
             'entryCodes' => $entryCodes,
+            'entryCodeType' => Gym::resolveEntryCodeType($user->gym?->entry_code_type),
         ]);
     }
 

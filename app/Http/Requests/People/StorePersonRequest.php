@@ -22,8 +22,10 @@ class StorePersonRequest extends FormRequest
             'password' => 'required|string|min:6',
             'phone' => ['required', 'string', 'max:50', Rule::unique('people', 'phone')],
             'type' => 'required|in:visitor,guest',
+            'entry_code_mode' => ['required', Rule::in(['existing', 'new'])],
             'entry_code_id' => [
-                'required',
+                Rule::requiredIf(fn (): bool => $this->input('entry_code_mode') === 'existing'),
+                'nullable',
                 Rule::exists('entry_codes', 'id')->where(function ($query): void {
                     $query->where('status', true)->where('activation', false);
 
@@ -31,6 +33,15 @@ class StorePersonRequest extends FormRequest
                         $query->where('gym_id', $this->user()->gym_id);
                     }
                 }),
+            ],
+            'entry_code_token' => [
+                Rule::requiredIf(fn (): bool => $this->input('entry_code_mode') === 'new'),
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('entry_codes', 'token')->where(
+                    fn ($query) => $query->where('gym_id', $this->user()?->gym_id),
+                ),
             ],
             'birth_date' => 'required|date',
             'gender' => 'nullable|string|in:male,female',
@@ -42,6 +53,8 @@ class StorePersonRequest extends FormRequest
         return [
             'entry_code_id.required' => __('backend_messages.entry_code_required'),
             'entry_code_id.exists' => __('backend_messages.selected_entry_code_not_found_create_one'),
+            'entry_code_token.required' => __('backend_messages.entry_code_required'),
+            'entry_code_token.unique' => __('backend_messages.this_token_already_exists_this_gym'),
             'phone.unique' => __('backend_messages.person_with_this_phone_number_already_exists'),
         ];
     }

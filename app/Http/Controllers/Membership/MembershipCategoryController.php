@@ -47,9 +47,9 @@ class MembershipCategoryController extends Controller
         $user = Auth::user();
         $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
         // format translations
-        $translations = [];
+        $categoryTranslations = [];
         foreach ($category->translations as $trans) {
-            $translations[$trans->locale] = [
+            $categoryTranslations[$trans->locale] = [
                 'name' => $trans->name,
                 'description' => $trans->description,
             ];
@@ -58,7 +58,7 @@ class MembershipCategoryController extends Controller
             'category' => $category,
             'gyms' => $gyms,
             'canSelectGym' => $user->hasRole('owner'),
-            'translations' => $translations,
+            'categoryTranslations' => $categoryTranslations,
         ]);
     }
 
