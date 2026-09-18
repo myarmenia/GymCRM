@@ -86,6 +86,7 @@ class EntryCodeRepository implements EntryCodeInterface
     public function getByGymId(int $gymId, ?int $currentId = null)
     {
         return EntryCode::where('gym_id', $gymId)
+            ->where('status', true)
             ->where(function ($query) use ($currentId) {
                 $query->where('activation', 0);
                 if ($currentId) {

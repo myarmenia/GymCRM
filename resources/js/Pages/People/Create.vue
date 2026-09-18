@@ -1,8 +1,8 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { translate, useTrans } from '/resources/js/trans'
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -15,9 +15,13 @@ const currentLocale = computed(() => page.props.locale ?? 'en');
 const props = defineProps({
     initialGymId: Number,
     entryCodes: Array,
+    entryCodeType: {
+        type: String,
+        default: 'rfId',
+    },
 });
 
-const entryCodes = ref([]);
+const entryCodes = ref(props.entryCodes || []);
 const imagePreview = ref(null);
 
 const form = useForm({
@@ -28,13 +32,11 @@ const form = useForm({
     password: '',
     phone: '',
     type: 'visitor',
+    entry_code_mode: entryCodes.value.length ? 'existing' : 'new',
     entry_code_id: null,
+    entry_code_token: '',
     birth_date: '',
     gender: '',
-});
-
-onMounted(() => {
-    entryCodes.value = props.entryCodes || [];
 });
 
 const handleImageUpload = (event) => {
@@ -44,9 +46,20 @@ const handleImageUpload = (event) => {
 };
 
 const submit = () => {
-    if (!form.entry_code_id) {
+    form.clearErrors('entry_code_id', 'entry_code_token');
+
+    if (form.entry_code_mode === 'existing' && !form.entry_code_id) {
         form.setError('entry_code_id', t('entry_code_required'));
         return;
+    }
+
+    if (form.entry_code_mode === 'new' && !form.entry_code_token.trim()) {
+        form.setError('entry_code_token', t('entry_code_required'));
+        return;
+    }
+
+    if (form.entry_code_mode === 'new') {
+        form.entry_code_token = form.entry_code_token.trim();
     }
 
     form.post(route('person.store', { locale: currentLocale.value }), {
@@ -88,24 +101,66 @@ const submit = () => {
                     </div>
 
                     <div class="col-md-12">
-                        <InputLabel for="entry_codes" class="form-label" :value="t('entry_code')" />
+                        <InputLabel
+                            :for="form.entry_code_mode === 'new' ? 'entry_code_token' : 'entry_codes'"
+                            class="form-label"
+                            :value="t('entry_code')"
+                        />
+                        <div v-if="entryCodes.length" class="d-flex flex-wrap gap-4 mb-3">
+                            <div class="form-check">
+                                <input
+                                    id="entry_code_existing"
+                                    v-model="form.entry_code_mode"
+                                    class="form-check-input"
+                                    type="radio"
+                                    value="existing"
+                                />
+                                <label class="form-check-label" for="entry_code_existing">
+                                    {{ t('use_existing_entry_code') }}
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input
+                                    id="entry_code_new"
+                                    v-model="form.entry_code_mode"
+                                    class="form-check-input"
+                                    type="radio"
+                                    value="new"
+                                />
+                                <label class="form-check-label" for="entry_code_new">
+                                    {{ t('create_new_entry_code') }}
+                                </label>
+                            </div>
+                        </div>
+
                         <select
-                            v-if="entryCodes.length"
+                            v-if="form.entry_code_mode === 'existing' && entryCodes.length"
                             id="entry_codes"
-                            class="form-select"
                             v-model="form.entry_code_id"
-                            required
+                            class="form-select"
                         >
                             <option :value="null" disabled>{{ t('choose_entry_code') }}</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
                                 {{ code.token }} ({{ code.gym?.name || t('without_gym') }}) {{ code.type }}
                             </option>
                         </select>
-                        <div v-else class="alert alert-warning mb-0">
-                            {{ t('no_entry_codes') }}
-                            <Link :href="route('entry-code.create', { locale: currentLocale })">
-                                {{ t('create_short') }}
-                            </Link>
+
+                        <div v-if="!entryCodes.length" class="alert alert-info mb-3">
+                            {{ t('no_entry_codes_create_here') }}
+                        </div>
+
+                        <div v-if="form.entry_code_mode === 'new'">
+                            <TextInput
+                                id="entry_code_token"
+                                v-model="form.entry_code_token"
+                                type="text"
+                                class="form-control"
+                                :placeholder="t('enter_entry_code')"
+                            />
+                            <div class="form-text">
+                                {{ useTrans('app.ui.entry_code_type') }}: {{ entryCodeType }}
+                            </div>
+                            <InputError class="mt-2" :message="form.errors.entry_code_token" />
                         </div>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
                     </div>

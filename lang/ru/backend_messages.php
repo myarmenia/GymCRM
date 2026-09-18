@@ -383,4 +383,5 @@ return [
     'your_membership_will_expire_soon' => 'Срок вашего абонемента скоро истечёт.',
     'your_new_membership_added_successfully' => 'Ваш новый абонемент успешно добавлен.',
     'your_user_account_not_linked_gym' => 'Ваш пользователь не привязан к спортзалу.',
+    'select_at_least_one_gym_language' => 'Выберите хотя бы один язык спортзала.',
 ];
