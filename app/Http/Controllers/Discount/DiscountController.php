@@ -48,9 +48,9 @@ class DiscountController extends Controller
     {
         $discount = $this->service->getById($id);
 
-        $translations = [];
+        $discountTranslations = [];
         foreach ($discount->translations as $trans) {
-            $translations[$trans->locale] = [
+            $discountTranslations[$trans->locale] = [
                 'name' => $trans->name,
                 'description' => $trans->description,
             ];
@@ -60,7 +60,7 @@ class DiscountController extends Controller
             'discount' => $discount,
             'membershipPlans' => $this->membershipPlans(),
             'selectedMembershipPlanIds' => $discount->membershipPlans->pluck('id')->values(),
-            'translations' => $translations,
+            'discountTranslations' => $discountTranslations,
         ]);
     }
 
