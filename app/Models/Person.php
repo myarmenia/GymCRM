@@ -23,6 +23,13 @@ class Person extends Authenticatable
 
     protected $table = 'people';
 
+    protected function casts(): array
+    {
+        return [
+            'is_blocked' => 'boolean',
+        ];
+    }
+
     protected function versionIgnoredAttributes(): array
     {
         return ['image', 'mobile_deleted', 'fcm_token'];

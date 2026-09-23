@@ -9,6 +9,7 @@ import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "vue-toastification";
 import { translate } from '/resources/js/trans';
+import { useConfirm } from '@/composables/useConfirm';
 
 const props = defineProps({
     people: Object,
@@ -29,9 +30,11 @@ const canManualScan = computed(() =>
     Boolean(page.props.auth?.user?.gym_id),
 );
 const toast = useToast();
+const { confirm } = useConfirm();
 const manualScanCode = ref("");
 const manualScanInput = ref(null);
 const manualScanProcessing = ref(false);
+const blockingPersonId = ref(null);
 
 const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
@@ -118,6 +121,39 @@ const resetFilters = () => {
             preserveState: true,
             preserveScroll: true,
             replace: true,
+        },
+    );
+};
+
+const blockPerson = async (person) => {
+    if (person.is_blocked || blockingPersonId.value !== null) {
+        return;
+    }
+
+    const approved = await confirm(t('confirm_block_user'), {
+        confirmText: t('block_user'),
+        confirmClass: 'btn-danger',
+    });
+
+    if (!approved) {
+        return;
+    }
+
+    blockingPersonId.value = person.id;
+
+    router.patch(
+        route('person.block', {
+            locale: currentLocale.value,
+            id: person.id,
+        }),
+        {},
+        {
+            preserveScroll: true,
+            onSuccess: () => toast.success(t('block_success')),
+            onError: () => toast.error(t('block_failed')),
+            onFinish: () => {
+                blockingPersonId.value = null;
+            },
         },
     );
 };
@@ -240,7 +276,15 @@ const submitManualScan = async () => {
                         <tbody>
                             <tr v-for="person in peopleList" :key="person.id">
                                 <td>{{ person.id }}</td>
-                                <td>{{ person.name || '-' }}</td>
+                                <td>
+                                    {{ person.name || '-' }}
+                                    <span
+                                        v-if="person.is_blocked"
+                                        class="badge bg-label-danger ms-2"
+                                    >
+                                        {{ t('blocked') }}
+                                    </span>
+                                </td>
                                 <td>{{ person.surname || '-' }}</td>
                                 <td>{{ person.email || '-' }}</td>
                                 <td>{{ person.phone || '-' }}</td>
@@ -323,6 +367,16 @@ const submitManualScan = async () => {
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
                                                 {{ t('edit') }}
                                             </Link>
+                                            <button
+                                                v-if="canManagePeople && !person.is_blocked"
+                                                type="button"
+                                                class="dropdown-item waves-effect text-danger"
+                                                :disabled="blockingPersonId === person.id"
+                                                @click="blockPerson(person)"
+                                            >
+                                                <i class="icon-base ti tabler-ban me-1"></i>
+                                                {{ t('block_user') }}
+                                            </button>
                                             <a
                                                 v-if="canManagePeople"
                                                 class="dropdown-item waves-effect"
