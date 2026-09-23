@@ -5,7 +5,9 @@ namespace App\Services\People;
 use App\Models\AttendanceSheet;
 use App\Models\Person;
 use App\Models\PersonMembership;
+use App\Models\TrainerCommission;
 use App\Models\User;
+use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,11 @@ use Illuminate\Validation\ValidationException;
 class PersonVisitService
 {
     private const LOCAL_TIMEZONE = 'Asia/Yerevan';
+
+    public function __construct(
+        private readonly TrainerMonthlySalaryService $trainerMonthlySalaryService,
+    ) {
+    }
 
     public function pageData(int $personId): array
     {
@@ -79,11 +86,10 @@ class PersonVisitService
         $now = Carbon::createFromFormat('Y-m-d\TH:i', $manualDateTime, self::LOCAL_TIMEZONE);
 
         if ($action === 'entry') {
-            $membership = $this->entryMembership($person, $user, $membershipId, $now);
-            $membership = $this->activateWaitingMembership($membership, $now);
-            $membership = $this->consumeVisitIfNeeded($membership);
-
-            return DB::transaction(function () use ($person, $membership, $now): AttendanceSheet {
+            return DB::transaction(function () use ($person, $user, $membershipId, $now): AttendanceSheet {
+                $membership = $this->entryMembership($person, $user, $membershipId, $now);
+                $membership = $this->activateWaitingMembership($membership, $now);
+                $membership = $this->consumeVisitIfNeeded($membership);
                 $attendance = AttendanceSheet::create([
                     'relation_id' => $person->id,
                     'relation_type' => Person::class,
@@ -95,6 +101,7 @@ class PersonVisitService
                     'online' => 1,
                 ]);
                 $attendance->personMemberships()->sync([$membership->id]);
+                $this->generateTrainerSalaryForEntry($membership, $now);
 
                 return $attendance;
             });
@@ -126,7 +133,7 @@ class PersonVisitService
                 'direction' => 'exit',
                 'online' => 1,
             ]);
-            $attendance->personMemberships()->sync($lastEntry->personMemberships()->pluck('id')->all());
+            $attendance->personMemberships()->sync($lastEntry->personMemberships->modelKeys());
 
             return $attendance;
         });
@@ -160,6 +167,7 @@ class PersonVisitService
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
+            ->lockForUpdate()
             ->first();
 
         if (!$membership) {
@@ -246,6 +254,21 @@ class PersonVisitService
             ->latest('date')
             ->latest('id')
             ->first();
+    }
+
+    private function generateTrainerSalaryForEntry(PersonMembership $membership, Carbon $entryAt): void
+    {
+        if (! $membership->trainer_id) {
+            return;
+        }
+
+        TrainerCommission::query()
+            ->where('person_membership_id', $membership->id)
+            ->where('trainer_id', $membership->trainer_id)
+            ->whereNull('generation_stopped_at')
+            ->get()
+            ->each(fn (TrainerCommission $commission) => $this->trainerMonthlySalaryService
+                ->generateForCommission($commission, $entryAt));
     }
 
     protected function lastAttendanceBeforeOrAt(Person $person, Carbon $beforeOrAt): ?AttendanceSheet

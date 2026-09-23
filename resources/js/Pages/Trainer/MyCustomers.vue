@@ -2,7 +2,7 @@
 import { translate } from '/resources/js/trans'
 import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from "vue";
-import { Head, usePage } from "@inertiajs/vue3";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import Index from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
 
@@ -94,6 +94,20 @@ const statusClass = (status) => statusClasses[status] ?? "bg-label-secondary";
                                             {{ statusLabel(membership.status) }}
                                         </span>
                                     </div>
+                                </td>
+                                <td class="text-center">
+                                    <Link
+                                        :href="
+                                            route('trainer.my-customers.show', {
+                                                locale: currentLocale,
+                                                personId: customer.id,
+                                            })
+                                        "
+                                        class="btn btn-sm btn-outline-primary"
+                                        title="Դիտել հաճախորդի տվյալները"
+                                    >
+                                        <i class="icon-base ti tabler-eye"></i>
+                                    </Link>
                                 </td>
                             </tr>
                         </tbody>
