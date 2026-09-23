@@ -112,15 +112,10 @@ const membershipDurationLabel = (membership) => {
 
 const insideNow = computed(() => props.lastAttendance?.direction === "entry");
 const visitDateTime = ref(nowDateTimeLocalInYerevan());
+const selectedMembershipId = ref(null);
 
 const entryForm = useForm({
     action: "entry",
-    membership_id: null,
-    manual_datetime: visitDateTime.value,
-});
-
-const exitForm = useForm({
-    action: "exit",
     membership_id: null,
     manual_datetime: visitDateTime.value,
 });
@@ -137,17 +132,6 @@ const submitEntry = (membershipId) => {
     });
 };
 
-const submitExit = () => {
-    exitForm.action = "exit";
-    exitForm.membership_id = null;
-    exitForm.manual_datetime = visitDateTime.value;
-    exitForm.post(route("person.visits.store", {
-        locale: currentLocale.value,
-        id: props.person.id,
-    }), {
-        preserveScroll: true,
-    });
-};
 </script>
 
 <template>
@@ -222,7 +206,7 @@ const submitExit = () => {
                         </div>
                     </div>
 
-                    <div class="action-panel">
+                    <div v-if="false" class="action-panel">
                         <div class="mb-3">
                             <label class="form-label">{{ t('record_time') }}</label>
                             <input
@@ -231,37 +215,48 @@ const submitExit = () => {
                                 class="form-control"
                             >
                             <div class="small text-muted mt-2">
-                                {{ t('power_outage_help') }}
+                                {{ t('choose_entry_time') }}
                             </div>
                         </div>
                         <div class="text-muted small mb-1">{{ t('last_record') }}</div>
                         <div class="fw-semibold mb-3">
                             {{ lastAttendance ? directionLabel(lastAttendance.direction) : "-" }}
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('membership') }}</label>
+                            <select
+                                v-model="selectedMembershipId"
+                                class="form-select"
+                                :disabled="!memberships.length"
+                            >
+                                <option :value="null" disabled>{{ t('membership') }}</option>
+                                <option
+                                    v-for="membership in memberships"
+                                    :key="membership.id"
+                                    :value="membership.id"
+                                >
+                                    {{ membershipPlanName(membership) }} — {{ membership.gym?.name || "-" }}
+                                </option>
+                            </select>
+                        </div>
                         <div
-                            v-if="entryForm.errors.manual_datetime || exitForm.errors.manual_datetime"
+                            v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"
                             class="text-danger small mb-3"
                         >
-                            {{ entryForm.errors.manual_datetime || exitForm.errors.manual_datetime }}
+                            {{ entryForm.errors.manual_datetime || entryForm.errors.membership_id }}
                         </div>
                         <button
                             type="button"
-                            class="btn btn-outline-secondary w-100"
-                            :disabled="exitForm.processing || !insideNow"
-                            @click="submitExit"
+                            class="btn btn-primary w-100"
+                            :disabled="entryForm.processing || !selectedMembershipId"
+                            @click="submitEntry(selectedMembershipId)"
                         >
                             <span
-                                v-if="exitForm.processing"
+                                v-if="entryForm.processing"
                                 class="spinner-border spinner-border-sm me-2"
                             ></span>
-                            {{ t('add_exit') }}
+                            {{ t('add_entry') }}
                         </button>
-                        <div
-                            v-if="!insideNow"
-                            class="small text-muted mt-2"
-                        >
-                            {{ t('exit_after_entry') }}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -341,7 +336,7 @@ const submitExit = () => {
                                     <button
                                         type="button"
                                         class="btn btn-primary"
-                                        :disabled="entryForm.processing || insideNow"
+                                        :disabled="entryForm.processing"
                                         @click="submitEntry(membership.id)"
                                     >
                                         <span
@@ -352,10 +347,10 @@ const submitExit = () => {
                                     </button>
                                 </div>
                                 <div
-                                    v-if="insideNow"
-                                    class="small text-muted mt-2"
+                                    v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"
+                                    class="text-danger small mt-2"
                                 >
-                                    {{ t('entry_after_exit') }}
+                                    {{ entryForm.errors.manual_datetime || entryForm.errors.membership_id }}
                                 </div>
                             </div>
                         </div>

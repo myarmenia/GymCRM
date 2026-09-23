@@ -47,6 +47,7 @@ class EntryExitSystemService
         $deviceTime = $this->resolveDeviceTime($timestamp);
 
         $detectedAt = $deviceTime ?? now(self::LOCAL_TIMEZONE);
+        $action = 'entry';
 
         $resolved = $this->resolveEntryCodeOwner(
             $entryCode,
@@ -76,7 +77,6 @@ class EntryExitSystemService
 
         $ownerType = $resolved['owner_type'];
         $owner = $resolved['owner'];
-        $action = $this->detectNextAction($ownerType, $owner->id, (int) $clientId);
         $selectedMembership = null;
         $selectedMemberships = collect();
 
@@ -120,11 +120,6 @@ class EntryExitSystemService
                 $detectedAt,
                 $action,
             );
-            $selectedMembership = $selectedMemberships->first();
-        }
-
-        if ($ownerType === 'person' && $action === 'exit') {
-            $selectedMemberships = $this->resolveMembershipsForExit($owner, (int) $clientId);
             $selectedMembership = $selectedMemberships->first();
         }
 
