@@ -89,7 +89,7 @@ class PersonVisitService
             return DB::transaction(function () use ($person, $user, $membershipId, $now): AttendanceSheet {
                 $membership = $this->entryMembership($person, $user, $membershipId, $now);
                 $membership = $this->activateWaitingMembership($membership, $now);
-                $membership = $this->consumeVisitIfNeeded($membership);
+                $membership = $this->consumeVisitIfNeeded($membership, $now);
                 $attendance = AttendanceSheet::create([
                     'relation_id' => $person->id,
                     'relation_type' => Person::class,
@@ -218,9 +218,13 @@ class PersonVisitService
         ]);
     }
 
-    protected function consumeVisitIfNeeded(PersonMembership $membership): PersonMembership
+    protected function consumeVisitIfNeeded(PersonMembership $membership, Carbon $entryAt): PersonMembership
     {
         if ($membership->visits_left === null) {
+            return $membership;
+        }
+
+        if ($this->membershipAlreadyEnteredOnDate($membership, $entryAt)) {
             return $membership;
         }
 
@@ -239,6 +243,21 @@ class PersonVisitService
             'membershipPlan.translations',
             'membershipPlan.MembershipCategory.translations',
         ]);
+    }
+
+    protected function membershipAlreadyEnteredOnDate(PersonMembership $membership, Carbon $entryAt): bool
+    {
+        $dayStart = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->startOfDay();
+        $dayEnd = $dayStart->copy()->addDay();
+
+        return AttendanceSheet::query()
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $membership->person_id)
+            ->where('direction', 'entry')
+            ->where('date', '>=', $dayStart)
+            ->where('date', '<', $dayEnd)
+            ->whereHas('personMemberships', fn ($query) => $query->where('person_memberships.id', $membership->id))
+            ->exists();
     }
 
     protected function lastAttendance(Person $person): ?AttendanceSheet

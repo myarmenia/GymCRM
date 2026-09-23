@@ -171,7 +171,7 @@ class EntryExitSystemService
         ): AttendanceSheet {
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership))
+                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership, $detectedAt))
                     ->values();
             }
 
@@ -375,7 +375,7 @@ class EntryExitSystemService
         ): AttendanceSheet {
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership))
+                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership, $detectedAt))
                     ->values();
             }
 
@@ -596,7 +596,7 @@ class EntryExitSystemService
             $selected = $selected
                 ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership->fresh([
                     'person', 'membershipPlan.translations', 'membershipPlan.MembershipCategory.translations',
-                ])))
+                ]), $detectedAt))
                 ->values();
             $primaryMembership = $selected->first();
 
@@ -738,12 +738,10 @@ class EntryExitSystemService
                 $query->whereNull('expired_at')
                     ->orWhere('expired_at', '>=', $referenceTime);
             })
-            ->where(function ($query) {
-                $query->whereNull('visits_left')
-                    ->orWhere('visits_left', '>', 0);
-            })
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->filter(fn (PersonMembership $membership) => $this->membershipHasVisitAvailableForEntry($membership, $referenceTime))
+            ->values();
     }
 
     private function membershipIsValidForTurnstile(PersonMembership $membership, Carbon $referenceTime): bool
@@ -765,7 +763,7 @@ class EntryExitSystemService
             return false;
         }
 
-        return $membership->visits_left === null || (int) $membership->visits_left > 0;
+        return $this->membershipHasVisitAvailableForEntry($membership, $referenceTime);
     }
 
     private function membershipSelectionContext(Person $person, int $clientId, Carbon $referenceTime): ?array
@@ -869,8 +867,12 @@ class EntryExitSystemService
         return $memberships->count() > 2;
     }
 
-    private function consumeMembershipVisit(PersonMembership $membership): PersonMembership
+    private function consumeMembershipVisit(PersonMembership $membership, Carbon $entryAt): PersonMembership
     {
+        if ($membership->visits_left !== null && $this->membershipAlreadyEnteredOnDate($membership, $entryAt)) {
+            return $membership;
+        }
+
         if ($membership->visits_left !== null && (int) $membership->visits_left <= 0) {
             throw ValidationException::withMessages([
                 'membership' => 'No visits left for this membership.',
@@ -891,6 +893,28 @@ class EntryExitSystemService
             'membershipPlan.translations',
             'membershipPlan.MembershipCategory.translations',
         ]);
+    }
+
+    private function membershipHasVisitAvailableForEntry(PersonMembership $membership, Carbon $entryAt): bool
+    {
+        return $membership->visits_left === null
+            || (int) $membership->visits_left > 0
+            || $this->membershipAlreadyEnteredOnDate($membership, $entryAt);
+    }
+
+    private function membershipAlreadyEnteredOnDate(PersonMembership $membership, Carbon $entryAt): bool
+    {
+        $dayStart = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->startOfDay();
+        $dayEnd = $dayStart->copy()->addDay();
+
+        return AttendanceSheet::query()
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $membership->person_id)
+            ->where('direction', 'entry')
+            ->where('date', '>=', $dayStart)
+            ->where('date', '<', $dayEnd)
+            ->whereHas('personMemberships', fn ($query) => $query->where('person_memberships.id', $membership->id))
+            ->exists();
     }
 
     private function membershipPayload(PersonMembership $membership): array
