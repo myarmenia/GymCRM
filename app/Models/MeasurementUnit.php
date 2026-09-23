@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\HasUuidAndVersion;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 class MeasurementUnit extends Model
@@ -15,6 +16,19 @@ class MeasurementUnit extends Model
         'type',
         'status',
     ];
+
+    protected function name(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => match ($this->code) {
+            'pcs' => __('backend_messages.pieces'),
+            'g' => __('backend_messages.gram'),
+            'ml' => __('backend_messages.millilitre'),
+            'cm' => __('backend_messages.centimetre'),
+            'box' => __('backend_messages.box'),
+            'btl' => __('backend_messages.bottle'),
+            default => $value,
+        });
+    }
 
     public function products()
     {

@@ -15,7 +15,7 @@ class TimeFormatHelper
         $minutes = floor($seconds / 60);
 
         if ($type === 'minutes') {
-            return $minutes . ' ր';
+            return $minutes . __('backend_messages.m');
         }
 
         if ($type === 'hours') {
@@ -25,7 +25,7 @@ class TimeFormatHelper
                 return ''; // тоже скрываем мусор
             }
 
-            return number_format($hours, 2) . ' ժ';
+            return number_format($hours, 2) . __('backend_messages.h');
         }
 
         $hours = floor($minutes / 60);
@@ -35,6 +35,9 @@ class TimeFormatHelper
             return '';
         }
 
-        return "{$hours} ժ {$remainingMinutes} ր";
+        return __('backend_messages.hours_h_minutes_m', [
+            'hours' => $hours,
+            'minutes' => $remainingMinutes,
+        ]);
     }
 }

@@ -1,4 +1,9 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 defineProps({
     weekRangeLabel: {
         type: String,
@@ -14,7 +19,7 @@ defineEmits(['previous', 'today', 'next'])
         <div class="card-body d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <div>
                 <h2 class="text-xl font-semibold leading-tight text-gray-800 mb-1">
-                    Մարզիչների զբաղվածության օրացույց
+                    {{ t('operations.trainer_occupancy_calendar') }}
                 </h2>
                 <div class="text-muted">{{ weekRangeLabel }}</div>
             </div>
@@ -25,21 +30,21 @@ defineEmits(['previous', 'today', 'next'])
                     class="btn btn-outline-secondary"
                     @click="$emit('previous')"
                 >
-                    Նախորդ շաբաթ
+                    {{ t('operations.previous_week') }}
                 </button>
                 <button
                     type="button"
                     class="btn btn-outline-primary"
                     @click="$emit('today')"
                 >
-                    Այսօր
+                    {{ t('staff_reports.today') }}
                 </button>
                 <button
                     type="button"
                     class="btn btn-outline-secondary"
                     @click="$emit('next')"
                 >
-                    Հաջորդ շաբաթ
+                    {{ t('operations.next_week') }}
                 </button>
             </div>
         </div>

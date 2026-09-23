@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
@@ -16,6 +17,7 @@ import {
 } from '@/utils/yerevanDate'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const alert = useAlert()
 
@@ -88,7 +90,7 @@ const form = useForm({
     payment_notes: '',
     reminder_scheduled_at: '',
     reminder_recipient_ids: [...props.defaultReminderRecipientIds],
-    reminder_title: 'Աբոնեմենտի վճարման հիշեցում',
+    reminder_title: t('people.reminder_title'),
     reminder_description: '',
 })
 
@@ -103,8 +105,8 @@ const planName = plan => {
 
 const selectedPlan = computed(() => props.membershipPlans.find(item => Number(item.id) === Number(form.membership_plan_id)))
 const trainerSalaryModeLabel = computed(() => ({
-    prepaid: 'Կանխավճարային',
-    postpaid: 'Հետվճարային',
+    prepaid: t('sales.prepaid'),
+    postpaid: t('sales.postpaid'),
 }[selectedPlan.value?.gym?.trainer_salary_mode] ?? '-'))
 const matchingCustomerMemberships = computed(() => {
     if (!selectedPlan.value) {
@@ -125,7 +127,7 @@ const startDateRestrictionMessage = computed(() => {
         return ''
     }
 
-    return `Նոր աբոնեմենտը կարող է սկսվել միայն ընթացիկ նույն աբոնեմենտի ավարտից հետո՝ ${formatDate(latestMatchingMembershipValidAt.value)}։`
+    return t('sales.membership_start_after_existing', { date: formatDate(latestMatchingMembershipValidAt.value) })
 })
 const selectedPaymentMethod = computed(() => props.paymentMethods.find(item => Number(item.id) === Number(form.payment_method_id)))
 const availableTrainers = computed(() => selectedPlan.value?.trainers ?? [])
@@ -136,22 +138,22 @@ const formatUser = user => `${user.name ?? ''} ${user.surname ?? ''}`.trim()
 const discountName = discount => discount?.translations?.find(item => item.locale === currentLocale.value)?.name ?? discount?.name ?? (discount ? `#${discount.id}` : '-')
 const paymentMethodName = method => method.translations?.find(item => item.locale === currentLocale.value)?.name ?? method.name ?? method.slug ?? `#${method.id}`
 const discountTypeLabel = type => ({
-    fixed: 'Ֆիքսված գումար',
-    percent: 'Տոկոս %',
+    fixed: t('sales.fixed_amount'),
+    percent: t('sales.percent'),
 }[type] ?? type)
 const planTypeLabel = type => ({
-    day: 'Օրական',
-    month: 'Ամսական',
-    year: 'Տարեկան',
-    visit: 'Այցելություններով',
-    period: 'Ժամանակահատված',
+    day: t('sales.daily'),
+    month: t('sales.monthly'),
+    year: t('sales.yearly'),
+    visit: t('sales.by_visits'),
+    period: t('membership.period'),
 }[type] ?? type ?? '-')
 const statusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    expired: 'Ժամկետանց',
-    cancelled: 'Չեղարկված',
+    waiting: t('people.waiting'),
+    active: t('membership.active'),
+    frozen: t('people.frozen'),
+    expired: t('people.expired'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const membershipPlanName = membership => planName(membership?.membership_plan)
@@ -216,21 +218,21 @@ const partialPaymentError = computed(() => {
     const total = Math.round(finalTotal.value * 100)
 
     return amount <= 0 || amount >= total
-        ? 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։'
+        ? t('sales.the_partial_payment_must_be_greater_than_zero_and_less_than_the_2')
         : ''
 })
 const numericPaymentAmount = computed(() => form.is_full_payment ? finalTotal.value : Number(form.amount) || 0)
 const remaining = computed(() => Math.max(finalTotal.value - numericPaymentAmount.value, 0))
 const calculatedSaleStatus = computed(() => {
     if (numericPaymentAmount.value >= finalTotal.value && finalTotal.value > 0) {
-        return 'Վճարված'
+        return t('people.paid')
     }
 
     if (numericPaymentAmount.value > 0) {
-        return 'Մասնակի'
+        return t('sales.partial')
     }
 
-    return 'Չվճարված'
+    return t('people.unpaid')
 })
 
 const addDays = (date, days) => {
@@ -413,7 +415,7 @@ const postSale = async stayDebt => {
         }), payload)
 
         if (response.data.need_print && response.data.print_data) {
-            alert.info('Աբոնեմենտը ստեղծվել է, ՀԴՄ կտրոնը տպվում է։')
+            alert.info(t('sales.membership_created_the_fiscal_receipt_is_printing'))
             const printResult = await printHdmReceipt(
                 response.data.print_data,
                 props.gateway,
@@ -421,14 +423,14 @@ const postSale = async stayDebt => {
             )
 
             if (printResult.success) {
-                alert.success('Աբոնեմենտի ՀԴՄ կտրոնը հաջողությամբ տպվել է։')
+                alert.success(t('sales.membership_fiscal_receipt_printed_successfully'))
             } else {
-                alert.warning(`Աբոնեմենտը ստեղծվել է, սակայն ՀԴՄ կտրոնը չի տպվել։ ${printResult.message}`)
+                alert.warning(t('sales.membership_created_receipt_failed', { message: printResult.message }))
             }
         } else if (response.data.print_error) {
             alert.warning(response.data.message)
         } else {
-            alert.success('Աբոնեմենտը հաջողությամբ ստեղծվել է։')
+            alert.success(t('sales.membership_created_successfully'))
         }
 
         router.visit(response.data.redirect)
@@ -445,7 +447,7 @@ const postSale = async stayDebt => {
             return
         }
 
-        alert.error(error.response?.data?.message ?? 'Չհաջողվեց ստեղծել աբոնեմենտը։')
+        alert.error(error.response?.data?.message ?? t('sales.could_not_create_the_membership'))
     } finally {
         form.processing = false
     }
@@ -465,11 +467,11 @@ const confirmReminder = () => {
     )
 
     if (!form.reminder_scheduled_at) {
-        form.setError('reminder_scheduled_at', 'Նշեք վճարման հիշեցման օրն ու ժամը։')
+        form.setError('reminder_scheduled_at', t('people.reminder_time_required'))
     }
 
     if (!form.reminder_recipient_ids.length) {
-        form.setError('reminder_recipient_ids', 'Ընտրեք առնվազն մեկ ստացող։')
+        form.setError('reminder_recipient_ids', t('people.recipient_required'))
     }
 
     if (form.errors.reminder_scheduled_at || form.errors.reminder_recipient_ids) {
@@ -510,12 +512,12 @@ const submitDebt = () => {
 </script>
 
 <template>
-    <Head title="Նոր աբոնեմենտի վաճառք" />
+    <Head :title="t('sales.new_membership_sale')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Նոր աբոնեմենտի վաճառք
+                {{ t('sales.new_membership_sale') }}
             </h2>
         </template>
 
@@ -526,7 +528,7 @@ const submitDebt = () => {
             >
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Հաճախորդ" />
+                        <InputLabel :value="t('sales.client')" />
                         <input
                             class="form-control"
                             :value="props.selectedPerson ? formatPerson(props.selectedPerson) : ''"
@@ -536,13 +538,13 @@ const submitDebt = () => {
                     </div>
 
                     <div class="col-md-6 mb-4">
-                        <InputLabel value="Աբոնեմենտ" />
+                        <InputLabel :value="t('people.membership')" />
                         <select
                             v-model="form.membership_plan_id"
                             class="form-select"
                         >
                             <option value="" disabled>
-                                Ընտրել աբոնեմենտ
+                                {{ t('sales.select_membership') }}
                             </option>
                             <option
                                 v-for="plan in membershipPlans"
@@ -558,7 +560,7 @@ const submitDebt = () => {
 
                 <div class="row">
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Գին" />
+                        <InputLabel :value="t('membership.price')" />
                         <input
                             class="form-control"
                             :value="selectedPlan?.price ?? ''"
@@ -567,7 +569,7 @@ const submitDebt = () => {
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Սկիզբ" />
+                        <InputLabel :value="t('membership.start')" />
                         <input
                             v-model="form.start_date"
                             type="date"
@@ -584,7 +586,7 @@ const submitDebt = () => {
                     </div>
 
                     <div class="col-md-4 mb-4">
-                        <InputLabel value="Ավարտ" />
+                        <InputLabel :value="t('membership.end')" />
                         <input
                             v-model="form.end_date"
                             type="date"
@@ -601,41 +603,41 @@ const submitDebt = () => {
                     class="border rounded p-4 mb-4"
                 >
                     <h5 class="mb-4">
-                        Ընտրված աբոնեմենտի տվյալներ
+                        {{ t('sales.selected_membership_details') }}
                     </h5>
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <span class="text-muted d-block">Տեսակ</span>
+                            <span class="text-muted d-block">{{ t('people.type') }}</span>
                             <strong>{{ planTypeLabel(selectedPlan.duration_type) }}</strong>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <span class="text-muted d-block">Ամիսների քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.month_count') }}</span>
                             <strong>{{ durationLabel(selectedPlan) }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.visits_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Այցելությունների քանակ</span>
+                            <span class="text-muted d-block">{{ t('sales.number_of_visits') }}</span>
                             <strong>{{ selectedPlan.visits_limit }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.guest_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Հյուրերի քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.guest_count') }}</span>
                             <strong>{{ selectedPlan.guest_limit }}</strong>
                         </div>
                         <div
                             v-if="selectedPlan.freeze_limit"
                             class="col-md-4 mb-3"
                         >
-                            <span class="text-muted d-block">Սառեցումների քանակ</span>
+                            <span class="text-muted d-block">{{ t('membership.freeze_count') }}</span>
                             <strong>{{ selectedPlan.freeze_limit }}</strong>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <span class="text-muted d-block">Մարզչի աշխատավարձի հաշվարկ</span>
+                            <span class="text-muted d-block">{{ t('sales.trainer_salary_calculation') }}</span>
                             <strong>{{ trainerSalaryModeLabel }}</strong>
                         </div>
                     </div>
@@ -646,7 +648,7 @@ const submitDebt = () => {
                     class="border rounded p-4 mb-4"
                 >
                     <h5 class="mb-4">
-                        Հաճախորդի ընթացիկ աբոնեմենտներ
+                        {{ t('sales.client_s_current_memberships') }}
                     </h5>
 
                     <div class="row">
@@ -660,30 +662,30 @@ const submitDebt = () => {
                                     {{ membershipPlanName(membershipItem) }}
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Կարգավիճակ</span>
+                                    <span class="text-muted">{{ t('membership.status') }}</span>
                                     <span>{{ statusLabel(membershipItem.status) }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Սկիզբ</span>
+                                    <span class="text-muted">{{ t('membership.start') }}</span>
                                     <span>{{ formatDate(membershipItem.start_date) }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Ավարտ / վավեր է մինչև</span>
+                                    <span class="text-muted">{{ t('sales.end_valid_until') }}</span>
                                     <span>{{ formatDate(membershipValidityDate(membershipItem)) }}</span>
                                 </div>
                                 <div
                                     v-if="membershipItem.visits_left !== null"
                                     class="small d-flex justify-content-between mb-1"
                                 >
-                                    <span class="text-muted">Մնացած այցելություններ</span>
+                                    <span class="text-muted">{{ t('sales.remaining_visits') }}</span>
                                     <span>{{ membershipItem.visits_left }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between mb-1">
-                                    <span class="text-muted">Մնացած հյուրեր</span>
+                                    <span class="text-muted">{{ t('sales.remaining_guests') }}</span>
                                     <span>{{ membershipItem.guest_left ?? 0 }}</span>
                                 </div>
                                 <div class="small d-flex justify-content-between">
-                                    <span class="text-muted">Մնացած սառեցումներ</span>
+                                    <span class="text-muted">{{ t('sales.remaining_freezes') }}</span>
                                     <span>{{ membershipItem.freeze_left ?? 0 }}</span>
                                 </div>
                             </div>
@@ -696,7 +698,7 @@ const submitDebt = () => {
                     class="row"
                 >
                     <div class="col-12 mb-4">
-                        <InputLabel value="Մարզիչ" />
+                        <InputLabel :value="t('people.trainer')" />
                         <div
                             v-if="availableTrainers.length"
                             class="trainer-grid mt-2"
@@ -722,7 +724,7 @@ const submitDebt = () => {
                             v-if="!availableTrainers.length"
                             class="small text-muted mt-1"
                         >
-                            Առանց մարզչի
+                            {{ t('sales.without_trainer') }}
                         </div>
                     </div>
                 </div>
@@ -744,15 +746,15 @@ const submitDebt = () => {
                                 {{ discountName(discount) }}
                             </div>
                             <div class="d-flex justify-content-between mb-2 w-100">
-                                <span>Տեսակ</span>
+                                <span>{{ t('people.type') }}</span>
                                 <span>{{ discountTypeLabel(discount.type) }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 w-100">
-                                <span>Արժեք</span>
+                                <span>{{ t('membership.cost') }}</span>
                                 <span>{{ discount.value }}</span>
                             </div>
                             <div class="d-flex justify-content-between w-100">
-                                <span>Հաշվարկված զեղչ</span>
+                                <span>{{ t('sales.calculated_discount') }}</span>
                                 <strong>{{ membershipDiscountRowAmount(discount).toFixed(2) }}</strong>
                             </div>
                         </div>
@@ -760,11 +762,11 @@ const submitDebt = () => {
                     <div v-if="membershipDiscounts.length">
                         <div class="alert alert-info mb-4">
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Ընտրված աբոնեմենտի զեղչեր</span>
+                                <span>{{ t('sales.selected_membership_discounts') }}</span>
                                 <strong>{{ membershipDiscountAmount.toFixed(2) }}</strong>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span>Զեղչված գին</span>
+                                <span>{{ t('sales.discounted_price') }}</span>
                                 <strong>{{ membershipDiscountedPrice.toFixed(2) }}</strong>
                             </div>
                         </div>
@@ -773,11 +775,11 @@ const submitDebt = () => {
                         v-else
                         class="alert alert-secondary mb-4"
                     >
-                        Այս աբոնեմենտի համար կցված զեղչ չկա։
+                        {{ t('sales.no_discount_is_attached_to_this_membership') }}
                     </div>
 
                     <div class="mb-0">
-                        <InputLabel value="Զեղչ" />
+                        <InputLabel :value="t('sales.discount')" />
                         <label class="form-check mt-2">
                             <input
                                 v-model="form.apply_discount"
@@ -785,7 +787,7 @@ const submitDebt = () => {
                                 class="form-check-input"
                             />
                             <span class="form-check-label">
-                                Կիրառել զեղչ
+                                {{ t('sales.apply_discount') }}
                             </span>
                         </label>
                         <InputError :message="form.errors.apply_discount" />
@@ -797,7 +799,7 @@ const submitDebt = () => {
                     >
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <InputLabel value="Զեղչի տեսակ" />
+                                <InputLabel :value="t('sales.discount_type')" />
                                 <select
                                     v-model="form.discount_type"
                                     class="form-select"
@@ -814,7 +816,7 @@ const submitDebt = () => {
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <InputLabel value="Զեղչի արժեք" />
+                                <InputLabel :value="t('sales.discount_value')" />
                                 <input
                                     v-model="form.discount_value"
                                     type="number"
@@ -822,7 +824,7 @@ const submitDebt = () => {
                                     min="0"
                                     :max="form.discount_type === 'percent' ? 100 : membershipDiscountedPrice"
                                     class="form-control"
-                                    :placeholder="form.discount_type === 'percent' ? 'օր․ 10' : 'օր․ 5000'"
+                                    :placeholder="form.discount_type === 'percent' ? t('sales.e_g_10') : t('sales.e_g_5000')"
                                 />
                                 <InputError :message="form.errors.discount_value" />
                             </div>
@@ -830,7 +832,7 @@ const submitDebt = () => {
 
                         <div class="alert alert-info mb-0">
                             <div class="d-flex justify-content-between">
-                                <span>Ձեռքով մուտքագրված զեղչ</span>
+                                <span>{{ t('sales.manually_entered_discount') }}</span>
                                 <strong>{{ manualDiscountAmount.toFixed(2) }}</strong>
                             </div>
                         </div>
@@ -841,7 +843,7 @@ const submitDebt = () => {
                     <div class="col-lg-6 mb-4">
                         <div class="border rounded p-4 h-100">
                             <h5 class="mb-4">
-                                Վճարում
+                                {{ t('people.payment') }}
                             </h5>
 
                             <div class="d-flex gap-4 mb-3">
@@ -851,7 +853,7 @@ const submitDebt = () => {
                                         type="checkbox"
                                         class="form-check-input"
                                     />
-                                    <span class="form-check-label">Ամբողջական վճարում</span>
+                                    <span class="form-check-label">{{ t('sales.full_payment') }}</span>
                                 </label>
                                 <label class="form-check">
                                     <input
@@ -859,20 +861,20 @@ const submitDebt = () => {
                                         type="checkbox"
                                         class="form-check-input"
                                     />
-                                    <span class="form-check-label">Մասնակի վճարում</span>
+                                    <span class="form-check-label">{{ t('sales.partial_payment') }}</span>
                                 </label>
                             </div>
                             <InputError :message="form.errors.is_full_payment" />
                             <InputError :message="form.errors.is_partial_payment" />
 
                             <div class="mb-3">
-                                <InputLabel value="Վճարման եղանակ" />
+                                <InputLabel :value="t('people.payment_method')" />
                                 <select
                                     v-model="form.payment_method_id"
                                     class="form-select"
                                 >
                                     <option value="">
-                                        Ընտրել վճարման եղանակ
+                                        {{ t('sales.select_payment_method') }}
                                     </option>
                                     <option
                                         v-for="method in paymentMethods"
@@ -889,13 +891,13 @@ const submitDebt = () => {
                                 v-if="selectedPaymentMethod?.slug === 'card'"
                                 class="mb-3"
                             >
-                                <InputLabel value="Քարտի տեսակ" />
+                                <InputLabel :value="t('sales.card_type')" />
                                 <select
                                     v-model="form.card_type_id"
                                     class="form-select"
                                 >
                                     <option value="">
-                                        Ընտրել քարտի տեսակը
+                                        {{ t('sales.select_card_type') }}
                                     </option>
                                     <option
                                         v-for="cardType in availableCardTypes"
@@ -912,7 +914,7 @@ const submitDebt = () => {
                                 v-if="form.is_partial_payment"
                                 class="mb-3"
                             >
-                                <InputLabel value="Վճարված գումար" />
+                                <InputLabel :value="t('sales.paid_amount')" />
                                 <input
                                     v-model="form.amount"
                                     type="number"
@@ -924,7 +926,7 @@ const submitDebt = () => {
                             </div>
 
                             <div class="mb-3">
-                                <InputLabel value="Վճարման նշումներ" />
+                                <InputLabel :value="t('sales.payment_notes')" />
                                 <textarea
                                     v-model="form.payment_notes"
                                     class="form-control"
@@ -934,7 +936,7 @@ const submitDebt = () => {
                             </div>
 
                             <div class="mb-0">
-                                <InputLabel value="ՀԴՄ" />
+                                <InputLabel :value="t('sales.fiscal_receipt_2')" />
                                 <label class="form-check mt-2">
                                     <input
                                         v-model="form.is_hdm"
@@ -942,7 +944,7 @@ const submitDebt = () => {
                                         class="form-check-input"
                                     />
                                     <span class="form-check-label">
-                                        ՀԴՄ կտրոն
+                                        {{ t('sales.fiscal_receipt_3') }}
                                     </span>
                                 </label>
                                 <InputError :message="form.errors.is_hdm" />
@@ -953,55 +955,55 @@ const submitDebt = () => {
                     <div class="col-lg-6 mb-4">
                         <div class="border rounded p-4 h-100">
                             <h5 class="mb-4">
-                                Գնի հաշվարկ
+                                {{ t('sales.price_calculation') }}
                             </h5>
 
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Աբոնեմենտի գին</span>
+                                <span>{{ t('sales.membership_price') }}</span>
                                 <span>{{ planPrice.toFixed(2) }}</span>
                             </div>
 
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Աբոնեմենտի զեղչ</span>
+                                <span>{{ t('sales.membership_discount') }}</span>
                                 <span>- {{ membershipDiscountAmount.toFixed(2) }}</span>
                             </div>
 
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Զեղչված գին</span>
+                                <span>{{ t('sales.discounted_price') }}</span>
                                 <span>{{ membershipDiscountedPrice.toFixed(2) }}</span>
                             </div>
 
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Ձեռքով զեղչ</span>
+                                <span>{{ t('sales.manual_discount') }}</span>
                                 <span>- {{ manualDiscountAmount.toFixed(2) }}</span>
                             </div>
 
                             <div class="d-flex justify-content-between mb-2 text-danger">
-                                <span>Ընդհանուր զեղչ</span>
+                                <span>{{ t('sales.total_discount') }}</span>
                                 <span>- {{ discountAmount.toFixed(2) }}</span>
                             </div>
 
                             <hr>
 
                             <div class="d-flex justify-content-between fw-bold mb-2">
-                                <span>Վերջնական գին</span>
+                                <span>{{ t('sales.final_price') }}</span>
                                 <span class="text-primary">{{ finalTotal.toFixed(2) }}</span>
                             </div>
 
                             <div class="d-flex justify-content-between mb-2">
-                                <span>Վճարված</span>
+                                <span>{{ t('people.paid') }}</span>
                                 <span class="text-success">- {{ numericPaymentAmount.toFixed(2) }}</span>
                             </div>
 
                             <div class="alert alert-success mt-3 mb-3 py-3">
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold">Մնացորդ</span>
+                                    <span class="fw-bold">{{ t('sales.balance') }}</span>
                                     <span class="fw-bold fs-4">{{ remaining.toFixed(2) }}</span>
                                 </div>
                             </div>
 
                             <div class="small text-muted d-flex justify-content-between">
-                                <span>Վաճառքի կարգավիճակ</span>
+                                <span>{{ t('sales.sale_status') }}</span>
                                 <span>{{ calculatedSaleStatus }}</span>
                             </div>
                         </div>
@@ -1009,7 +1011,7 @@ const submitDebt = () => {
                 </div>
 
                 <div class="mb-4">
-                    <InputLabel value="Նշումներ" />
+                    <InputLabel :value="t('people.notes')" />
                     <textarea
                         v-model="form.notes"
                         class="form-control"
@@ -1025,10 +1027,10 @@ const submitDebt = () => {
                         :disabled="form.processing"
                         @click="submitDebt"
                     >
-                        Մնալ պարտք
+                        {{ t('sales.leave_a_debt') }}
                     </button>
                     <PrimaryButton :disabled="form.processing">
-                        Պահպանել
+                        {{ t('membership.save') }}
                     </PrimaryButton>
                 </div>
             </form>
@@ -1045,7 +1047,7 @@ const submitDebt = () => {
             :users="reminderUsers"
             :errors="form.errors"
             :processing="form.processing"
-            confirm-text="Պլանավորել և պահպանել վաճառքը"
+            :confirm-text="t('sales.schedule_and_save_sale')"
             @close="reminderModalOpen = false"
             @confirm="confirmReminder"
         />

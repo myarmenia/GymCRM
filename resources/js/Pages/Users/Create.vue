@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch, onMounted } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
@@ -9,6 +11,9 @@ import TextInput from '@/Components/TextInput.vue';
 import { useTrans } from '/resources/js/trans';
 import axios from 'axios';
 import MultiSelect from '@/Components/MultiSelect.vue';
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 
 const page = usePage();
@@ -177,24 +182,24 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ավելացնել նոր աշխատակից" />
+    <Head :title="t('operations.add_new_employee')" />
 
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Օգտատեր / Ավելացնել նոր աշխատակից</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ t('operations.user_add_new_employee') }}</h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Ավելացնել նոր աշխատակից</h5>
+            <h5 class="card-header">{{ t('operations.add_new_employee') }}</h5>
             <form @submit.prevent="submit" class="card-body">
-                <h6>1. Հաշվի տվյալներ</h6>
+                <h6>{{ t('operations.1_account_details') }}</h6>
                 <div class="row g-6">
                     <!-- Gym selection (only for owner) -->
                     <div v-if="canSelectGym" class="col-md-12 select2-primary">
-                        <InputLabel for="gyms" class="form-label" value="Մարզադահլիճ" />
+                        <InputLabel for="gyms" class="form-label" :value="t('sidebar.gym')" />
 
                         <select class="form-select" v-model="form.gym_id" @change="onGymChange">
-                            <option value="" disabled>Ընտրել մարզադահլիճ</option>
+                            <option value="" disabled>{{ t('operations.select_gym') }}</option>
 
 
                             <option
@@ -207,7 +212,7 @@ const submit = () => {
                         </select>
 
                         <!-- <select id="gyms" class="select2 form-select">
-                            <option disabled selected>Choose gym</option>
+                            <option disabled selected>{{ t('ui.choose_gym') }}</option>
                             <option
                                 v-for="gym in gymOptions"
                                 :key="gym.value"
@@ -221,11 +226,11 @@ const submit = () => {
 
                     <!-- Entry Code dropdown (appears after gym is selected) -->
                     <div v-if="entryCodes.length" class="col-md-12 select2-primary">
-                        <InputLabel for="entry_codes" class="form-label" value="Մուտքի կոդ" />
+                        <InputLabel for="entry_codes" class="form-label" :value="t('people.entry_code')" />
                         <select id="entry_codes" class="form-select" @change="onEntryCodeChange">
-                            <option :value="null">Ոչինչ</option>
+                            <option :value="null">{{ t('people.none') }}</option>
                             <option v-for="code in entryCodes" :key="code.id" :value="code.id">
-                                {{ code.token }} ({{ code.gym?.name || 'Առանց մարզադահլիճի' }}) {{ code.type }}
+                                {{ code.token }} ({{ code.gym?.name || t('people.without_gym') }}) {{ code.type }}
                             </option>
                         </select>
                         <InputError class="mt-2" :message="form.errors.entry_code_id" />
@@ -233,18 +238,18 @@ const submit = () => {
 
                     <!-- Rest of the fields (name, surname, password, etc.) remain unchanged -->
                     <div class="col-md-6">
-                        <InputLabel for="name" class="form-label" value="Անուն" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" placeholder="Մուտքագրել անունը" />
+                        <InputLabel for="name" class="form-label" :value="t('auth.name')" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus tabindex="1" :placeholder="t('people.enter_name')" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="surname" class="form-label" value="Ազգանուն" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" placeholder="Մուտքագրել ազգանունը" />
+                        <InputLabel for="surname" class="form-label" :value="t('filter.surname')" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" tabindex="2" :placeholder="t('people.enter_surname')" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Գաղտնաբառ</label>
+                            <label class="form-label">{{ t('auth.password') }}</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password" tabindex="3" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -253,13 +258,13 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="email" class="form-label" value="Էլ. հասցե" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" placeholder="Մուտքագրել էլ. հասցեն" />
+                        <InputLabel for="email" class="form-label" :value="t('auth.email')" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" tabindex="5" :placeholder="t('people.enter_email')" />
                         <InputError :message="form.errors.email" />
                     </div>
                     <div class="col-md-6">
                         <div class="form-password-toggle">
-                            <label class="form-label">Հաստատել գաղտնաբառը</label>
+                            <label class="form-label">{{ t('operations.confirm_password') }}</label>
                             <div class="input-group input-group-merge">
                                 <input type="password" v-model="form.password_confirmation" tabindex="4" class="form-control" placeholder="············">
                                 <span class="input-group-text cursor-pointer"><i class="icon-base ti tabler-eye-off"></i></span>
@@ -268,12 +273,12 @@ const submit = () => {
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="phone" class="form-label" value="Հեռախոսահամար" />
+                        <InputLabel for="phone" class="form-label" :value="t('people.phone_number')" />
                         <TextInput id="phone" type="text" class="form-control" v-model="form.phone" tabindex="6" placeholder="+374 58 79 98 94" />
                         <InputError :message="form.errors.phone" />
                     </div>
                     <div class="col-md-6 select2-primary">
-                        <InputLabel for="roles" class="form-label" value="Դերեր" />
+                        <InputLabel for="roles" class="form-label" :value="t('staff_reports.roles')" />
                         <!-- <select id="roles" class="select2 form-select" multiple tabindex="7">
                             <option
                                 v-for="(role, index) in roleOptions"
@@ -286,12 +291,12 @@ const submit = () => {
                         <MultiSelect
                             v-model="form.roles"
                             :options="roleOptions"
-                            placeholder="Ընտրել դերերը"
+                            :placeholder="t('operations.select_roles')"
                         />
                         <InputError class="mt-2" :message="form.errors.roles" />
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Ակտիվ</label>
+                        <label class="form-label">{{ t('status.active') }}</label>
                         <div class="form-check form-switch">
                             <input
                                 class="form-check-input"
@@ -304,25 +309,25 @@ const submit = () => {
                 </div>
 
                 <hr class="my-6 mx-n6">
-                <h6>2. Անձնական տվյալներ</h6>
+                <h6>{{ t('operations.2_personal_details') }}</h6>
                 <div class="row g-6">
                     <div class="col-md-6">
-                        <InputLabel for="passport_number" class="form-label" value="Անձնագրի համար / ID" />
+                        <InputLabel for="passport_number" class="form-label" :value="t('operations.passport_number_id')" />
                         <TextInput id="passport_number" type="text" class="form-control" v-model="form.passport_number" tabindex="9" placeholder="AB547896 / 005423587" />
                         <InputError :message="form.errors.passport_number" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="passport_expire_at" class="form-label" value="Անձնագրի ժամկետը (մինչև)" />
+                        <InputLabel for="passport_expire_at" class="form-label" :value="t('operations.passport_expiry_date')" />
                         <TextInput id="passport_expire_at" type="date" class="form-control" v-model="form.passport_expire_at" tabindex="10" />
                         <InputError :message="form.errors.passport_expire_at" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="birth_date" class="form-label" value="Ծննդյան ամսաթիվ" />
+                        <InputLabel for="birth_date" class="form-label" :value="t('filter.birth_date')" />
                         <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" tabindex="12" />
                         <InputError :message="form.errors.birth_date" />
                     </div>
                     <div class="col-md-6">
-                        <InputLabel for="image" class="form-label" value="Պրոֆիլի նկար" />
+                        <InputLabel for="image" class="form-label" :value="t('operations.profile_image')" />
                         <input
                             id="image"
                             type="file"
@@ -332,16 +337,16 @@ const submit = () => {
                         >
                         <InputError :message="form.errors.image" />
                         <div v-if="imagePreview" class="mt-3">
-                            <img :src="imagePreview" alt="Preview" class="user-image-preview">
+                            <img :src="imagePreview" :alt="t('ui.preview')" class="user-image-preview">
                         </div>
                     </div>
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                        Պահպանել
+                        {{ t('common.save') }}
                     </PrimaryButton>
-                    <button type="reset" class="btn btn-label-secondary waves-effect">Չեղարկել</button>
+                    <button type="reset" class="btn btn-label-secondary waves-effect">{{ t('confirm.cancel') }}</button>
                 </div>
             </form>
         </div>

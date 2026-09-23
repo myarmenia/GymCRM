@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { ref } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     consumptions: Object,
@@ -47,13 +52,13 @@ const resetSearch = () => {
 </script>
 
 <template>
-    <Head title="Product Consumption List" />
+    <Head :title="t('inventory.product_consumption_list')" />
     <AppLayout>
         <div class="card">
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Ապրանքների սպառման ցուցակ</h5>
+                <h5 class="mb-0">{{ t('inventory.product_consumption_list') }}</h5>
             </div>
 
             <div class="card-body">
@@ -63,7 +68,7 @@ const resetSearch = () => {
                             v-model="search"
                             type="text"
                             class="form-control"
-                            placeholder="Որոնել Ըստ Ապրանքի Անունի"
+                            :placeholder="t('inventory.search_by_product_name')"
                             @keyup.enter="submitSearch"
                         />
                     </div>
@@ -74,7 +79,7 @@ const resetSearch = () => {
                             class="btn btn-primary"
                             @click="submitSearch"
                         >
-                            Որոնել
+                            {{ t('inventory.search') }}
                         </button>
 
                         <button
@@ -92,12 +97,12 @@ const resetSearch = () => {
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Ապրանք</th>
-                                <th>Սպառման Քանակ</th>
-                                <th>Նկարագրություն</th>
-                                <th>Գնման գնով</th>
-                                <th>Վաճառքի գնով</th>
-                                <th>Ստեղծվել է</th>
+                                <th>{{ t('inventory.product') }}</th>
+                                <th>{{ t('inventory.consumption_quantity_2') }}</th>
+                                <th>{{ t('people.description') }}</th>
+                                <th>{{ t('inventory.at_purchase_price') }}</th>
+                                <th>{{ t('inventory.at_sale_price') }}</th>
+                                <th>{{ t('inventory.created_at') }}</th>
                             </tr>
                         </thead>
 
@@ -148,7 +153,7 @@ const resetSearch = () => {
 
                             <tr v-if="consumptions.data.length === 0">
                                 <td colspan="5" class="text-center">
-                                    Սպառման տվյալներ չեն գտնվել
+                                    {{ t('inventory.no_consumption_records_found') }}
                                 </td>
                             </tr>
                         </tbody>

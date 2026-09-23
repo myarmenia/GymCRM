@@ -8,6 +8,7 @@
         "accountant": "Бухгалтер",
         "owner": "Владелец",
         "cleaner": "Уборщик",
-        "trainer": "Тренер"
+        "trainer": "Тренер",
+        "sales_manager": "Менеджер по продажам"
     }
 }

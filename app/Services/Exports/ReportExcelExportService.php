@@ -43,7 +43,7 @@ class ReportExcelExportService
 
             if (!empty($filters)) {
                 echo '<table>';
-                echo '<tr><th colspan="2">Ֆիլտրեր</th></tr>';
+                echo __('backend_messages.filters');
 
                 foreach ($filters as $key => $value) {
                     if ($value === null || $value === '') {
@@ -118,7 +118,7 @@ class ReportExcelExportService
         }
 
         return [
-            'title' => (string) ($summary['title'] ?? 'Ամփոփում'),
+            'title' => (string) ($summary['title'] ?? __('backend_messages.summary')),
             'rows' => $rows,
         ];
     }

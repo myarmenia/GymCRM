@@ -47,6 +47,7 @@ class EntryExitSystemService
         $deviceTime = $this->resolveDeviceTime($timestamp);
 
         $detectedAt = $deviceTime ?? now(self::LOCAL_TIMEZONE);
+        $action = 'entry';
 
         $resolved = $this->resolveEntryCodeOwner(
             $entryCode,
@@ -76,7 +77,6 @@ class EntryExitSystemService
 
         $ownerType = $resolved['owner_type'];
         $owner = $resolved['owner'];
-        $action = $this->detectNextAction($ownerType, $owner->id, (int) $clientId);
         $selectedMembership = null;
         $selectedMemberships = collect();
 
@@ -91,7 +91,7 @@ class EntryExitSystemService
                 'owner_type' => 'person',
                 'action' => $action,
                 'reason' => 'subscription_expired',
-                'message' => 'Մուտքը մերժված է․ aboniment-ի ժամկետը լրացել է կամ active aboniment չկա',
+                'message' => __('backend_messages.entry_denied_membership_has_expired_or_there_no_active_membership'),
                 'person' => $this->personPayload($owner),
                 'entry_code' => $entryCode,
                 'client_id' => $clientId,
@@ -120,11 +120,6 @@ class EntryExitSystemService
                 $detectedAt,
                 $action,
             );
-            $selectedMembership = $selectedMemberships->first();
-        }
-
-        if ($ownerType === 'person' && $action === 'exit') {
-            $selectedMemberships = $this->resolveMembershipsForExit($owner, (int) $clientId);
             $selectedMembership = $selectedMemberships->first();
         }
 

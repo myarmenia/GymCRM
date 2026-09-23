@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import AppLayout from "@/Layouts/Index.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     weekdays: {
@@ -97,13 +102,13 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Ժամանակի գրաֆիկ ստեղծել" />
+    <Head :title="t('operations.create_time_schedule')" />
 
     <AppLayout>
         <main id="main" class="main">
             <div class="pagetitle d-flex justify-content-between">
                 <div>
-                    <h1>Աշխատանքային ժամանակի ստեղծում</h1>
+                    <h1>{{ t('operations.create_working_time') }}</h1>
 
                     <nav>
                         <ol class="breadcrumb">
@@ -115,10 +120,10 @@ const submit = () => {
                                         })
                                     "
                                 >
-                                    Ժամային գրաֆիկ
+                                    {{ t('sidebar.schedule') }}
                                 </Link>
                             </li>
-                            <li class="breadcrumb-item active">Ստեղծել</li>
+                            <li class="breadcrumb-item active">{{ t('people.create') }}</li>
                         </ol>
                     </nav>
                 </div>
@@ -135,7 +140,7 @@ const submit = () => {
                                             <div class="row mt-3">
                                                 <div>
                                                     <label class="form-label">
-                                                        Անվանում
+                                                        {{ t('membership.title') }}
                                                     </label>
 
                                                     <input
@@ -165,7 +170,7 @@ const submit = () => {
                                                 <label
                                                     class="col-4 col-form-label"
                                                 >
-                                                    Ակտիվացում
+                                                    {{ t('operations.activation') }}
                                                 </label>
 
                                                 <div class="col-1">
@@ -199,7 +204,7 @@ const submit = () => {
                                         "
                                         @click="openCopyModal"
                                     >
-                                        Տարածել շաբաթվա օրերի վրա
+                                        {{ t('operations.apply_to_weekdays') }}
                                     </button>
                                 </div>
 
@@ -233,7 +238,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Աշխատանքային ժամի սկիզբ
+                                                        {{ t('operations.working_time_start') }}
                                                     </label>
 
                                                     <input
@@ -247,7 +252,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Աշխատանքային ժամի ավարտ
+                                                        {{ t('operations.working_time_end') }}
                                                     </label>
 
                                                     <input
@@ -261,7 +266,7 @@ const submit = () => {
 
                                                 <div class="col-md-4">
                                                     <label class="form-label">
-                                                        Ընդմիջում
+                                                        {{ t('staff_reports.break') }}
                                                     </label>
 
                                                     <div class="d-flex gap-2">
@@ -287,7 +292,7 @@ const submit = () => {
                                                                 )
                                                             "
                                                         >
-                                                            Ընդմիջման ժամ
+                                                            {{ t('operations.break_time') }}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -319,8 +324,7 @@ const submit = () => {
                                                                 <h6
                                                                     class="mb-0"
                                                                 >
-                                                                    Ընդմիջման
-                                                                    ժամ
+                                                                    {{ t('operations.break_time') }}
                                                                 </h6>
 
                                                                 <button
@@ -332,7 +336,7 @@ const submit = () => {
                                                                         )
                                                                     "
                                                                 >
-                                                                    Ջնջել
+                                                                    {{ t('action.delete') }}
                                                                 </button>
                                                             </div>
 
@@ -343,7 +347,7 @@ const submit = () => {
                                                                     <label
                                                                         class="form-label"
                                                                     >
-                                                                        Սկիզբ
+                                                                        {{ t('people.start') }}
                                                                     </label>
 
                                                                     <input
@@ -361,7 +365,7 @@ const submit = () => {
                                                                     <label
                                                                         class="form-label"
                                                                     >
-                                                                        Ավարտ
+                                                                        {{ t('people.end') }}
                                                                     </label>
 
                                                                     <input
@@ -405,7 +409,7 @@ const submit = () => {
                                         class="btn btn-primary"
                                         :disabled="form.processing"
                                     >
-                                        Ստեղծել
+                                        {{ t('people.create') }}
                                     </button>
                                 </div>
                             </div>
@@ -423,7 +427,7 @@ const submit = () => {
                 <div class="modal-dialog modal-sm modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Տարածել օրերի վրա</h5>
+                            <h5 class="modal-title">{{ t('operations.apply_to_days') }}</h5>
 
                             <button
                                 type="button"
@@ -434,7 +438,7 @@ const submit = () => {
 
                         <div class="modal-body">
                             <label class="form-label">
-                                Ընտրիր օրերը, որոնց վրա պետք է տարածվի ժամը
+                                {{ t('operations.select_the_days_to_apply_the_time_to') }}
                             </label>
 
                             <div
@@ -465,7 +469,7 @@ const submit = () => {
                                 class="btn btn-secondary"
                                 @click="showCopyModal = false"
                             >
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
 
                             <button
@@ -473,7 +477,7 @@ const submit = () => {
                                 class="btn btn-primary"
                                 @click="copyToSelectedDays"
                             >
-                                Տարածել
+                                {{ t('operations.apply') }}
                             </button>
                         </div>
                     </div>

@@ -30,9 +30,9 @@ class TrainerOccupancyCalendarRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'week.date' => 'Շաբաթվա ամսաթիվը սխալ է։',
-            'trainer_id.integer' => 'Մարզիչը սխալ է ընտրված։',
-            'trainer_id.exists' => 'Ընտրված մարզիչը չի գտնվել։',
+            'week.date' => __('backend_messages.week_date_invalid'),
+            'trainer_id.integer' => __('backend_messages.selected_trainer_invalid'),
+            'trainer_id.exists' => __('backend_messages.selected_trainer_not_found'),
         ];
     }
 

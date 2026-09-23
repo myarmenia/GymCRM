@@ -35,9 +35,8 @@ class StoreCategoryRequest extends FormRequest
             'icon' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'boolean'],
 
-            //'translations.en.name' => ['required', 'string', 'max:255'],
-            //'translations.ru.name' => ['required', 'string', 'max:255'],
-            'translations.hy.name' => ['required', 'string', 'max:255'],
+            'translations' => ['required', 'array', 'min:1'],
+            'translations.*.name' => ['required', 'string', 'max:255'],
         ];
     }
 }

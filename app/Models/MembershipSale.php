@@ -22,7 +22,7 @@ class MembershipSale extends Model
         static::updating(function (self $sale): void {
             if ($sale->isDirty('is_hdm')) {
                 throw ValidationException::withMessages([
-                    'is_hdm' => 'Վաճառքի ՀԴՄ ռեժիմը հնարավոր չէ փոխել։',
+                    'is_hdm' => __('backend_messages.sale_cash_register_mode_cannot_be_changed'),
                 ]);
             }
         });

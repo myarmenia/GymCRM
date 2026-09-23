@@ -248,13 +248,13 @@ class MembershipSaleService
 
         if (! $personMembership) {
             throw ValidationException::withMessages([
-                'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                'membership_sale_id' => __('backend.membership_sales.membership_sale_not_found'),
             ]);
         }
 
         if (! $personMembership->trainer_id) {
             throw ValidationException::withMessages([
-                'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+                'trainer_id' => __('backend.membership_sales.active_trainer_missing'),
             ]);
         }
 
@@ -294,13 +294,13 @@ class MembershipSaleService
 
             if (! $personMembership) {
                 throw ValidationException::withMessages([
-                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                    'membership_sale_id' => __('backend.membership_sales.membership_sale_not_found'),
                 ]);
             }
 
             if (! $personMembership->trainer_id) {
                 throw ValidationException::withMessages([
-                    'trainer_id' => 'Այս վաճառքի համար գործող մարզիչ չի նշված։',
+                    'trainer_id' => __('backend.membership_sales.active_trainer_missing'),
                 ]);
             }
 
@@ -308,7 +308,7 @@ class MembershipSaleService
 
             if ((int) $personMembership->trainer_id === $newTrainerId) {
                 throw ValidationException::withMessages([
-                    'trainer_id' => 'Նոր մարզիչը չի կարող նույնը լինել գործող մարզչի հետ։',
+                    'trainer_id' => __('backend.membership_sales.same_trainer'),
                 ]);
             }
 
@@ -329,7 +329,7 @@ class MembershipSaleService
 
             if (! $oldTrainerCommission) {
                 throw ValidationException::withMessages([
-                    'trainer_id' => 'Գործող մարզչի կոմիսիան չի գտնվել։',
+                    'trainer_id' => __('backend.membership_sales.trainer_commission_not_found'),
                 ]);
             }
 
@@ -408,7 +408,7 @@ class MembershipSaleService
 
             if ($paymentAmount <= 0) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Վճարվող գումարը պետք է մեծ լինի 0-ից։',
+                    'amount' => __('backend.membership_sales.payment_amount_positive'),
                 ]);
             }
 
@@ -467,7 +467,7 @@ class MembershipSaleService
 
         if ($debtAmount <= 0) {
             throw ValidationException::withMessages([
-                'reminder_scheduled_at' => 'Այս աբոնեմենտի համար վճարման պարտք չկա։',
+                'reminder_scheduled_at' => __('backend.membership_sales.no_payment_debt'),
             ]);
         }
 
@@ -496,7 +496,7 @@ class MembershipSaleService
 
             if ($this->paidAmount($membershipSale) <= 0) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Վճարումը չի գտնվել։',
+                    'amount' => __('backend.membership_sales.payment_not_found'),
                 ]);
             }
 
@@ -529,7 +529,7 @@ class MembershipSaleService
             if ($lastReturnedFinalPaymentId
                 && (int) $selectedPayment->id <= (int) $lastReturnedFinalPaymentId) {
                 throw ValidationException::withMessages([
-                    'parent_payment_id' => 'Այս վճարումն արդեն ներառված է ամբողջությամբ վերադարձված ՀԴՄ կտրոնում։',
+                    'parent_payment_id' => __('backend.membership_sales.payment_already_fully_refunded'),
                 ]);
             }
 
@@ -538,13 +538,13 @@ class MembershipSaleService
             if ($isFinalHdmReceipt
                 && (int) $selectedPayment->id !== (int) $finalOperation->operationable_id) {
                 throw ValidationException::withMessages([
-                    'parent_payment_id' => 'Կանխավճարն արդեն ներառված է վերջնական ՀԴՄ կտրոնում։ Վերադարձի համար ընտրեք վերջնական ՀԴՄ կտրոնը։',
+                    'parent_payment_id' => __('backend.membership_sales.advance_in_final_receipt'),
                 ]);
             }
 
             if ($isFinalHdmReceipt && empty($data['is_full_refund'])) {
                 throw ValidationException::withMessages([
-                    'is_full_refund' => 'Մեկ ապրանքով վերջնական ՀԴՄ կտրոնը հնարավոր է վերադարձնել միայն ամբողջությամբ։',
+                    'is_full_refund' => __('backend.membership_sales.single_item_full_refund_only'),
                 ]);
             }
 
@@ -617,7 +617,7 @@ class MembershipSaleService
             if ($termination['requires_workflow']) {
                 throw ValidationException::withMessages([
                     'membership_sale_id' => $termination['reason']
-                        ?? 'ՀԴՄ կանխավճարով վաճառքը պետք է խզել կանխավճարի վերադարձի բաժնից։',
+                        ?? __('backend.membership_sales.terminate_from_advance_refund'),
                 ]);
             }
             $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
@@ -625,7 +625,7 @@ class MembershipSaleService
 
             if (! $personMembership) {
                 throw ValidationException::withMessages([
-                    'membership_sale_id' => 'Աբոնեմենտը չի գտնվել։',
+                    'membership_sale_id' => __('backend.membership_sales.membership_sale_not_found'),
                 ]);
             }
 
@@ -727,7 +727,7 @@ class MembershipSaleService
     {
         if (! empty($data['apply_discount']) && ($data['discount_type'] ?? null) !== 'percent') {
             throw ValidationException::withMessages([
-                'discount_type' => 'Թույլատրվում է միայն տոկոսային զեղչ։',
+                'discount_type' => __('backend.membership_sales.percentage_discount_only'),
             ]);
         }
 
@@ -905,11 +905,11 @@ class MembershipSaleService
                 $reminderErrors = [];
 
                 if (empty($data['reminder_scheduled_at'])) {
-                    $reminderErrors['reminder_scheduled_at'] = 'Նշեք վճարման հիշեցման օրն ու ժամը։';
+                    $reminderErrors['reminder_scheduled_at'] = __('backend.membership_sales.reminder_time_required');
                 }
 
                 if (empty($data['reminder_recipient_ids'])) {
-                    $reminderErrors['reminder_recipient_ids'] = 'Ընտրեք առնվազն մեկ հիշեցման ստացող։';
+                    $reminderErrors['reminder_recipient_ids'] = __('backend.membership_sales.reminder_recipients_required');
                 }
 
                 if (! empty($reminderErrors)) {
@@ -968,7 +968,7 @@ class MembershipSaleService
                 && (! empty($newDiscountIds)
                     || (! $hasExistingManualDiscount && ! empty($data['apply_discount'])))) {
                 throw ValidationException::withMessages([
-                    'membership_discount_ids' => 'Վերջնական վճարումից հետո վաճառքի զեղչերը հնարավոր չէ փոփոխել։',
+                    'membership_discount_ids' => __('backend.membership_sales.discounts_locked_after_payment'),
                 ]);
             }
 
@@ -1139,7 +1139,7 @@ class MembershipSaleService
 
             if (! $hasGym || (int) $membershipPlan->gym_id !== (int) $user->gym_id) {
                 throw ValidationException::withMessages([
-                    'person_id' => 'Ընտրված հաճախորդը չի պատկանում ձեր մարզասրահին։',
+                    'person_id' => __('backend.membership_sales.person_wrong_gym'),
                 ]);
             }
         }
@@ -1168,7 +1168,7 @@ class MembershipSaleService
 
         if (! $gymId) {
             throw ValidationException::withMessages([
-                'gym_id' => 'Մարզասրահը պարտադիր է։',
+                'gym_id' => __('backend.membership_sales.gym_required'),
             ]);
         }
 
@@ -1211,7 +1211,7 @@ class MembershipSaleService
 
         if ($discounts->count() !== count($discountIds)) {
             throw ValidationException::withMessages([
-                'membership_discount_ids' => 'Ընտրված զեղչերից մեկը կամ մի քանիսը հասանելի չեն այս աբոնեմենտի համար։',
+                'membership_discount_ids' => __('backend.membership_sales.discount_unavailable'),
             ]);
         }
 
@@ -1377,7 +1377,7 @@ class MembershipSaleService
 
         if (! $payment || (float) $payment->amount - (float) ($payment->refunded_amount ?? 0) < $refundAmount) {
             throw ValidationException::withMessages([
-                'parent_payment_id' => 'Ընտրված վճարումը չունի բավարար վերադարձվող մնացորդ։',
+                'parent_payment_id' => __('backend.membership_sales.insufficient_refundable_balance'),
             ]);
         }
 
@@ -1432,7 +1432,7 @@ class MembershipSaleService
         }
 
         throw ValidationException::withMessages([
-            'start_date' => 'Այս աբոնեմենտի նոր վաճառքը կարող է սկսվել միայն ընթացիկ նույն աբոնեմենտի ավարտից հետո։',
+            'start_date' => __('backend.membership_sales.renewal_after_current_end'),
         ]);
     }
 
@@ -1459,7 +1459,7 @@ class MembershipSaleService
             $amount = round((float) ($data['payment_amount'] ?? $data['amount'] ?? 0), 2);
             if (! empty($data['is_full_payment']) || $amount <= 0 || $amount >= round($finalPrice, 2)) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և զեղչերից հետո վերջնական գնից փոքր։',
+                    'amount' => __('backend.membership_sales.partial_payment_range'),
                 ]);
             }
 
@@ -1481,14 +1481,14 @@ class MembershipSaleService
     {
         if ($sale->is_hdm === null) {
             throw ValidationException::withMessages([
-                'is_hdm' => 'Այս հին վաճառքի ՀԴՄ ռեժիմը որոշված չէ։ Անհրաժեշտ է ստուգել վճարումների պատմությունը։',
+                'is_hdm' => __('backend.membership_sales.legacy_cash_register_unknown'),
             ]);
         }
 
         if ((array_key_exists('is_hdm', $data) && (bool) $data['is_hdm'] !== $sale->is_hdm)
             || $sale->payments()->withTrashed()->where('is_hdm', '!=', $sale->is_hdm)->exists()) {
             throw ValidationException::withMessages([
-                'is_hdm' => 'Վճարման ՀԴՄ ռեժիմը պետք է համապատասխանի վաճառքի ՀԴՄ ռեժիմին։',
+                'is_hdm' => __('backend.membership_sales.cash_register_mismatch'),
             ]);
         }
 
@@ -1499,7 +1499,7 @@ class MembershipSaleService
     {
         if ($debtAmount <= 0) {
             throw ValidationException::withMessages([
-                'amount' => 'Այս վաճառքի համար մնացած պարտք չկա։',
+                'amount' => __('backend.membership_sales.no_remaining_debt'),
             ]);
         }
 
@@ -1514,7 +1514,7 @@ class MembershipSaleService
 
             if ($paymentAmount <= 0 || $paymentAmount >= round($debtAmount, 2)) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Մասնակի վճարման գումարը պետք է լինի 0-ից մեծ և մնացած պարտքից փոքր։',
+                    'amount' => __('backend.membership_sales.partial_payment_below_debt'),
                 ]);
             }
 
@@ -1523,7 +1523,7 @@ class MembershipSaleService
 
         if ($paymentAmount > $debtAmount) {
             throw ValidationException::withMessages([
-                'amount' => 'Վճարվող գումարը չի կարող գերազանցել մնացած պարտքը։',
+                'amount' => __('backend.membership_sales.payment_exceeds_debt'),
             ]);
         }
 
@@ -1534,7 +1534,7 @@ class MembershipSaleService
     {
         if ($availableRefundAmount <= 0) {
             throw ValidationException::withMessages([
-                'amount' => 'Վերադարձն անհնար է, քանի որ վերադարձվող գումար առկա չէ։',
+                'amount' => __('backend.membership_sales.nothing_to_refund'),
             ]);
         }
 
@@ -1544,13 +1544,13 @@ class MembershipSaleService
 
         if ($refundAmount <= 0) {
             throw ValidationException::withMessages([
-                'amount' => 'Վերադարձի գումարը պետք է լինի 0-ից մեծ։',
+                'amount' => __('backend.membership_sales.refund_amount_positive'),
             ]);
         }
 
         if ($refundAmount > $availableRefundAmount) {
             throw ValidationException::withMessages([
-                'amount' => 'Վերադարձի գումարը չի կարող գերազանցել հասանելի վերադարձի գումարը։',
+                'amount' => __('backend.membership_sales.refund_exceeds_available'),
             ]);
         }
 
@@ -1568,7 +1568,7 @@ class MembershipSaleService
         if (! $paymentMethodId) {
             if ($paymentAmount > 0) {
                 throw ValidationException::withMessages([
-                    'payment_method_id' => 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։',
+                    'payment_method_id' => __('backend.membership_sales.payment_method_required'),
                 ]);
             }
 
@@ -1581,7 +1581,7 @@ class MembershipSaleService
 
         if (! $paymentMethod) {
             throw ValidationException::withMessages([
-                'payment_method_id' => 'Ընտրված վճարման եղանակը անվավեր է։',
+                'payment_method_id' => __('backend.membership_sales.invalid_payment_method'),
             ]);
         }
 
@@ -1600,13 +1600,13 @@ class MembershipSaleService
 
         if (! $cardTypeId) {
             throw ValidationException::withMessages([
-                'card_type_id' => 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։',
+                'card_type_id' => __('backend.membership_sales.card_type_required'),
             ]);
         }
 
         if (! $paymentMethod->cardTypes->contains('id', (int) $cardTypeId)) {
             throw ValidationException::withMessages([
-                'card_type_id' => 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։',
+                'card_type_id' => __('backend.membership_sales.card_type_mismatch'),
             ]);
         }
 

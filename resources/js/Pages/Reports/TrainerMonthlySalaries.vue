@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -65,14 +70,14 @@ const exportHref = computed(() => route('reports.trainer-monthly-salaries.export
 const filterFields = computed(() => [
     {
         name: 'trainer_id',
-        label: 'Մարզիչ',
-        placeholder: 'Բոլոր մարզիչները',
+        label: t('roles.trainer'),
+        placeholder: t('sales.all_trainers'),
         options: props.filterOptions.trainers ?? [],
     },
     {
         name: 'status',
-        label: 'Կարգավիճակ',
-        placeholder: 'Բոլոր կարգավիճակները',
+        label: t('status.status'),
+        placeholder: t('staff_reports.all_statuses'),
         options: props.filterOptions.statuses ?? [],
     },
 ])
@@ -83,14 +88,14 @@ const filterValues = computed(() => ({
 }))
 
 const summaryCards = computed(() => [
-    { label: 'Գրանցումների քանակ', value: props.summary.salaries_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
-    { label: 'Մարզիչների բաժիններ', value: props.summary.parts_count ?? 0, icon: 'tabler-arrows-split', class: 'bg-label-secondary text-secondary' },
-    { label: 'Ընդհանուր գումար', value: formatAmount(props.summary.total_price), icon: 'tabler-cash', class: 'bg-label-info text-info' },
-    { label: 'Վճարված գումար', value: formatAmount(props.summary.paid_price), icon: 'tabler-check', class: 'bg-label-success text-success' },
-    { label: 'Սպասող գումար', value: formatAmount(props.summary.pending_price), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
-    { label: 'Վերադարձված գումար', value: formatAmount(props.summary.refunded_price), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
-    { label: 'Փոխանցված մուտք', value: formatAmount(props.summary.transferred_in_price), icon: 'tabler-arrow-down-left', class: 'bg-label-info text-info' },
-    { label: 'Փոխանցված ելք', value: formatAmount(props.summary.transferred_out_price), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.record_count'), value: props.summary.salaries_count ?? 0, icon: 'tabler-list-numbers', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.trainer_sections'), value: props.summary.parts_count ?? 0, icon: 'tabler-arrows-split', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.total_amount'), value: formatAmount(props.summary.total_price), icon: 'tabler-cash', class: 'bg-label-info text-info' },
+    { label: t('sales.paid_amount'), value: formatAmount(props.summary.paid_price), icon: 'tabler-check', class: 'bg-label-success text-success' },
+    { label: t('staff_reports.pending_amount'), value: formatAmount(props.summary.pending_price), icon: 'tabler-clock', class: 'bg-label-warning text-warning' },
+    { label: t('people.refunded_amount'), value: formatAmount(props.summary.refunded_price), icon: 'tabler-arrow-back-up', class: 'bg-label-danger text-danger' },
+    { label: t('staff_reports.transferred_entry'), value: formatAmount(props.summary.transferred_in_price), icon: 'tabler-arrow-down-left', class: 'bg-label-info text-info' },
+    { label: t('staff_reports.transferred_exit'), value: formatAmount(props.summary.transferred_out_price), icon: 'tabler-arrow-up-right', class: 'bg-label-secondary text-secondary' },
 ])
 
 const updateFilters = payload => {
@@ -149,12 +154,12 @@ const formatAmount = value => Number(value || 0).toLocaleString('hy-AM', {
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 
 const statusLabel = status => ({
-    pending: 'Սպասման մեջ',
-    partial: 'Մասնակի վճարված',
-    paid: 'Վճարված',
-    transferred: 'Փոխանցված',
-    cancel: 'Չեղարկված',
-    reject: 'Մերժված',
+    pending: t('status.pending'),
+    partial: t('people.partial_paid'),
+    paid: t('people.paid'),
+    transferred: t('staff_reports.transferred'),
+    cancel: t('people.cancelled'),
+    reject: t('staff_reports.rejected'),
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -168,12 +173,12 @@ const statusClass = status => ({
 </script>
 
 <template>
-    <Head title="Մարզիչների աշխատավարձեր" />
+    <Head :title="t('sidebar.trainer_salaries')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Մարզիչների աշխատավարձեր</h2>
+                <h2 class="mb-1">{{ t('sidebar.trainer_salaries') }}</h2>
                 <div class="text-muted">
                     {{ formatDate(filters.start_date) }} - {{ formatDate(filters.end_date) }}
                 </div>
@@ -183,7 +188,7 @@ const statusClass = status => ({
                 class="btn btn-outline-success"
             >
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -231,24 +236,24 @@ const statusClass = status => ({
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Մարզիչների աշխատավարձեր</h5>
-                <span class="badge bg-label-primary">{{ salaries.total ?? salaries.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('sidebar.trainer_salaries') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: salaries.total ?? salaries.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Մարզիչ</th>
-                            <th>Աբոնեմենտ / հաճախորդ</th>
-                            <th>Աշխատավարձի ամիս</th>
-                            <th>Վերագրված գումար</th>
-                            <th>Զուտ վճարված</th>
-                            <th>Չվճարված մնացորդ</th>
-                            <th>Վերադարձված</th>
-                            <th>Փոխանցված մուտք</th>
-                            <th>Փոխանցված ելք</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Ստեղծվել է</th>
+                            <th>{{ t('roles.trainer') }}</th>
+                            <th>{{ t('staff_reports.membership_customer') }}</th>
+                            <th>{{ t('staff_reports.salary_month') }}</th>
+                            <th>{{ t('staff_reports.reassigned_amount') }}</th>
+                            <th>{{ t('sales.net_paid') }}</th>
+                            <th>{{ t('staff_reports.unpaid_balance') }}</th>
+                            <th>{{ t('sales.refunded') }}</th>
+                            <th>{{ t('staff_reports.transferred_entry') }}</th>
+                            <th>{{ t('staff_reports.transferred_exit') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('inventory.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -280,7 +285,7 @@ const statusClass = status => ({
                                 colspan="11"
                                 class="text-center text-muted py-4"
                             >
-                                Տվյալներ չկան։
+                                {{ t('staff_reports.no_data_2') }}
                             </td>
                         </tr>
                     </tbody>

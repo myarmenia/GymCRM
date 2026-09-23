@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     users: Object,
@@ -61,12 +66,12 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Մարզիչների ցուցակ" />
+    <Head :title="t('staff_reports.trainer_list')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մարզիչների ցուցակ
+                {{ t('staff_reports.trainer_list') }}
             </h2>
         </template>
 
@@ -80,7 +85,7 @@ const resetFilters = () => {
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Մարզիչների ցուցակ</h5>
+                <h5 class="mb-0">{{ t('staff_reports.trainer_list') }}</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive text-nowrap">
@@ -88,11 +93,11 @@ const resetFilters = () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Անուն</th>
-                                <th>Ազգանուն</th>
-                                <th>Հեռախոս</th>
-                                <th>Էլ․ հասցե</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('auth.name') }}</th>
+                                <th>{{ t('filter.surname') }}</th>
+                                <th>{{ t('filter.phone') }}</th>
+                                <th>{{ t('staff_reports.email_address') }}</th>
+                                <th>{{ t('action.action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -123,7 +128,7 @@ const resetFilters = () => {
                                                 })"
                                             >
                                                 <i class="icon-base ti tabler-eye me-1"></i>
-                                                Դիտել պրոֆիլը
+                                                {{ t('people.view_profile') }}
                                             </Link>
                                             <Link
                                                 class="dropdown-item waves-effect"
@@ -133,7 +138,7 @@ const resetFilters = () => {
                                                 })"
                                             >
                                                 <i class="icon-base ti tabler-cash me-1"></i>
-                                                Վճարել աշխատավարձ
+                                                {{ t('staff_reports.pay_salary') }}
                                             </Link>
                                             <Link
                                                 v-if="hasAnyRole(['owner', 'super_admin'])"
@@ -144,7 +149,7 @@ const resetFilters = () => {
                                                 })"
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('action.edit') }}
                                             </Link>
                                         </div>
                                     </div>

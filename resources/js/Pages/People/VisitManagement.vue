@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import Index from "@/Layouts/Index.vue";
+import { translate } from '/resources/js/trans'
 import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
 import {
     formatDateTimeInYerevan,
@@ -18,6 +19,7 @@ const props = defineProps({
 });
 
 const page = usePage();
+const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements);
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 
 const fullName = computed(() => {
@@ -52,8 +54,8 @@ const attendanceMembershipNames = (attendance) =>
         .join(", ") || "-";
 
 const membershipStatusLabel = (status) => ({
-    waiting: "Սպասման մեջ",
-    active: "Ակտիվ",
+    waiting: t('waiting'),
+    active: t('active'),
 }[status] ?? status ?? "-");
 
 const membershipStatusClass = (status) => ({
@@ -62,8 +64,8 @@ const membershipStatusClass = (status) => ({
 }[status] ?? "bg-label-secondary");
 
 const directionLabel = (direction) => ({
-    entry: "Մուտք",
-    exit: "Ելք",
+    entry: t('entry'),
+    exit: t('exit'),
 }[direction] ?? direction ?? "-");
 
 const directionClass = (direction) => ({
@@ -86,23 +88,23 @@ const membershipDurationLabel = (membership) => {
     const durationValue = Number(membership?.membership_plan?.duration_value || 0);
 
     if (!durationType || !durationValue) {
-        return "Անսահմանափակ";
+        return t('unlimited');
     }
 
     if (durationType === "month") {
-        return `${durationValue} ամիս`;
+        return t('months_count', { count: durationValue });
     }
 
     if (durationType === "year") {
-        return `${durationValue * 12} ամիս`;
+        return t('months_count', { count: durationValue * 12 });
     }
 
     if (durationType === "day") {
-        return `${durationValue} օր`;
+        return t('days_count', { count: durationValue });
     }
 
     if (durationType === "visit") {
-        return `${durationValue} այց`;
+        return t('visits_count', { count: durationValue });
     }
 
     return `${durationValue}`;
@@ -110,15 +112,10 @@ const membershipDurationLabel = (membership) => {
 
 const insideNow = computed(() => props.lastAttendance?.direction === "entry");
 const visitDateTime = ref(nowDateTimeLocalInYerevan());
+const selectedMembershipId = ref(null);
 
 const entryForm = useForm({
     action: "entry",
-    membership_id: null,
-    manual_datetime: visitDateTime.value,
-});
-
-const exitForm = useForm({
-    action: "exit",
     membership_id: null,
     manual_datetime: visitDateTime.value,
 });
@@ -135,28 +132,17 @@ const submitEntry = (membershipId) => {
     });
 };
 
-const submitExit = () => {
-    exitForm.action = "exit";
-    exitForm.membership_id = null;
-    exitForm.manual_datetime = visitDateTime.value;
-    exitForm.post(route("person.visits.store", {
-        locale: currentLocale.value,
-        id: props.person.id,
-    }), {
-        preserveScroll: true,
-    });
-};
 </script>
 
 <template>
-    <Head title="Այցելությունների կառավարում" />
+    <Head :title="t('visits_management')" />
 
     <Index>
         <template #header>
             <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div>
                     <h2 class="text-xl font-semibold leading-tight text-gray-800 mb-1">
-                        Այցելությունների կառավարում
+                        {{ t('visits_management') }}
                     </h2>
                     <div class="text-muted">{{ fullName }}</div>
                 </div>
@@ -165,13 +151,13 @@ const submitExit = () => {
                         class="btn btn-label-secondary"
                         :href="route('person.profile', { locale: currentLocale, id: person.id })"
                     >
-                        Պրոֆիլ
+                        {{ t('profile_short') }}
                     </Link>
                     <Link
                         class="btn btn-secondary"
                         :href="route('person.list', { locale: currentLocale })"
                     >
-                        Վերադառնալ
+                        {{ t('back') }}
                     </Link>
                 </div>
             </div>
@@ -200,7 +186,7 @@ const submitExit = () => {
                                 class="badge"
                                 :class="insideNow ? 'bg-label-success' : 'bg-label-secondary'"
                             >
-                                {{ insideNow ? "Ներսում է" : "Դրսում է" }}
+                                {{ insideNow ? t('inside') : t('outside') }}
                             </span>
                         </div>
 
@@ -220,46 +206,57 @@ const submitExit = () => {
                         </div>
                     </div>
 
-                    <div class="action-panel">
+                    <div v-if="false" class="action-panel">
                         <div class="mb-3">
-                            <label class="form-label">Գրանցման ժամ</label>
+                            <label class="form-label">{{ t('record_time') }}</label>
                             <input
                                 v-model="visitDateTime"
                                 type="datetime-local"
                                 class="form-control"
                             >
                             <div class="small text-muted mt-2">
-                                Հոսանքի անջատման դեպքում կարող եք նշել իրական մուտքի կամ ելքի ժամը։
+                                {{ t('choose_entry_time') }}
                             </div>
                         </div>
-                        <div class="text-muted small mb-1">Վերջին գրանցումը</div>
+                        <div class="text-muted small mb-1">{{ t('last_record') }}</div>
                         <div class="fw-semibold mb-3">
                             {{ lastAttendance ? directionLabel(lastAttendance.direction) : "-" }}
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label">{{ t('membership') }}</label>
+                            <select
+                                v-model="selectedMembershipId"
+                                class="form-select"
+                                :disabled="!memberships.length"
+                            >
+                                <option :value="null" disabled>{{ t('membership') }}</option>
+                                <option
+                                    v-for="membership in memberships"
+                                    :key="membership.id"
+                                    :value="membership.id"
+                                >
+                                    {{ membershipPlanName(membership) }} — {{ membership.gym?.name || "-" }}
+                                </option>
+                            </select>
+                        </div>
                         <div
-                            v-if="entryForm.errors.manual_datetime || exitForm.errors.manual_datetime"
+                            v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"
                             class="text-danger small mb-3"
                         >
-                            {{ entryForm.errors.manual_datetime || exitForm.errors.manual_datetime }}
+                            {{ entryForm.errors.manual_datetime || entryForm.errors.membership_id }}
                         </div>
                         <button
                             type="button"
-                            class="btn btn-outline-secondary w-100"
-                            :disabled="exitForm.processing || !insideNow"
-                            @click="submitExit"
+                            class="btn btn-primary w-100"
+                            :disabled="entryForm.processing || !selectedMembershipId"
+                            @click="submitEntry(selectedMembershipId)"
                         >
                             <span
-                                v-if="exitForm.processing"
+                                v-if="entryForm.processing"
                                 class="spinner-border spinner-border-sm me-2"
                             ></span>
-                            Ավելացնել ելք
+                            {{ t('add_entry') }}
                         </button>
-                        <div
-                            v-if="!insideNow"
-                            class="small text-muted mt-2"
-                        >
-                            Ելքը հասանելի է միայն վերջին մուտքից հետո։
-                        </div>
                     </div>
                 </div>
             </div>
@@ -269,7 +266,7 @@ const submitExit = () => {
             <div class="col-12 col-xl-7">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Ակտիվ բաժանորդագրություններ</h5>
+                        <h5 class="mb-0">{{ t('active_subscriptions') }}</h5>
                     </div>
                     <div class="card-body">
                         <div
@@ -299,7 +296,7 @@ const submitExit = () => {
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <div class="metric-box">
-                                            <div class="text-muted small">Վավեր է մինչև</div>
+                                            <div class="text-muted small">{{ t('valid_until') }}</div>
                                             <div class="fw-semibold">
                                                 {{ formatDateOnly(membership.valid_at || membership.end_date) }}
                                             </div>
@@ -307,13 +304,13 @@ const submitExit = () => {
                                     </div>
                                     <div class="col-md-6">
                                         <div class="metric-box">
-                                            <div class="text-muted small">Այցերի հաշվառում</div>
+                                            <div class="text-muted small">{{ t('visit_tracking') }}</div>
                                             <div class="fw-semibold">
                                                 <span v-if="membership.visits_left === null">
                                                     {{ membershipDurationLabel(membership) }}
                                                 </span>
                                                 <span v-else>
-                                                    {{ membership.visits_left }} մնացել / {{ membership.visits_used ?? 0 }} օգտագործվել
+                                                    {{ t('visits_left_used', { left: membership.visits_left, used: membership.visits_used ?? 0 }) }}
                                                 </span>
                                             </div>
                                         </div>
@@ -321,14 +318,14 @@ const submitExit = () => {
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Մուտքի օր և ժամ</label>
+                                    <label class="form-label">{{ t('entry_time') }}</label>
                                     <input
                                         v-model="visitDateTime"
                                         type="datetime-local"
                                         class="form-control"
                                     >
                                     <div class="small text-muted mt-2">
-                                        Մուտքը ավելացնելուց առաջ ընտրեք իրական մուտքի օրը և ժամը։
+                                        {{ t('choose_entry_time') }}
                                     </div>
                                 </div>
 
@@ -339,21 +336,21 @@ const submitExit = () => {
                                     <button
                                         type="button"
                                         class="btn btn-primary"
-                                        :disabled="entryForm.processing || insideNow"
+                                        :disabled="entryForm.processing"
                                         @click="submitEntry(membership.id)"
                                     >
                                         <span
                                             v-if="entryForm.processing && entryForm.membership_id === membership.id"
                                             class="spinner-border spinner-border-sm me-2"
                                         ></span>
-                                        Ավելացնել մուտք
+                                        {{ t('add_entry') }}
                                     </button>
                                 </div>
                                 <div
-                                    v-if="insideNow"
-                                    class="small text-muted mt-2"
+                                    v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"
+                                    class="text-danger small mt-2"
                                 >
-                                    Նոր մուտքը հասանելի կլինի ելքից հետո։
+                                    {{ entryForm.errors.manual_datetime || entryForm.errors.membership_id }}
                                 </div>
                             </div>
                         </div>
@@ -362,7 +359,7 @@ const submitExit = () => {
                             v-else
                             class="empty-state"
                         >
-                            Ակտիվ կամ սպասման մեջ անդամակցություններ չկան։
+                            {{ t('no_active_memberships') }}
                         </div>
                     </div>
                 </div>
@@ -371,7 +368,7 @@ const submitExit = () => {
             <div class="col-12 col-xl-5">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Վերջին այցելությունները</h5>
+                        <h5 class="mb-0">{{ t('recent_visits') }}</h5>
                     </div>
                     <div class="card-body">
                         <div
@@ -381,9 +378,9 @@ const submitExit = () => {
                             <table class="table table-bordered align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Ամսաթիվ</th>
-                                        <th>Գործողություն</th>
-                                        <th>Աբոնեմենտ</th>
+                                        <th>{{ t('date') }}</th>
+                                        <th>{{ t('action') }}</th>
+                                        <th>{{ t('membership') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -412,7 +409,7 @@ const submitExit = () => {
                             v-else
                             class="empty-state"
                         >
-                            Այցելությունների պատմություն չկա։
+                            {{ t('no_visits') }}
                         </div>
                     </div>
                 </div>

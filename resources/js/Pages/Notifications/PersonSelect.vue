@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import Multiselect from 'vue-multiselect'
 import 'vue-multiselect/dist/vue-multiselect.css'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     modelValue: {
@@ -14,7 +19,7 @@ const props = defineProps({
     },
     placeholder: {
         type: String,
-        default: 'Ընտրեք հաճախորդին',
+        default: '',
     },
 })
 
@@ -39,15 +44,15 @@ const selected = computed({
         :clear-on-select="false"
         :allow-empty="true"
         :preserve-search="true"
-        :placeholder="placeholder"
+        :placeholder="placeholder || t('operations.select_customer')"
         label="label"
         track-by="value"
     >
         <template #noResult>
-            Արդյունքներ չկան
+            {{ t('operations.no_results') }}
         </template>
         <template #noOptions>
-            Հաճախորդներ չկան
+            {{ t('operations.no_customers') }}
         </template>
     </Multiselect>
 </template>

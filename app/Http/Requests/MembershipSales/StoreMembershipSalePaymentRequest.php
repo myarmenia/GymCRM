@@ -63,15 +63,15 @@ class StoreMembershipSalePaymentRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             if ($this->boolean('is_partial_payment') && $this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', 'Ընտրեք կամ մասնակի, կամ ամբողջական վճարում։');
+                $validator->errors()->add('is_full_payment', __('backend.membership_sales.select_partial_or_full_payment'));
             }
 
             if (!$this->boolean('is_partial_payment') && !$this->boolean('is_full_payment')) {
-                $validator->errors()->add('is_full_payment', 'Ընտրեք վճարման տեսակը։');
+                $validator->errors()->add('is_full_payment', __('backend.membership_sales.select_payment_type'));
             }
 
             if ($this->submittedPaymentAmount() > 0 && !$this->filled('payment_method_id')) {
-                $validator->errors()->add('payment_method_id', 'Վճարման եղանակը պարտադիր է, եթե վճարվող գումարը մեծ է 0-ից։');
+                $validator->errors()->add('payment_method_id', __('backend.membership_sales.payment_method_required'));
             }
 
             $paymentMethod = $this->filled('payment_method_id')
@@ -83,11 +83,11 @@ class StoreMembershipSalePaymentRequest extends FormRequest
             }
 
             if ($paymentMethod->cardTypes->count() && !$this->filled('card_type_id')) {
-                $validator->errors()->add('card_type_id', 'Այս վճարման եղանակի համար քարտի տեսակը պարտադիր է։');
+                $validator->errors()->add('card_type_id', __('backend.membership_sales.card_type_required'));
             }
 
             if ($this->filled('card_type_id') && !$paymentMethod->cardTypes->contains('id', (int) $this->input('card_type_id'))) {
-                $validator->errors()->add('card_type_id', 'Ընտրված քարտի տեսակը չի համապատասխանում վճարման եղանակին։');
+                $validator->errors()->add('card_type_id', __('backend.membership_sales.card_type_mismatch'));
             }
         });
     }
@@ -95,24 +95,24 @@ class StoreMembershipSalePaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'boolean' => ':attribute դաշտը պետք է լինի այո կամ ոչ։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'integer' => __('validation.integer'),
+            'numeric' => __('validation.numeric'),
+            'min.numeric' => __('validation.min.numeric'),
+            'boolean' => __('validation.boolean'),
+            'exists' => __('validation.exists'),
+            'string' => __('validation.string'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'amount' => 'վճարվող գումար',
-            'payment_amount' => 'վճարվող գումար',
-            'payment_method_id' => 'վճարման եղանակ',
-            'card_type_id' => 'քարտի տեսակ',
-            'payment_notes' => 'վճարման նշումներ',
-            'is_hdm' => 'ՀԴՄ',
+            'amount' => __('backend.attributes.payment_amount'),
+            'payment_amount' => __('backend.attributes.payment_amount'),
+            'payment_method_id' => __('backend.attributes.payment_method'),
+            'card_type_id' => __('backend.attributes.card_type'),
+            'payment_notes' => __('backend.attributes.payment_notes'),
+            'is_hdm' => __('backend.attributes.cash_register'),
         ];
     }
 

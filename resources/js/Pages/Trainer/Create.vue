@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, useForm, usePage } from "@inertiajs/vue3";
@@ -6,16 +8,19 @@ import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
+
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
 const weekDayLabels = {
-    monday: "Երկուշաբթի",
-    tuesday: "Երեքշաբթի",
-    wednesday: "Չորեքշաբթի",
-    thursday: "Հինգշաբթի",
-    friday: "Ուրբաթ",
-    saturday: "Շաբաթ",
-    sunday: "Կիրակի",
+    monday: t('staff_reports.monday'),
+    tuesday: t('staff_reports.tuesday'),
+    wednesday: t('staff_reports.wednesday'),
+    thursday: t('staff_reports.thursday'),
+    friday: t('staff_reports.friday'),
+    saturday: t('staff_reports.saturday'),
+    sunday: t('staff_reports.sunday'),
 };
 
 const getWeekDayLabel = (weekDay) => {
@@ -124,20 +129,20 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Մարզիչի գրաֆիկների կառավարում" />
+    <Head :title="t('staff_reports.trainer_schedule_management_2')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մարզիչ / Գրաֆիկների կառավարում
+                {{ t('staff_reports.trainer_schedule_management') }}
             </h2>
         </template>
 
         <div class="card mb-6">
-            <h5 class="card-header">Գրաֆիկներ և պարապունքի տեսակներ</h5>
+            <h5 class="card-header">{{ t('staff_reports.schedules_and_training_types') }}</h5>
 
             <form @submit.prevent="submit" class="card-body">
-                <h6>1. Ժամային գրաֆիկներ</h6>
+                <h6>{{ t('staff_reports.1_hourly_schedules') }}</h6>
 
                 <div class="mb-4">
                     <button
@@ -145,7 +150,7 @@ const submit = () => {
                         class="btn btn-primary btn-sm"
                         @click="addScheduleName"
                     >
-                        + Ավելացնել գրաֆիկ
+                        {{ t('staff_reports.add_schedule') }}
                     </button>
                 </div>
 
@@ -155,14 +160,14 @@ const submit = () => {
                     class="row g-3 mb-3 align-items-end"
                 >
                     <div class="col-md-10">
-                        <InputLabel class="form-label" value="Ժամային գրաֆիկ" />
+                        <InputLabel class="form-label" :value="t('sidebar.schedule')" />
 
                         <select
                             class="form-select"
                             v-model="form.schedule_names[index]"
                         >
                             <option :value="null" disabled>
-                                Ընտրել գրաֆիկ
+                                {{ t('membership.choose_schedule') }}
                             </option>
 
                             <option
@@ -189,7 +194,7 @@ const submit = () => {
                             class="btn btn-danger w-100"
                             @click="removeScheduleName(index)"
                         >
-                            Ջնջել
+                            {{ t('action.delete') }}
                         </button>
                     </div>
                 </div>
@@ -204,14 +209,14 @@ const submit = () => {
                 <div
                     class="d-flex justify-content-between align-items-center mb-3"
                 >
-                    <h6 class="mb-0">2. Պարապունքի տեսակներ</h6>
+                    <h6 class="mb-0">{{ t('staff_reports.2_training_types') }}</h6>
 
                     <button
                         type="button"
                         class="btn btn-primary btn-sm"
                         @click="addSessionDuration"
                     >
-                        + Ավելացնել տեսակ
+                        {{ t('staff_reports.add_type') }}
                     </button>
                 </div>
 
@@ -224,7 +229,7 @@ const submit = () => {
                         class="d-flex justify-content-between align-items-center mb-3"
                     >
                         <strong
-                            >Պարապունքի տեսակ #{{ durationIndex + 1 }}</strong
+                            >{{ t('staff_reports.training_type_number', { number: durationIndex + 1 }) }}</strong
                         >
 
                         <button
@@ -232,7 +237,7 @@ const submit = () => {
                             class="btn btn-danger btn-sm"
                             @click="removeSessionDuration(durationIndex)"
                         >
-                            Ջնջել
+                            {{ t('action.delete') }}
                         </button>
                     </div>
 
@@ -240,7 +245,7 @@ const submit = () => {
                         <div class="col-md-4">
                             <InputLabel
                                 class="form-label"
-                                value="Որ գրաֆիկին է կպնում"
+                                :value="t('staff_reports.assigned_schedule')"
                             />
 
                             <select
@@ -248,7 +253,7 @@ const submit = () => {
                                 v-model="duration.schedule_name_id"
                             >
                                 <option :value="null" disabled>
-                                    Ընտրել գրաֆիկ
+                                    {{ t('membership.choose_schedule') }}
                                 </option>
 
                                 <option
@@ -274,13 +279,13 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-3">
-                            <InputLabel class="form-label" value="Անվանում" />
+                            <InputLabel class="form-label" :value="t('membership.title')" />
 
                             <input
                                 type="text"
                                 class="form-control"
                                 v-model="duration.title"
-                                placeholder="Օր․ 60 րոպե"
+                                :placeholder="t('staff_reports.e_g_60_minutes')"
                             />
 
                             <InputError
@@ -294,7 +299,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-2">
-                            <InputLabel class="form-label" value="Րոպե" />
+                            <InputLabel class="form-label" :value="t('staff_reports.minutes')" />
 
                             <input
                                 type="number"
@@ -314,11 +319,11 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-2">
-                            <InputLabel class="form-label" value="Տեսակ" />
+                            <InputLabel class="form-label" :value="t('people.type')" />
 
                             <select class="form-select" v-model="duration.type">
-                                <option value="individual">Անհատական</option>
-                                <option value="group">Խմբային</option>
+                                <option value="individual">{{ t('staff_reports.individual') }}</option>
+                                <option value="group">{{ t('staff_reports.group') }}</option>
                             </select>
 
                             <InputError
@@ -332,7 +337,7 @@ const submit = () => {
                         </div>
 
                         <div class="col-md-1">
-                            <InputLabel class="form-label" value="Գին" />
+                            <InputLabel class="form-label" :value="t('membership.price')" />
 
                             <input
                                 type="number"
@@ -345,14 +350,13 @@ const submit = () => {
 
                     <hr />
 
-                    <h6>Ժամեր</h6>
+                    <h6>{{ t('staff_reports.hours') }}</h6>
 
                     <div
                         v-if="!duration.schedule_name_id"
                         class="alert alert-warning"
                     >
-                        Նախ ընտրիր, թե այս պարապունքի տեսակը որ գրաֆիկին է
-                        կպնում։
+                        {{ t('staff_reports.select_training_schedule_first') }}
                     </div>
 
                     <div
@@ -376,7 +380,7 @@ const submit = () => {
                                 class="btn btn-outline-primary btn-sm"
                                 @click="addSlot(durationIndex, detail)"
                             >
-                                + Ավելացնել ժամ
+                                {{ t('staff_reports.add_time') }}
                             </button>
                         </div>
 
@@ -388,7 +392,7 @@ const submit = () => {
                             class="row g-2 mb-2 align-items-end"
                         >
                             <div class="col-md-4">
-                                <label class="form-label">Սկիզբ</label>
+                                <label class="form-label">{{ t('people.start') }}</label>
 
                                 <input
                                     type="time"
@@ -406,7 +410,7 @@ const submit = () => {
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">Ավարտ</label>
+                                <label class="form-label">{{ t('people.end') }}</label>
 
                                 <input
                                     type="time"
@@ -427,7 +431,7 @@ const submit = () => {
                                         )
                                     "
                                 >
-                                    Ջնջել
+                                    {{ t('action.delete') }}
                                 </button>
                             </div>
                         </div>
@@ -444,14 +448,14 @@ const submit = () => {
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"
                     >
-                        Պահպանել
+                        {{ t('common.save') }}
                     </PrimaryButton>
 
                     <button
                         type="reset"
                         class="btn btn-label-secondary waves-effect"
                     >
-                        Չեղարկել
+                        {{ t('confirm.cancel') }}
                     </button>
                 </div>
             </form>

@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
@@ -7,6 +8,7 @@ import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.membership.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -55,12 +57,12 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Նոր կատեգորիա" />
+    <Head :title="t('category_new')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold">
-                Նոր կատեգորիա
+                {{ t('category_new') }}
             </h2>
         </template>
 
@@ -73,14 +75,14 @@ const submit = () => {
                     v-if="canSelectGym"
                     class="mb-4"
                 >
-                    <InputLabel value="Մարզադահլիճ" />
+                    <InputLabel :value="t('gym')" />
 
                     <select
                         v-model="form.gym_id"
                         class="form-select"
                     >
                         <option :value="null">
-                            Ընտրել
+                            {{ t('select') }}
                         </option>
 
                         <option
@@ -117,7 +119,7 @@ const submit = () => {
                     </h5>
 
                     <div class="mb-3">
-                        <InputLabel value="Անվանում" />
+                        <InputLabel :value="t('title')" />
 
                         <input
                             v-model="form.translations[code].name"
@@ -131,7 +133,7 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <InputLabel value="Նկարագրություն" />
+                        <InputLabel :value="t('description')" />
 
                         <textarea
                             v-model="form.translations[code].description"
@@ -149,14 +151,14 @@ const submit = () => {
                         />
 
                         <span class="form-check-label">
-                            Ակտիվ
+                            {{ t('active') }}
                         </span>
                     </label>
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
                     <PrimaryButton :disabled="form.processing">
-                        Պահպանել
+                        {{ t('save') }}
                     </PrimaryButton>
                 </div>
             </form>

@@ -75,7 +75,7 @@ class MembershipPlan extends Model
     public function getLockReasonAttribute(): ?string
     {
         return $this->is_locked
-            ? 'Այս աբոնեմենտը կապված է այցելուի աբոնեմենտի հետ։ Կարելի է փոփոխել միայն մարզիչներին։'
+            ? __('backend_messages.this_plan_linked_client_membership_only_trainers_can_be_changed')
             : null;
     }
 

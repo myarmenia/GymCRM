@@ -55,8 +55,8 @@ class StoreGymRequest extends FormRequest
             'address.required' => 'The gym address is required.',
             'phone.regex' => 'The phone number format is invalid. It should only contain numbers, spaces, plus, and minus signs.',
             'email.email' => 'Please enter a valid email address.',
-            'trainer_salary_mode.required' => 'Ընտրեք մարզչի աշխատավարձի հաշվարկման եղանակը։',
-            'trainer_salary_mode.in' => 'Մարզչի աշխատավարձի հաշվարկման եղանակը սխալ է։',
+            'trainer_salary_mode.required' => __('backend_messages.select_how_trainer_salary_calculated'),
+            'trainer_salary_mode.in' => __('backend_messages.trainer_salary_calculation_method_invalid'),
         ];
     }
 

@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { Head, router, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     purchases: {
@@ -67,12 +72,13 @@ const hasRefundQuantity = computed(() =>
 );
 
 const formatMoney = (value) => {
-    return `${Number(value || 0).toLocaleString("hy-AM")} ֏`;
+    const locale = translationPage.props.lang ?? translationPage.props.locale ?? 'hy'
+    return `${Number(value || 0).toLocaleString({ hy: 'hy-AM', en: 'en-US', ru: 'ru-RU' }[locale] ?? 'hy-AM')} ֏`;
 };
 
 const getPersonName = (person) => {
     if (!person) {
-        return "Հաճախորդ ընտրված չէ";
+        return t('inventory.no_customer_selected');
     }
 
     return `${person.name ?? ""}${person.surname ? ` ${person.surname}` : ""}`.trim();
@@ -202,7 +208,7 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Վաճառքների պատմություն" />
+    <Head :title="t('sidebar.sales_history')" />
 
     <AppLayout>
         <div class="card">
@@ -210,9 +216,9 @@ const resetFilters = () => {
                 class="card-header d-flex flex-column flex-md-row justify-content-between gap-3"
             >
                 <div>
-                    <h5 class="mb-1">Վաճառքների պատմություն</h5>
+                    <h5 class="mb-1">{{ t('sidebar.sales_history') }}</h5>
                     <p class="text-muted mb-0">
-                        Դիտեք վաճառքները, վճարման տվյալները և վաճառված ապրանքները։
+                        {{ t('inventory.view_sales_payment_details_and_sold_products') }}
                     </p>
                 </div>
 
@@ -222,25 +228,25 @@ const resetFilters = () => {
                     @click="resetFilters"
                 >
                     <i class="icon-base ti tabler-refresh me-1"></i>
-                    Մաքրել
+                    {{ t('inventory.clear') }}
                 </button>
             </div>
 
             <div class="card-body">
                 <div class="row g-3 mb-4">
                     <div class="col-lg-3 col-md-6">
-                        <label class="form-label">Որոնում</label>
+                        <label class="form-label">{{ t('inventory.search_2') }}</label>
                         <input
                             v-model="search"
                             type="text"
                             class="form-control"
-                            placeholder="ID, ապրանք, SKU կամ հաճախորդ"
+                            :placeholder="t('inventory.id_product_sku_or_customer')"
                             @keyup.enter="applyFilters"
                         />
                     </div>
 
                     <div class="col-lg-2 col-md-6">
-                        <label class="form-label">Սկիզբ</label>
+                        <label class="form-label">{{ t('people.start') }}</label>
                         <input
                             v-model="startDate"
                             type="date"
@@ -249,7 +255,7 @@ const resetFilters = () => {
                     </div>
 
                     <div class="col-lg-2 col-md-6">
-                        <label class="form-label">Ավարտ</label>
+                        <label class="form-label">{{ t('people.end') }}</label>
                         <input
                             v-model="endDate"
                             type="date"
@@ -258,9 +264,9 @@ const resetFilters = () => {
                     </div>
 
                     <div class="col-lg-2 col-md-6">
-                        <label class="form-label">Վճարում</label>
+                        <label class="form-label">{{ t('people.payment') }}</label>
                         <select v-model="paymentMethodId" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="method in localPaymentMethods"
                                 :key="method.id"
@@ -272,9 +278,9 @@ const resetFilters = () => {
                     </div>
 
                     <div class="col-lg-3 col-md-6">
-                        <label class="form-label">Հաճախորդ</label>
+                        <label class="form-label">{{ t('sales.client') }}</label>
                         <select v-model="personId" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="person in localPeople"
                                 :key="person.id"
@@ -288,9 +294,9 @@ const resetFilters = () => {
                     </div>
 
                     <div class="col-lg-3 col-md-6">
-                        <label class="form-label">Պահեստ</label>
+                        <label class="form-label">{{ t('inventory.warehouse') }}</label>
                         <select v-model="warehouseId" class="form-select">
-                            <option value="">Բոլորը</option>
+                            <option value="">{{ t('common.all') }}</option>
                             <option
                                 v-for="warehouse in localWarehouses"
                                 :key="warehouse.id"
@@ -308,7 +314,7 @@ const resetFilters = () => {
                             @click="applyFilters"
                         >
                             <i class="icon-base ti tabler-search me-1"></i>
-                            Որոնել
+                            {{ t('inventory.search') }}
                         </button>
                     </div>
                 </div>
@@ -318,14 +324,14 @@ const resetFilters = () => {
                         <thead class="table-light">
                             <tr>
                                 <th width="70">#</th>
-                                <th>Ամսաթիվ</th>
-                                <th>Հաճախորդ</th>
-                                <th>Վճարում</th>
-                                <th>Միջանկյալ</th>
-                                <th>Զեղչ</th>
-                                <th>Ընդամենը</th>
-                                <th>Ստացված</th>
-                                <th>Մանր</th>
+                                <th>{{ t('filter.date') }}</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('people.payment') }}</th>
+                                <th>{{ t('inventory.subtotal') }}</th>
+                                <th>{{ t('sales.discount') }}</th>
+                                <th>{{ t('inventory.total') }}</th>
+                                <th>{{ t('inventory.received') }}</th>
+                                <th>{{ t('inventory.retail') }}</th>
                                 <th width="90"></th>
                             </tr>
                         </thead>
@@ -381,7 +387,7 @@ const resetFilters = () => {
                                             v-if="purchase.refunded_amount"
                                             class="d-block small text-danger"
                                         >
-                                            Վերադարձ՝ {{ formatMoney(purchase.refunded_amount) }}
+                                            {{ t('inventory.refund_amount', { amount: formatMoney(purchase.refunded_amount) }) }}
                                         </span>
                                     </td>
                                     <td>
@@ -403,7 +409,7 @@ const resetFilters = () => {
                                             v-if="purchase.can_refund"
                                             type="button"
                                             class="btn btn-sm btn-outline-warning me-1"
-                                            title="Գրանցել վերադարձ"
+                                            :title="t('inventory.record_refund')"
                                             @click="openRefundModal(purchase)"
                                         >
                                             <i class="icon-base ti tabler-arrow-back-up"></i>
@@ -431,13 +437,13 @@ const resetFilters = () => {
                                             <table class="table table-sm mb-0">
                                                 <thead>
                                                     <tr>
-                                                        <th>Ապրանք</th>
+                                                        <th>{{ t('inventory.product') }}</th>
                                                         <th>SKU</th>
-                                                        <th>Քանակ</th>
-                                                        <th>Վերադարձված</th>
-                                                        <th>Հասանելի</th>
-                                                        <th>Գին</th>
-                                                        <th>Ընդամենը</th>
+                                                        <th>{{ t('inventory.quantity') }}</th>
+                                                        <th>{{ t('sales.refunded') }}</th>
+                                                        <th>{{ t('inventory.available') }}</th>
+                                                        <th>{{ t('membership.price') }}</th>
+                                                        <th>{{ t('inventory.total') }}</th>
                                                     </tr>
                                                 </thead>
 
@@ -485,7 +491,7 @@ const resetFilters = () => {
                                                             colspan="7"
                                                             class="text-center text-muted"
                                                         >
-                                                            Ապրանքներ չեն գտնվել
+                                                            {{ t('inventory.no_products_found') }}
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -493,17 +499,17 @@ const resetFilters = () => {
                                         </div>
 
                                         <div v-if="purchase.refunds.length" class="mt-3">
-                                            <h6 class="mb-2">Վերադարձների պատմություն</h6>
+                                            <h6 class="mb-2">{{ t('inventory.refund_history') }}</h6>
                                             <div class="table-responsive">
                                                 <table class="table table-sm table-bordered mb-0">
                                                     <thead>
                                                         <tr>
                                                             <th>#</th>
-                                                            <th>Ամսաթիվ</th>
-                                                            <th>Գումար</th>
-                                                            <th>Վճարում</th>
-                                                            <th>Գրանցող</th>
-                                                            <th>Պատճառ / հղում</th>
+                                                            <th>{{ t('filter.date') }}</th>
+                                                            <th>{{ t('people.amount') }}</th>
+                                                            <th>{{ t('people.payment') }}</th>
+                                                            <th>{{ t('inventory.recorded_by') }}</th>
+                                                            <th>{{ t('inventory.reason_reference') }}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -528,7 +534,7 @@ const resetFilters = () => {
                                     colspan="10"
                                     class="text-center text-muted py-4"
                                 >
-                                    Վաճառքներ չեն գտնվել
+                                    {{ t('inventory.no_sales_found') }}
                                 </td>
                             </tr>
                         </tbody>
@@ -554,10 +560,12 @@ const resetFilters = () => {
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h5 class="modal-title">Ապրանքի վերադարձ</h5>
+                            <h5 class="modal-title">{{ t('inventory.product_refund') }}</h5>
                             <small class="text-muted">
-                                Վաճառք #{{ refundPurchase.id }} · վերադարձման մնացորդ՝
-                                {{ formatMoney(refundPurchase.refundable_amount) }}
+                                {{ t('inventory.sale_refund_balance', {
+                                    id: refundPurchase.id,
+                                    amount: formatMoney(refundPurchase.refundable_amount),
+                                }) }}
                             </small>
                         </div>
                         <button
@@ -581,10 +589,10 @@ const resetFilters = () => {
                                 <table class="table table-sm table-bordered align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Ապրանք</th>
-                                            <th>Վաճառված</th>
-                                            <th>Արդեն վերադարձված</th>
-                                            <th style="width: 160px">Վերադարձնել</th>
+                                            <th>{{ t('inventory.product') }}</th>
+                                            <th>{{ t('inventory.sold') }}</th>
+                                            <th>{{ t('inventory.already_refunded') }}</th>
+                                            <th style="width: 160px">{{ t('inventory.refund') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -609,14 +617,14 @@ const resetFilters = () => {
 
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label">Վերադարձի եղանակ *</label>
+                                    <label class="form-label">{{ t('inventory.refund_method') }}</label>
                                     <select
                                         v-model="refundForm.payment_method_id"
                                         class="form-select"
                                         :class="{ 'is-invalid': refundForm.errors.payment_method_id }"
                                         @change="refundForm.card_type_id = ''"
                                     >
-                                        <option value="">Ընտրել</option>
+                                        <option value="">{{ t('people.select') }}</option>
                                         <option v-for="method in localPaymentMethods" :key="method.id" :value="method.id">
                                             {{ getPaymentMethodLabel(method) }}
                                         </option>
@@ -624,13 +632,13 @@ const resetFilters = () => {
                                     <div class="invalid-feedback">{{ refundForm.errors.payment_method_id }}</div>
                                 </div>
                                 <div v-if="refundCardTypes.length" class="col-md-6">
-                                    <label class="form-label">Քարտի տեսակ *</label>
+                                    <label class="form-label">{{ t('inventory.card_type') }}</label>
                                     <select
                                         v-model="refundForm.card_type_id"
                                         class="form-select"
                                         :class="{ 'is-invalid': refundForm.errors.card_type_id }"
                                     >
-                                        <option value="">Ընտրել</option>
+                                        <option value="">{{ t('people.select') }}</option>
                                         <option v-for="cardType in refundCardTypes" :key="cardType.id" :value="cardType.id">
                                             {{ cardType.name }}
                                         </option>
@@ -638,11 +646,11 @@ const resetFilters = () => {
                                     <div class="invalid-feedback">{{ refundForm.errors.card_type_id }}</div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Հղում / փաստաթղթի համար</label>
+                                    <label class="form-label">{{ t('inventory.reference_document_number') }}</label>
                                     <input v-model="refundForm.reference" type="text" maxlength="255" class="form-control" />
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label">Պատճառ</label>
+                                    <label class="form-label">{{ t('inventory.reason') }}</label>
                                     <input v-model="refundForm.reason" type="text" maxlength="1000" class="form-control" />
                                 </div>
                             </div>
@@ -650,7 +658,7 @@ const resetFilters = () => {
 
                         <div class="modal-footer">
                             <button type="button" class="btn btn-label-secondary" :disabled="refundForm.processing" @click="closeRefundModal">
-                                Փակել
+                                {{ t('confirm.close') }}
                             </button>
                             <button
                                 type="submit"
@@ -658,7 +666,7 @@ const resetFilters = () => {
                                 :disabled="refundForm.processing || !refundForm.payment_method_id || !hasRefundQuantity || (refundCardTypes.length && !refundForm.card_type_id)"
                             >
                                 <span v-if="refundForm.processing" class="spinner-border spinner-border-sm me-1"></span>
-                                Գրանցել վերադարձը
+                                {{ t('inventory.record_the_refund') }}
                             </button>
                         </div>
                     </form>

@@ -32,19 +32,19 @@ class StoreMembershipSaleFreezeRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'date' => ':attribute դաշտը պետք է լինի վավեր ամսաթիվ։',
-            'after_or_equal' => ':attribute-ը պետք է լինի :date-ից ոչ շուտ։',
-            'string' => ':attribute դաշտը պետք է լինի տեքստ։',
+            'required' => __('validation.required'),
+            'date' => __('validation.date'),
+            'after_or_equal' => __('validation.after_or_equal'),
+            'string' => __('validation.string'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'start_date' => 'սառեցման սկիզբ',
-            'end_date' => 'սառեցման ավարտ',
-            'notes' => 'նշումներ',
+            'start_date' => __('backend.attributes.freeze_start'),
+            'end_date' => __('backend.attributes.freeze_end'),
+            'notes' => __('backend.attributes.notes'),
         ];
     }
 }

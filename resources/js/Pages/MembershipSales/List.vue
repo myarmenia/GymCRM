@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed, ref, watch } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
@@ -8,6 +9,7 @@ import { todayInYerevan } from '@/utils/yerevanDate'
 import { useAuth } from '@/composables/useAuth'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const { hasAnyRole } = useAuth()
 const canManageSales = computed(() =>
@@ -81,8 +83,8 @@ const personOptionName = person => {
 const saleFilterSelectFields = computed(() => [
     {
         name: 'person_id',
-        label: 'Հաճախորդ',
-        placeholder: 'Բոլոր հաճախորդները',
+        label: t('sales.client'),
+        placeholder: t('sales.all_clients'),
         options: props.people.map(person => ({
             value: person.id,
             label: personOptionName(person),
@@ -90,8 +92,8 @@ const saleFilterSelectFields = computed(() => [
     },
     {
         name: 'trainer_id',
-        label: 'Մարզիչ',
-        placeholder: 'Բոլոր մարզիչները',
+        label: t('people.trainer'),
+        placeholder: t('sales.all_trainers'),
         options: props.trainers.map(trainer => ({
             value: trainer.id,
             label: trainerOptionName(trainer),
@@ -99,8 +101,8 @@ const saleFilterSelectFields = computed(() => [
     },
     {
         name: 'membership_plan_id',
-        label: 'Աբոնեմենտ',
-        placeholder: 'Բոլոր աբոնեմենտները',
+        label: t('people.membership'),
+        placeholder: t('sales.all_memberships'),
         options: props.membershipPlans.map(plan => ({
             value: plan.id,
             label: optionName(plan),
@@ -108,8 +110,8 @@ const saleFilterSelectFields = computed(() => [
     },
     {
         name: 'membership_discount_ids',
-        label: 'Աբոնեմենտի զեղչեր',
-        placeholder: 'Բոլոր զեղչերը',
+        label: t('sales.membership_discounts'),
+        placeholder: t('sales.all_discounts'),
         options: props.discounts.map(discount => ({
             value: discount.id,
             label: optionName(discount),
@@ -117,27 +119,27 @@ const saleFilterSelectFields = computed(() => [
     },
     {
         name: 'manual_discount',
-        label: 'Ձեռքով զեղչ',
-        placeholder: 'Բոլորը',
+        label: t('sales.manual_discount'),
+        placeholder: t('people.all'),
         options: [
-            { value: 'with', label: 'Ձեռքով զեղչով' },
-            { value: 'without', label: 'Առանց ձեռքով զեղչի' },
+            { value: 'with', label: t('sales.with_manual_discount') },
+            { value: 'without', label: t('sales.without_manual_discount') },
         ],
     },
     {
         name: 'payment_status',
-        label: 'Վճարման վիճակ',
-        placeholder: 'Բոլորը',
+        label: t('sales.payment_state'),
+        placeholder: t('people.all'),
         options: [
-            { value: 'paid', label: 'Լրիվ վճարում' },
-            { value: 'partial', label: 'Մասնակի վճարում' },
+            { value: 'paid', label: t('sales.paid_in_full') },
+            { value: 'partial', label: t('sales.partial_payment') },
         ],
     },
 ])
 
 const saleFilterDateFields = [
-    { value: 'membership_start_date', label: 'Աբոնեմենտի սկիզբ' },
-    { value: 'membership_end_date', label: 'Աբոնեմենտի ավարտ' },
+    { value: 'membership_start_date', label: t('sales.membership_start') },
+    { value: 'membership_end_date', label: t('sales.membership_end') },
 ]
 
 watch(
@@ -165,11 +167,11 @@ const trainerName = sale => {
 }
 
 const paymentStatusLabel = status => ({
-    unpaid: 'Չվճարված',
-    partial: 'Մասնակի',
-    paid: 'Վճարված',
-    refunded: 'Վերադարձված',
-    cancelled: 'Չեղարկված',
+    unpaid: t('people.unpaid'),
+    partial: t('sales.partial'),
+    paid: t('people.paid'),
+    refunded: t('sales.refunded'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 
 const statusClass = status => ({
@@ -246,10 +248,10 @@ const canChangeTrainer = sale => {
     return Boolean(membership?.trainer_id && trainers.length > 1)
 }
 const membershipStatusLabel = status => ({
-    waiting: 'Սպասման մեջ',
-    active: 'Ակտիվ',
-    frozen: 'Սառեցված',
-    cancelled: 'Չեղարկված',
+    waiting: t('people.waiting'),
+    active: t('membership.active'),
+    frozen: t('people.frozen'),
+    cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
@@ -312,12 +314,12 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Աբոնեմենտների վաճառքներ" />
+    <Head :title="t('sidebar.membership_sales')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Աբոնեմենտների վաճառքներ
+                {{ t('sidebar.membership_sales') }}
             </h2>
         </template>
 
@@ -327,7 +329,7 @@ const resetFilters = () => {
             :select-fields="saleFilterSelectFields"
             :date-fields="saleFilterDateFields"
             default-date-field=""
-            date-placeholder="Ընտրել ամսաթվի տեսակը"
+            :date-placeholder="t('sales.choose_date_type')"
             @filter="applyFilters"
             @reset="resetFilters"
         />
@@ -335,7 +337,7 @@ const resetFilters = () => {
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    Վաճառքների ցանկ
+                    {{ t('sales.sales_list') }}
                 </h5>
             </div>
 
@@ -344,15 +346,15 @@ const resetFilters = () => {
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Հաճախորդ</th>
-                                <th>Աբոնեմենտ</th>
-                                <th>Մարզիչ</th>
-                                <th>Գին</th>
-                                <th>Վճարում</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Պարտք</th>
-                                <th>Ժամկետ</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('people.membership') }}</th>
+                                <th>{{ t('people.trainer') }}</th>
+                                <th>{{ t('membership.price') }}</th>
+                                <th>{{ t('people.payment') }}</th>
+                                <th>{{ t('membership.status') }}</th>
+                                <th>{{ t('sales.debt') }}</th>
+                                <th>{{ t('sales.term') }}</th>
+                                <th>{{ t('membership.actions') }}</th>
                             </tr>
                         </thead>
 
@@ -366,11 +368,11 @@ const resetFilters = () => {
                                 <td>{{ trainerName(sale) }}</td>
                                 <td>
                                     <div>
-                                        <span class="text-muted">Գին՝</span>
+                                        <span class="text-muted">{{ t('sales.price') }}</span>
                                         {{ formattedAmount(sale.total_price) }}
                                     </div>
                                     <div>
-                                        <span class="text-muted">Վերջնական՝</span>
+                                        <span class="text-muted">{{ t('sales.final') }}</span>
                                         {{ formattedAmount(sale.final_price) }}
                                     </div>
                                 </td>
@@ -401,11 +403,11 @@ const resetFilters = () => {
                                 </td>
                                 <td>
                                     <div>
-                                        <span class="text-muted">Սկիզբ՝</span>
+                                        <span class="text-muted">{{ t('sales.start') }}</span>
                                         {{ formatDate(membershipStartDate(sale)) }}
                                     </div>
                                     <div>
-                                        <span class="text-muted">Ավարտ՝</span>
+                                        <span class="text-muted">{{ t('sales.end') }}</span>
                                         {{ formatDate(membershipEndDate(sale)) }}
                                     </div>
                                 </td>
@@ -426,7 +428,7 @@ const resetFilters = () => {
                                                 :href="route('membership_sale.payments', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-cash me-1"></i>
-                                                Վճարումներ
+                                                {{ t('people.payments') }}
                                             </Link>
 
                                             <Link
@@ -435,7 +437,7 @@ const resetFilters = () => {
                                                 :href="route('membership_sale.change_trainer', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-user-cog me-1"></i>
-                                                Փոխել մարզիչին
+                                                {{ t('sales.change_trainer') }}
                                             </Link>
 
                                             <Link
@@ -444,7 +446,7 @@ const resetFilters = () => {
                                                 :href="route('membership_sale.guests', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-user-plus me-1"></i>
-                                                Ավելացնել հյուր
+                                                {{ t('people.add_guest') }}
                                             </Link>
 
                                             <Link
@@ -453,7 +455,7 @@ const resetFilters = () => {
                                                 :href="route('membership_sale.freezes', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-snowflake me-1"></i>
-                                                Սառեցնել աբոնեմենտը
+                                                {{ t('people.freeze_membership') }}
                                             </Link>
 
                                             <Link
@@ -462,7 +464,7 @@ const resetFilters = () => {
                                                 :href="route('membership_sale.edit', { locale: currentLocale, id: sale.id })"
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('membership.edit') }}
                                             </Link>
                                         </div>
                                     </div>
@@ -474,7 +476,7 @@ const resetFilters = () => {
                                     colspan="9"
                                     class="text-center text-muted"
                                 >
-                                    Վաճառքներ չկան
+                                    {{ t('sales.no_sales') }}
                                 </td>
                             </tr>
                         </tbody>

@@ -30,13 +30,11 @@ class ProductStoreRequest extends FormRequest
             'measurement_unit_id' => ['required', 'exists:measurement_units,id'],
             'warehouse_id' => ['required', 'exists:warehouses,id'],
 
-            'name.hy' => ['required', 'string', 'max:255'],
-            //'name.ru' => ['required', 'string', 'max:255'],
-            //'name.en' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'array', 'min:1'],
+            'name.*' => ['required', 'string', 'max:255'],
 
-            'description.hy' => ['nullable', 'string'],
-            //'description.ru' => ['nullable', 'string'],
-            //'description.en' => ['nullable', 'string'],
+            'description' => ['nullable', 'array'],
+            'description.*' => ['nullable', 'string'],
             'sku' => [
                 'required',
                 'string',
@@ -85,9 +83,9 @@ class ProductStoreRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'sku.required' => 'SKU դաշտը պարտադիր է։',
-            'sku.unique' => 'Այս SKU-ով ապրանք արդեն գոյություն ունի։',
-            'barcode.unique' => 'Այս barcode-ով ապրանք արդեն գոյություն ունի։',
+            'sku.required' => __('backend_messages.sku_field_required'),
+            'sku.unique' => __('backend_messages.product_with_this_sku_already_exists'),
+            'barcode.unique' => __('backend_messages.product_with_this_barcode_already_exists'),
         ];
     }
 }

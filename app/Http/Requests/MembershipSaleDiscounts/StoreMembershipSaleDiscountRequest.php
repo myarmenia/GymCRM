@@ -26,23 +26,23 @@ class StoreMembershipSaleDiscountRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'required' => ':attribute դաշտը պարտադիր է։',
-            'integer' => ':attribute դաշտը պետք է լինի ամբողջ թիվ։',
-            'numeric' => ':attribute դաշտը պետք է լինի թիվ։',
-            'min.numeric' => ':attribute դաշտը պետք է լինի առնվազն :min։',
-            'exists' => 'Ընտրված :attribute-ը անվավեր է։',
-            'in' => 'Ընտրված :attribute-ը անվավեր է։',
+            'required' => __('backend_messages.attribute_field_required'),
+            'integer' => __('backend_messages.attribute_must_be_integer'),
+            'numeric' => __('backend_messages.attribute_must_be_number'),
+            'min.numeric' => __('backend_messages.attribute_must_be_least_min'),
+            'exists' => __('backend_messages.selected_attribute_invalid'),
+            'in' => __('backend_messages.selected_attribute_invalid'),
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'membership_sale_id' => 'աբոնեմենտի վաճառք',
-            'discount_id' => 'զեղչ',
-            'discount_type' => 'զեղչի տեսակ',
-            'discount_value' => 'զեղչի արժեք',
-            'discount_amount' => 'զեղչի գումար',
+            'membership_sale_id' => __('backend_messages.membership_sale_lowercase'),
+            'discount_id' => __('backend_messages.discount'),
+            'discount_type' => __('backend_messages.discount_type'),
+            'discount_value' => __('backend_messages.discount_value'),
+            'discount_amount' => __('backend_messages.discount_amount'),
         ];
     }
 }

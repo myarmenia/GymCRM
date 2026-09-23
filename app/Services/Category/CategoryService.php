@@ -81,46 +81,23 @@ class CategoryService
             'parent_id' => $category->parent_id,
             'status' => $category->status,
             'sort_order' => $category->sort_order,
-            'translations' => [
-                'en' => [
-                    'id' => $translations['en']->id ?? null,
-                    'name' => $translations['en']->name ?? '',
-                ],
-                'ru' => [
-                    'id' => $translations['ru']->id ?? null,
-                    'name' => $translations['ru']->name ?? '',
-                ],
-                'hy' => [
-                    'id' => $translations['hy']->id ?? null,
-                    'name' => $translations['hy']->name ?? '',
-                ],
-            ],
+            'translations' => $translations
+                ->mapWithKeys(fn ($translation) => [
+                    $translation->locale => [
+                        'id' => $translation->id,
+                        'name' => $translation->name,
+                    ],
+                ])
+                ->all(),
         ];
     }
 
     public function update(int $id, array $data, int $hotelId)
     {
-        $locale = app()->getLocale();
         $payload = [
             'gym_id' => $hotelId,
             'status' => $data['status'] ?? null,
-            'translations' => [
-                [
-                    'id' => $data['translations']['en']['id'],
-                    'locale' => 'en',
-                    'name' => $data['translations']['en']['name'],
-                ],
-                [
-                    'id' => $data['translations']['ru']['id'],
-                    'locale' => 'ru',
-                    'name' => $data['translations']['ru']['name'],
-                ],
-                [
-                    'id' => $data['translations']['hy']['id'],
-                    'locale' => 'hy',
-                    'name' => $data['translations']['hy']['name'],
-                ],
-            ],
+            'translations' => $data['translations'] ?? [],
         ];
         $category = $this->categoryRepository->findBy('id', $id, ['translations']);
 
@@ -129,15 +106,9 @@ class CategoryService
             'sort_order' => $payload['sort_order'] ?? $category->sort_order,
         ]);
         foreach (($payload['translations'] ?? []) as $locale => $translation) {
-            $this->categoryTranslationsRepository->updateTranslation(
-                [
-                    'id' => $translation['id'],
-                    'inventory_category_id' => $category->id,
-                ],
-                [
-                    'name' => $translation['name'] ?? '',
-                    'locale' => $translation['locale'] ?? $locale,
-                ]
+            $category->translations()->updateOrCreate(
+                ['locale' => $locale],
+                ['name' => $translation['name'] ?? ''],
             );
         }
 

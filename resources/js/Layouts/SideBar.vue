@@ -2,6 +2,7 @@
 import { Link, usePage } from "@inertiajs/vue3";
 import { computed } from "vue";
 import { useAuth } from "@/composables/useAuth";
+import { useTrans } from "/resources/js/trans";
 
 const page = usePage();
 const currentLocale = computed(
@@ -91,7 +92,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
                     <div>
-                        {{ hasRole("owner") ? "Օգտատերեր" : "Անձնակազմ" }}
+                        {{ useTrans(hasRole("owner") ? "app.sidebar.users" : "app.sidebar.staff") }}
                     </div>
                 </Link>
             </li>
@@ -116,7 +117,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div>Մարզիչներ</div>
+                    <div>{{ useTrans("app.sidebar.trainers") }}</div>
                 </Link>
             </li>
 
@@ -139,7 +140,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
-                    <div>Հաճախորդներ</div>
+                    <div>{{ useTrans("app.sidebar.customers") }}</div>
                 </Link>
             </li>
 
@@ -155,7 +156,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-building"></i>
-                    <div>Մարզադահլիճ</div>
+                    <div>{{ useTrans("app.sidebar.gym") }}</div>
                 </Link>
             </li>
 
@@ -179,7 +180,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-packages"></i>
-                    <div>Պահեստներ</div>
+                    <div>{{ useTrans("app.sidebar.warehouses") }}</div>
                 </Link>
             </li>
 
@@ -203,7 +204,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-list"></i>
-                    <div>Կատեգորիաներ</div>
+                    <div>{{ useTrans("app.sidebar.categories") }}</div>
                 </Link>
             </li>
             <li
@@ -220,7 +221,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-calendar-time"></i>
-                    <div>Իմ գրաֆիկները</div>
+                    <div>{{ useTrans("app.sidebar.my_schedules") }}</div>
                 </Link>
             </li>
 
@@ -236,7 +237,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-cash"></i>
-                    <div>Իմ աշխատավարձերը</div>
+                    <div>{{ useTrans("app.sidebar.my_salaries") }}</div>
                 </Link>
             </li>
 
@@ -254,7 +255,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
-                    <div>Իմ հաճախորդները</div>
+                    <div>{{ useTrans("app.sidebar.my_customers") }}</div>
                 </Link>
             </li>
 
@@ -279,7 +280,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-list-details"></i>
-                    <div>Ապրանքներ</div>
+                    <div>{{ useTrans("app.sidebar.products") }}</div>
                 </Link>
             </li>
 
@@ -309,7 +310,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-package-export"></i>
-                    <div>Ապրանքների սպառում</div>
+                    <div>{{ useTrans("app.sidebar.product_consumption") }}</div>
                 </Link>
             </li>
 
@@ -333,7 +334,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-calendar-time"></i>
-                    <div>Ժամային գրաֆիկ</div>
+                    <div>{{ useTrans("app.sidebar.schedule") }}</div>
                 </Link>
             </li>
 
@@ -349,7 +350,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-history"></i>
-                    <div data-i18n="Logs">Մատյաններ</div>
+                    <div>{{ useTrans("app.sidebar.logs") }}</div>
                 </Link>
             </li>
 
@@ -378,7 +379,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-calendar-stats"></i>
-                    <div>Մարզիչների զբաղվածություն</div>
+                    <div>{{ useTrans("app.sidebar.trainer_occupancy") }}</div>
                 </Link>
             </li>
 
@@ -402,7 +403,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-qrcode"></i>
-                    <div>Մուտքի կոդեր</div>
+                    <div>{{ useTrans("app.sidebar.entry_codes") }}</div>
                 </Link>
             </li>
 
@@ -425,7 +426,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         class="menu-icon icon-base ti tabler-report-analytics"
                     ></i>
                     <div data-i18n="Entry Reports">
-                        Մուտք/ելք հաշվետվություն
+                        {{ useTrans("app.sidebar.entry_report") }}
                     </div>
                 </Link>
             </li>
@@ -453,7 +454,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
-                    <div>Աբոնեմենտներ</div>
+                    <div>{{ useTrans("app.sidebar.membership_plans") }}</div>
                 </Link>
             </li>
 
@@ -480,7 +481,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div>Աբոնեմենտների կատեգորիաներ</div>
+                    <div>{{ useTrans("app.sidebar.membership_categories") }}</div>
                 </Link>
             </li>
 
@@ -503,7 +504,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-percentage"></i>
-                    <div>Զեղչեր</div>
+                    <div>{{ useTrans("app.sidebar.discounts") }}</div>
                 </Link>
             </li>
 
@@ -525,7 +526,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     <i
                         class="menu-icon icon-base ti tabler-report-analytics"
                     ></i>
-                    <div>Հաշվետվություններ</div>
+                    <div>{{ useTrans("app.sidebar.reports") }}</div>
                 </a>
                 <ul class="menu-sub">
                     <li
@@ -544,7 +545,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Աբոնեմենտներ</div>
+                            <div>{{ useTrans("app.sidebar.report_memberships") }}</div>
                         </Link>
                     </li>
                     <li
@@ -563,7 +564,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Մուտք / Ելք</div>
+                            <div>{{ useTrans("app.sidebar.report_entry_exit") }}</div>
                         </Link>
                     </li>
                     <li
@@ -582,7 +583,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Մարզիչների միջնորդավճարներ</div>
+                            <div>{{ useTrans("app.sidebar.trainer_commissions") }}</div>
                         </Link>
                     </li>
                     <li
@@ -601,7 +602,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Մարզիչների աշխատավարձեր</div>
+                            <div>{{ useTrans("app.sidebar.trainer_salaries") }}</div>
                         </Link>
                     </li>
                     <li
@@ -620,7 +621,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Վաճառողների միջնորդավճարներ</div>
+                            <div>{{ useTrans("app.sidebar.salesperson_commissions") }}</div>
                         </Link>
                     </li>
                 </ul>
@@ -659,7 +660,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     ]"
                 >
                     <i class="menu-icon icon-base ti tabler-receipt"></i>
-                    <div>Աբոնեմենտների վաճառքներ</div>
+                    <div>{{ useTrans("app.sidebar.membership_sales") }}</div>
                 </Link>
             </li>
 
@@ -685,7 +686,7 @@ const { hasRole, hasAnyRole } = useAuth();
             >
                 <a href="javascript:void(0);" class="menu-link menu-toggle">
                     <i class="menu-icon icon-base ti tabler-cash-register"></i>
-                    <div data-i18n="Cashier">Դրամարկղ</div>
+                    <div>{{ useTrans("app.sidebar.cashier") }}</div>
                 </a>
 
                 <ul class="menu-sub">
@@ -703,7 +704,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div data-i18n="Finance">Ֆինանսական շարժեր</div>
+                            <div>{{ useTrans("app.sidebar.finance") }}</div>
                         </Link>
                     </li>
 
@@ -729,7 +730,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div>Աշխատավարձերի վճարումներ</div>
+                            <div>{{ useTrans("app.sidebar.salary_payouts") }}</div>
                         </Link>
                     </li>
 
@@ -747,7 +748,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div data-i18n="Sale">Վաճառք</div>
+                            <div>{{ useTrans("app.sidebar.sale") }}</div>
                         </Link>
                     </li>
 
@@ -767,9 +768,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             "
                             class="menu-link"
                         >
-                            <div data-i18n="Sales History">
-                                Վաճառքների պատմություն
-                            </div>
+                            <div>{{ useTrans("app.sidebar.sales_history") }}</div>
                         </Link>
                     </li>
                 </ul>

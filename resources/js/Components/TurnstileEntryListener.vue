@@ -1,7 +1,12 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import { useToast } from "vue-toastification";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage();
 const toast = useToast();
@@ -77,24 +82,24 @@ const isDenied = computed(() => {
 
 const modalTitle = computed(() => {
     if (isDenied.value) {
-        return "Մուտքը մերժված է";
+        return t('operations.entry_denied');
     }
 
     return entryData.value?.action === "exit"
-        ? "Ելքը գրանցված է"
-        : "Մուտքը թույլատրված է";
+        ? t('operations.exit_recorded')
+        : t('operations.entry_allowed');
 });
 
 const actionLabel = computed(() => {
     if (entryData.value?.action === "exit") {
-        return "Ելք";
+        return t('people.exit');
     }
 
     if (entryData.value?.action === "entry") {
-        return "Մուտք";
+        return t('auth.login');
     }
 
-    return "Անհայտ";
+    return t('operations.unknown');
 });
 
 const reasonLabel = computed(() => {
@@ -103,14 +108,14 @@ const reasonLabel = computed(() => {
             entryData.value?.reason,
         )
     ) {
-        return "Մուտքը մերժված է. աբոնեմենտի ժամկետը լրացել է կամ գործող աբոնեմենտ չկա";
+        return t('operations.entry_denied_the_membership_has_expired_or_there_is_no_active_me');
     }
 
     if (entryData.value?.reason === "invalid_entry_code") {
-        return "Մուտքը մերժված է. մուտքի կոդը չի գտնվել կամ տվյալ կոդով այցելու չի գտնվել";
+        return t('operations.entry_denied_the_entry_code_or_its_visitor_was_not_found');
     }
 
-    return entryData.value?.message ?? "Մուտքը մերժված է";
+    return entryData.value?.message ?? t('operations.entry_denied');
 });
 
 const currentOwner = computed(() => {
@@ -195,7 +200,7 @@ const entryOwnerName = (entry) => {
 };
 
 const entryActionLabel = (entry) => {
-    return entry?.action === "exit" ? "Ելք" : "Մուտք";
+    return entry?.action === "exit" ? t('people.exit') : t('auth.login');
 };
 
 const selectPendingEntry = (entry) => {
@@ -264,12 +269,12 @@ const selectMembership = async () => {
             throw new Error("Entry was not recorded.");
         }
 
-        toast.success("Մուտքը ֆիքսվեց ընտրված աբոնեմենտների համար");
+        toast.success(t('operations.entry_recorded_for_the_selected_memberships'));
         closeModal();
     } catch (error) {
         toast.error(
             error?.response?.data?.message ??
-                "Չհաջողվեց ակտիվացնել ընտրված աբոնեմենտը",
+                t('operations.could_not_activate_the_selected_membership'),
         );
     } finally {
         activatingMembershipId.value = null;
@@ -360,7 +365,7 @@ onBeforeUnmount(() => {
                     <div class="turnstile-entry-layout">
                         <aside class="turnstile-entry-list">
                             <div class="turnstile-entry-list__title">
-                                Մուտքերի հերթ ({{ pendingEntries.length }})
+                                {{ t('operations.entry_queue_count', { count: pendingEntries.length }) }}
                             </div>
 
                             <button
@@ -396,7 +401,7 @@ onBeforeUnmount(() => {
                                 {{
                                     isDenied
                                         ? reasonLabel
-                                        : entryData.message || "Մուտքը թույլատրված է"
+                                        : entryData.message || t('operations.entry_allowed')
                                 }}
                             </div>
                         </div>
@@ -408,7 +413,7 @@ onBeforeUnmount(() => {
                                 width="70"
                                 height="70"
                                 class="rounded-circle object-fit-cover"
-                                alt="Person"
+                                :alt="t('ui.person')"
                             />
 
                             <div>
@@ -421,40 +426,40 @@ onBeforeUnmount(() => {
                                     {{ currentOwner?.phone || currentOwner?.email }}
                                 </div>
                                 <div class="text-muted small">
-                                    Ծննդյան ամսաթիվ: {{ formatBirthDate(currentOwner?.birth_date) }}
+                                    {{ t('operations.birth_date_value', { date: formatBirthDate(currentOwner?.birth_date) }) }}
                                 </div>
                             </div>
                         </div>
 
                         <p class="mb-1">
-                            <strong>Entry Code:</strong>
+                            <strong>{{ t('people.entry_code') }}:</strong>
                             {{ entryData.entry_code }}
                         </p>
 
                         <p class="mb-1">
-                            <strong>Կարգավիճակ:</strong>
+                            <strong>{{ t('operations.status') }}</strong>
                             <span
                                 class="badge"
                                 :class="
                                     isDenied ? 'bg-label-danger' : 'bg-label-success'
                                 "
                             >
-                                {{ isDenied ? "Մերժված" : "Թույլատրված" }}
+                                {{ isDenied ? t('staff_reports.rejected') : t('staff_reports.allowed') }}
                             </span>
                         </p>
 
                         <p class="mb-1">
-                            <strong>Գործողություն:</strong>
+                            <strong>{{ t('operations.action') }}</strong>
                             {{ actionLabel }}
                         </p>
 
                         <p class="mb-1">
-                            <strong>Ամսաթիվ:</strong>
+                            <strong>{{ t('operations.date') }}</strong>
                             {{ entryData.detected_at || entryData.date }}
                         </p>
 
                         <p class="mb-0">
-                            <strong>Տեսակ:</strong>
+                            <strong>{{ t('staff_reports.type') }}</strong>
                             {{ entryData.owner_type || currentOwner?.type }}
                         </p>
 
@@ -463,7 +468,7 @@ onBeforeUnmount(() => {
                             class="alert alert-info mt-4 mb-0"
                         >
                             <div class="fw-semibold mb-3">
-                                Ֆիքսված աբոնեմենտներ
+                                {{ t('operations.selected_memberships') }}
                             </div>
 
                             <div class="d-flex flex-column gap-2">
@@ -476,13 +481,13 @@ onBeforeUnmount(() => {
                                         {{ membership.membership_plan_name }}
                                     </div>
                                     <div class="small text-muted">
-                                        Category: {{ membership.membership_category_name || "-" }}
+                                        {{ t('membership.category') }}: {{ membership.membership_category_name || "-" }}
                                     </div>
                                     <div class="small text-muted">
                                         {{ formatMembershipPeriod(membership) }}
                                     </div>
                                     <div class="small text-muted">
-                                        Visits left: {{ membership.visits_left ?? "-" }}
+                                        {{ t('sales.remaining_visits') }}: {{ membership.visits_left ?? "-" }}
                                     </div>
                                 </div>
                             </div>
@@ -493,7 +498,7 @@ onBeforeUnmount(() => {
                             class="alert alert-warning mt-4 mb-0"
                         >
                             <div class="fw-semibold mb-3">
-                                Այս անձի մոտ կա մեկից ավելի գործող աբոնեմենտ։ Ընտրեք, թե որ աբոնեմենտի սահմաններում է մուտքը գրանցվել։
+                                {{ t('operations.this_person_has_more_than_one_active_membership_select_the_membe') }}
                             </div>
 
                             <div
@@ -501,7 +506,7 @@ onBeforeUnmount(() => {
                                 class="mb-3"
                             >
                                 <div class="small text-muted mb-2">
-                                    Արդեն active աբոնեմենտներ
+                                    {{ t('operations.already_active_memberships') }}
                                 </div>
 
                                 <div class="d-flex flex-column gap-2">
@@ -514,7 +519,7 @@ onBeforeUnmount(() => {
                                             {{ membership.membership_plan_name }}
                                         </div>
                                         <div class="small text-muted">
-                                            Category: {{ membership.membership_category_name || "-" }}
+                                        {{ t('membership.category') }}: {{ membership.membership_category_name || "-" }}
                                         </div>
                                         <div class="small text-muted">
                                             {{ formatMembershipPeriod(membership) }}
@@ -525,7 +530,7 @@ onBeforeUnmount(() => {
 
                             <div>
                                 <div class="small text-muted mb-2">
-                                    Ընտրության համար հասանելի աբոնեմենտներ
+                                    {{ t('operations.memberships_available_for_selection') }}
                                 </div>
 
                                 <div class="d-flex flex-column gap-2">
@@ -554,7 +559,7 @@ onBeforeUnmount(() => {
                                                     </span>
                                                 </div>
                                                 <div class="small text-muted">
-                                                    Category: {{ membership.membership_category_name || "-" }}
+                                                    {{ t('membership.category') }}: {{ membership.membership_category_name || "-" }}
                                                 </div>
                                                 <div class="small text-muted">
                                                     {{ formatMembershipPeriod(membership) }}
@@ -586,10 +591,10 @@ onBeforeUnmount(() => {
                                             >
                                                 {{
                                                     activatingMembershipId === membership.id
-                                                        ? "Ակտիվացվում է..."
+                                                        ? t('operations.activating')
                                                         : membership.status === 'active'
-                                                          ? "Ընտրել"
-                                                          : "Սարքել active և ընտրել"
+                                                          ? t('people.select')
+                                                          : t('operations.activate_and_select')
                                                 }}
                                             </button>
                                         </div>
@@ -603,10 +608,10 @@ onBeforeUnmount(() => {
 
                 <div class="modal-footer">
                     <button v-if="requiresManagerSelection" class="btn btn-primary" :disabled="!selectedMembershipIds.length || activatingMembershipId" @click="selectMembership">
-                        Ֆիքսել մուտքը ընտրված աբոնեմենտների համար
+                        {{ t('operations.record_entry_for_selected_memberships') }}
                     </button>
                     <button class="btn btn-secondary" @click="closeModal">
-                        Փակել
+                        {{ t('confirm.close') }}
                     </button>
                 </div>
             </div>

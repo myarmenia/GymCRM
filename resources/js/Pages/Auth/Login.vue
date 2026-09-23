@@ -1,6 +1,7 @@
 <script setup>
 import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import { useTrans } from '/resources/js/trans';
 import '../../../assets/vendor/css/pages/page-auth.css';
 
 import InputError from '@/Components/InputError.vue';
@@ -34,7 +35,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Log in" />
+        <Head :title="useTrans('app.auth.login')" />
         <!-- Login -->
         <div class="card">
             <div class="card-body">
@@ -46,11 +47,11 @@ const submit = () => {
                 </div>
                 <!-- /Logo -->
 
-                <p class="mb-6">Please sign-in to your account and start the adventure</p>
+                <p class="mb-6">{{ useTrans("app.auth.login_intro") }}</p>
 
                 <form @submit.prevent="submit" id="formAuthentication" class="mb-4 fv-plugins-bootstrap5 fv-plugins-framework" >
                     <div class="mb-6 form-control-validation fv-plugins-icon-container fv-plugins-bootstrap5-row-invalid">
-                        <InputLabel for="email" class="form-label" value="Email or Username" />
+                        <InputLabel for="email" class="form-label" :value="useTrans('app.auth.email_or_username')" />
                         <TextInput
                             id="email"
                             type="email"
@@ -59,12 +60,12 @@ const submit = () => {
                             required
                             autofocus
                             autocomplete="username"
-                            placeholder="Enter your email or username"
+                            :placeholder="useTrans('app.auth.email_or_username_placeholder')"
                         />
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
                     <div class="mb-6 form-password-toggle form-control-validation fv-plugins-icon-container fv-plugins-bootstrap5-row-invalid">
-                        <InputLabel class="form-label" for="password" value="Please enter your password" />
+                        <InputLabel class="form-label" for="password" :value="useTrans('app.auth.password_prompt')" />
                         <TextInput
                             id="password"
                             type="password"
@@ -78,7 +79,7 @@ const submit = () => {
                     </div>
 
                     <div class="mb-6">
-                        <button class="btn btn-primary d-grid w-100 waves-effect waves-light" type="submit">Login</button>
+                        <button class="btn btn-primary d-grid w-100 waves-effect waves-light" type="submit">{{ useTrans("app.auth.login") }}</button>
                     </div>
                 </form>
             </div>

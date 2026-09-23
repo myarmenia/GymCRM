@@ -4,6 +4,7 @@ import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
+import { useTrans } from '/resources/js/trans';
 
 defineProps({
     mustVerifyEmail: {
@@ -16,14 +17,14 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Profile" />
+    <Head :title="useTrans('app.sidebar.profile')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2
                 class="text-xl font-semibold leading-tight text-gray-800"
             >
-                Profile
+                {{ useTrans("app.sidebar.profile") }}
             </h2>
         </template>
 

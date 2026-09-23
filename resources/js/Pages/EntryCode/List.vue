@@ -1,4 +1,6 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head } from "@inertiajs/vue3";
@@ -9,6 +11,9 @@ import DeleteButton from "@/Components/DeleteButton.vue";
 import Pagination from "@/Components/Pagination.vue";
 import TableFilter from "@/Components/TableFilter.vue";
 import { useAuth } from "@/composables/useAuth";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     entryCodes: Object,
@@ -30,8 +35,8 @@ const entryCodeFilterSelectFields = computed(() => {
     const fields = [
         {
             name: "type",
-            label: "Type",
-            placeholder: "All types",
+            label: t("filter.type"),
+            placeholder: t("filter.all_types"),
             options: [
                 { value: "rfId", label: "RF ID" },
                 { value: "FaceId", label: "Face ID" },
@@ -42,16 +47,16 @@ const entryCodeFilterSelectFields = computed(() => {
     if (hasRole("owner")) {
         fields.push({
             name: "gym_id",
-            label: "Gym",
-            placeholder: "All gyms",
+            label: t("filter.gym"),
+            placeholder: t("filter.all_gyms"),
             options: props.gyms,
         });
     }
 
     fields.push({
         name: "status",
-        label: "Status",
-        placeholder: "All statuses",
+        label: t("filter.status"),
+        placeholder: t("filter.all_statuses"),
         options: [
             { value: "1", label: useTrans("app.status.active") },
             { value: "0", label: useTrans("app.status.inactive") },
@@ -97,12 +102,12 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head title="Մուտքի կոդեր" />
+    <Head :title="t('sidebar.entry_codes')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Մուտքի կոդեր
+                {{ t('sidebar.entry_codes') }}
             </h2>
         </template>
 
@@ -120,7 +125,7 @@ const resetFilters = () => {
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
-                <h5 class="mb-0">Մուտքի կոդերի ցանկ</h5>
+                <h5 class="mb-0">{{ t('operations.entry_code_list') }}</h5>
                 <Link
                     class="btn create-new btn-primary"
                     tabindex="0"
@@ -131,7 +136,7 @@ const resetFilters = () => {
                         <span class="d-flex align-items-center gap-2">
                             <i class="icon-base ti tabler-plus icon-sm"></i>
                             <span class="d-none d-sm-inline-block"
-                                >Ավելացնել նոր կոդ</span
+                                >{{ t('operations.add_new_code') }}</span
                             >
                         </span>
                     </span>
@@ -143,12 +148,12 @@ const resetFilters = () => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Թոքեն</th>
-                                <th>Տեսակ</th>
-                                <th>Մարզասրահ</th>
-                                <th>Կարգավիճակ</th>
-                                <th>Ակտիվացում</th>
-                                <th>Գործողություններ</th>
+                                <th>{{ t('operations.token') }}</th>
+                                <th>{{ t('people.type') }}</th>
+                                <th>{{ t('people.gym') }}</th>
+                                <th>{{ t('status.status') }}</th>
+                                <th>{{ t('operations.activation') }}</th>
+                                <th>{{ t('action.action') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -184,7 +189,7 @@ const resetFilters = () => {
                                                 : 'bg-label-secondary'
                                         "
                                     >
-                                        {{ code.activation ? 'Ակտիվացված է' : 'Ակտիվացված չէ' }}
+                                        {{ code.activation ? t('operations.activated') : t('operations.not_activated') }}
                                     </span>
                                 </td>
                                 <!-- Actions -->
@@ -220,7 +225,7 @@ const resetFilters = () => {
                                                 "
                                             >
                                                 <i class="icon-base ti tabler-pencil me-1"></i>
-                                                Խմբագրել
+                                                {{ t('action.edit') }}
                                             </Link>
                                             <a class="dropdown-item waves-effect" href="javascript:void(0);">
                                                 <DeleteButton

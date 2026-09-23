@@ -1,6 +1,11 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     notification: {
@@ -22,7 +27,7 @@ defineEmits(['delete'])
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const isUnread = computed(() => props.notification.was_unread || !props.notification.seen)
-const personLabel = computed(() => props.mode === 'sent' ? 'Ստացող' : 'Ուղարկող')
+const personLabel = computed(() => props.mode === 'sent' ? t('operations.recipient') : t('operations.sender'))
 const displayUser = computed(() => props.mode === 'sent' ? props.notification.recipient : props.notification.sender)
 
 const fullName = user => `${user?.name ?? ''} ${user?.surname ?? ''}`.trim() || user?.email || '-'
@@ -51,7 +56,7 @@ const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ')
                                 class="badge"
                                 :class="isUnread ? 'bg-label-warning' : 'bg-label-success'"
                             >
-                                {{ isUnread ? 'Չկարդացված' : 'Կարդացված' }}
+                                {{ isUnread ? t('operations.unread') : t('operations.read') }}
                             </span>
                         </div>
                         <div class="text-muted small">
@@ -67,7 +72,7 @@ const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ')
                         v-if="canDelete"
                         type="button"
                         class="btn btn-icon btn-sm btn-label-danger"
-                        title="Ջնջել"
+                        :title="t('action.delete')"
                         @click="$emit('delete', notification)"
                     >
                         <i class="icon-base ti tabler-trash"></i>
@@ -83,7 +88,7 @@ const formatDate = value => value ? String(value).slice(0, 16).replace('T', ' ')
                 <div class="d-flex gap-2 align-items-center flex-wrap">
                     <span class="badge bg-label-primary">
                         <i class="icon-base ti tabler-id me-1"></i>
-                        Հաճախորդ
+                        {{ t('sales.client') }}
                     </span>
                     <Link
                         v-if="notification.about"

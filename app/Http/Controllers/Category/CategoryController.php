@@ -53,7 +53,6 @@ class CategoryController extends Controller
         return Inertia::render('Categories/Edit', [
             'category' => $category,
             'parentCategories' => $parentCategories,
-            'locales' => ['en', 'ru', 'hy'],
         ]);
     }
 

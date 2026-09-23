@@ -1,4 +1,5 @@
 <script setup>
+import { translate } from '/resources/js/trans'
 import { computed } from 'vue'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
@@ -6,6 +7,7 @@ import InputError from '@/Components/InputError.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 
 const page = usePage()
+const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 
 const props = defineProps({
@@ -46,19 +48,19 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Փոխել մարզիչին" />
+    <Head :title="t('sales.change_trainer')" />
 
     <Index>
         <template #header>
             <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h2 class="text-xl font-semibold mb-0">
-                    Փոխել մարզիչին
+                    {{ t('sales.change_trainer') }}
                 </h2>
                 <Link
                     class="btn btn-secondary"
                     :href="route('membership_sale.list', { locale: currentLocale })"
                 >
-                    Վերադառնալ
+                    {{ t('people.back') }}
                 </Link>
             </div>
         </template>
@@ -67,27 +69,27 @@ const submit = () => {
             <div class="col-lg-6">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Վաճառքի տվյալներ</h5>
+                        <h5 class="mb-0">{{ t('sales.sale_details') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="detail-row">
-                            <span>Հաճախորդ</span>
+                            <span>{{ t('sales.client') }}</span>
                             <strong>{{ fullName(membershipSale.person) }}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Աբոնեմենտ</span>
+                            <span>{{ t('people.membership') }}</span>
                             <strong>{{ translatedName(membershipSale.membership_plan) }}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Վաճառքի համար</span>
+                            <span>{{ t('sales.sale_number') }}</span>
                             <strong>#{{ membershipSale.id }}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Ընդհանուր գին</span>
+                            <span>{{ t('sales.total_price') }}</span>
                             <strong>{{ formatAmount(membershipSale.total_price) }}</strong>
                         </div>
                         <div class="detail-row mb-0">
-                            <span>Վերջնական գին</span>
+                            <span>{{ t('sales.final_price') }}</span>
                             <strong>{{ formatAmount(membershipSale.final_price) }}</strong>
                         </div>
                     </div>
@@ -97,23 +99,23 @@ const submit = () => {
             <div class="col-lg-6">
                 <div class="card h-100">
                     <div class="card-header">
-                        <h5 class="mb-0">Աբոնեմենտի տվյալներ</h5>
+                        <h5 class="mb-0">{{ t('sales.membership_details') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="detail-row">
-                            <span>Սկիզբ</span>
+                            <span>{{ t('membership.start') }}</span>
                             <strong>{{ formatDate(personMembership.start_date) }}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Ավարտ</span>
+                            <span>{{ t('membership.end') }}</span>
                             <strong>{{ formatDate(personMembership.valid_at || personMembership.end_date) }}</strong>
                         </div>
                         <div class="detail-row">
-                            <span>Կարգավիճակ</span>
+                            <span>{{ t('membership.status') }}</span>
                             <strong>{{ personMembership.status ?? '-' }}</strong>
                         </div>
                         <div class="detail-row mb-0">
-                            <span>Գործող մարզիչ</span>
+                            <span>{{ t('sales.current_trainer') }}</span>
                             <strong>{{ fullName(currentTrainer) }}</strong>
                         </div>
                     </div>
@@ -126,7 +128,7 @@ const submit = () => {
             @submit.prevent="submit"
         >
             <div class="card-header">
-                <h5 class="mb-0">Ընտրել նոր մարզիչ</h5>
+                <h5 class="mb-0">{{ t('sales.select_a_new_trainer') }}</h5>
             </div>
             <div class="card-body">
                 <div
@@ -160,7 +162,7 @@ const submit = () => {
                     v-else
                     class="alert alert-warning mb-0"
                 >
-                    Այս աբոնեմենտի համար այլ մարզիչ կցված չէ։
+                    {{ t('sales.no_other_trainer_is_assigned_to_this_membership') }}
                 </div>
 
                 <InputError :message="form.errors.trainer_id" />
@@ -171,12 +173,12 @@ const submit = () => {
                         class="btn btn-label-secondary"
                         :href="route('membership_sale.list', { locale: currentLocale })"
                     >
-                        Չեղարկել
+                        {{ t('people.cancel') }}
                     </Link>
                     <PrimaryButton
                         :disabled="form.processing || !form.trainer_id"
                     >
-                        Պահպանել
+                        {{ t('membership.save') }}
                     </PrimaryButton>
                 </div>
             </div>

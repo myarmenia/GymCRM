@@ -32,7 +32,6 @@ class DiscountController extends Controller
     {
         return Inertia::render('Discount/Create', [
             'membershipPlans' => $this->membershipPlans(),
-            'locales' => ['en', 'hy', 'ru'],
         ]);
     }
 
@@ -42,7 +41,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Զեղչը հաջողությամբ ստեղծվեց։');
+            ->with('success', __('backend_messages.discount_created_successfully'));
     }
 
     public function edit($locale, $id)
@@ -61,7 +60,6 @@ class DiscountController extends Controller
             'discount' => $discount,
             'membershipPlans' => $this->membershipPlans(),
             'selectedMembershipPlanIds' => $discount->membershipPlans->pluck('id')->values(),
-            'locales' => ['en', 'hy', 'ru'],
             'translations' => $translations,
         ]);
     }
@@ -72,7 +70,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Զեղչը հաջողությամբ թարմացվեց։');
+            ->with('success', __('backend_messages.discount_updated_successfully'));
     }
 
     public function destroy($locale, $id)
@@ -81,7 +79,7 @@ class DiscountController extends Controller
 
         return redirect()
             ->route('discount.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Զեղչը հաջողությամբ ջնջվեց։');
+            ->with('success', __('backend_messages.discount_deleted_successfully'));
     }
 
     protected function membershipPlans()

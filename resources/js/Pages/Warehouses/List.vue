@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue';
 import { Head, router, usePage, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import DeleteButton from '@/Components/DeleteButton.vue';
 import ToggleStatus from '@/Components/ToggleStatus.vue';
 import { useAuth } from '@/composables/useAuth';
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
@@ -21,17 +26,17 @@ const warehousesList = ref(props.warehouses.data);
 </script>
 
 <template>
-    <Head title="Warehouses List" />
+    <Head :title="t('inventory.warehouse_list')" />
     <Index>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">Warehouses</h2>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ t('sidebar.warehouses') }}</h2>
         </template>
 
         <div class="card mb-6">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Պահեստների ցուցակ</h5>
+                <h5 class="mb-0">{{ t('inventory.warehouse_list') }}</h5>
                 <button v-if="canManageWarehouses" @click="router.get(route('warehouse.create', { locale: currentLocale }))" class="btn btn-primary">
-                    + Ավելացնել նոր պահեստ
+                    {{ t('inventory.add_new_warehouse') }}
                 </button>
             </div>
             <div class="table-responsive text-nowrap">
@@ -39,12 +44,12 @@ const warehousesList = ref(props.warehouses.data);
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Անուն</th>
-                            <th>Մարզասրահ</th>
-                            <th>Տիպ</th>
-                            <th>Հեռախոս</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Գործողություններ</th>
+                            <th>{{ t('auth.name') }}</th>
+                            <th>{{ t('people.gym') }}</th>
+                            <th>{{ t('inventory.type') }}</th>
+                            <th>{{ t('filter.phone') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('action.action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -56,7 +61,7 @@ const warehousesList = ref(props.warehouses.data);
                             <td>{{ warehouse.phone ?? '-' }}</td>
                             <td>
                                 <span :class="warehouse.status ? 'badge bg-label-success' : 'badge bg-label-danger'">
-                                    {{ warehouse.status ? 'Ակտիվ' : 'Պասիվ' }}
+                                    {{ warehouse.status ? t('status.active') : t('inventory.inactive') }}
                                 </span>
                             </td>
                             <td>
@@ -77,7 +82,7 @@ const warehousesList = ref(props.warehouses.data);
                                                 :column="'status'"
                                                 :locale="currentLocale"
                                                 :active="warehouse.status"
-                                                :label="'Կարգավիճակ'"
+                                                :label="t('status.status')"
                                                 @update="warehouse.status = $event"
                                             />
 
@@ -89,7 +94,7 @@ const warehousesList = ref(props.warehouses.data);
                                             :href="route('warehouse.edit', { locale: currentLocale, id: warehouse.id })"
                                         >
                                             <i class="icon-base ti tabler-pencil me-1"></i>
-                                            Խմբագրել
+                                            {{ t('action.edit') }}
                                         </Link>
 
                                         <a

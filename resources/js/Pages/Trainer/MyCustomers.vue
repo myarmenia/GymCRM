@@ -1,8 +1,13 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import Index from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const props = defineProps({
     customers: {
@@ -15,9 +20,9 @@ const page = usePage();
 const currentLocale = computed(() => page.props.locale ?? page.props.lang ?? "hy");
 
 const statusLabels = {
-    waiting: "Սպասման մեջ",
-    active: "Ակտիվ",
-    frozen: "Սառեցված",
+    waiting: t('status.pending'),
+    active: t('status.active'),
+    frozen: t('people.frozen'),
 };
 
 const statusClasses = {
@@ -42,34 +47,33 @@ const statusClass = (status) => statusClasses[status] ?? "bg-label-secondary";
 </script>
 
 <template>
-    <Head title="Իմ հաճախորդները" />
+    <Head :title="t('sidebar.my_customers')" />
 
     <Index>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Իմ հաճախորդները
+                {{ t('sidebar.my_customers') }}
             </h2>
         </template>
 
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Ինձ կցված հաճախորդներ</h5>
+                <h5 class="mb-0">{{ t('staff_reports.customers_assigned_to_me') }}</h5>
             </div>
 
             <div class="card-body">
                 <div v-if="!customers.data?.length" class="alert alert-info mb-0">
-                    Ձեզ դեռ գործող հաճախորդ կցված չէ։
+                    {{ t('staff_reports.no_active_customer_has_been_assigned_to_you_yet') }}
                 </div>
 
                 <div v-else class="table-responsive">
                     <table class="table table-bordered align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Հաճախորդ</th>
-                                <th>Հեռախոս</th>
-                                <th>Էլ. հասցե</th>
-                                <th>Աբոնեմենտ(ներ)</th>
-                                <th class="text-center">Դիտել</th>
+                                <th>{{ t('sales.client') }}</th>
+                                <th>{{ t('filter.phone') }}</th>
+                                <th>{{ t('auth.email') }}</th>
+                                <th>{{ t('staff_reports.membership_s') }}</th>
                             </tr>
                         </thead>
                         <tbody>

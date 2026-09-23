@@ -1,10 +1,15 @@
 <script setup>
+import { translate } from '/resources/js/trans'
+import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
 import TableFilter from '@/Components/TableFilter.vue'
 import PeriodDateRangeFilter from '@/Components/Reports/PeriodDateRangeFilter.vue'
+
+const translationPage = useTranslationPage()
+const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
@@ -67,8 +72,8 @@ const exportHref = computed(() => route('reports.entry-exit.export', {
 const textFields = [
     {
         name: 'search',
-        label: 'Որոնում',
-        placeholder: 'Անուն, հեռախոս, email, entry code, MAC',
+        label: t('inventory.search_2'),
+        placeholder: t('staff_reports.name_phone_email_entry_code_mac'),
         col: 'col-md-4',
     },
 ]
@@ -76,20 +81,20 @@ const textFields = [
 const filterFields = computed(() => [
     {
         name: 'owner_type',
-        label: 'Տեսակ',
-        placeholder: 'Բոլորը',
+        label: t('people.type'),
+        placeholder: t('common.all'),
         options: props.filterOptions.ownerTypes ?? [],
     },
     {
         name: 'person_type',
-        label: 'Հաճախորդ / հյուր',
-        placeholder: 'Բոլորը',
+        label: t('staff_reports.customer_guest'),
+        placeholder: t('common.all'),
         options: props.filterOptions.personTypes ?? [],
     },
     ...(props.filterOptions.canSelectClient ? [{
         name: 'client_id',
-        label: 'Մասնաճյուղ',
-        placeholder: 'Բոլոր մասնաճյուղերը',
+        label: t('staff_reports.branch'),
+        placeholder: t('staff_reports.all_branches'),
         options: (props.filterOptions.clients ?? []).map(client => ({
             value: client.id,
             label: client.name,
@@ -105,17 +110,17 @@ const filterValues = computed(() => ({
 }))
 
 const summaryCards = computed(() => [
-    { label: 'Ընդհանուր մուտքեր', value: props.summary.entry_count ?? 0, icon: 'tabler-door-enter', class: 'bg-label-primary text-primary' },
-    { label: 'Ընդհանուր ելքեր', value: props.summary.exit_count ?? 0, icon: 'tabler-door-exit', class: 'bg-label-info text-info' },
-    { label: 'Եզակի հաճախորդներ', value: props.summary.unique_customers_count ?? 0, icon: 'tabler-users', class: 'bg-label-success text-success' },
-    { label: 'Այս պահին ներսում', value: props.summary.currently_inside_count ?? 0, icon: 'tabler-map-pin', class: 'bg-label-warning text-warning' },
-    { label: 'Ներսում հյուրեր', value: props.summary.currently_inside_guests_count ?? 0, icon: 'tabler-user-star', class: 'bg-label-secondary text-secondary' },
-    { label: 'Այցելություններ', value: props.summary.total_visits_count ?? 0, icon: 'tabler-calendar-check', class: 'bg-label-dark text-dark' },
-    { label: 'Նոր այցելություններ', value: props.summary.new_customer_visits_count ?? 0, icon: 'tabler-user-plus', class: 'bg-label-success text-success' },
-    { label: 'Կրկնակի այցելություններ', value: props.summary.repeat_visits_count ?? 0, icon: 'tabler-repeat', class: 'bg-label-info text-info' },
-    { label: 'Այսօր', value: props.summary.today_visits_count ?? 0, icon: 'tabler-calendar', class: 'bg-label-primary text-primary' },
-    { label: 'Այս շաբաթ', value: props.summary.week_visits_count ?? 0, icon: 'tabler-calendar-week', class: 'bg-label-warning text-warning' },
-    { label: 'Այս ամիս', value: props.summary.month_visits_count ?? 0, icon: 'tabler-calendar-month', class: 'bg-label-secondary text-secondary' },
+    { label: t('staff_reports.total_entries'), value: props.summary.entry_count ?? 0, icon: 'tabler-door-enter', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.total_exits'), value: props.summary.exit_count ?? 0, icon: 'tabler-door-exit', class: 'bg-label-info text-info' },
+    { label: t('staff_reports.unique_customers'), value: props.summary.unique_customers_count ?? 0, icon: 'tabler-users', class: 'bg-label-success text-success' },
+    { label: t('staff_reports.currently_inside'), value: props.summary.currently_inside_count ?? 0, icon: 'tabler-map-pin', class: 'bg-label-warning text-warning' },
+    { label: t('staff_reports.guests_inside'), value: props.summary.currently_inside_guests_count ?? 0, icon: 'tabler-user-star', class: 'bg-label-secondary text-secondary' },
+    { label: t('people.visits'), value: props.summary.total_visits_count ?? 0, icon: 'tabler-calendar-check', class: 'bg-label-dark text-dark' },
+    { label: t('staff_reports.new_visits'), value: props.summary.new_customer_visits_count ?? 0, icon: 'tabler-user-plus', class: 'bg-label-success text-success' },
+    { label: t('staff_reports.repeat_visits'), value: props.summary.repeat_visits_count ?? 0, icon: 'tabler-repeat', class: 'bg-label-info text-info' },
+    { label: t('staff_reports.today'), value: props.summary.today_visits_count ?? 0, icon: 'tabler-calendar', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.this_week'), value: props.summary.week_visits_count ?? 0, icon: 'tabler-calendar-week', class: 'bg-label-warning text-warning' },
+    { label: t('people.this_month'), value: props.summary.month_visits_count ?? 0, icon: 'tabler-calendar-month', class: 'bg-label-secondary text-secondary' },
 ])
 
 const busiestDaysText = computed(() => formatStats(props.summary.busiest_days))
@@ -192,12 +197,12 @@ const statusClass = status => ({
 </script>
 
 <template>
-    <Head title="Մուտք / Ելք" />
+    <Head :title="t('sidebar.report_entry_exit')" />
 
     <Index>
         <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
             <div>
-                <h2 class="mb-1">Մուտք / Ելք</h2>
+                <h2 class="mb-1">{{ t('sidebar.report_entry_exit') }}</h2>
                 <div class="text-muted">
                     {{ filters.start_date }} - {{ filters.end_date }}
                 </div>
@@ -207,7 +212,7 @@ const statusClass = status => ({
                 class="btn btn-outline-success"
             >
                 <i class="icon-base ti tabler-file-export me-1"></i>
-                Արտահանել Excel
+                {{ t('staff_reports.export_to_excel') }}
             </a>
         </div>
 
@@ -254,7 +259,7 @@ const statusClass = status => ({
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-body">
-                        <div class="text-muted small">Ամենածանրաբեռնված օրերը</div>
+                        <div class="text-muted small">{{ t('staff_reports.busiest_days') }}</div>
                         <div class="h6 mb-0">{{ busiestDaysText }}</div>
                     </div>
                 </div>
@@ -262,7 +267,7 @@ const statusClass = status => ({
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-body">
-                        <div class="text-muted small">Ամենածանրաբեռնված ժամերը</div>
+                        <div class="text-muted small">{{ t('staff_reports.busiest_hours') }}</div>
                         <div class="h6 mb-0">{{ busiestHoursText }}</div>
                     </div>
                 </div>
@@ -271,21 +276,21 @@ const statusClass = status => ({
 
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mb-0">Մուտք / Ելք պատմություն</h5>
-                <span class="badge bg-label-primary">{{ visits.total ?? visits.data.length }} գրառում</span>
+                <h5 class="mb-0">{{ t('staff_reports.entry_exit_history') }}</h5>
+                <span class="badge bg-label-primary">{{ t('staff_reports.records_count', { count: visits.total ?? visits.data.length }) }}</span>
             </div>
             <div class="table-responsive text-nowrap">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th>Հաճախորդ</th>
-                            <th>Հյուր</th>
-                            <th>Entry Code</th>
-                            <th>Մուտքի ժամանակ</th>
-                            <th>Ելքի ժամանակ</th>
-                            <th>Այցի տևողություն</th>
-                            <th>Կարգավիճակ</th>
-                            <th>Ստեղծման ամսաթիվ</th>
+                            <th>{{ t('sales.client') }}</th>
+                            <th>{{ t('people.guest') }}</th>
+                            <th>{{ t('people.entry_code') }}</th>
+                            <th>{{ t('staff_reports.entry_time') }}</th>
+                            <th>{{ t('staff_reports.exit_time') }}</th>
+                            <th>{{ t('staff_reports.visit_duration') }}</th>
+                            <th>{{ t('status.status') }}</th>
+                            <th>{{ t('filter.created_at') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -314,7 +319,7 @@ const statusClass = status => ({
                                 colspan="8"
                                 class="text-center text-muted py-4"
                             >
-                                Տվյալներ չկան։
+                                {{ t('staff_reports.no_data_2') }}
                             </td>
                         </tr>
                     </tbody>

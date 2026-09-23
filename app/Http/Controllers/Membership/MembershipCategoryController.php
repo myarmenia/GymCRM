@@ -31,7 +31,6 @@ class MembershipCategoryController extends Controller
         return Inertia::render('MembershipCategory/Create', [
             'gyms' => $gyms,
             'canSelectGym' => $user->hasRole('owner'),
-            'locales' => ['en', 'hy', 'ru'], // your supported locales
         ]);
     }
 
@@ -39,7 +38,7 @@ class MembershipCategoryController extends Controller
     {
         $category = $this->service->store(MembershipCategoryDTO::fromArray($request->all()));
         return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ ստեղծվեց։');
+            ->with('success', __('backend_messages.membership_category_created_successfully'));
     }
 
     public function edit($locale, $id)
@@ -59,7 +58,6 @@ class MembershipCategoryController extends Controller
             'category' => $category,
             'gyms' => $gyms,
             'canSelectGym' => $user->hasRole('owner'),
-            'locales' => ['en', 'hy', 'ru'],
             'translations' => $translations,
         ]);
     }
@@ -68,13 +66,13 @@ class MembershipCategoryController extends Controller
     {
         $this->service->update($id, MembershipCategoryDTO::fromArray($request->all()));
         return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ թարմացվեց։');
+            ->with('success', __('backend_messages.membership_category_updated_successfully'));
     }
 
     public function destroy($locale, $id)
     {
         $this->service->delete($id);
         return redirect()->route('membership-category.list', ['locale' => app()->getLocale()])
-            ->with('success', 'Աբոնեմենտի կատեգորիան հաջողությամբ ջնջվեց։');
+            ->with('success', __('backend_messages.membership_category_deleted_successfully'));
     }
 }

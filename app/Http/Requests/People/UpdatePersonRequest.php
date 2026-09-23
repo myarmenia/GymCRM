@@ -69,7 +69,7 @@ class UpdatePersonRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.unique' => 'Այս հեռախոսահամարով անձ արդեն գոյություն ունի։',
+            'phone.unique' => __('backend_messages.person_with_this_phone_number_already_exists'),
         ];
     }
 }
