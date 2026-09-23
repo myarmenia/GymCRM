@@ -34,7 +34,7 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
+    <GuestLayout :show-language-switcher="false">
         <Head :title="useTrans('app.auth.login')" />
         <!-- Login -->
         <div class="card">
