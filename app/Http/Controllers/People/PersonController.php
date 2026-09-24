@@ -73,13 +73,13 @@ class PersonController extends Controller
     {
         $this->authorizePersonManagement();
 
-        $person = $this->personService->store(PersonDTO::fromArray([
+        $this->personService->store(PersonDTO::fromArray([
             ...$request->all(),
             'image' => $request->file('image'),
         ]));
 
         return redirect()
-            ->route('person.edit', ['locale' => app()->getLocale(), 'id' => $person->id])
+            ->route('person.list', ['locale' => app()->getLocale()])
             ->with('success', 'Person created successfully');
     }
 
@@ -152,6 +152,28 @@ class PersonController extends Controller
         ]));
         return redirect()->route('person.list', ['locale' => app()->getLocale()])
                         ->with('success', 'Person updated successfully');
+    }
+
+    public function block($locale, $id)
+    {
+        $this->authorizePersonManagement();
+
+        $person = $this->personService->getById($id);
+        $authUser = Auth::user();
+
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
+            $personGymIds = $person->gyms->pluck('id')->toArray();
+
+            if (! in_array($authUser->gym_id, $personGymIds)) {
+                abort(403);
+            }
+        }
+
+        if (! $person->is_blocked) {
+            $person->update(['is_blocked' => true]);
+        }
+
+        return back();
     }
 
     public function storeVisit(StorePersonVisitRequest $request, $locale, $id)
