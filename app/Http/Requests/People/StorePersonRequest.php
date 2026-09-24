@@ -18,9 +18,9 @@ class StorePersonRequest extends FormRequest
             'name' => 'required|string|max:255',
             'surname' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
-            'email' => 'required|email|max:255|unique:people,email',
-            'password' => 'required|string|min:6',
-            'phone' => ['required', 'string', 'max:50', Rule::unique('people', 'phone')],
+            'email' => 'nullable|email|max:255|unique:people,email',
+            'password' => 'nullable|string|min:6',
+            'phone' => ['nullable', 'string', 'max:50', Rule::unique('people', 'phone')],
             'type' => 'required|in:visitor,guest',
             'entry_code_mode' => ['required', Rule::in(['existing', 'new'])],
             'entry_code_id' => [
