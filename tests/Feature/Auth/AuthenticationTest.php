@@ -42,6 +42,29 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_inactive_users_can_not_authenticate(): void
+    {
+        $user = User::factory()->create(['active' => false]);
+
+        $response = $this->post('/hy/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('email');
+    }
+
+    public function test_inactive_users_with_an_existing_session_can_not_access_membership_sales(): void
+    {
+        $user = User::factory()->create(['active' => false]);
+
+        $response = $this->actingAs($user)->get('/hy/membership-sale/list');
+
+        $this->assertGuest();
+        $response->assertRedirect('/hy/login');
+    }
+
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();
