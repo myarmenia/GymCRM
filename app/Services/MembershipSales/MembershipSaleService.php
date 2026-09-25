@@ -665,7 +665,7 @@ class MembershipSaleService
             ->with([
                 'translations',
                 'discounts' => fn ($query) => $this->activeDiscountQuery($query)->with('translations'),
-                'trainers',
+                'trainers' => fn ($query) => $query->where('users.active', true),
                 'gym:id,name,trainer_salary_mode',
             ])
             ->where('active', true)
@@ -687,6 +687,7 @@ class MembershipSaleService
 
         $trainers = User::query()
             ->with('roles')
+            ->where('active', true)
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             })
@@ -1618,6 +1619,7 @@ class MembershipSaleService
         $query = $membershipPlan
             ->trainers()
             ->where('users.id', $trainerId)
+            ->where('users.active', true)
             ->whereHas('roles', function ($query) {
                 $query->where('roles.id', 7);
             });

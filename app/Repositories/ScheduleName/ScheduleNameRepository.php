@@ -25,6 +25,7 @@ class ScheduleNameRepository extends BaseRepository implements ScheduleNameInter
             ->with([
                 'trainers' => function ($query) {
                     $query
+                        ->where('users.active', true)
                         ->whereHas('roles', function ($roleQuery) {
                             $roleQuery->where('roles.id', 7);
                         })
