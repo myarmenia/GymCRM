@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\DTO\Memberships\MembershipCategoryDTO;
+use App\Http\Requests\Memberships\StoreMembershipCategoryRequest;
 use App\Models\Gym;
 use App\Models\MembershipCategory;
 use App\Models\Role;
@@ -11,12 +12,44 @@ use App\Repositories\Memberships\MembershipCategoryRepository;
 use App\Services\Memberships\MembershipCategoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class MembershipCategoryVersioningTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_soft_deleted_category_slug_can_be_reused_but_active_slug_remains_unique(): void
+    {
+        config()->set('sync.enabled', false);
+        $deletedCategory = MembershipCategory::query()->create([
+            'gym_id' => null,
+            'active' => true,
+            'slug' => 'reusable-category',
+        ]);
+        $deletedCategory->delete();
+
+        $payload = [
+            'slug' => 'reusable-category',
+            'translations' => [
+                'en' => ['name' => 'Replacement category'],
+            ],
+        ];
+        $rules = (new StoreMembershipCategoryRequest)->rules();
+
+        $this->assertFalse(Validator::make($payload, $rules)->fails());
+
+        $replacement = MembershipCategory::query()->create([
+            'gym_id' => null,
+            'active' => true,
+            'slug' => 'reusable-category',
+        ]);
+
+        $this->assertNotSame($deletedCategory->id, $replacement->id);
+        $this->assertTrue($deletedCategory->fresh()->trashed());
+        $this->assertTrue(Validator::make($payload, $rules)->fails());
+    }
 
     public function test_translation_updates_advance_the_root_version_once(): void
     {

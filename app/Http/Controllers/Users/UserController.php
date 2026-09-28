@@ -51,9 +51,10 @@ class UserController extends Controller
     // ========== list =====================
     public function list(Request $request){
 
+        $authUser = Auth::user();
         $users = $this->userService->getAllPaginated($request->query());
         $roles = $this->roleService
-            ->getAvailableRoles(Auth::user())
+            ->getUserListFilterRoles()
             ->map(fn ($role) => [
                 'value' => $role->name,
                 'label' => $role->name,
@@ -63,6 +64,7 @@ class UserController extends Controller
         return Inertia::render('Users/List', [
             'users' => $users,
             'roles' => $roles,
+            'canViewGymColumn' => $authUser->hasRole('owner'),
         ]);
     }
 

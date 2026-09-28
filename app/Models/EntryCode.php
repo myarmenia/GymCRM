@@ -31,6 +31,8 @@ class EntryCode extends Model
     {
         return [
             'version' => 'integer',
+            'status' => 'boolean',
+            'activation' => 'boolean',
         ];
     }
 

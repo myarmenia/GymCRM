@@ -55,10 +55,6 @@ class StoreGymRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'The gym name is required.',
-            'address.required' => 'The gym address is required.',
-            'phone.regex' => 'The phone number format is invalid. It should only contain numbers, spaces, plus, and minus signs.',
-            'email.email' => 'Please enter a valid email address.',
             'trainer_salary_mode.required' => __('backend_messages.select_how_trainer_salary_calculated'),
             'trainer_salary_mode.in' => __('backend_messages.trainer_salary_calculation_method_invalid'),
             'language_codes.required' => __('backend_messages.select_at_least_one_gym_language'),
