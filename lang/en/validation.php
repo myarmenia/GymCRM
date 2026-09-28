@@ -195,6 +195,6 @@ return [
     |
     */
 
-    'attributes' => [],
+    'attributes' => require __DIR__.'/validation_attributes.php',
 
 ];

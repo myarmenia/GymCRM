@@ -92,6 +92,29 @@ class GymLanguageManagementTest extends TestCase
         ], $this->languageStates($gym->fresh()));
     }
 
+    public function test_assigned_user_ui_uses_only_the_languages_selected_for_the_created_gym(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)
+            ->post(route('gym.store', ['locale' => 'ru']), [
+                ...$this->gymPayload(),
+                'name' => 'Russian only gym',
+                'language_codes' => ['ru'],
+            ])
+            ->assertRedirect(route('gym.list', ['locale' => 'ru']));
+
+        $gym = Gym::query()->where('name', 'Russian only gym')->firstOrFail();
+        $assignedUser = User::factory()->create(['gym_id' => $gym->id]);
+
+        $this->actingAs($assignedUser)
+            ->get('/ru/dashboard')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('locale', 'ru')
+                ->where('langs', ['ru'])
+                ->etc());
+    }
+
     public function test_language_management_is_owner_only_and_requires_one_language(): void
     {
         $owner = $this->owner();

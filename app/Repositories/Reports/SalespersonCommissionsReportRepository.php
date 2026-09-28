@@ -46,6 +46,8 @@ class SalespersonCommissionsReportRepository implements SalespersonCommissionsRe
     {
         return User::query()
             ->whereHas('salespersonCommissions', function (Builder $query) use ($user) {
+                $query->where('salary_amount', '>', 0);
+
                 if (! $user->hasRole('owner')) {
                     $this->scopeByMembershipSaleGym($query, $user);
                 }
@@ -75,6 +77,7 @@ class SalespersonCommissionsReportRepository implements SalespersonCommissionsRe
         $netPaidSql = "({$payoutAmountSql} - {$refundedAmountSql})";
 
         return SalespersonCommission::query()
+            ->where('salesperson_commissions.salary_amount', '>', 0)
             ->addSelect([
                 'outstanding_amount' => DB::table('salary_payable_assignments as sales_summary_assignments')
                     ->whereColumn(

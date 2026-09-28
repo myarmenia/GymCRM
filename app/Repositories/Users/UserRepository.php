@@ -18,8 +18,14 @@ class UserRepository extends BaseRepository implements UserInterface
 
     public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
+        $relations = ['roles'];
+
+        if ($user->hasRole('owner')) {
+            $relations[] = 'gym:id,name';
+        }
+
         return $this->query()
-            ->with('roles')
+            ->with($relations)
             ->when(!$user->hasRole('owner'), function ($q) {
                 $q->currentGym();
             })

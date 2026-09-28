@@ -209,6 +209,7 @@
         "active": "Active",
         "inactive": "Inactive",
         "blocked": "Blocked",
+        "entry_code_status": "Entry code status",
         "block_user": "Block user",
         "confirm_block_user": "Are you sure you want to block this client?",
         "block_success": "The client has been blocked.",

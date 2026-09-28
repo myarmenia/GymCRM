@@ -170,7 +170,5 @@ return array (
       'rule-name' => 'custom-message',
     ),
   ),
-  'attributes' => 
-  array (
-  ),
+  'attributes' => require __DIR__.'/validation_attributes.php',
 );
