@@ -30,6 +30,10 @@ const props = defineProps({
         type: String,
         default: 'created_at',
     },
+    showDateFieldSelector: {
+        type: Boolean,
+        default: true,
+    },
     datePlaceholder: {
         type: String,
         default: null,
@@ -200,7 +204,7 @@ watch(
                 </div>
 
                 <div
-                    v-if="resolvedDateFields.length"
+                    v-if="resolvedDateFields.length && showDateFieldSelector"
                     class="col-md-3"
                 >
                     <InputLabel

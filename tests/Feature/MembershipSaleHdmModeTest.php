@@ -6,12 +6,15 @@ use App\Models\HdmCashier;
 use App\Models\HdmConfig;
 use App\Models\HdmOperation;
 use App\Models\MembershipPlanPayment;
+use App\Models\SalespersonCommission;
 use App\Models\User;
+use App\Repositories\Reports\SalespersonCommissionsReportRepository;
 use App\Services\Hdm\HdmOperationService;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
 use App\Services\Hdm\HdmReturnService;
 use App\Services\MembershipSales\MembershipSaleService;
+use App\Services\Reports\SalespersonCommissionsReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +70,44 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(40.0, (float) $sale->payments->first()->amount);
         $this->assertTrue($sale->payments->first()->is_hdm);
         $this->assertSame('partial', $sale->payment_status);
+    }
+
+    public function test_salesperson_commission_report_excludes_zero_amount_records(): void
+    {
+        $sale = $this->service->store($this->payload());
+        $zeroCommission = SalespersonCommission::query()
+            ->where('membership_sale_id', $sale->id)
+            ->firstOrFail();
+        $this->assertSame(0.0, (float) $zeroCommission->salary_amount);
+
+        $positiveCommission = SalespersonCommission::query()->create([
+            'salesperson_id' => $zeroCommission->salesperson_id,
+            'membership_sale_id' => $zeroCommission->membership_sale_id,
+            'person_membership_id' => $zeroCommission->person_membership_id,
+            'membership_plan_id' => $zeroCommission->membership_plan_id,
+            'salary_type' => 'percent',
+            'salary_value' => 5,
+            'salary_amount' => 4,
+            'sale_amount' => 80,
+            'status' => 'pending',
+        ]);
+
+        $repository = app(SalespersonCommissionsReportRepository::class);
+        $filters = [
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->toDateString(),
+        ];
+
+        $this->assertSame(
+            [$positiveCommission->id],
+            $repository->commissionsForSummary(auth()->user(), $filters)->pluck('id')->all(),
+        );
+        $this->assertSame(
+            1,
+            app(SalespersonCommissionsReportService::class)->report(auth()->user(), $filters)['summary']['commissions_count'],
+        );
+        $this->assertSame(1, $repository->paginatedCommissions(auth()->user(), $filters)->total());
+        $this->assertSame(1, $repository->commissionsForExport(auth()->user(), $filters)->count());
     }
 
     public function test_final_hdm_payment_closes_debt_and_prints_the_remainder(): void

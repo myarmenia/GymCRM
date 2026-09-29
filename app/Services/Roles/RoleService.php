@@ -24,5 +24,13 @@ class RoleService
         return $this->roleRepository->getAvailableFor($user);
     }
 
+    public function getUserListFilterRoles()
+    {
+        return $this->roleRepository
+            ->getAll()
+            ->reject(fn ($role) => $role->name === 'owner')
+            ->values();
+    }
+
 
 }
