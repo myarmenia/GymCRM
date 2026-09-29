@@ -108,6 +108,10 @@ class HandleInertiaRequests extends Middleware
             'locale' => $lang,
             'lang' => $lang,
             'langs' => $langs,
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
             'err' => function () use ($request) {
                 return $request->session()->get('errors')
                     ? $request->session()->get('errors')->getBag('default')->toArray()

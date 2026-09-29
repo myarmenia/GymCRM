@@ -385,4 +385,12 @@ return [
     'your_new_membership_added_successfully' => 'Ձեր նոր աբոնեմենտը հաջողությամբ ավելացվել է։',
     'your_user_account_not_linked_gym' => 'Ձեր օգտատերը կապված չէ մարզասրահի հետ։',
     'select_at_least_one_gym_language' => 'Ընտրեք մարզասրահի առնվազն մեկ լեզու։',
+    'hdm_config_created' => 'ՀԴՄ կոնֆիգուրացիան ստեղծվել է։',
+    'hdm_config_updated' => 'ՀԴՄ կոնֆիգուրացիան թարմացվել է։',
+    'hdm_config_deleted' => 'ՀԴՄ կոնֆիգուրացիան ջնջվել է։',
+    'hdm_config_has_operations' => 'Օգտագործված ՀԴՄ կոնֆիգուրացիան հնարավոր չէ ջնջել․ այն կարող եք պասիվացնել։',
+    'hdm_config_status_updated' => 'ՀԴՄ կոնֆիգուրացիայի կարգավիճակը փոխվել է։',
+    'hdm_cashier_created' => 'Գանձապահն ավելացվել է։',
+    'hdm_cashier_updated' => 'Գանձապահի տվյալները թարմացվել են։',
+    'hdm_cashier_deleted' => 'Գանձապահը ջնջվել է։',
 ];

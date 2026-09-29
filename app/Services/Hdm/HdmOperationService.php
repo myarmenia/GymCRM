@@ -66,7 +66,7 @@ class HdmOperationService
                 $cashierId = $data['cashier_id'] ?? $operation?->hdm_cashier_id;
 
                 if ($cashierId && isset($data['new_session_key']) && ! empty($data['new_session_key'])) {
-                    HdmCashier::where('id', $cashierId)->update([
+                    HdmCashier::query()->find($cashierId)?->update([
                         'session_key' => $data['new_session_key'],
                         'session_expires_at' => now()->addHours(24),
                     ]);
@@ -85,7 +85,7 @@ class HdmOperationService
                     && str_contains($responseText, 'decrypt_failed')
                     && empty($data['new_session_key'])
                 ) {
-                    HdmCashier::where('id', $cashierId)->update([
+                    HdmCashier::query()->find($cashierId)?->update([
                         'session_key' => null,
                         'session_expires_at' => null,
                     ]);
