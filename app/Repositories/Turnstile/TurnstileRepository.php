@@ -12,11 +12,23 @@ use App\Models\Turnstile;
 class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryCodeInterface
 {
 
-    public function getClientId($mac):mixed
+    public function getClientId(string $mac): ?int
     {
-        $turnstile = Turnstile::where('mac', $mac)->first();
-        
-        return $turnstile != null ? $turnstile->gym_id : false;
+        $mac = trim($mac);
+
+        if ($mac === '') {
+            return null;
+        }
+
+        // Resolve the turnstile first. Its gym_id is then used to scope the
+        // entry-code lookup, so a code from another gym can never identify a
+        // customer for this request.
+        $gymId = Turnstile::query()
+            ->where('mac', $mac)
+            ->whereNotNull('gym_id')
+            ->value('gym_id');
+
+        return $gymId === null ? null : (int) $gymId;
     }
 
     public function checkEntryCode($request_entry_code, $gym_id, $type, $auto_add = 0):object
@@ -28,10 +40,10 @@ class TurnstileRepository implements ClientIdFromTurnstileInterface, CheckEntryC
             Gym::query()->whereKey($gym_id)->value('entry_code_type')
         );
 
-        $entry_code = EntryCode::where([
-            'token' => $request_entry_code,
-            'gym_id' => $gym_id
-        ])->first();
+        $entry_code = EntryCode::query()
+            ->where('gym_id', $gym_id)
+            ->where('token', $request_entry_code)
+            ->first();
 
         if (!$entry_code) {
             if ($gym_id && $auto_add) {

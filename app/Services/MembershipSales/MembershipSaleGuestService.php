@@ -58,19 +58,11 @@ class MembershipSaleGuestService
 
         try {
             $membershipSale = $this->getById($id);
-            $personMembership = $this->activePersonMembershipForGuests($membershipSale);
+            $personMembership = $this->activePersonMembershipForGuests($membershipSale, true);
 
             if (! $personMembership) {
                 throw ValidationException::withMessages([
                     'person_membership_id' => $this->guestRequiresActiveMembershipMessage(),
-                ]);
-            }
-
-            $summary = $this->guestSummary($personMembership);
-
-            if ($summary['remainingGuestCount'] <= 0) {
-                throw ValidationException::withMessages([
-                    'guest_id' => $this->guestLimitReachedMessage(),
                 ]);
             }
 
@@ -158,7 +150,7 @@ class MembershipSaleGuestService
             ->findOrFail($id);
     }
 
-    protected function activePersonMembershipForGuests(MembershipSale $membershipSale)
+    protected function activePersonMembershipForGuests(MembershipSale $membershipSale, bool $lock = false)
     {
         return $membershipSale
             ->personMemberships()
@@ -175,18 +167,24 @@ class MembershipSaleGuestService
                 $query->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', today());
             })
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->first();
     }
 
     protected function guestSummary($personMembership): array
     {
-        $allowedGuestCount = (int) ($personMembership->guest_used ?? 0);
-        $usedGuestCount = (int) $personMembership->guests()->count();
+        // These counters describe guest entries, not how many people may be
+        // linked as guests. Linking a guest is deliberately unlimited here.
+        $allowedGuestCount = (int) ($personMembership->guest_used ?? 0)
+            + (int) ($personMembership->guest_left ?? 0);
+        $usedGuestCount = (int) ($personMembership->guest_used ?? 0);
 
         return [
             'allowedGuestCount' => $allowedGuestCount,
             'usedGuestCount' => $usedGuestCount,
-            'remainingGuestCount' => max((int) ($personMembership->guest_left ?? 0), 0),
+            'remainingGuestCount' => $personMembership->guest_left === null
+                ? null
+                : max((int) $personMembership->guest_left, 0),
         ];
     }
 

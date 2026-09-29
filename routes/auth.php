@@ -17,14 +17,15 @@ use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\EntryReportController;
 use App\Http\Controllers\FinancialTransactionController;
 use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\Hdm\HdmConfigurationController;
 use App\Http\Controllers\Hdm\HdmOperationController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Notifications\NotificationController;
 use App\Http\Controllers\Partners\PartnerController;
-use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\People\ManualEntryScanController;
+use App\Http\Controllers\People\PersonController;
 use App\Http\Controllers\ProductConsumption\ProductConsumptionController;
 use App\Http\Controllers\Products\ProductsController;
 use App\Http\Controllers\Purchase\PurchaseController;
@@ -349,6 +350,22 @@ Route::prefix('{locale}')
                 Route::post('/update-operation-status', [HdmOperationController::class, 'updateStatus'])
                     ->name('update_operation_status');
             });
+
+            Route::prefix('hdm-configurations')
+                ->name('hdm-configurations.')
+                ->middleware('role:owner')
+                ->group(function () {
+                    Route::get('/', [HdmConfigurationController::class, 'index'])->name('index');
+                    Route::get('/create', [HdmConfigurationController::class, 'create'])->name('create');
+                    Route::post('/', [HdmConfigurationController::class, 'store'])->name('store');
+                    Route::get('/{hdmConfig}/edit', [HdmConfigurationController::class, 'edit'])->name('edit');
+                    Route::put('/{hdmConfig}', [HdmConfigurationController::class, 'update'])->name('update');
+                    Route::patch('/{hdmConfig}/status', [HdmConfigurationController::class, 'toggleStatus'])->name('status');
+                    Route::delete('/{hdmConfig}', [HdmConfigurationController::class, 'destroy'])->name('destroy');
+                    Route::post('/{hdmConfig}/cashiers', [HdmConfigurationController::class, 'storeCashier'])->name('cashiers.store');
+                    Route::put('/{hdmConfig}/cashiers/{cashier}', [HdmConfigurationController::class, 'updateCashier'])->name('cashiers.update');
+                    Route::delete('/{hdmConfig}/cashiers/{cashier}', [HdmConfigurationController::class, 'destroyCashier'])->name('cashiers.destroy');
+                });
 
             Route::prefix('products')->name('products.')->group(function () {
                 Route::get('/', [ProductsController::class, 'index'])->name('index');

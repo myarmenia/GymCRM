@@ -161,6 +161,22 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
+                v-if="hasRole('owner')"
+                :class="[
+                    'menu-item',
+                    route().current('hdm-configurations.*') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('hdm-configurations.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-device-desktop-cog"></i>
+                    <div>{{ useTrans("app.sidebar.hdm_configurations") }}</div>
+                </Link>
+            </li>
+
+            <li
                 v-if="
                     hasAnyRole([
                         'owner',
@@ -548,7 +564,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             <div>{{ useTrans("app.sidebar.report_memberships") }}</div>
                         </Link>
                     </li>
-                    <li
+                    <!-- <li
                         :class="[
                             'menu-item',
                             route().current('reports.entry-exit')
@@ -566,7 +582,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         >
                             <div>{{ useTrans("app.sidebar.report_entry_exit") }}</div>
                         </Link>
-                    </li>
+                    </li> -->
                     <li
                         :class="[
                             'menu-item',

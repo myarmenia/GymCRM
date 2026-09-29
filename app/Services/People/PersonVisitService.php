@@ -36,12 +36,18 @@ class PersonVisitService
                 'gym:id,name',
             ])
             ->where('person_id', $person->id)
-            ->whereIn('status', ['waiting', 'active'])
+            ->whereIn('status', ['waiting', 'active', 'expired'])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderByDesc('id')
             ->get();
+
+        $guestMemberships = app(GuestEntryService::class)->linkedMemberships(
+            $person,
+            $user->hasRole('owner') ? null : (int) $user->gym_id,
+        );
+        $memberships = $memberships->concat($guestMemberships)->unique('id')->values();
 
         $recentAttendances = AttendanceSheet::query()
             ->with('personMemberships.membershipPlan.translations')
@@ -83,13 +89,39 @@ class PersonVisitService
     {
         $user = Auth::user();
         $person = $this->personQueryForUser($user)->findOrFail($personId);
+
+        if ($person->is_blocked) {
+            throw ValidationException::withMessages([
+                'membership_id' => 'This person is blocked and cannot enter.',
+            ]);
+        }
+
         $now = Carbon::createFromFormat('Y-m-d\TH:i', $manualDateTime, self::LOCAL_TIMEZONE);
 
         if ($action === 'entry') {
             return DB::transaction(function () use ($person, $user, $membershipId, $now): AttendanceSheet {
+                // Lock the person as well as the membership so concurrent manual/API
+                // attempts cannot create more than one entry for the same local day.
+                $person = Person::query()->lockForUpdate()->findOrFail($person->id);
+
+                if ($person->is_blocked) {
+                    throw ValidationException::withMessages([
+                        'membership_id' => 'This person is blocked and cannot enter.',
+                    ]);
+                }
+
                 $membership = $this->entryMembership($person, $user, $membershipId, $now);
+
+                if ($this->personAlreadyEnteredOnSelectedDate($person, $now)) {
+                    throw ValidationException::withMessages([
+                        'membership_id' => 'This person already has an entry recorded for this day.',
+                    ]);
+                }
+
                 $membership = $this->activateWaitingMembership($membership, $now);
-                $membership = $this->consumeVisitIfNeeded($membership, $now);
+                $membership = $membership->person_id === $person->id
+                    ? $this->consumeVisitIfNeeded($membership, $now)
+                    : app(GuestEntryService::class)->consumeVisit($person, $membership, $now);
                 $attendance = AttendanceSheet::create([
                     'relation_id' => $person->id,
                     'relation_type' => Person::class,
@@ -99,6 +131,8 @@ class PersonVisitService
                     'type' => 'manual',
                     'direction' => 'entry',
                     'online' => 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ]);
                 $attendance->personMemberships()->sync([$membership->id]);
                 $this->generateTrainerSalaryForEntry($membership, $now);
@@ -162,8 +196,14 @@ class PersonVisitService
                 'membershipPlan.MembershipCategory.translations',
             ])
             ->where('id', $membershipId)
-            ->where('person_id', $person->id)
-            ->whereIn('status', ['waiting', 'active'])
+            ->where(function ($query) use ($person) {
+                $query->where('person_id', $person->id)
+                    ->orWhereHas('guests', function ($guestQuery) use ($person) {
+                        $guestQuery->where('guest_id', $person->id)
+                            ->whereColumn('guests.person_id', 'person_memberships.person_id');
+                    });
+            })
+            ->whereIn('status', ['waiting', 'active', 'expired'])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
@@ -176,23 +216,23 @@ class PersonVisitService
             ]);
         }
 
-        $today = $now->toDateString();
+        if ($membership->person_id !== $person->id
+            && !app(GuestEntryService::class)->isLinked($person, $membership)) {
+            throw ValidationException::withMessages([
+                'membership_id' => 'This guest is not linked to the selected membership.',
+            ]);
+        }
 
-        if ($membership->start_date && Carbon::parse($membership->start_date)->toDateString() > $today) {
+        $selectedDate = $now->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
+
+        if ($membership->start_date && Carbon::parse($membership->start_date)->toDateString() > $selectedDate) {
             throw ValidationException::withMessages([
                 'membership_id' => 'This membership has not started yet.',
             ]);
         }
 
-        $validUntil = $membership->valid_at ?: $membership->end_date;
-
-        if ($validUntil && Carbon::parse($validUntil)->toDateString() < $today) {
-            throw ValidationException::withMessages([
-                'membership_id' => 'This membership is already expired.',
-            ]);
-        }
-
-        if ($membership->expired_at && Carbon::parse($membership->expired_at, self::LOCAL_TIMEZONE)->lt($now)) {
+        // Membership expiration is determined only by valid_at.
+        if ($membership->valid_at && Carbon::parse($membership->valid_at, self::LOCAL_TIMEZONE)->toDateString() < $selectedDate) {
             throw ValidationException::withMessages([
                 'membership_id' => 'This membership is already expired.',
             ]);
@@ -203,7 +243,7 @@ class PersonVisitService
 
     protected function activateWaitingMembership(PersonMembership $membership, Carbon $now): PersonMembership
     {
-        if ($membership->status !== 'waiting') {
+        if (!in_array($membership->status, ['waiting', 'expired'], true)) {
             return $membership;
         }
 
@@ -257,6 +297,16 @@ class PersonVisitService
             ->where('date', '>=', $dayStart)
             ->where('date', '<', $dayEnd)
             ->whereHas('personMemberships', fn ($query) => $query->where('person_memberships.id', $membership->id))
+            ->exists();
+    }
+
+    protected function personAlreadyEnteredOnSelectedDate(Person $person, Carbon $selectedEntryAt): bool
+    {
+        return AttendanceSheet::query()
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $person->id)
+            ->where('direction', 'entry')
+            ->whereDate('created_at', $selectedEntryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString())
             ->exists();
     }
 

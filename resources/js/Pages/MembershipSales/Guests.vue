@@ -48,8 +48,7 @@ const form = useForm({
     gender: '',
 })
 
-const remaining = computed(() => Number(props.remainingGuestCount || 0))
-const canAddGuest = computed(() => remaining.value > 0 && props.personMembership?.status === 'active')
+const canAddGuest = computed(() => props.personMembership?.status === 'active')
 const foundPerson = ref(null)
 const lookupError = ref('')
 const lookupInProgress = ref(false)
@@ -197,11 +196,11 @@ const submit = () => {
 
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">{{ t('sales.used_guests') }}</span>
-                            <strong>{{ allowedGuestCount }}</strong>
+                            <strong>{{ usedGuestCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">{{ t('sales.allowed_guests') }}</span>
-                            <strong>{{ usedGuestCount }}</strong>
+                            <strong>{{ allowedGuestCount }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-0">
                             <span class="text-muted">{{ t('sales.remaining_guests') }}</span>
