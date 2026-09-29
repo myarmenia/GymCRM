@@ -71,6 +71,7 @@ use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
 use App\Models\SalespersonCommission;
 use App\Models\TrainerCommission;
+use App\Observers\HdmConfigurationAggregateObserver;
 use App\Observers\MembershipSaleAggregateObserver;
 use App\Repositories\AttendanceSheets\AttendanceSheetsRepository;
 use App\Repositories\CardTypes\CardTypeRepository;
@@ -217,6 +218,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        HdmCashier::observe(HdmConfigurationAggregateObserver::class);
         foreach ([
             MembershipPlanPayment::class,
             MembershipSaleDiscount::class,

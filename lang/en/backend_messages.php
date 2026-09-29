@@ -384,4 +384,12 @@ return [
     'your_new_membership_added_successfully' => 'Your new membership was added successfully.',
     'your_user_account_not_linked_gym' => 'Your user account is not linked to a gym.',
     'select_at_least_one_gym_language' => 'Select at least one gym language.',
+    'hdm_config_created' => 'HDM configuration created.',
+    'hdm_config_updated' => 'HDM configuration updated.',
+    'hdm_config_deleted' => 'HDM configuration deleted.',
+    'hdm_config_has_operations' => 'An HDM configuration with operations cannot be deleted; deactivate it instead.',
+    'hdm_config_status_updated' => 'HDM configuration status updated.',
+    'hdm_cashier_created' => 'Cashier added.',
+    'hdm_cashier_updated' => 'Cashier updated.',
+    'hdm_cashier_deleted' => 'Cashier deleted.',
 ];

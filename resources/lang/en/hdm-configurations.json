@@ -1,0 +1,16 @@
+{
+    "title": "HDM Configurations",
+    "subtitle": "Manage fiscal devices and their assigned cashiers",
+    "create_title": "Add HDM Configuration",
+    "edit_title": "Edit HDM Configuration",
+    "config_section": "Configuration",
+    "cashiers_section": "Cashiers",
+    "cashiers_hint": "Cashiers assigned to work with this device",
+    "add_cashier_title": "Add Cashier",
+    "edit_cashier_title": "Edit Cashier",
+    "fields": { "id": "ID", "gym": "Gym", "name": "Name", "ip": "IP Address", "port": "Port", "password": "Device Password", "status": "Status", "active": "Active", "cashiers": "Cashiers", "cashier_name": "Cashier Name", "login": "Login", "pin": "PIN", "user": "User", "last_login": "Last Login", "actions": "Actions" },
+    "placeholders": { "select_gym": "Select a gym", "select_user": "Select a user", "name": "For example, Reception or Bar", "keep_password": "Leave blank to keep the current password", "keep_pin": "Leave blank to keep the current PIN" },
+    "actions": { "add_config": "Add Configuration", "add_cashier": "Add Cashier", "save": "Save", "save_changes": "Save Changes", "cancel": "Cancel", "activate": "Activate", "deactivate": "Deactivate", "edit": "Edit", "delete": "Delete" },
+    "status": { "active": "Active", "inactive": "Inactive" },
+    "messages": { "no_configs": "No HDM configurations yet.", "no_cashiers": "No cashiers are assigned to this device yet.", "confirm_delete_config": "Delete this HDM configuration and its assigned cashiers?", "confirm_delete_cashier": "Delete this cashier?" }
+}

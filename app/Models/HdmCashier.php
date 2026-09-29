@@ -5,13 +5,19 @@ namespace App\Models;
 use App\Traits\BelongsToGym;
 use App\Traits\HasUuidAndVersion;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HdmCashier extends Model
 {
-    use BelongsToGym;
+    use BelongsToGym, SoftDeletes;
     use HasUuidAndVersion;
 
     protected $guarded = [];
+
+    protected $hidden = [
+        'pin',
+        'session_key',
+    ];
 
     protected function casts(): array
     {
