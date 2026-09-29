@@ -80,7 +80,15 @@ const isDenied = computed(() => {
     );
 });
 
+const isDuplicateEntry = computed(
+    () => entryData.value?.reason === "entry_already_recorded_today",
+);
+
 const modalTitle = computed(() => {
+    if (isDuplicateEntry.value) {
+        return t('operations.entry_already_recorded_today');
+    }
+
     if (isDenied.value) {
         return t('operations.entry_denied');
     }
@@ -103,6 +111,10 @@ const actionLabel = computed(() => {
 });
 
 const reasonLabel = computed(() => {
+    if (isDuplicateEntry.value) {
+        return t('operations.entry_already_recorded_today_message');
+    }
+
     if (
         ["subscription_expired", "no_active_subscription"].includes(
             entryData.value?.reason,
@@ -131,16 +143,38 @@ const membershipSelectionContext = computed(() => {
     return entryData.value?.membership_activation_context ?? null;
 });
 
+const isGuestSelection = computed(() => Boolean(membershipSelectionContext.value?.guest_entry));
+
+const membershipReferenceDate = computed(() => {
+    const detectedAt = entryData.value?.detected_at ?? entryData.value?.date;
+
+    return String(
+        detectedAt ?? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Yerevan" }),
+    ).slice(0, 10);
+});
+
+const membershipIsExpiredForDetectedDate = (membership) => {
+    const validUntil = membership?.valid_at;
+
+    return Boolean(
+        validUntil &&
+        String(validUntil).slice(0, 10) < membershipReferenceDate.value,
+    );
+};
+
+const membershipsValidForDetectedDate = (memberships = []) =>
+    memberships.filter((membership) => !membershipIsExpiredForDetectedDate(membership));
+
 const activeMemberships = computed(() => {
-    return membershipSelectionContext.value?.active_memberships ?? [];
+    return membershipsValidForDetectedDate(membershipSelectionContext.value?.active_memberships);
 });
 
 const waitingMemberships = computed(() => {
-    return membershipSelectionContext.value?.waiting_memberships ?? [];
+    return membershipsValidForDetectedDate(membershipSelectionContext.value?.waiting_memberships);
 });
 
 const selectableMemberships = computed(() => {
-    return membershipSelectionContext.value?.selectable_memberships ?? [];
+    return membershipsValidForDetectedDate(membershipSelectionContext.value?.selectable_memberships);
 });
 
 const recordedMemberships = computed(() => {
@@ -156,16 +190,19 @@ const recordedMemberships = computed(() => {
 });
 
 const requiresManagerSelection = computed(() => {
+    const selectionPending = entryData.value?.pending_attendance_selection
+        ?? membershipSelectionContext.value?.requires_manager_selection;
+
     return Boolean(
         entryData.value?.action === "entry" &&
-        membershipSelectionContext.value?.requires_manager_selection &&
-            selectableMemberships.value.length > 2,
+        selectionPending &&
+        selectableMemberships.value.length,
     );
 });
 
 const formatMembershipPeriod = (membership) => {
     const startDate = membership?.start_date ?? "-";
-    const endDate = membership?.valid_at ?? membership?.end_date ?? "-";
+    const endDate = membership?.valid_at ?? "-";
 
     return `${startDate} - ${endDate}`;
 };
@@ -240,11 +277,16 @@ const closeModal = () => {
 };
 
 const selectMembership = async () => {
-    if (!selectedMembershipIds.value.length || activatingMembershipId.value) {
+    const selectableIds = new Set(selectableMemberships.value.map((membership) => membership.id));
+    const validSelectedIds = selectedMembershipIds.value
+        .filter((id) => selectableIds.has(id))
+        .slice(0, isGuestSelection.value ? 1 : undefined);
+
+    if (!validSelectedIds.length || activatingMembershipId.value) {
         return;
     }
 
-    const membershipId = selectedMembershipIds.value[0];
+    const membershipId = validSelectedIds[0];
     activatingMembershipId.value = "multiple";
 
     try {
@@ -254,7 +296,8 @@ const selectMembership = async () => {
                 id: membershipId,
             }),
             {
-                membership_ids: selectedMembershipIds.value,
+                membership_ids: validSelectedIds,
+                guest_id: isGuestSelection.value ? currentOwner.value?.id : null,
                 action: entryData.value?.action,
                 detected_at: entryData.value?.detected_at ?? entryData.value?.date,
                 entry_code: entryData.value?.entry_code,
@@ -394,7 +437,11 @@ onBeforeUnmount(() => {
                         <div
                             class="alert mb-3"
                             :class="
-                                isDenied ? 'alert-danger' : 'alert-success'
+                                isDuplicateEntry
+                                    ? 'alert-warning'
+                                    : isDenied
+                                      ? 'alert-danger'
+                                      : 'alert-success'
                             "
                         >
                             <div class="fw-semibold">
@@ -441,10 +488,20 @@ onBeforeUnmount(() => {
                             <span
                                 class="badge"
                                 :class="
-                                    isDenied ? 'bg-label-danger' : 'bg-label-success'
+                                    isDuplicateEntry
+                                        ? 'bg-label-warning'
+                                        : isDenied
+                                          ? 'bg-label-danger'
+                                          : 'bg-label-success'
                                 "
                             >
-                                {{ isDenied ? t('staff_reports.rejected') : t('staff_reports.allowed') }}
+                                {{
+                                    isDuplicateEntry
+                                        ? t('operations.entry_already_recorded_today')
+                                        : isDenied
+                                          ? t('staff_reports.rejected')
+                                          : t('staff_reports.allowed')
+                                }}
                             </span>
                         </p>
 
@@ -479,6 +536,9 @@ onBeforeUnmount(() => {
                                 >
                                     <div class="fw-semibold">
                                         {{ membership.membership_plan_name }}
+                                    </div>
+                                    <div v-if="membership.person_id !== currentOwner?.id && membership.membership_owner_name" class="small text-muted">
+                                        {{ t('ui.owner') }}: {{ membership.membership_owner_name }}
                                     </div>
                                     <div class="small text-muted">
                                         {{ t('membership.category') }}: {{ membership.membership_category_name || "-" }}
@@ -518,6 +578,9 @@ onBeforeUnmount(() => {
                                         <div class="fw-semibold">
                                             {{ membership.membership_plan_name }}
                                         </div>
+                                        <div v-if="membership.person_id !== currentOwner?.id && membership.membership_owner_name" class="small text-muted">
+                                            {{ t('ui.owner') }}: {{ membership.membership_owner_name }}
+                                        </div>
                                         <div class="small text-muted">
                                         {{ t('membership.category') }}: {{ membership.membership_category_name || "-" }}
                                         </div>
@@ -545,6 +608,9 @@ onBeforeUnmount(() => {
                                             <div>
                                                 <div class="fw-semibold">
                                                     {{ membership.membership_plan_name }}
+                                                </div>
+                                                <div v-if="membership.person_id !== currentOwner?.id && membership.membership_owner_name" class="small text-muted">
+                                                    {{ t('ui.owner') }}: {{ membership.membership_owner_name }}
                                                 </div>
                                                 <div class="small mb-1">
                                                     <span
@@ -575,6 +641,7 @@ onBeforeUnmount(() => {
                                                     type="checkbox"
                                                     :value="membership.id"
                                                     :disabled="activatingMembershipId"
+                                                    @change="isGuestSelection && selectedMembershipIds.includes(membership.id) && (selectedMembershipIds = [membership.id])"
                                                 >
                                                 <span class="membership-select__box" aria-hidden="true"></span>
                                             </label>

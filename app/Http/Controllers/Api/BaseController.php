@@ -16,10 +16,12 @@ class BaseController extends Controller
             'message' => $message,
         ];
 
+        // Դեպք՝ response-ի հետ կան լրացուցիչ պարամետրեր, որոնք պետք է վերադարձվեն `params` դաշտում։
         if ($params != null) {
             $response['params'] = $params;
         }
 
+        // Դեպք՝ պետք է response-ի root մակարդակում ավելացնել լրացուցիչ դաշտեր (օր.՝ pagination)։
         if ($additionals != null) {
             foreach ($additionals as $key => $value) {
                 $response[$key] = $value;
@@ -42,12 +44,14 @@ class BaseController extends Controller
             'message' => $error,
         ];
 
+        // Դեպք՝ error response-ի հետ էլ պետք է վերադարձնել լրացուցիչ դաշտեր։
         if ($additionals != null) {
             foreach ($additionals as $key => $value) {
                 $response[$key] = $value;
             }
         }
 
+        // Դեպք՝ առկա են մանրամասն error-ներ (օր.՝ վավերացման սխալներ), որոնք պետք է փոխանցվեն `data` դաշտում։
         if (!empty($errorMessages)) {
             $response['data'] = $errorMessages;
         }

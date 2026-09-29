@@ -58,7 +58,7 @@ class MembershipSaleGuestService
 
         try {
             $membershipSale = $this->getById($id);
-            $personMembership = $this->activePersonMembershipForGuests($membershipSale);
+            $personMembership = $this->activePersonMembershipForGuests($membershipSale, true);
 
             if (! $personMembership) {
                 throw ValidationException::withMessages([
@@ -91,6 +91,11 @@ class MembershipSaleGuestService
                 'guest_id' => $guestPerson->id,
                 'person_id' => $personMembership->person_id,
                 'person_membership_id' => $personMembership->id,
+            ]);
+
+            $personMembership->update([
+                'guest_used' => $summary['usedGuestCount'] + 1,
+                'guest_left' => $summary['remainingGuestCount'] - 1,
             ]);
 
             DB::commit();
@@ -158,7 +163,7 @@ class MembershipSaleGuestService
             ->findOrFail($id);
     }
 
-    protected function activePersonMembershipForGuests(MembershipSale $membershipSale)
+    protected function activePersonMembershipForGuests(MembershipSale $membershipSale, bool $lock = false)
     {
         return $membershipSale
             ->personMemberships()
@@ -175,18 +180,20 @@ class MembershipSaleGuestService
                 $query->whereNull('end_date')
                     ->orWhereDate('end_date', '>=', today());
             })
+            ->when($lock, fn ($query) => $query->lockForUpdate())
             ->first();
     }
 
     protected function guestSummary($personMembership): array
     {
-        $allowedGuestCount = (int) ($personMembership->guest_used ?? 0);
+        $allowedGuestCount = (int) ($personMembership->guest_used ?? 0)
+            + (int) ($personMembership->guest_left ?? 0);
         $usedGuestCount = (int) $personMembership->guests()->count();
 
         return [
             'allowedGuestCount' => $allowedGuestCount,
             'usedGuestCount' => $usedGuestCount,
-            'remainingGuestCount' => max((int) ($personMembership->guest_left ?? 0), 0),
+            'remainingGuestCount' => max($allowedGuestCount - $usedGuestCount, 0),
         ];
     }
 

@@ -170,7 +170,7 @@ return [
     'notification_deleted' => 'Ծանուցումը ջնջվել է։',
     'notification_not_found' => 'Ծանուցումը չի գտնվել։',
     'number_freezes' => 'սառեցման քանակ',
-    'number_guests' => 'հյուրերի քանակ',
+    'number_guests' => 'հյուրերի մուտքի քանակ',
     'number_visits' => 'այցելությունների քանակ',
     'one_selected_recipients_not_found' => 'Ընտրված ստացողներից մեկը չի գտնվել։',
     'one_selected_recipients_unavailable' => 'Ընտրված ստացողներից մեկը հասանելի չէ։',
