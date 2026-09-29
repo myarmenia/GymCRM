@@ -22,12 +22,12 @@ class DatabaseSeeder extends Seeder
             LangSeeder::class,
             CountriesSeeder::class,
             CountryTranslationSeeder::class,
-            GymSeeder::class,
-            CompanySeeder::class,
+            //GymSeeder::class,
+            //CompanySeeder::class,
             PaymentMethodSeeder::class,
             CardTypeSeeder::class,
             CardTypePaymentMethodSeeder::class,
-            MembershipCategorySeeder::class,
+            //MembershipCategorySeeder::class,
             MeasurementUnitSeeder::class
 
         ]);

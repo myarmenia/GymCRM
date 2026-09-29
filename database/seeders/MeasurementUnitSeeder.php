@@ -16,7 +16,7 @@ class MeasurementUnitSeeder extends Seeder
         $units = [
             [
                 'code' => 'pcs',
-                'name' => 'Հատով',
+                'name' => 'Piece',
                 'type' => 'quantity',
                 'status' => true,
                 'created_at' => now(),
@@ -24,7 +24,7 @@ class MeasurementUnitSeeder extends Seeder
             ],
             [
                 'code' => 'g',
-                'name' => 'Գրամ',
+                'name' => 'Gram',
                 'type' => 'weight',
                 'status' => true,
                 'created_at' => now(),
@@ -32,7 +32,7 @@ class MeasurementUnitSeeder extends Seeder
             ],
             [
                 'code' => 'ml',
-                'name' => 'Միլլիլիտր',
+                'name' => 'Milliliter',
                 'type' => 'volume',
                 'status' => true,
                 'created_at' => now(),
@@ -40,7 +40,7 @@ class MeasurementUnitSeeder extends Seeder
             ],
             [
                 'code' => 'cm',
-                'name' => 'Սանտիմետր',
+                'name' => 'Centimeter',
                 'type' => 'length',
                 'status' => true,
                 'created_at' => now(),
@@ -48,7 +48,7 @@ class MeasurementUnitSeeder extends Seeder
             ],
             [
                 'code' => 'box',
-                'name' => 'Տուփով',
+                'name' => 'Box',
                 'type' => 'package',
                 'status' => true,
                 'created_at' => now(),
@@ -56,7 +56,7 @@ class MeasurementUnitSeeder extends Seeder
             ],
             [
                 'code' => 'btl',
-                'name' => 'Շշով',
+                'name' => 'Bottle',
                 'type' => 'package',
                 'status' => true,
                 'created_at' => now(),

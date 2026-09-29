@@ -77,6 +77,7 @@ return [
     'enter_start_and_end_working_hours_least_one_day' => 'Укажите начало и конец рабочего времени хотя бы для одного дня.',
     'entry_code_required' => 'Необходимо указать код доступа.',
     'entry_denied_membership_has_expired_or_there_no_active_membership' => 'Вход отклонён: абонемент истёк или нет активного абонемента',
+    'guest_entry_limit_reached' => 'Вход отклонён: допустимое количество входов гостей по этому абонементу исчерпано.',
     'entry_exit_report' => 'Отчёт по входам / выходам',
     'entry_time' => 'Время входа',
     'exit' => 'Выход',

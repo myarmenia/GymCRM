@@ -548,7 +548,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             <div>{{ useTrans("app.sidebar.report_memberships") }}</div>
                         </Link>
                     </li>
-                    <li
+                    <!-- <li
                         :class="[
                             'menu-item',
                             route().current('reports.entry-exit')
@@ -566,7 +566,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         >
                             <div>{{ useTrans("app.sidebar.report_entry_exit") }}</div>
                         </Link>
-                    </li>
+                    </li> -->
                     <li
                         :class="[
                             'menu-item',
