@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Notifications\NotificationService;
 use App\Support\SupportedLocales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
-use App\Services\Notifications\NotificationService;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
             : SupportedLocales::CODES;
 
         if ($langs === []) {
-            $langs = ['hy'];
+            $langs = SupportedLocales::CODES;
         }
 
         $lang = app()->getLocale();

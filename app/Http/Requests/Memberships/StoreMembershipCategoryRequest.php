@@ -7,13 +7,22 @@ use Illuminate\Validation\Rule;
 
 class StoreMembershipCategoryRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     public function rules(): array
     {
         return [
             'gym_id' => 'nullable|exists:gyms,id',
             'active' => 'sometimes|boolean',
-            'slug' => 'required|string|max:255|unique:membership_categories,slug',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('membership_categories', 'slug')->whereNull('deleted_at'),
+            ],
             'translations' => 'required|array|min:1',
             'translations.*.name' => 'required|string|max:255',
             'translations.*.description' => 'nullable|string',

@@ -73,13 +73,13 @@ class PersonController extends Controller
     {
         $this->authorizePersonManagement();
 
-        $person = $this->personService->store(PersonDTO::fromArray([
+        $this->personService->store(PersonDTO::fromArray([
             ...$request->all(),
             'image' => $request->file('image'),
         ]));
 
         return redirect()
-            ->route('person.edit', ['locale' => app()->getLocale(), 'id' => $person->id])
+            ->route('person.list', ['locale' => app()->getLocale()])
             ->with('success', 'Person created successfully');
     }
 

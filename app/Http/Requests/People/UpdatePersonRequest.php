@@ -30,7 +30,7 @@ class UpdatePersonRequest extends FormRequest
             'image' => 'nullable|image|max:2048',
             'email' => [
                 'sometimes',
-                'required',
+                'nullable',
                 'email',
                 'max:255',
                 Rule::unique('people', 'email')->ignore($personId),
@@ -38,7 +38,7 @@ class UpdatePersonRequest extends FormRequest
             'password' => 'nullable|string|min:6',
             'phone' => [
                 'sometimes',
-                'required',
+                'nullable',
                 'string',
                 'max:50',
                 Rule::unique('people', 'phone')->ignore($personId),

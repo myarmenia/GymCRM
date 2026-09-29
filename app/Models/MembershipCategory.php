@@ -15,6 +15,8 @@ class MembershipCategory extends Model
 
     protected $guarded = [];
 
+    protected $hidden = ['active_slug'];
+
     protected $appends = ['name'];
 
     protected $casts = [

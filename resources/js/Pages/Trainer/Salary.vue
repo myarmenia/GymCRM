@@ -49,8 +49,8 @@ const initials = computed(() => {
     return `${first}${last}`.toUpperCase() || '#'
 })
 
-const trainerStatusLabel = computed(() => props.trainer?.deleted_at ? t('people.inactive') : t('status.active'))
-const trainerStatusClass = computed(() => props.trainer?.deleted_at ? 'bg-label-danger' : 'bg-label-success')
+const trainerStatusLabel = computed(() => props.trainer?.active ? t('status.active') : t('people.inactive'))
+const trainerStatusClass = computed(() => props.trainer?.active ? 'bg-label-success' : 'bg-label-danger')
 const salaryStatusLabel = status => ({
     pending: t('status.pending'),
     paid: t('people.paid'),

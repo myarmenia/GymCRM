@@ -62,9 +62,23 @@ const genderLabel = gender => ({
     female: t('female'),
 }[gender] ?? gender ?? '-')
 
-const personStatusLabel = computed(() => props.person?.deleted_at || props.person?.mobile_deleted
-    ? t('inactive')
-    : t('active'))
+const personStatusKey = computed(() => {
+    if (props.person?.is_blocked) {
+        return 'blocked'
+    }
+
+    return props.person?.deleted_at || props.person?.mobile_deleted ? 'inactive' : 'active'
+})
+const personStatusLabel = computed(() => t(personStatusKey.value))
+const personStatusClass = computed(() => ({
+    active: 'bg-label-success',
+    inactive: 'bg-label-secondary',
+    blocked: 'bg-label-danger',
+}[personStatusKey.value]))
+const entryCodeIsActive = computed(() => props.entryCode?.status === true || Number(props.entryCode?.status) === 1)
+const entryCodeStatusLabel = computed(() => props.entryCode
+    ? (entryCodeIsActive.value ? t('active') : t('inactive'))
+    : '-')
 
 const membershipStatusLabel = status => ({
     waiting: t('waiting'),
@@ -99,6 +113,18 @@ const paymentStatusLabel = status => ({
 const trainerName = trainer => trainer ? fullName(trainer) : '-'
 const guestName = guestRecord => fullName(guestRecord?.guest)
 const membershipPlanName = membership => translatedName(membership?.membership_plan)
+const membershipVisitsUsageLabel = membership => {
+    const durationType = membership?.membership_plan?.duration_type
+
+    if ((durationType && durationType !== 'visit') || membership?.visits_left == null) {
+        return t('unlimited')
+    }
+
+    return t('visits_left_used', {
+        left: membership.visits_left,
+        used: membership.visits_used ?? 0,
+    })
+}
 const salePlanName = sale => translatedName(sale?.membership_plan)
 const trainerStatusLabel = trainer => trainer?.status ? t('active') : t('not_specified')
 const trainerRoleNames = trainer => {
@@ -273,6 +299,7 @@ const primaryInfoItems = computed(() => [
     { label: t('phone_number'), value: props.person?.phone || '-', icon: 'tabler-phone' },
     { label: t('email_alt'), value: props.person?.email || '-', icon: 'tabler-mail' },
     { label: t('entry_code'), value: props.entryCode?.token || '-', icon: 'tabler-key' },
+    { label: t('entry_code_status'), value: entryCodeStatusLabel.value, icon: 'tabler-key-off' },
 ])
 const secondaryInfoItems = computed(() => [
     { label: t('type'), value: personTypeLabel(props.person?.type), icon: 'tabler-users' },
@@ -316,7 +343,7 @@ const secondaryInfoItems = computed(() => [
                         <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
                             <h3 class="mb-0">{{ fullName(person) }}</h3>
                             <span class="badge bg-label-info">{{ personTypeLabel(person?.type) }}</span>
-                            <span class="badge bg-label-success">{{ personStatusLabel }}</span>
+                            <span class="badge" :class="personStatusClass">{{ personStatusLabel }}</span>
                         </div>
                         <div class="d-flex gap-4 flex-wrap text-muted">
                             <span>
@@ -330,6 +357,13 @@ const secondaryInfoItems = computed(() => [
                             <span>
                                 <i class="icon-base ti tabler-key me-1"></i>
                                 {{ entryCode?.token || '-' }}
+                                <span
+                                    v-if="entryCode"
+                                    class="badge ms-1"
+                                    :class="entryCodeIsActive ? 'bg-label-success' : 'bg-label-danger'"
+                                >
+                                    {{ entryCodeStatusLabel }}
+                                </span>
                             </span>
                         </div>
                     </div>
@@ -573,7 +607,7 @@ const secondaryInfoItems = computed(() => [
                                     <div class="metric-box">
                                         <div class="text-muted small">{{ t('visit_count') }}</div>
                                         <div class="fw-semibold">
-                                            {{ t('visits_left_used', { left: membership.visits_left ?? 0, used: membership.visits_used ?? 0 }) }}
+                                            {{ membershipVisitsUsageLabel(membership) }}
                                         </div>
                                     </div>
                                 </div>
@@ -581,7 +615,7 @@ const secondaryInfoItems = computed(() => [
                                     <div class="metric-box">
                                         <div class="text-muted small">{{ t('guests') }}</div>
                                         <div class="fw-semibold">
-                                            {{ t('items_left_records', { left: membership.guest_left ?? 0, count: membership.guests?.length ?? 0 }) }}
+                                            {{ t('visits_left_used', { left: membership.guest_left ?? 0, used: membership.guest_used ?? 0 }) }}
                                         </div>
                                     </div>
                                 </div>

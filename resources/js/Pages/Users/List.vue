@@ -21,6 +21,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    canViewGymColumn: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const page = usePage();
@@ -106,6 +110,7 @@ const resetFilters = () => {
             name-mode="separate"
             :select-fields="userFilterSelectFields"
             :date-fields="userFilterDateFields"
+            :show-date-field-selector="false"
             @filter="applyFilters"
             @reset="resetFilters"
         />
@@ -144,6 +149,7 @@ const resetFilters = () => {
                                 <th>{{ t('filter.phone') }}</th>
                                 <th>{{ t('auth.email') }}</th>
                                 <th>{{ t('staff_reports.roles') }}</th>
+                                <th v-if="canViewGymColumn">{{ t('filter.gym') }}</th>
                                 <th>{{ t('status.status') }}</th>
                                 <th>{{ t('action.action') }}</th>
                             </tr>
@@ -163,6 +169,9 @@ const resetFilters = () => {
                                     >
                                         {{useTrans(`page.roles.${role.name}`) }}
                                     </span>
+                                </td>
+                                <td v-if="canViewGymColumn">
+                                    {{ user.gym?.name ?? '—' }}
                                 </td>
 
                                 <td>

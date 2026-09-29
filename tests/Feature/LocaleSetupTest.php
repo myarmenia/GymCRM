@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\FinancialCategory;
 use App\Models\Gym;
 use App\Models\Lang;
-use App\Models\FinancialCategory;
 use App\Models\MeasurementUnit;
 use App\Models\MembershipCategory;
 use App\Models\ReminderCategory;
@@ -124,6 +124,7 @@ class LocaleSetupTest extends TestCase
             ->component('Dashboard')
             ->where('locale', 'en')
             ->where('lang', 'en')
+            ->where('langs', ['hy', 'en', 'ru'])
             ->where('translations.app.sidebar.profile', 'Profile')
             ->etc());
     }
@@ -174,6 +175,19 @@ class LocaleSetupTest extends TestCase
             ->where('locale', 'ru')
             ->where('lang', 'ru')
             ->where('langs', ['hy', 'ru'])
+            ->etc());
+    }
+
+    public function test_authenticated_page_falls_back_to_all_supported_languages_when_gym_has_no_active_languages(): void
+    {
+        $this->seed(LangSeeder::class);
+
+        $gym = Gym::query()->create(['name' => 'Main gym']);
+        $gym->languages()->newPivotStatement()->where('gym_id', $gym->id)->update(['active' => false]);
+        $user = User::factory()->create(['gym_id' => $gym->id]);
+
+        $this->actingAs($user)->get('/hy/dashboard')->assertInertia(fn (Assert $page) => $page
+            ->where('langs', ['hy', 'en', 'ru'])
             ->etc());
     }
 

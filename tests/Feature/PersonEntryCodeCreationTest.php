@@ -58,10 +58,7 @@ class PersonEntryCodeCreationTest extends TestCase
         $entryCode = EntryCode::query()->sole();
         $permission = EntryPermission::query()->sole();
 
-        $response->assertRedirect(route('person.edit', [
-            'locale' => 'hy',
-            'id' => $person->id,
-        ]));
+        $response->assertRedirect(route('person.list', ['locale' => 'hy']));
         $this->assertSame($gym->id, $entryCode->gym_id);
         $this->assertSame('FACE-1001', $entryCode->token);
         $this->assertSame('FaceId', $entryCode->type);
@@ -73,6 +70,88 @@ class PersonEntryCodeCreationTest extends TestCase
         $this->assertSame(Person::class, $permission->relation_type);
         $this->assertSame($person->id, $permission->relation_id);
         $this->assertTrue($person->gyms()->whereKey($gym->id)->exists());
+    }
+
+    public function test_person_can_be_created_without_email_password_or_phone(): void
+    {
+        $gym = Gym::query()->create([
+            'name' => 'Main gym',
+            'entry_code_type' => 'rfId',
+        ]);
+        $user = $this->userWithRole($gym);
+
+        $response = $this->actingAs($user)->post(
+            route('person.store', ['locale' => 'hy']),
+            $this->personPayload([
+                'email' => null,
+                'password' => null,
+                'phone' => null,
+                'entry_code_mode' => 'new',
+                'entry_code_token' => 'NULLABLE-1001',
+            ]),
+        );
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('person.list', ['locale' => 'hy']));
+
+        $person = Person::query()->sole();
+        $this->assertNull($person->email);
+        $this->assertNull($person->password);
+        $this->assertNull($person->phone);
+    }
+
+    public function test_person_email_and_phone_can_be_cleared_during_edit(): void
+    {
+        $gym = Gym::query()->create([
+            'name' => 'Main gym',
+            'entry_code_type' => 'rfId',
+        ]);
+        $user = $this->userWithRole($gym);
+        $person = Person::query()->create([
+            'name' => 'John',
+            'surname' => 'Doe',
+            'email' => 'john@example.com',
+            'password' => Hash::make('password'),
+            'phone' => '+37499123456',
+            'type' => 'visitor',
+            'birth_date' => '1990-01-01',
+        ]);
+        $person->gyms()->attach($gym->id);
+        $entryCode = EntryCode::query()->create([
+            'gym_id' => $gym->id,
+            'token' => 'EDIT-NULLABLE-1001',
+            'status' => true,
+            'activation' => true,
+            'type' => 'rfId',
+        ]);
+        EntryPermission::query()->create([
+            'entry_code_id' => $entryCode->id,
+            'relation_type' => Person::class,
+            'relation_id' => $person->id,
+            'status' => true,
+        ]);
+        $password = $person->password;
+
+        $this->actingAs($user)->patch(
+            route('person.update', ['locale' => 'hy', 'id' => $person->id]),
+            [
+                'name' => $person->name,
+                'surname' => $person->surname,
+                'email' => null,
+                'password' => null,
+                'phone' => null,
+                'type' => $person->type,
+                'entry_code_id' => $entryCode->id,
+                'birth_date' => $person->birth_date,
+                'gender' => null,
+            ],
+        )->assertSessionHasNoErrors();
+
+        $person->refresh();
+        $this->assertNull($person->email);
+        $this->assertNull($person->phone);
+        $this->assertSame($password, $person->password);
     }
 
     public function test_missing_or_invalid_gym_entry_code_type_falls_back_to_rfid(): void
