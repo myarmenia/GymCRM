@@ -903,6 +903,7 @@
         "entry_exit_history": "История входов / выходов",
         "entries": "Входы",
         "entry_denied_the_membership_has_expired_or_there_is_no_active_me": "Вход отклонён: абонемент истёк или нет активного абонемента",
+        "guest_entry_limit_reached": "Вход отклонён: допустимое количество входов гостей по этому абонементу исчерпано.",
         "entry_denied_invalid_or_unregistered_entry_code": "Вход отклонён: неверный или незарегистрированный код входа",
         "entry_time": "Время входа",
         "entry_code": "Код входа",

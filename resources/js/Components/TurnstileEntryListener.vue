@@ -123,6 +123,10 @@ const reasonLabel = computed(() => {
         return t('operations.entry_denied_the_membership_has_expired_or_there_is_no_active_me');
     }
 
+    if (entryData.value?.reason === "guest_entry_limit_reached") {
+        return t('operations.guest_entry_limit_reached');
+    }
+
     if (entryData.value?.reason === "invalid_entry_code") {
         return t('operations.entry_denied_the_entry_code_or_its_visitor_was_not_found');
     }
@@ -137,6 +141,17 @@ const currentOwner = computed(() => {
         entryData.value?.owner ??
         null
     );
+});
+
+const ownerTypeLabel = computed(() => {
+    // Every customer and guest is stored in the people table, so the backend
+    // ownership relation is "person" for both. Display the business type the
+    // manager needs to see instead.
+    if (currentOwner.value?.type === "guest") {
+        return t('people.guest');
+    }
+
+    return entryData.value?.owner_type ?? currentOwner.value?.type ?? "-";
 });
 
 const membershipSelectionContext = computed(() => {
@@ -517,7 +532,7 @@ onBeforeUnmount(() => {
 
                         <p class="mb-0">
                             <strong>{{ t('staff_reports.type') }}</strong>
-                            {{ entryData.owner_type || currentOwner?.type }}
+                            {{ ownerTypeLabel }}
                         </p>
 
                         <div

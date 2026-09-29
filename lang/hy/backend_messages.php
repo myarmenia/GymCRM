@@ -77,6 +77,7 @@ return [
     'enter_start_and_end_working_hours_least_one_day' => 'Անհրաժեշտ է լրացնել առնվազն մեկ օրվա աշխատանքային ժամի սկիզբը և ավարտը։',
     'entry_code_required' => 'Մուտքի կոդը պարտադիր է։',
     'entry_denied_membership_has_expired_or_there_no_active_membership' => 'Մուտքը մերժված է․ aboniment-ի ժամկետը լրացել է կամ active aboniment չկա',
+    'guest_entry_limit_reached' => 'Մուտքը մերժված է․ տվյալ աբոնեմենտով հյուրերի մուտքերի թույլատրելի քանակը սպառված է։',
     'entry_exit_report' => 'Մուտք / Ելք հաշվետվություն',
     'entry_time' => 'Մուտքի ժամանակ',
     'exit' => 'Ելք',

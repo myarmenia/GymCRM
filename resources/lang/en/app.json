@@ -903,6 +903,7 @@
         "entry_exit_history": "Entry / Exit history",
         "entries": "Entries",
         "entry_denied_the_membership_has_expired_or_there_is_no_active_me": "Entry denied: the membership has expired or there is no active membership",
+        "guest_entry_limit_reached": "Entry denied: the allowed number of guest entries for this membership has been reached.",
         "entry_denied_invalid_or_unregistered_entry_code": "Entry denied: invalid or unregistered entry code",
         "entry_time": "Entry time",
         "entry_code": "Entry code",

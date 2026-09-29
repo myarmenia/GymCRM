@@ -1196,6 +1196,7 @@
         "entry_already_recorded_today": "Մուտքն այսօր արդեն ֆիքսված է",
         "entry_already_recorded_today_message": "Այս այցելուի մուտքն այսօր արդեն ֆիքսված է։ Կրկնակի մուտք և աբոնեմենտի փոփոխություն չի կատարվել։",
         "entry_denied_the_membership_has_expired_or_there_is_no_active_me": "Մուտքը մերժված է. աբոնեմենտի ժամկետը լրացել է կամ գործող աբոնեմենտ չկա",
+        "guest_entry_limit_reached": "Մուտքը մերժված է․ տվյալ աբոնեմենտով հյուրերի մուտքերի թույլատրելի քանակը սպառված է։",
         "entry_denied_the_entry_code_or_its_visitor_was_not_found": "Մուտքը մերժված է. մուտքի կոդը չի գտնվել կամ տվյալ կոդով այցելու չի գտնվել",
         "entry_recorded_for_the_selected_memberships": "Մուտքը ֆիքսվեց ընտրված աբոնեմենտների համար",
         "download": "Ներբեռնել",

@@ -41,7 +41,7 @@ class GuestEntryService
             ->filter(fn (PersonMembership $membership) =>
                 $membership->person !== null
                 && !$membership->person->is_blocked
-                && $this->isWithinGuestLimit($guest, $membership)
+                && $this->isWithinGuestLimit($guest, $membership, $date)
                 && (!$membership->start_date || $membership->start_date->toDateString() <= $date)
                 && (!$membership->valid_at || $membership->valid_at->toDateString() >= $date)
                 && ($membership->visits_left === null
@@ -70,27 +70,46 @@ class GuestEntryService
             ->exists();
     }
 
-    public function isWithinGuestLimit(Person $guest, PersonMembership $membership): bool
+    public function isWithinGuestLimit(Person $guest, PersonMembership $membership, ?string $date = null): bool
     {
-        // Guest slots limit distinct assigned people; entries consume visits_left instead.
-        $assignment = Guest::query()
-            ->where('guest_id', $guest->id)
-            ->where('person_id', $membership->person_id)
-            ->where('person_membership_id', $membership->id)
-            ->first();
-
-        $limit = (int) $membership->guest_used + (int) $membership->guest_left;
-        if (!$assignment || $limit <= 0) {
+        if (! $this->isLinked($guest, $membership)) {
             return false;
         }
 
-        return Guest::query()
-            ->where('person_membership_id', $membership->id)
-            ->where('id', '<=', $assignment->id)
-            ->count() <= $limit;
+        // guest_left limits actual guest entries, never the number of guest
+        // people attached to a membership. A second scan on the same day is
+        // allowed through to the duplicate-entry response without using a
+        // second guest entry.
+        return $membership->guest_left === null
+            || (int) $membership->guest_left > 0
+            || ($date !== null && $this->alreadyEnteredOnDate($guest, $membership, $date));
     }
 
-    public function consumeVisit(Person $guest, PersonMembership $selected, Carbon $entryAt): PersonMembership
+    public function hasExhaustedGuestEntryLimit(Person $guest, int $gymId, Carbon $entryAt): bool
+    {
+        if ($guest->type !== 'guest') {
+            return false;
+        }
+
+        $date = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
+
+        return $this->linkedMemberships($guest, $gymId)->contains(
+            fn (PersonMembership $membership) => $membership->person !== null
+                && ! $membership->person->is_blocked
+                && (! $membership->start_date || $membership->start_date->toDateString() <= $date)
+                && (! $membership->valid_at || $membership->valid_at->toDateString() >= $date)
+                && $membership->guest_left !== null
+                && (int) $membership->guest_left <= 0
+                && ! $this->alreadyEnteredOnDate($guest, $membership, $date)
+        );
+    }
+
+    public function consumeVisit(
+        Person $guest,
+        PersonMembership $selected,
+        Carbon $entryAt,
+        bool $consumeGuestEntry = false,
+    ): PersonMembership
     {
         $membership = PersonMembership::query()
             ->with('person:id,is_blocked')
@@ -98,7 +117,7 @@ class GuestEntryService
             ->findOrFail($selected->id);
         $date = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
 
-        if (!$this->isWithinGuestLimit($guest, $membership)
+        if (!$this->isLinked($guest, $membership)
             || !in_array($membership->status, ['waiting', 'active', 'expired'], true)
             || !$membership->person
             || $membership->person->is_blocked
@@ -115,12 +134,27 @@ class GuestEntryService
             ]);
         }
 
-        $membership->update([
+        if ($consumeGuestEntry && $membership->guest_left !== null && (int) $membership->guest_left <= 0) {
+            throw ValidationException::withMessages([
+                'membership_id' => 'No guest entries left for this membership.',
+            ]);
+        }
+
+        $updates = [
             'visits_used' => (int) $membership->visits_used + 1,
             'visits_left' => $membership->visits_left === null
                 ? null
                 : (int) $membership->visits_left - 1,
-        ]);
+        ];
+
+        if ($consumeGuestEntry) {
+            $updates['guest_used'] = (int) $membership->guest_used + 1;
+            $updates['guest_left'] = $membership->guest_left === null
+                ? null
+                : (int) $membership->guest_left - 1;
+        }
+
+        $membership->update($updates);
 
         return $membership->fresh([
             'person:id,name,surname',

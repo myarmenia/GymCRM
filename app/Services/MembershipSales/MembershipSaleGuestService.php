@@ -66,14 +66,6 @@ class MembershipSaleGuestService
                 ]);
             }
 
-            $summary = $this->guestSummary($personMembership);
-
-            if ($summary['remainingGuestCount'] <= 0) {
-                throw ValidationException::withMessages([
-                    'guest_id' => $this->guestLimitReachedMessage(),
-                ]);
-            }
-
             $guestPerson = $this->findOrCreateGuestPerson($data, $membershipSale);
 
             $alreadyAdded = $personMembership
@@ -91,11 +83,6 @@ class MembershipSaleGuestService
                 'guest_id' => $guestPerson->id,
                 'person_id' => $personMembership->person_id,
                 'person_membership_id' => $personMembership->id,
-            ]);
-
-            $personMembership->update([
-                'guest_used' => $summary['usedGuestCount'] + 1,
-                'guest_left' => $summary['remainingGuestCount'] - 1,
             ]);
 
             DB::commit();
@@ -186,14 +173,18 @@ class MembershipSaleGuestService
 
     protected function guestSummary($personMembership): array
     {
+        // These counters describe guest entries, not how many people may be
+        // linked as guests. Linking a guest is deliberately unlimited here.
         $allowedGuestCount = (int) ($personMembership->guest_used ?? 0)
             + (int) ($personMembership->guest_left ?? 0);
-        $usedGuestCount = (int) $personMembership->guests()->count();
+        $usedGuestCount = (int) ($personMembership->guest_used ?? 0);
 
         return [
             'allowedGuestCount' => $allowedGuestCount,
             'usedGuestCount' => $usedGuestCount,
-            'remainingGuestCount' => max($allowedGuestCount - $usedGuestCount, 0),
+            'remainingGuestCount' => $personMembership->guest_left === null
+                ? null
+                : max((int) $personMembership->guest_left, 0),
         ];
     }
 

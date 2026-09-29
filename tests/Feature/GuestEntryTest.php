@@ -35,6 +35,7 @@ class GuestEntryTest extends TestCase
     public function test_ees_guest_uses_hosts_visits_once_per_day_even_if_host_entered(): void
     {
         [$gym, $host, $guest, $membership, $code] = $this->fixture(2);
+        $membership->update(['guest_left' => 2]);
         AttendanceSheet::query()->create([
             'relation_type' => Person::class,
             'relation_id' => $host->id,
@@ -49,6 +50,8 @@ class GuestEntryTest extends TestCase
 
         $this->assertTrue($first->result['access_allowed']);
         $this->assertSame(1, $membership->fresh()->visits_left);
+        $this->assertSame(1, $membership->fresh()->guest_used);
+        $this->assertSame(1, $membership->fresh()->guest_left);
         $entry = AttendanceSheet::query()->where('relation_id', $guest->id)->firstOrFail();
         $this->assertSame($membership->id, $entry->personMemberships->firstOrFail()->id);
 
@@ -56,11 +59,14 @@ class GuestEntryTest extends TestCase
         $this->assertSame('entry_already_recorded_today', $duplicate->message);
         $this->assertTrue($duplicate->result['access_allowed']);
         $this->assertSame(1, $membership->fresh()->visits_left);
+        $this->assertSame(1, $membership->fresh()->guest_left);
         $this->assertSame(1, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
 
         $nextDay = $service->ees($this->scan('2026-09-29 10:00:00'));
         $this->assertTrue($nextDay->result['access_allowed']);
         $this->assertSame(0, $membership->fresh()->visits_left);
+        $this->assertSame(2, $membership->fresh()->guest_used);
+        $this->assertSame(0, $membership->fresh()->guest_left);
         $this->assertSame(2, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
     }
 
@@ -96,6 +102,7 @@ class GuestEntryTest extends TestCase
         $this->assertSame($guest->id, $entry->relation_id);
         $this->assertSame($membership->id, $entry->personMemberships->firstOrFail()->id);
         $this->assertSame(1, $membership->fresh()->visits_left);
+        $this->assertSame(1, $membership->fresh()->guest_left);
 
         $this->expectException(ValidationException::class);
         $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-28T12:00');
@@ -112,6 +119,24 @@ class GuestEntryTest extends TestCase
         $this->assertFalse($result->result['access_allowed']);
         $this->assertDatabaseCount('attendance_sheets', 0);
         $this->assertSame(2, $membership->fresh()->visits_left);
+    }
+
+    public function test_ees_reports_when_the_guest_entry_quota_is_exhausted(): void
+    {
+        [$gym, $host, $guest, $membership, $code] = $this->fixture(2);
+        $membership->update(['guest_left' => 0]);
+        $service = $this->eesService($gym, $code, 1);
+
+        $result = $service->ees($this->scan('2026-09-28 10:00:00'));
+
+        $this->assertFalse($result->result['access_allowed']);
+        $this->assertSame('guest_entry_limit_reached', $result->result['reason']);
+        Event::assertDispatched(TurnstileEntryDetected::class, function (TurnstileEntryDetected $event) use ($guest): bool {
+            return ($event->payload['reason'] ?? null) === 'guest_entry_limit_reached'
+                && ($event->payload['owner_type'] ?? null) === 'guest'
+                && ($event->payload['person']['type'] ?? null) === 'guest'
+                && ($event->payload['person']['id'] ?? null) === $guest->id;
+        });
     }
 
     public function test_manager_selects_one_linked_membership_for_guest_with_multiple_options(): void
@@ -155,9 +180,11 @@ class GuestEntryTest extends TestCase
         $this->assertSame($secondMembership->id, $entry->personMemberships->firstOrFail()->id);
         $this->assertSame(2, $firstMembership->fresh()->visits_left);
         $this->assertSame(1, $secondMembership->fresh()->visits_left);
+        $this->assertSame(1, $secondMembership->fresh()->guest_used);
+        $this->assertSame(0, $secondMembership->fresh()->guest_left);
     }
 
-    public function test_registered_guest_uses_the_only_guest_slot(): void
+    public function test_registering_a_guest_does_not_consume_a_guest_entry(): void
     {
         [$gym, $host, $guest, $membership, $code] = $this->fixture(2);
         $this->actingAs(User::query()->where('gym_id', $gym->id)->firstOrFail());
@@ -165,17 +192,15 @@ class GuestEntryTest extends TestCase
 
         $page = $service->guestPageData($membership->membership_sale_id);
         $this->assertSame(1, $page['allowedGuestCount']);
-        $this->assertSame(1, $page['usedGuestCount']);
-        $this->assertSame(0, $page['remainingGuestCount']);
-
-        $this->expectException(ValidationException::class);
-        $service->storeGuest($membership->membership_sale_id, ['phone' => '+37499333333']);
+        $this->assertSame(0, $page['usedGuestCount']);
+        $this->assertSame(1, $page['remainingGuestCount']);
     }
 
-    public function test_adding_guest_updates_the_guest_slot_counters(): void
+    public function test_adding_guest_does_not_update_guest_entry_counters(): void
     {
         [$gym, $host, $guest, $membership, $code] = $this->fixture(2);
         $membership->guests()->delete();
+        $membership->update(['guest_left' => 0]);
         $this->actingAs(User::query()->where('gym_id', $gym->id)->firstOrFail());
         $service = app(MembershipSaleGuestService::class);
 
@@ -186,12 +211,12 @@ class GuestEntryTest extends TestCase
             'entry_code_id' => $code->id,
         ]);
 
-        $this->assertSame(1, $membership->fresh()->guest_used);
+        $this->assertSame(0, $membership->fresh()->guest_used);
         $this->assertSame(0, $membership->fresh()->guest_left);
         $this->assertSame(1, $membership->guests()->count());
     }
 
-    public function test_legacy_extra_guest_assignment_does_not_exceed_plan_guest_limit(): void
+    public function test_guest_assignments_are_not_limited_by_remaining_guest_entries(): void
     {
         [$gym, $host, $guest, $membership] = $this->fixture(2);
         $extraGuest = $this->person('Extra', 'extra@example.test', '+37499333333', 'guest', $gym);
@@ -204,7 +229,7 @@ class GuestEntryTest extends TestCase
         $service = app(GuestEntryService::class);
 
         $this->assertCount(1, $service->availableMemberships($guest, $gym->id, $entryAt));
-        $this->assertCount(0, $service->availableMemberships($extraGuest, $gym->id, $entryAt));
+        $this->assertCount(1, $service->availableMemberships($extraGuest, $gym->id, $entryAt));
     }
 
     private function fixture(int $visitsLeft): array

@@ -166,7 +166,6 @@ const canFreezeMembership = membership => {
 }
 const canAddGuest = membership => {
     return Boolean(membershipSaleId(membership))
-        && Number(membership?.guest_left || 0) > 0
         && membership?.status === 'active'
         && isMembershipCurrentlyValid(membership)
 }
