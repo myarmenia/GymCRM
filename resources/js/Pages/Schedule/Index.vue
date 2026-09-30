@@ -44,7 +44,7 @@ const roleNames = computed(() => {
 
 const canChangeStatus = computed(() => {
     return roleNames.value.some((role) =>
-        ["super_admin", "sales_manager"].includes(role),
+        ["super_admin", "sales_manager", "admin"].includes(role),
     );
 });
 

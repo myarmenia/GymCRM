@@ -141,7 +141,7 @@ const resetFilters = () => {
                                                 {{ t('staff_reports.pay_salary') }}
                                             </Link>
                                             <Link
-                                                v-if="hasAnyRole(['owner', 'super_admin'])"
+                                                v-if="hasAnyRole(['owner', 'super_admin', 'admin'])"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('trainer.edit', {
                                                     locale: currentLocale,

@@ -124,7 +124,7 @@ class ReminderService
     public function defaultMembershipRecipients(User $actor): Collection
     {
         return User::query()
-            ->whereHas('roles', fn ($query) => $query->whereIn('name', ['sales_manager', 'super_admin']))
+            ->whereHas('roles', fn ($query) => $query->whereIn('name', ['sales_manager', 'super_admin','admin']))
             ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
