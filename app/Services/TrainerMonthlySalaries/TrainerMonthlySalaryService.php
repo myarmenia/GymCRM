@@ -62,6 +62,14 @@ class TrainerMonthlySalaryService
         return $this->membershipMonthCount($personMembership);
     }
 
+    public function refreshForMembership(PersonMembership $personMembership, null|string|Carbon $date = null): void
+    {
+        $personMembership->trainerCommissions()
+            ->whereNull('generation_stopped_at')
+            ->get()
+            ->each(fn (TrainerCommission $commission) => $this->generateForCommission($commission, $date));
+    }
+
     public function stopFutureGenerationForMembership(
         PersonMembership $personMembership,
         string $reason = 'membership_cancelled',
@@ -306,6 +314,8 @@ class TrainerMonthlySalaryService
             ->first();
 
         if ($salary) {
+            $this->syncMutableSalaryPeriod($salary, $installment, $period);
+
             return $salary;
         }
 
@@ -558,15 +568,34 @@ class TrainerMonthlySalaryService
     protected function isFrozenDate(Carbon $date, $freezes): bool
     {
         foreach ($freezes as $freeze) {
-            $start = Carbon::parse($freeze->start_date)->startOfDay();
-            $end = Carbon::parse($freeze->end_date)->startOfDay();
-
-            if ($date->betweenIncluded($start, $end)) {
+            if ($freeze->coversDate($date)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    protected function syncMutableSalaryPeriod(
+        TrainerMonthlySalary $salary,
+        int $installment,
+        array $period,
+    ): void {
+        if (! in_array($salary->status, ['pending', 'transfer'], true)
+            || $salary->salary_payout_id
+            || $salary->payoutItems()->exists()) {
+            return;
+        }
+
+        $attributes = [
+            'salary_month' => $period['start']->copy()->startOfMonth()->toDateString(),
+            ...$this->periodAttributes($installment, $period),
+        ];
+        $salary->fill($attributes);
+
+        if ($salary->isDirty()) {
+            $salary->save();
+        }
     }
 
     protected function periodAttributes(int $installment, array $period): array

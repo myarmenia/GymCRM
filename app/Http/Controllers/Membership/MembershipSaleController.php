@@ -152,6 +152,15 @@ class MembershipSaleController extends Controller
             ->with('success', 'Membership frozen successfully.');
     }
 
+    public function cancelFreeze($locale, $id, $freeze)
+    {
+        $this->membershipSaleFreezeService->cancelFreeze((int) $id, (int) $freeze);
+
+        return redirect()
+            ->route('membership_sale.freezes', ['locale' => app()->getLocale(), 'id' => $id])
+            ->with('success', __('backend.membership_sales.freeze_cancelled_successfully'));
+    }
+
     public function storeGuest(StoreMembershipSaleGuestRequest $request, $locale, $id)
     {
         $this->membershipSaleGuestService->storeGuest((int) $id, $request->validated());

@@ -335,6 +335,7 @@ Route::prefix('{locale}')
                     Route::post('/guests/{id}', [MembershipSaleController::class, 'storeGuest'])->name('guests.store');
                     Route::get('/freezes/{id}', [MembershipSaleController::class, 'freezes'])->name('freezes');
                     Route::post('/freezes/{id}', [MembershipSaleController::class, 'storeFreeze'])->name('freezes.store');
+                    Route::post('/freezes/{id}/{freeze}/cancel', [MembershipSaleController::class, 'cancelFreeze'])->name('freezes.cancel');
                     Route::get('/change-trainer/{id}', [MembershipSaleController::class, 'changeTrainer'])->name('change_trainer');
                     Route::patch('/change-trainer/{id}', [MembershipSaleController::class, 'updateTrainer'])->name('change_trainer.update');
                     Route::post('/refunds/{id}', [MembershipSaleController::class, 'storeRefund'])->name('refunds.store');

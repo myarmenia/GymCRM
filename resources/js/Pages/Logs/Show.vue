@@ -30,6 +30,7 @@ const actionLabels = {
     "membership_sale.cancelled": t('logs.membership_cancellation'),
     "membership_sale.trainer_changed": t('logs.trainer_change'),
     "membership_sale.frozen": t('logs.membership_freeze'),
+    "membership_sale.freeze_cancelled": t('logs.membership_freeze_cancellation'),
     "membership_sale.updated": t('logs.membership_edit'),
 };
 const details = computed(() => [
