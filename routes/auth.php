@@ -354,7 +354,7 @@ Route::prefix('{locale}')
 
             Route::prefix('hdm-configurations')
                 ->name('hdm-configurations.')
-                ->middleware('role:owner')
+                ->middleware('role:owner|founder')
                 ->group(function () {
                     Route::get('/', [HdmConfigurationController::class, 'index'])->name('index');
                     Route::get('/create', [HdmConfigurationController::class, 'create'])->name('create');

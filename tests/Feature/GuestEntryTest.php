@@ -88,6 +88,9 @@ class GuestEntryTest extends TestCase
     public function test_manual_guest_entry_shows_and_consumes_the_hosts_membership(): void
     {
         [$gym, $host, $guest, $membership] = $this->fixture(2);
+        $guestOwnedMembership = $membership->replicate(['uuid']);
+        $guestOwnedMembership->person_id = $guest->id;
+        $guestOwnedMembership->save();
         $manager = User::query()->where('gym_id', $gym->id)->firstOrFail();
         $manager->assignRole(Role::query()->create([
             'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
@@ -96,13 +99,14 @@ class GuestEntryTest extends TestCase
         $service = app(PersonVisitService::class);
 
         $page = $service->pageData($guest->id);
-        $this->assertContains($membership->id, $page['memberships']->modelKeys());
+        $this->assertSame([$membership->id], $page['memberships']->modelKeys());
 
         $entry = $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-28T10:00');
         $this->assertSame($guest->id, $entry->relation_id);
         $this->assertSame($membership->id, $entry->personMemberships->firstOrFail()->id);
         $this->assertSame(1, $membership->fresh()->visits_left);
-        $this->assertSame(1, $membership->fresh()->guest_left);
+        $this->assertSame(1, $membership->fresh()->guest_used);
+        $this->assertSame(0, $membership->fresh()->guest_left);
 
         $this->expectException(ValidationException::class);
         $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-28T12:00');

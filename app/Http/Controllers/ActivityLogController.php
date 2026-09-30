@@ -49,7 +49,7 @@ class ActivityLogController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user?->hasAnyRole(['owner', 'admin', 'super_admin']),
+            $user?->hasAnyRole(['owner', 'admin', 'super_admin', 'founder']),
             403,
             'You are not allowed to view activity logs.',
         );
@@ -61,7 +61,7 @@ class ActivityLogController extends Controller
     {
         return ActivityLog::query()
             ->when(
-                ! $user->hasRole('owner'),
+                ! $user->hasAnyRole(['owner', 'founder']),
                 fn (Builder $query) => $user->gym_id
                     ? $query->where('gym_id', $user->gym_id)
                     : $query->whereRaw('1 = 0'),

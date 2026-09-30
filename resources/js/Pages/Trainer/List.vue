@@ -131,6 +131,7 @@ const resetFilters = () => {
                                                 {{ t('people.view_profile') }}
                                             </Link>
                                             <Link
+                                                v-if="!hasAnyRole(['founder'])"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('trainer.salary', {
                                                     locale: currentLocale,

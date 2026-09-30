@@ -5,6 +5,7 @@ import { Head, router, useForm, usePage } from "@inertiajs/vue3";
 import { computed, ref } from "vue";
 import AppLayout from "@/Layouts/Index.vue";
 import Pagination from "@/Components/Pagination.vue";
+import { useAuth } from "@/composables/useAuth";
 
 const translationPage = useTranslationPage()
 const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
@@ -34,6 +35,8 @@ const props = defineProps({
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "en";
+const { hasRole } = useAuth();
+const isFounder = computed(() => hasRole("founder"));
 
 const search = ref(props.filters?.search ?? "");
 const startDate = ref(props.filters?.start_date ?? "");
@@ -111,6 +114,8 @@ const togglePurchase = (purchaseId) => {
 };
 
 const openRefundModal = (purchase) => {
+    if (isFounder.value) return;
+
     refundPurchase.value = purchase;
     refundForm.clearErrors();
     refundForm.payment_method_id = purchase.payment_method_id ?? "";
@@ -135,7 +140,7 @@ const closeRefundModal = () => {
 };
 
 const submitRefund = () => {
-    if (!refundPurchase.value) return;
+    if (isFounder.value || !refundPurchase.value) return;
 
     refundForm
         .transform((data) => ({
@@ -406,7 +411,7 @@ const resetFilters = () => {
                                     </td>
                                     <td class="text-end text-nowrap">
                                         <button
-                                            v-if="purchase.can_refund"
+                                            v-if="purchase.can_refund && !isFounder"
                                             type="button"
                                             class="btn btn-sm btn-outline-warning me-1"
                                             :title="t('inventory.record_refund')"

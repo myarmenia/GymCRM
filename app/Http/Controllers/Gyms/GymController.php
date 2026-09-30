@@ -76,6 +76,6 @@ class GymController extends Controller
 
     private function authorizeOwner(): void
     {
-        abort_unless(Auth::user()?->hasRole('owner'), 403);
+        abort_unless(Auth::user()?->hasAnyRole(['owner', 'founder']), 403);
     }
 }

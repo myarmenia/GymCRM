@@ -1,7 +1,7 @@
 <script setup>
 import { translate } from '/resources/js/trans'
 import { usePage as useTranslationPage } from '@inertiajs/vue3'
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import Index from "@/Layouts/Index.vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import DeleteButton from "@/Components/DeleteButton.vue";
@@ -39,6 +39,9 @@ const toggleCategory = (id) => {
     openedCategory.value = openedCategory.value === id ? null : id;
 };
 const page = usePage();
+const isFounder = computed(() =>
+    page.props.auth?.user?.roles?.some((role) => role.name === "founder"),
+);
 
 const currentLocale = page.props.locale ?? "en";
 
@@ -77,6 +80,7 @@ const removeSubCategory = (categoryId, subId) => {
                 </div>
 
                 <Link
+                    v-if="!isFounder"
                     :href="
                         route('categories.create', { locale: currentLocale })
                     "
@@ -150,7 +154,7 @@ const removeSubCategory = (categoryId, subId) => {
                                     </td> -->
 
                                     <td class="text-end">
-                                        <div class="dropdown">
+                                        <div v-if="!isFounder" class="dropdown">
                                             <button
                                                 class="btn btn-sm btn-icon"
                                                 data-bs-toggle="dropdown"
@@ -285,6 +289,7 @@ const removeSubCategory = (categoryId, subId) => {
                                                         </div>
 
                                                         <div
+                                                            v-if="!isFounder"
                                                             class="d-flex align-items-center gap-2"
                                                         >
                                                             <Link

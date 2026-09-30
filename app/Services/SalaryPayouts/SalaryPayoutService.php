@@ -25,13 +25,15 @@ class SalaryPayoutService
 {
     private const MANAGER_ROLES = ['owner', 'admin', 'super_admin', 'accountant'];
 
+    private const VIEWER_ROLES = ['owner', 'admin', 'super_admin', 'accountant', 'founder'];
+
     public function __construct(
         protected FinancialLedgerService $financialLedgerService,
     ) {}
 
     public function pageData(User $actor, array $filters = []): array
     {
-        $this->authorizeManager($actor);
+        $this->authorizeViewer($actor);
 
         $filters = $this->normalizeFilters($filters);
         $filteredPayables = $this->assignmentPayablesQuery($actor, $filters);
@@ -75,7 +77,7 @@ class SalaryPayoutService
 
     public function historyExportData(User $actor, array $filters = []): array
     {
-        $this->authorizeManager($actor);
+        $this->authorizeViewer($actor);
         $filters = $this->normalizeFilters($filters);
         $query = $this->historyQuery($actor, $filters);
         $summary = $this->historySummary(clone $query);
@@ -525,7 +527,7 @@ class SalaryPayoutService
                     ->whereHas('trainerMonthlySalary', fn ($query) => $query->whereIn('status', ['pending', 'transfer']))
                     ->orWhereHas('salespersonCommission', fn ($query) => $query->where('status', 'pending'));
             })
-            ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
+            ->when(! $this->hasFullReadAccess($actor), fn ($query) => $query->where('gym_id', $actor->gym_id))
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('source_type', $type))
             ->when($filters['payee_id'] ?? null, fn ($query, $payeeId) => $query->where('payee_id', $payeeId))
             ->when($filters['gym_id'] ?? null, fn ($query, $gymId) => $query->where('gym_id', $gymId))
@@ -554,11 +556,11 @@ class SalaryPayoutService
                     ->whereHas('trainerMonthlySalary', fn ($query) => $query->whereIn('status', ['pending', 'transfer']))
                     ->orWhereHas('salespersonCommission', fn ($query) => $query->where('status', 'pending'));
             })
-            ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
+            ->when(! $this->hasFullReadAccess($actor), fn ($query) => $query->where('gym_id', $actor->gym_id))
             ->get(['payee_id', 'gym_id', 'source_type']);
 
         $historyOptions = SalaryPayout::query()
-            ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
+            ->when(! $this->hasFullReadAccess($actor), fn ($query) => $query->where('gym_id', $actor->gym_id))
             ->get(['payee_id', 'gym_id']);
         $payeeIds = $payableOptions->pluck('payee_id')
             ->merge($historyOptions->pluck('payee_id'))
@@ -795,7 +797,7 @@ class SalaryPayoutService
                 'salesperson_commissions.created_at as due_at',
             ]);
 
-        if (! $actor->hasRole('owner')) {
+        if (! $this->hasFullReadAccess($actor)) {
             $trainer->where('person_memberships.gym_id', $actor->gym_id);
             $salesperson->where('membership_sales.gym_id', $actor->gym_id);
         }
@@ -873,7 +875,7 @@ class SalaryPayoutService
                 'refunds.paymentMethod.translations',
                 'refunds.refundedBy',
             ])
-            ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
+            ->when(! $this->hasFullReadAccess($actor), fn ($query) => $query->where('gym_id', $actor->gym_id))
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->whereHas(
                 'items',
                 fn ($itemQuery) => $itemQuery->where('source_type', $type),
@@ -945,7 +947,7 @@ class SalaryPayoutService
             ->get();
 
         $gyms = Gym::query()
-            ->when(! $actor->hasRole('owner'), fn ($query) => $query->whereKey($actor->gym_id))
+            ->when(! $this->hasFullReadAccess($actor), fn ($query) => $query->whereKey($actor->gym_id))
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -1287,6 +1289,16 @@ class SalaryPayoutService
     protected function authorizeManager(User $actor): void
     {
         abort_unless($actor->hasAnyRole(self::MANAGER_ROLES), 403);
+    }
+
+    protected function authorizeViewer(User $actor): void
+    {
+        abort_unless($actor->hasAnyRole(self::VIEWER_ROLES), 403);
+    }
+
+    protected function hasFullReadAccess(User $actor): bool
+    {
+        return $actor->hasAnyRole(['owner', 'founder']);
     }
 
     protected function ensureGymAccess(User $actor, int $gymId): void
