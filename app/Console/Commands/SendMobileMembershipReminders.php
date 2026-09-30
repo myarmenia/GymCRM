@@ -36,6 +36,7 @@ class SendMobileMembershipReminders extends Command
 
         PersonMembershipFreeze::query()
             ->with('personMembership.person')
+            ->whereNull('cancelled_at')
             ->whereDate('end_date', $freezeDate)
             ->whereHas('personMembership', fn ($query) => $query->whereIn('status', ['active', 'frozen']))
             ->chunkById(200, function ($freezes) use ($notifications, &$freezeCount) {

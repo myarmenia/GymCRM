@@ -109,7 +109,18 @@ class HdmPrintService extends HdmBaseService
                     'amount' => $amount,
                 ]],
                 request: $receiptData,
+                status: $this->isExternalProcessing() ? 'external' : 'pending',
             );
+
+            if ($this->isExternalProcessing()) {
+                return [
+                    'success' => true,
+                    'need_print' => false,
+                    'external' => true,
+                    'operation_id' => $operation->id,
+                    'message' => 'The fiscal receipt is processed outside CRM.',
+                ];
+            }
 
             return $this->formatResponse($operation, $device, $cashier, $receiptData, [
                 'id' => $entity->id,

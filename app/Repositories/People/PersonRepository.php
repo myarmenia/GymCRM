@@ -26,10 +26,10 @@ class PersonRepository extends BaseRepository implements PersonInterface
         $query = $this->query()
             ->with([
                 'gyms',
-                'activeMemberships.membershipPlan.translations',
+                'memberships.membershipPlan.translations',
             ]);
 
-        if (!$user->hasRole('owner')) {
+        if (! $user->hasRole('owner')) {
             $query->whereHas('gyms', function ($q) use ($user) {
                 $q->where('gyms.id', $user->gym_id);
             });
@@ -55,15 +55,15 @@ class PersonRepository extends BaseRepository implements PersonInterface
 
         $dateField = $filters['date_field'] ?? 'created_at';
 
-        if (!in_array($dateField, ['birth_date', 'created_at'], true)) {
+        if (! in_array($dateField, ['birth_date', 'created_at'], true)) {
             $dateField = 'created_at';
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $filters["{$dateField}_from"] = $filters['date_from'];
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $filters["{$dateField}_to"] = $filters['date_to'];
         }
 

@@ -203,6 +203,123 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(40.0, (float) $sale->payments->first()->amount);
     }
 
+    public function test_external_hdm_records_are_supported_while_integrated_remains_the_default(): void
+    {
+        $this->assertSame('integrated', config('hdm.processing_mode'));
+        config()->set('hdm.processing_mode', 'external');
+        $this->createHdmDevice();
+
+        $sale = $this->service->store($this->payload());
+        $payment = $sale->payments->firstOrFail();
+        $saleResult = app(HdmPrintService::class)->preparePrintData($payment);
+
+        $this->assertTrue($saleResult['success']);
+        $this->assertFalse($saleResult['need_print']);
+        $this->assertTrue($saleResult['external']);
+        $this->assertDatabaseHas('hdm_operations', [
+            'id' => $saleResult['operation_id'],
+            'operationable_id' => $payment->id,
+            'transaction_type' => 'sale',
+            'status' => 'external',
+        ]);
+
+        $pagePayment = $this->service->paymentPageData($sale->id)['membershipSale']->payments->first();
+        $this->assertTrue($pagePayment->has_successful_hdm_operation);
+        $this->assertFalse($pagePayment->can_retry_hdm_receipt);
+
+        $refund = $this->service->storeRefund($sale->id, [
+            'parent_payment_id' => $payment->id,
+            'amount' => 10,
+            'is_full_refund' => false,
+        ]);
+        $this->assertSame('pending', $refund->status);
+
+        $refundResult = app(HdmReturnService::class)->prepareReturnData($refund);
+        $this->assertTrue($refundResult['success'], $refundResult['message'] ?? '');
+        $this->assertFalse($refundResult['need_print']);
+        $this->assertTrue($refundResult['external']);
+        $this->assertSame('paid', $refund->fresh()->status);
+        $this->assertDatabaseHas('financial_transactions', [
+            'source_type' => 'membership_plan_payment',
+            'source_id' => $refund->id,
+            'direction' => 'expense',
+        ]);
+    }
+
+    public function test_external_full_payment_uses_regular_refund_flow(): void
+    {
+        config()->set('hdm.processing_mode', 'external');
+        $this->createHdmDevice();
+
+        $sale = $this->service->store([
+            ...$this->payload(amount: 80),
+            'is_partial_payment' => false,
+            'is_full_payment' => true,
+        ]);
+        $payment = $sale->payments->firstOrFail();
+        $printResult = app(HdmPrintService::class)->preparePrintData($payment);
+        $this->assertTrue($printResult['success']);
+        $this->assertTrue($printResult['external']);
+
+        $termination = app(HdmPrepaymentTerminationService::class)->pageData($sale->fresh());
+        $this->assertFalse($termination['requires_workflow']);
+
+        $refund = $this->service->storeRefund($sale->id, [
+            'parent_payment_id' => $payment->id,
+            'is_full_refund' => true,
+            'is_partial_refund' => false,
+        ]);
+        $returnResult = app(HdmReturnService::class)->prepareReturnData($refund);
+
+        $this->assertTrue($returnResult['success'], $returnResult['message'] ?? '');
+        $this->assertTrue($returnResult['external']);
+        $this->assertSame('paid', $refund->fresh()->status);
+        $this->assertSame('refunded', $sale->fresh()->payment_status);
+    }
+
+    public function test_external_prepayment_can_be_terminated_without_device_printing(): void
+    {
+        config()->set('hdm.processing_mode', 'external');
+        $this->createHdmDevice();
+
+        $sale = $this->service->store($this->payload());
+        $payment = $sale->payments->firstOrFail();
+        $printResult = app(HdmPrintService::class)->preparePrintData($payment);
+        $this->assertTrue($printResult['external']);
+
+        $terminationService = app(HdmPrepaymentTerminationService::class);
+        $pageData = $terminationService->pageData($sale->fresh());
+        $this->assertTrue($pageData['can_start']);
+        $this->assertTrue($pageData['requires_workflow']);
+        $this->assertNull($pageData['reason']);
+        $this->assertSame(40.0, (float) $pageData['available_prepayment']);
+
+        $result = $terminationService->start($sale->fresh(), [
+            'refund_amount' => 25,
+            'notes' => 'External refund',
+        ]);
+
+        $this->assertTrue($result['success']);
+        $this->assertTrue($result['external']);
+        $this->assertFalse($result['need_print']);
+        $this->assertSame([], $result['print_steps']);
+        $this->assertSame('success', $result['workflow']['status']);
+
+        $refund = MembershipPlanPayment::query()->where('type', 'refund')->latest('id')->firstOrFail();
+        $this->assertSame('paid', $refund->status);
+        $this->assertDatabaseHas('hdm_operations', [
+            'operationable_id' => $refund->id,
+            'transaction_type' => 'refund',
+            'status' => 'external',
+        ]);
+        $this->assertDatabaseHas('financial_transactions', [
+            'source_type' => 'membership_plan_payment',
+            'source_id' => $refund->id,
+            'direction' => 'expense',
+            'amount' => 25,
+        ]);
+    }
+
     public function test_cashier_can_prepare_missing_hdm_receipt_after_device_is_enabled(): void
     {
         $sale = $this->service->store($this->payload());

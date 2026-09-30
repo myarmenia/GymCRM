@@ -60,6 +60,10 @@ class MembershipSaleSnapshotFactory
                     ->map(fn ($freeze) => [
                         'start_date' => $freeze->start_date?->toDateString(),
                         'end_date' => $freeze->end_date?->toDateString(),
+                        'cancel_effective_date' => $freeze->cancel_effective_date?->toDateString(),
+                        'cancelled_at' => $freeze->cancelled_at?->format('Y-m-d H:i:s'),
+                        'cancelled_by' => $freeze->cancelled_by,
+                        'cancellation_reason' => $freeze->cancellation_reason,
                         'notes' => $freeze->notes,
                     ])
                     ->values()

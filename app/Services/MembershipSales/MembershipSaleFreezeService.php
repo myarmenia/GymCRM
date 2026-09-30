@@ -7,9 +7,11 @@ use App\Models\MembershipSale;
 use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
 use App\Services\Audit\MembershipSaleAuditService;
+use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class MembershipSaleFreezeService
@@ -17,6 +19,7 @@ class MembershipSaleFreezeService
     public function __construct(
         protected MembershipSaleInterface $membershipSaleRepository,
         protected MembershipSaleAuditService $membershipSaleAuditService,
+        protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
     ) {}
 
     public function freezePageData(int $id): array
@@ -39,7 +42,12 @@ class MembershipSaleFreezeService
         return [
             'membershipSale' => $membershipSale,
             'personMembership' => $personMembership,
-            'freezes' => $personMembership->freezes,
+            'freezes' => $personMembership->freezes
+                ->map(fn (PersonMembershipFreeze $freeze): array => [
+                    ...$freeze->toArray(),
+                    'can_cancel' => $freeze->isCancellableOn(today()),
+                ])
+                ->values(),
             ...$this->freezeSummary($personMembership),
         ];
     }
@@ -80,7 +88,13 @@ class MembershipSaleFreezeService
             $endDate = Carbon::parse($data['end_date'])->startOfDay();
             $freezeDays = (int) $startDate->diffInDays($endDate) + 1;
 
-            if ($this->freezeStartDateOverlaps($personMembership, $startDate)) {
+            if ($this->freezePeriodOutsideMembership($personMembership, $startDate, $endDate)) {
+                throw ValidationException::withMessages([
+                    'end_date' => $this->freezePeriodOutsideMembershipMessage(),
+                ]);
+            }
+
+            if ($this->freezePeriodOverlaps($personMembership, $startDate, $endDate)) {
                 throw ValidationException::withMessages([
                     'start_date' => $this->freezeStartDateOverlapsMessage(),
                 ]);
@@ -122,6 +136,102 @@ class MembershipSaleFreezeService
         } catch (\Throwable $e) {
             DB::rollBack();
             throw $e;
+        }
+    }
+
+    public function cancelFreeze(int $id, int $freezeId): void
+    {
+        $personMembership = DB::transaction(function () use ($id, $freezeId): PersonMembership {
+            $membershipSale = $this->getById($id);
+            $membershipId = $membershipSale->personMemberships()
+                ->whereHas('freezes', fn ($query) => $query->whereKey($freezeId))
+                ->value('person_memberships.id');
+
+            if (! $membershipId) {
+                throw ValidationException::withMessages([
+                    'freeze' => $this->freezeNotFoundMessage(),
+                ]);
+            }
+
+            $personMembership = PersonMembership::query()
+                ->whereKey($membershipId)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $freeze = PersonMembershipFreeze::query()
+                ->whereKey($freezeId)
+                ->where('person_membership_id', $personMembership->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $oldSnapshot = $this->membershipSaleAuditService->snapshot($membershipSale);
+            $today = today()->startOfDay();
+            $startDate = Carbon::parse($freeze->start_date)->startOfDay();
+            $endDate = Carbon::parse($freeze->end_date)->startOfDay();
+
+            if ($freeze->cancelled_at) {
+                throw ValidationException::withMessages([
+                    'freeze' => $this->freezeAlreadyCancelledMessage(),
+                ]);
+            }
+
+            if ($endDate->lt($today)) {
+                throw ValidationException::withMessages([
+                    'freeze' => $this->completedFreezeCannotBeCancelledMessage(),
+                ]);
+            }
+
+            $plannedDays = (int) $startDate->diffInDays($endDate) + 1;
+            $usedEndDate = $today->copy()->subDay()->min($endDate);
+            $usedDays = $usedEndDate->lt($startDate)
+                ? 0
+                : (int) $startDate->diffInDays($usedEndDate) + 1;
+            $remainingDays = max($plannedDays - $usedDays, 0);
+            $wasEffectiveToday = $today->betweenIncluded($startDate, $endDate);
+
+            $freeze->update([
+                'cancel_effective_date' => $today->toDateString(),
+                'cancelled_at' => now(),
+                'cancelled_by' => Auth::id(),
+                'cancellation_reason' => null,
+            ]);
+
+            $validAt = $personMembership->valid_at
+                ? Carbon::parse($personMembership->valid_at)->startOfDay()
+                : null;
+            $updateData = [
+                'valid_at' => $validAt?->subDays($remainingDays)->toDateString(),
+            ];
+
+            if ($usedDays === 0) {
+                $updateData['freeze_left'] = (int) ($personMembership->freeze_left ?? 0) + 1;
+                $updateData['freeze_used'] = max((int) ($personMembership->freeze_used ?? 0) - 1, 0);
+            }
+
+            if ($wasEffectiveToday && ! $personMembership->freezes()
+                ->whereKeyNot($freeze->id)
+                ->effectiveOn($today)
+                ->exists()) {
+                $updateData['status'] = 'active';
+            }
+
+            $personMembership->update($updateData);
+
+            $this->membershipSaleAuditService->afterChanged(
+                $membershipSale,
+                $oldSnapshot,
+                'membership_sale.freeze_cancelled',
+                "Membership sale #{$membershipSale->id} freeze #{$freeze->id} cancelled",
+            );
+
+            return $personMembership->fresh();
+        });
+
+        try {
+            $this->trainerMonthlySalaryService->refreshForMembership($personMembership);
+        } catch (\Throwable $exception) {
+            Log::error('Trainer salary periods could not be refreshed after freeze cancellation.', [
+                'person_membership_id' => $personMembership->id,
+                'exception' => $exception->getMessage(),
+            ]);
         }
     }
 
@@ -188,13 +298,40 @@ class MembershipSaleFreezeService
         return true;
     }
 
-    protected function freezeStartDateOverlaps(PersonMembership $personMembership, Carbon $startDate): bool
-    {
+    protected function freezePeriodOverlaps(
+        PersonMembership $personMembership,
+        Carbon $startDate,
+        Carbon $endDate,
+    ): bool {
         return $personMembership
             ->freezes()
-            ->whereDate('start_date', '<=', $startDate->toDateString())
-            ->whereDate('end_date', '>=', $startDate->toDateString())
+            ->whereDate('start_date', '<=', $endDate->toDateString())
+            ->where(function ($query) use ($startDate): void {
+                $query->where(function ($query) use ($startDate): void {
+                    $query->whereNull('cancel_effective_date')
+                        ->whereDate('end_date', '>=', $startDate->toDateString());
+                })->orWhere(function ($query) use ($startDate): void {
+                    $query->whereNotNull('cancel_effective_date')
+                        ->whereDate('cancel_effective_date', '>', $startDate->toDateString());
+                });
+            })
             ->exists();
+    }
+
+    protected function freezePeriodOutsideMembership(
+        PersonMembership $personMembership,
+        Carbon $startDate,
+        Carbon $endDate,
+    ): bool {
+        $membershipStart = $personMembership->start_date
+            ? Carbon::parse($personMembership->start_date)->startOfDay()
+            : null;
+        $membershipValidAt = $personMembership->valid_at
+            ? Carbon::parse($personMembership->valid_at)->startOfDay()
+            : null;
+
+        return ($membershipStart && $startDate->lt($membershipStart))
+            || ($membershipValidAt && $endDate->gt($membershipValidAt));
     }
 
     protected function shiftNextMembershipAfterFreeze(PersonMembership $personMembership, ?Carbon $extendedValidAt): void
@@ -257,5 +394,25 @@ class MembershipSaleFreezeService
     protected function freezeStartDateOverlapsMessage(): string
     {
         return __('backend.membership_sales.freeze_start_overlaps');
+    }
+
+    protected function freezePeriodOutsideMembershipMessage(): string
+    {
+        return __('backend.membership_sales.freeze_period_outside_membership');
+    }
+
+    protected function freezeNotFoundMessage(): string
+    {
+        return __('backend.membership_sales.freeze_not_found');
+    }
+
+    protected function freezeAlreadyCancelledMessage(): string
+    {
+        return __('backend.membership_sales.freeze_already_cancelled');
+    }
+
+    protected function completedFreezeCannotBeCancelledMessage(): string
+    {
+        return __('backend.membership_sales.completed_freeze_cannot_be_cancelled');
     }
 }
