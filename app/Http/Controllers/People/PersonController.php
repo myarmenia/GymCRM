@@ -28,7 +28,7 @@ class PersonController extends Controller
     private function authorizePersonManagement(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['sales_manager', 'super_admin']),
+            Auth::user()?->hasAnyRole(['sales_manager', 'super_admin', "admin"]),
             403,
             'You are not allowed to manage people.'
         );
@@ -37,7 +37,7 @@ class PersonController extends Controller
     private function authorizePersonVisitManagement(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin']),
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin','admin']),
             403,
             'You are not allowed to manage person visits.'
         );
@@ -91,7 +91,7 @@ class PersonController extends Controller
         $authUser = Auth::user();
 
         // Authorization: sales_manager can only edit people belonging to his gym
-        if ($authUser->hasRole('sales_manager') || $authUser->hasRole('super_admin')) {
+        if ($authUser->hasRole('sales_manager') || $authUser->hasRole('super_admin') || $authUser->hasRole('admin')) {
             $personGymIds = $person->gyms->pluck('id')->toArray();
             
             if (!in_array($authUser->gym_id, $personGymIds)) {
@@ -101,7 +101,7 @@ class PersonController extends Controller
 
 
         $gymId = null;
-        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin','admin'])) {
             $gymId = $authUser->gym_id;
         } else {
             $gymId = $person->gyms->first()?->id;
@@ -138,7 +138,7 @@ class PersonController extends Controller
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
 
-        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin','admin'])) {
             $personGymIds = $person->gyms->pluck('id')->toArray();
             
             if (!in_array($authUser->gym_id, $personGymIds)) {
@@ -161,7 +161,7 @@ class PersonController extends Controller
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
 
-        if ($authUser->hasAnyRole(['sales_manager', 'super_admin'])) {
+        if ($authUser->hasAnyRole(['sales_manager', 'super_admin','admin'])) {
             $personGymIds = $person->gyms->pluck('id')->toArray();
 
             if (! in_array($authUser->gym_id, $personGymIds)) {
