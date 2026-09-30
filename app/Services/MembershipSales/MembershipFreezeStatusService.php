@@ -13,12 +13,8 @@ class MembershipFreezeStatusService
 
         $reactivatedCount = PersonMembership::query()
             ->where('status', 'frozen')
-            ->whereHas('freezes', function ($query) use ($today) {
-                $query->whereDate('end_date', '<', $today);
-            })
             ->whereDoesntHave('freezes', function ($query) use ($today) {
-                $query->whereDate('start_date', '<=', $today)
-                    ->whereDate('end_date', '>=', $today);
+                $query->effectiveOn($today);
             })
             ->update([
                 'status' => 'active',
@@ -28,8 +24,7 @@ class MembershipFreezeStatusService
         $frozenCount = PersonMembership::query()
             ->whereNotIn('status', ['cancelled', 'expired', 'deleted', 'frozen'])
             ->whereHas('freezes', function ($query) use ($today) {
-                $query->whereDate('start_date', '<=', $today)
-                    ->whereDate('end_date', '>=', $today);
+                $query->effectiveOn($today);
             })
             ->update([
                 'status' => 'frozen',

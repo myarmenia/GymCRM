@@ -16,9 +16,9 @@ class PersonMembership extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
-            'valid_at' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
+            'valid_at' => 'date:Y-m-d',
             'activated_at' => 'datetime',
             'expired_at' => 'datetime',
         ];

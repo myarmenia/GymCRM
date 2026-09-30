@@ -12,6 +12,13 @@
   height: 24px;
 }
 
+.app-brand-logo.demo .gymcrm-brand-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
 .app-brand-text.demo {
   font-size: 1.375rem;
 }

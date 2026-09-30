@@ -1,6 +1,7 @@
 <script setup>
 import { translate } from '/resources/js/trans'
 import { computed } from 'vue'
+import { useConfirm } from '@/composables/useConfirm'
 import Index from '@/Layouts/Index.vue'
 import InputError from '@/Components/InputError.vue'
 import InputLabel from '@/Components/InputLabel.vue'
@@ -11,6 +12,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 const page = usePage()
 const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const { confirm } = useConfirm()
 
 const props = defineProps({
     membershipSale: Object,
@@ -43,6 +45,10 @@ const remaining = computed(() => Number(props.remainingFreezeCount || 0))
 const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen'].includes(props.personMembership?.status))
 const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value)
 const freezeOverlapMessage = t('sales.freeze_cannot_start_during_an_existing_freeze_period')
+const cancelForm = useForm({
+    freeze_id: null,
+})
+const cancellingFreezeId = computed(() => cancelForm.processing ? cancelForm.freeze_id : null)
 
 const personName = person => `${person?.name ?? ''} ${person?.surname ?? ''}`.trim() || '-'
 const translatedName = item => {
@@ -60,23 +66,31 @@ const statusLabel = status => ({
     deleted: t('people.deleted'),
     cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
-const dateInsideFreezePeriod = value => {
-    if (!value) {
+const freezePeriodOverlaps = (startValue, endValue) => {
+    if (!startValue || !endValue) {
         return false
     }
 
-    const selectedDate = String(value).slice(0, 10)
+    const selectedStartDate = String(startValue).slice(0, 10)
+    const selectedEndDate = String(endValue).slice(0, 10)
 
     return props.freezes.some(freeze => {
         const startDate = freeze.start_date ? String(freeze.start_date).slice(0, 10) : null
         const endDate = freeze.end_date ? String(freeze.end_date).slice(0, 10) : null
+        const cancelEffectiveDate = freeze.cancel_effective_date
+            ? String(freeze.cancel_effective_date).slice(0, 10)
+            : null
 
-        return startDate && endDate && selectedDate >= startDate && selectedDate <= endDate
+        return startDate
+            && endDate
+            && startDate <= selectedEndDate
+            && endDate >= selectedStartDate
+            && (!cancelEffectiveDate || cancelEffectiveDate > selectedStartDate)
     })
 }
 
 const submit = () => {
-    if (dateInsideFreezePeriod(form.start_date)) {
+    if (freezePeriodOverlaps(form.start_date, form.end_date)) {
         form.setError('start_date', freezeOverlapMessage)
         return
     }
@@ -87,6 +101,35 @@ const submit = () => {
     }), {
         preserveScroll: true,
         onSuccess: () => form.reset(),
+    })
+}
+
+const cancelFreeze = async freeze => {
+    const approved = await confirm(
+        t('sales.confirm_cancel_freeze', {
+            start: formatDate(freeze.start_date),
+            end: formatDate(freeze.end_date),
+        }),
+        {
+            confirmText: t('sales.cancel_freeze'),
+            confirmClass: 'btn-danger',
+        },
+    )
+
+    if (!approved) {
+        return
+    }
+
+    cancelForm.freeze_id = freeze.id
+    cancelForm.post(route('membership_sale.freezes.cancel', {
+        locale: currentLocale.value,
+        id: props.membershipSale.id,
+        freeze: freeze.id,
+    }), {
+        preserveScroll: true,
+        onFinish: () => {
+            cancelForm.freeze_id = null
+        },
     })
 }
 </script>
@@ -167,6 +210,7 @@ const submit = () => {
                                         <th>{{ t('membership.start') }}</th>
                                         <th>{{ t('membership.end') }}</th>
                                         <th>{{ t('people.notes') }}</th>
+                                        <th>{{ t('sales.actions') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -177,6 +221,27 @@ const submit = () => {
                                         <td>{{ formatDate(freeze.start_date) }}</td>
                                         <td>{{ formatDate(freeze.end_date) }}</td>
                                         <td>{{ freeze.notes ?? '-' }}</td>
+                                        <td>
+                                            <span
+                                                v-if="freeze.cancelled_at"
+                                                class="badge bg-label-secondary"
+                                            >
+                                                {{ t('sales.freeze_cancelled') }}
+                                            </span>
+                                            <button
+                                                v-else
+                                                type="button"
+                                                class="btn btn-sm btn-label-danger"
+                                                :disabled="!freeze.can_cancel || cancelForm.processing"
+                                                @click="cancelFreeze(freeze)"
+                                            >
+                                                <span
+                                                    v-if="cancellingFreezeId === freeze.id"
+                                                    class="spinner-border spinner-border-sm me-1"
+                                                ></span>
+                                                {{ t('sales.cancel_freeze') }}
+                                            </button>
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
