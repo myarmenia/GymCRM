@@ -385,4 +385,12 @@ return [
     'your_new_membership_added_successfully' => 'Ваш новый абонемент успешно добавлен.',
     'your_user_account_not_linked_gym' => 'Ваш пользователь не привязан к спортзалу.',
     'select_at_least_one_gym_language' => 'Выберите хотя бы один язык спортзала.',
+    'hdm_config_created' => 'Конфигурация ККМ создана.',
+    'hdm_config_updated' => 'Конфигурация ККМ обновлена.',
+    'hdm_config_deleted' => 'Конфигурация ККМ удалена.',
+    'hdm_config_has_operations' => 'Конфигурацию ККМ с операциями удалить нельзя; деактивируйте её.',
+    'hdm_config_status_updated' => 'Статус конфигурации ККМ обновлён.',
+    'hdm_cashier_created' => 'Кассир добавлен.',
+    'hdm_cashier_updated' => 'Данные кассира обновлены.',
+    'hdm_cashier_deleted' => 'Кассир удалён.',
 ];
