@@ -75,8 +75,12 @@ const reportFilterFields = [
 
 const summaryCards = computed(() => [
     { label: t('staff_reports.memberships_sold'), value: props.summary.sold_memberships_count, icon: 'tabler-id', class: 'bg-label-primary text-primary' },
+    { label: t('staff_reports.cancelled_memberships'), value: props.summary.cancelled_memberships_count, icon: 'tabler-id-off', class: 'bg-label-danger text-danger' },
     { label: t('staff_reports.initial_amount'), value: formatAmount(props.summary.total_amount), icon: 'tabler-cash', class: 'bg-label-info text-info' },
-    { label: t('staff_reports.final_amount'), value: formatAmount(props.summary.final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
+    { label: t('staff_reports.gross_final_amount'), value: formatAmount(props.summary.gross_final_amount), icon: 'tabler-receipt', class: 'bg-label-dark text-dark' },
+    { label: t('staff_reports.refunded_amount'), value: formatAmount(props.summary.refunded_amount), icon: 'tabler-arrow-back-up', class: 'bg-label-warning text-warning' },
+    { label: t('staff_reports.cancelled_amount'), value: formatAmount(props.summary.cancelled_amount), icon: 'tabler-circle-x', class: 'bg-label-danger text-danger' },
+    { label: t('staff_reports.net_final_amount'), value: formatAmount(props.summary.final_amount), icon: 'tabler-calculator', class: 'bg-label-success text-success' },
     { label: t('sales.paid_amount'), value: formatAmount(props.summary.paid_amount), icon: 'tabler-credit-card', class: 'bg-label-success text-success' },
     { label: t('sales.debt'), value: formatAmount(props.summary.debt), icon: 'tabler-alert-circle', class: 'bg-label-danger text-danger' },
     { label: t('sales.manual_discount'), value: formatAmount(props.summary.manual_discount_amount), icon: 'tabler-discount', class: 'bg-label-warning text-warning' },
@@ -242,10 +246,13 @@ const statusClass = status => ({
                             <th>{{ t('sales.term') }}</th>
                             <th>{{ t('membership.price') }}</th>
                             <th>{{ t('sales.discount') }}</th>
-                            <th>{{ t('staff_reports.final') }}</th>
+                            <th>{{ t('staff_reports.gross_final_amount') }}</th>
+                            <th>{{ t('staff_reports.refunded_amount') }}</th>
+                            <th>{{ t('staff_reports.cancelled_amount') }}</th>
+                            <th>{{ t('staff_reports.net_final_amount') }}</th>
                             <th>{{ t('people.paid') }}</th>
                             <th>{{ t('sales.debt') }}</th>
-                            <th>{{ t('staff_reports.refund') }}</th>
+                            <th>{{ t('staff_reports.refund_due_amount') }}</th>
                             <th>{{ t('status.status') }}</th>
                             <th>{{ t('inventory.created_at') }}</th>
                         </tr>
@@ -276,6 +283,9 @@ const statusClass = status => ({
                                 <div>{{ t('staff_reports.manual_amount', { amount: formatAmount(sale.manual_discount_amount) }) }}</div>
                                 <div class="text-muted small">{{ t('staff_reports.membership_amount', { amount: formatAmount(sale.membership_discount_amount) }) }}</div>
                             </td>
+                            <td>{{ formatAmount(sale.gross_final_price) }}</td>
+                            <td>{{ formatAmount(sale.refunded_amount) }}</td>
+                            <td>{{ formatAmount(sale.cancelled_amount) }}</td>
                             <td>{{ formatAmount(sale.final_price) }}</td>
                             <td>{{ formatAmount(sale.paid_amount) }}</td>
                             <td>
@@ -300,7 +310,7 @@ const statusClass = status => ({
                         </tr>
                         <tr v-if="!sales.data.length">
                             <td
-                                colspan="12"
+                                colspan="15"
                                 class="text-center text-muted py-4"
                             >
                                 {{ t('staff_reports.no_data_2') }}
@@ -315,6 +325,9 @@ const statusClass = status => ({
                                 <div>{{ t('staff_reports.manual_amount', { amount: formatAmount(totals.manual_discount_amount) }) }}</div>
                                 <div class="text-muted small">{{ t('staff_reports.membership_amount', { amount: formatAmount(totals.membership_discount_amount) }) }}</div>
                             </td>
+                            <td>{{ formatAmount(totals.gross_final_amount) }}</td>
+                            <td>{{ formatAmount(totals.refunded_amount) }}</td>
+                            <td>{{ formatAmount(totals.cancelled_amount) }}</td>
                             <td>{{ formatAmount(totals.final_amount) }}</td>
                             <td>{{ formatAmount(totals.paid_amount) }}</td>
                             <td>{{ formatAmount(totals.debt) }}</td>

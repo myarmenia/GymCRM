@@ -41,7 +41,7 @@ class MembershipSalesReportRepository implements MembershipSalesReportRepository
                 'membershipPlan.translations',
                 'personMemberships.trainer',
                 'discounts',
-                'payments',
+                'payments.hdmOperations',
             ])
             ->when(!$user->hasRole('owner'), function (Builder $query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
