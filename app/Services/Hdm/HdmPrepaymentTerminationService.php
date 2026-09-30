@@ -7,6 +7,7 @@ use App\Models\HdmOperation;
 use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
 use App\Services\Audit\MembershipSaleAuditService;
+use App\Services\Finance\FinancialLedgerService;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         HdmOperationInterface $operationRepository,
         private readonly ReminderService $reminderService,
         private readonly MembershipSaleAuditService $membershipSaleAuditService,
+        private readonly FinancialLedgerService $financialLedgerService,
     ) {
         parent::__construct($authService, $operationRepository);
     }
@@ -214,17 +216,22 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             $firstRefund = $allocations[0]['refund_payment'];
             $steps = [];
             $serviceOperation = null;
+            $external = $this->isExternalProcessing();
 
             if ($serviceAmount > 0) {
                 $serviceOperation = $this->createServiceOperation($sale, $firstRefund, $sources->first(), $serviceAmount);
-                $steps[] = $this->operationPrintData($serviceOperation, $sale, 'service');
+                if (! $external) {
+                    $steps[] = $this->operationPrintData($serviceOperation, $sale, 'service');
+                }
             }
 
             $refundOperations = [];
             foreach ($allocations as &$allocation) {
                 $operation = $this->createPrepaymentReturnOperation($sale, $allocation);
                 $refundOperations[] = $operation;
-                $steps[] = $this->operationPrintData($operation, $sale, 'refund');
+                if (! $external) {
+                    $steps[] = $this->operationPrintData($operation, $sale, 'refund');
+                }
             }
             unset($allocation);
 
@@ -236,7 +243,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
                 'operationable_id' => $firstRefund->id,
                 'transaction_type' => self::WORKFLOW_TRANSACTION_TYPE,
                 'cashier_number' => $allocations[0]['return_cashier']->login,
-                'status' => 'pending',
+                'status' => $external ? 'success' : 'pending',
                 'request' => [
                     'version' => 1,
                     'prepayment_amount' => $prepaymentAmount,
@@ -250,6 +257,15 @@ class HdmPrepaymentTerminationService extends HdmBaseService
                     'notes' => $data['notes'] ?? null,
                 ],
             ], []);
+
+            if ($external) {
+                foreach ($allocations as $allocation) {
+                    $refundPayment = $allocation['refund_payment'];
+                    $refundPayment->update(['status' => 'paid']);
+                    $this->financialLedgerService->recordMembershipPayment($refundPayment, (int) $sale->user_id);
+                }
+                $this->recalculateMembershipSalePaymentStatus($sale);
+            }
 
             $sale->personMemberships->each(function ($membership): void {
                 if ($membership->status !== 'cancelled') {
@@ -269,6 +285,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
                 'need_print' => $steps !== [],
                 'print_steps' => $steps,
                 'workflow' => $this->workflowSummary($workflow),
+                'external' => $external,
             ];
         });
     }
@@ -376,7 +393,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'operationable_id' => $refundPayment->id,
             'transaction_type' => 'sale',
             'cashier_number' => $cashier->login,
-            'status' => 'pending',
+            'status' => $this->isExternalProcessing() ? 'external' : 'pending',
             'request' => [
                 'paidAmount' => 0,
                 'paidAmountCard' => 0,
@@ -415,7 +432,15 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'returnTicketId' => (int) $originalOperation->rseq,
         ];
 
-        if (! $isWholeOriginalReceipt) {
+        if ($this->isExternalProcessing()) {
+            $request = [
+                'external' => true,
+                'amount' => $refundAmount,
+                'original_operation_uuid' => $originalOperation->uuid,
+            ];
+        }
+
+        if (! $this->isExternalProcessing() && ! $isWholeOriginalReceipt) {
             $paymentType = $this->getPaymentType($originalPayment->payment_method_id);
             $request['cashAmountForReturn'] = $paymentType === 'cash' ? round($refundAmount, 2) : 0;
             $request['cardAmountForReturn'] = $paymentType === 'cash' ? 0 : round($refundAmount, 2);
@@ -430,7 +455,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'operationable_id' => $refundPayment->id,
             'transaction_type' => 'refund',
             'cashier_number' => $cashier->login,
-            'status' => 'pending',
+            'status' => $this->isExternalProcessing() ? 'external' : 'pending',
             'parent_operation_id' => $originalOperation->id,
             'crn' => $originalOperation->crn,
             'request' => $request,
@@ -517,10 +542,10 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
             $operation = $payment->hdmOperations
                 ->where('transaction_type', 'sale')
-                ->where('status', 'success')
+                ->whereIn('status', ['success', 'external'])
                 ->filter(fn (HdmOperation $operation): bool => (int) data_get($operation->request, 'mode') === 3
-                    && (bool) $operation->crn
-                    && (bool) $operation->rseq)
+                    && ($operation->status === 'external'
+                        || ((bool) $operation->crn && (bool) $operation->rseq)))
                 ->sortByDesc('id')
                 ->first();
 
@@ -546,14 +571,14 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         $operations = $sale->payments->flatMap->hdmOperations;
         $returnedIds = $operations
             ->where('transaction_type', 'refund')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->pluck('parent_operation_id')
             ->filter()
             ->map(fn ($id): int => (int) $id);
 
         return $operations
             ->where('transaction_type', 'sale')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->filter(fn (HdmOperation $operation): bool => (int) data_get($operation->request, 'mode') === 2
                 && ! $returnedIds->contains((int) $operation->id))
             ->sortByDesc('id')
@@ -565,14 +590,14 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         $operations = $sale->payments->flatMap->hdmOperations;
         $returnedIds = $operations
             ->where('transaction_type', 'refund')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->pluck('parent_operation_id')
             ->filter()
             ->map(fn ($id): int => (int) $id);
 
         return $operations
             ->where('transaction_type', 'sale')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->filter(fn (HdmOperation $operation): bool => (int) data_get($operation->request, 'mode') === 2
                 && $returnedIds->contains((int) $operation->id))
             ->sortByDesc('id')
@@ -666,5 +691,20 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'refund_amount' => (float) data_get($workflow->request, 'refund_amount', 0),
             'notes' => data_get($workflow->request, 'notes'),
         ];
+    }
+
+    private function recalculateMembershipSalePaymentStatus(MembershipSale $sale): void
+    {
+        $paid = (float) $sale->payments()->where('type', 'payment')->where('status', 'paid')->sum('amount');
+        $refunded = (float) $sale->payments()->where('type', 'refund')->where('status', 'paid')->sum('amount');
+        $netPaid = max($paid - $refunded, 0);
+
+        $status = $paid > 0 && $refunded >= $paid
+            ? 'refunded'
+            : ($netPaid >= (float) $sale->final_price && (float) $sale->final_price > 0
+                ? 'paid'
+                : ($netPaid > 0 ? 'partial' : 'unpaid'));
+
+        $sale->update(['payment_status' => $status]);
     }
 }

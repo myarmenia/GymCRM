@@ -163,19 +163,19 @@ class MembershipSaleService
         $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
         $returnedOperationIds = $hdmOperations
             ->where('transaction_type', 'refund')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->pluck('parent_operation_id')
             ->filter()
             ->map(fn ($id) => (int) $id);
         $lastReturnedFinalPaymentId = $hdmOperations
             ->where('transaction_type', 'sale')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
                 && $returnedOperationIds->contains((int) $operation->id))
             ->max('operationable_id');
         $finalHdmOperation = $hdmOperations
             ->where('transaction_type', 'sale')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
                 && ! $returnedOperationIds->contains((int) $operation->id))
             ->sortByDesc('id')
@@ -192,7 +192,7 @@ class MembershipSaleService
                 ->where('transaction_type', 'sale')
                 ->sortByDesc('id');
             $latestSaleOperation = $saleOperations->first();
-            $successfulSaleOperation = $saleOperations->first(fn ($operation) => $operation->status === 'success'
+            $successfulSaleOperation = $saleOperations->first(fn ($operation) => in_array($operation->status, ['success', 'external'], true)
                 && $operation->crn
                 && $operation->rseq);
 
@@ -202,7 +202,7 @@ class MembershipSaleService
                 : 0);
             $payment->setAttribute('hdm_payment_closed_by_return', (bool) $isClosedByReturnedReceipt);
             $payment->setAttribute('has_successful_hdm_operation', $payment->type === 'payment'
-                && $successfulSaleOperation !== null);
+                && ($successfulSaleOperation !== null || $latestSaleOperation?->status === 'external'));
             $payment->setAttribute('hdm_print_status', $latestSaleOperation?->status);
             $payment->setAttribute('can_retry_hdm_receipt', $payment->type === 'payment'
                 && $payment->status === 'paid'
@@ -219,7 +219,7 @@ class MembershipSaleService
                 && $payment->is_hdm
                 && (int) $payment->id !== (int) $finalHdmOperation->operationable_id
                 && $payment->hdmOperations->contains(fn ($operation) => $operation->transaction_type === 'sale'
-                    && $operation->status === 'success'
+                    && in_array($operation->status, ['success', 'external'], true)
                     && (int) data_get($operation->request, 'mode') === 3);
 
             $payment->setAttribute('is_final_hdm_payment', (bool) $isFinalHdmPayment);
@@ -508,19 +508,19 @@ class MembershipSaleService
             $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
             $returnedOperationIds = $hdmOperations
                 ->where('transaction_type', 'refund')
-                ->where('status', 'success')
+                ->whereIn('status', ['success', 'external'])
                 ->pluck('parent_operation_id')
                 ->filter()
                 ->map(fn ($id) => (int) $id);
             $lastReturnedFinalPaymentId = $hdmOperations
                 ->where('transaction_type', 'sale')
-                ->where('status', 'success')
+                ->whereIn('status', ['success', 'external'])
                 ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
                     && $returnedOperationIds->contains((int) $operation->id))
                 ->max('operationable_id');
             $finalOperation = $hdmOperations
                 ->where('transaction_type', 'sale')
-                ->where('status', 'success')
+                ->whereIn('status', ['success', 'external'])
                 ->filter(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
                     && ! $returnedOperationIds->contains((int) $operation->id))
                 ->sortByDesc('id')
@@ -1068,13 +1068,13 @@ class MembershipSaleService
         $hdmOperations = $membershipSale->payments->flatMap->hdmOperations;
         $returnedOperationIds = $hdmOperations
             ->where('transaction_type', 'refund')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->pluck('parent_operation_id')
             ->filter()
             ->map(fn ($id) => (int) $id);
         $hasActiveFinalHdmReceipt = $hdmOperations
             ->where('transaction_type', 'sale')
-            ->where('status', 'success')
+            ->whereIn('status', ['success', 'external'])
             ->contains(fn ($operation) => (int) data_get($operation->request, 'mode') === 2
                 && ! $returnedOperationIds->contains((int) $operation->id));
 
