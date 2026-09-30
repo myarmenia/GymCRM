@@ -81,13 +81,36 @@ const planName = plan => {
         ?? plan?.name
         ?? (plan?.id ? `#${plan.id}` : null);
 };
-const membershipNames = person => {
-    const names = (person.active_memberships ?? [])
-        .map(membership => planName(membership.membership_plan))
-        .filter(Boolean);
-
-    return names.length ? names.join(", ") : t('no');
+const membershipStatusLabel = status => ({
+    waiting: t('waiting'),
+    active: t('active'),
+    frozen: t('frozen'),
+    expired: t('expired'),
+    deleted: t('deleted'),
+    cancelled: t('cancelled'),
+}[status] ?? status ?? '-');
+const membershipStatusClass = status => ({
+    waiting: 'bg-label-info',
+    active: 'bg-label-success',
+    frozen: 'bg-label-warning',
+    expired: 'bg-label-secondary',
+    deleted: 'bg-label-secondary',
+    cancelled: 'bg-label-danger',
+}[status] ?? 'bg-label-secondary');
+const membershipStatusOrder = {
+    active: 0,
+    frozen: 1,
+    waiting: 2,
+    expired: 3,
+    cancelled: 4,
+    deleted: 5,
 };
+const membershipItems = person => [...(person.memberships ?? [])].sort((left, right) => {
+    const statusDifference = (membershipStatusOrder[left.status] ?? 99)
+        - (membershipStatusOrder[right.status] ?? 99);
+
+    return statusDifference || Number(right.id || 0) - Number(left.id || 0);
+});
 
 watch(
     () => props.people,
@@ -298,7 +321,25 @@ const submitManualScan = async () => {
                                     </span>
                                 </td>
                                 <td>
-                                    {{ membershipNames(person) }}
+                                    <div
+                                        v-if="membershipItems(person).length"
+                                        class="membership-list"
+                                    >
+                                        <div
+                                            v-for="membership in membershipItems(person)"
+                                            :key="membership.id"
+                                            class="membership-list-item"
+                                        >
+                                            <span>{{ planName(membership.membership_plan) || '-' }}</span>
+                                            <span
+                                                class="badge"
+                                                :class="membershipStatusClass(membership.status)"
+                                            >
+                                                {{ membershipStatusLabel(membership.status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span v-else>{{ t('no') }}</span>
                                 </td>
                                 <td v-if="hasRole('owner')">
                                     <span v-if="person.gyms && person.gyms.length">
@@ -415,6 +456,19 @@ const submitManualScan = async () => {
 <style scoped>
 .manual-scan-input {
     min-width: 260px;
+}
+
+.membership-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.membership-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 @media (max-width: 575.98px) {

@@ -193,6 +193,74 @@ class TrainerSalaryAccrualModeTest extends TestCase
         );
     }
 
+    public function test_cancelled_freeze_pauses_salary_cycles_only_until_its_effective_cancellation_date(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'postpaid',
+            '2026-01-01',
+            '2026-03-31',
+            30000,
+            3,
+        );
+        PersonMembershipFreeze::query()->create([
+            'person_membership_id' => $membership->id,
+            'start_date' => '2026-02-01',
+            'end_date' => '2026-02-28',
+            'cancel_effective_date' => '2026-02-15',
+            'cancelled_at' => '2026-02-15 09:00:00',
+        ]);
+        $membership->update(['valid_at' => '2026-04-14']);
+        $this->attendance($membership, '2026-01-15 10:00:00');
+        $this->attendance($membership, '2026-03-01 10:00:00');
+        $this->attendance($membership, '2026-04-01 10:00:00');
+        $service = app(TrainerMonthlySalaryService::class);
+
+        $service->generateForCommission($commission->fresh(), '2026-02-01');
+        $service->generateForCommission($commission->fresh(), '2026-03-15');
+        $service->generateForCommission($commission->fresh(), '2026-04-15');
+
+        $salaries = $commission->monthlySalaries()->orderBy('installment_number')->get();
+        $this->assertSame(
+            ['2026-01-31', '2026-03-14', '2026-04-14'],
+            $salaries->map(fn ($salary) => $salary->period_end->toDateString())->all(),
+        );
+        $this->assertSame(30000.0, (float) $salaries->sum('price'));
+    }
+
+    public function test_cancelled_freeze_updates_only_unpaid_salary_period_metadata(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'postpaid',
+            '2026-01-01',
+            '2026-03-31',
+            30000,
+            3,
+        );
+        $freeze = PersonMembershipFreeze::query()->create([
+            'person_membership_id' => $membership->id,
+            'start_date' => '2026-02-01',
+            'end_date' => '2026-02-28',
+        ]);
+        $this->attendance($membership, '2026-03-15 10:00:00');
+        $service = app(TrainerMonthlySalaryService::class);
+        $salary = $service->generateForCommission($commission->fresh(), '2026-03-29');
+        $this->assertSame('2026-03-28', $salary?->period_end->toDateString());
+
+        $freeze->update([
+            'cancel_effective_date' => '2026-02-15',
+            'cancelled_at' => '2026-02-15 09:00:00',
+        ]);
+        $service->generateForCommission($commission->fresh(), '2026-03-29');
+
+        $this->assertSame('2026-03-14', $salary->fresh()->period_end->toDateString());
+
+        $salary->update(['status' => 'paid']);
+        $freeze->update(['cancel_effective_date' => '2026-02-10']);
+        $service->generateForCommission($commission->fresh(), '2026-03-29');
+
+        $this->assertSame('2026-03-14', $salary->fresh()->period_end->toDateString());
+    }
+
     public function test_plain_cancellation_keeps_generated_salary_and_cancels_only_unearned_installments(): void
     {
         [$commission, $membership] = $this->salaryFixture(
