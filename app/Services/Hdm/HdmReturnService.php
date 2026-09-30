@@ -2,11 +2,22 @@
 
 namespace App\Services\Hdm;
 
+use App\Interfaces\Hdm\HdmOperationInterface;
 use App\Models\MembershipPlanPayment;
+use App\Services\Finance\FinancialLedgerService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class HdmReturnService extends HdmBaseService
 {
+    public function __construct(
+        HdmAuthService $authService,
+        HdmOperationInterface $operationRepository,
+        private FinancialLedgerService $financialLedgerService,
+    ) {
+        parent::__construct($authService, $operationRepository);
+    }
+
     public function preparePrintData($entity): array
     {
         if (! $entity instanceof MembershipPlanPayment) {
@@ -61,6 +72,10 @@ class HdmReturnService extends HdmBaseService
                     'success' => false,
                     'message' => 'Original successfully printed HDM payment was not found.',
                 ];
+            }
+
+            if ($this->isExternalProcessing()) {
+                return $this->prepareExternalReturnData($refund, $originalPayment);
             }
 
             $paymentOperation = $originalPayment->hdmOperations()
@@ -234,5 +249,105 @@ class HdmReturnService extends HdmBaseService
                 return (float) $payment->amount - (float) ($payment->refunded_amount ?? 0)
                     >= (float) $refund->amount;
             });
+    }
+
+    private function prepareExternalReturnData(
+        MembershipPlanPayment $refund,
+        MembershipPlanPayment $originalPayment,
+    ): array {
+        $originalOperation = $originalPayment->hdmOperations()
+            ->where('transaction_type', 'sale')
+            ->where('status', 'external')
+            ->latest('id')
+            ->first();
+
+        if (! $originalOperation || ! $originalOperation->config) {
+            return [
+                'success' => false,
+                'message' => 'Original externally processed HDM operation was not found.',
+            ];
+        }
+
+        $sale = $refund->membershipSale;
+        $device = $originalOperation->config;
+        $cashier = $this->getCashier($device->id, $sale?->user_id);
+
+        if (! $cashier) {
+            return [
+                'success' => false,
+                'message' => 'Active HDM cashier was not found.',
+            ];
+        }
+
+        $amount = (float) $refund->amount;
+        $paymentType = $this->getPaymentType($refund->payment_method_id);
+        $operation = DB::transaction(function () use (
+            $refund,
+            $originalPayment,
+            $originalOperation,
+            $sale,
+            $device,
+            $cashier,
+            $amount,
+            $paymentType,
+        ) {
+            $operation = $this->createOperation(
+                deviceId: $device->id,
+                cashierId: $cashier->id,
+                userId: (int) $sale->user_id,
+                operationableType: MembershipPlanPayment::class,
+                operationableId: $refund->id,
+                transactionType: 'refund',
+                cashierNumber: $cashier->login,
+                payments: [[
+                    'method' => $paymentType === 'cash' ? 'cash' : 'card',
+                    'amount' => $amount,
+                ]],
+                request: [
+                    'external' => true,
+                    'amount' => $amount,
+                    'original_operation_uuid' => $originalOperation->uuid,
+                ],
+                status: 'external',
+                parentOperationId: $originalOperation->id,
+            );
+
+            $refund->update([
+                'status' => 'paid',
+                'parent_payment_id' => $originalPayment->id,
+            ]);
+            $this->financialLedgerService->recordMembershipPayment($refund, (int) $sale->user_id);
+            $this->recalculateMembershipSalePaymentStatus($refund);
+
+            return $operation;
+        });
+
+        return [
+            'success' => true,
+            'need_print' => false,
+            'external' => true,
+            'operation_id' => $operation->id,
+            'message' => 'The fiscal refund is processed outside CRM.',
+        ];
+    }
+
+    private function recalculateMembershipSalePaymentStatus(MembershipPlanPayment $refund): void
+    {
+        $sale = $refund->membershipSale;
+        if (! $sale) {
+            return;
+        }
+
+        $paid = (float) $sale->payments()->where('type', 'payment')->where('status', 'paid')->sum('amount');
+        $refunded = (float) $sale->payments()->where('type', 'refund')->where('status', 'paid')->sum('amount');
+        $netPaid = max($paid - $refunded, 0);
+
+        $status = $paid > 0 && $refunded >= $paid
+            ? 'refunded'
+            : ($netPaid >= (float) $sale->final_price && (float) $sale->final_price > 0
+                ? 'paid'
+                : ($netPaid > 0 ? 'partial' : 'unpaid'));
+
+        $sale->update(['payment_status' => $status]);
     }
 }

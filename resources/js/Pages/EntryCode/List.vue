@@ -127,6 +127,7 @@ const resetFilters = () => {
             >
                 <h5 class="mb-0">{{ t('operations.entry_code_list') }}</h5>
                 <Link
+                    v-if="!hasRole('founder')"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     type="button"
@@ -194,7 +195,7 @@ const resetFilters = () => {
                                 </td>
                                 <!-- Actions -->
                                 <td>
-                                    <div class="dropdown">
+                                    <div v-if="!hasRole('founder')" class="dropdown">
                                         <button
                                             type="button"
                                             class="btn p-0 dropdown-toggle hide-arrow"

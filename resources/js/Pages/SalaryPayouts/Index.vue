@@ -5,12 +5,15 @@ import { computed, ref, watch } from 'vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
+import { useAuth } from '@/composables/useAuth'
 
 const translationPage = useTranslationPage()
 const t = (key, replacements = {}) => translate(translationPage.props.translations, `app.${key}`, replacements)
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const { hasRole } = useAuth()
+const isFounder = computed(() => hasRole('founder'))
 
 const props = defineProps({
     payables: {
@@ -151,6 +154,8 @@ const toggleAll = () => {
 }
 
 const submitPayout = () => {
+    if (isFounder.value) return
+
     payoutForm.items = selectedPayables.value.map(item => ({
         id: item.id,
         amount: selectedPayables.value.length === 1
@@ -171,6 +176,8 @@ const submitPayout = () => {
 }
 
 const openTransferModal = item => {
+    if (isFounder.value) return
+
     transferContext.value = item
     transferForm.clearErrors()
     transferForm.amount = String(item.amount)
@@ -190,7 +197,7 @@ const closeTransferModal = () => {
 }
 
 const submitTransfer = () => {
-    if (!transferContext.value) {
+    if (isFounder.value || !transferContext.value) {
         return
     }
 
@@ -204,6 +211,8 @@ const submitTransfer = () => {
 }
 
 const openRefundModal = (payout, item) => {
+    if (isFounder.value) return
+
     refundContext.value = { payout, item }
     refundForm.clearErrors()
     refundForm.payout_item_id = item.id
@@ -227,7 +236,7 @@ const closeRefundModal = () => {
 }
 
 const submitRefund = () => {
-    if (!refundContext.value) {
+    if (isFounder.value || !refundContext.value) {
         return
     }
 
@@ -241,6 +250,8 @@ const submitRefund = () => {
 }
 
 const openVoidModal = payout => {
+    if (isFounder.value) return
+
     voidContext.value = payout
     voidForm.reset()
     voidForm.clearErrors()
@@ -259,7 +270,7 @@ const closeVoidModal = () => {
 }
 
 const submitVoid = () => {
-    if (!voidContext.value) {
+    if (isFounder.value || !voidContext.value) {
         return
     }
 
@@ -584,7 +595,7 @@ const hasAuditNotes = payout => Boolean(
         </div>
 
         <div
-            v-if="activeTab === 'payables' && selectedPayables.length"
+            v-if="activeTab === 'payables' && selectedPayables.length && !isFounder"
             class="card border-primary mb-4"
         >
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -709,7 +720,7 @@ const hasAuditNotes = payout => Boolean(
                                     class="form-check-input"
                                     type="checkbox"
                                     :checked="allCompatibleSelected"
-                                    :disabled="!(payables.data ?? []).length"
+                                    :disabled="isFounder || !(payables.data ?? []).length"
                                     @change="toggleAll"
                                 >
                             </th>
@@ -737,7 +748,7 @@ const hasAuditNotes = payout => Boolean(
                                     class="form-check-input"
                                     type="checkbox"
                                     :value="item.key"
-                                    :disabled="!canSelect(item)"
+                                    :disabled="isFounder || !canSelect(item)"
                                 >
                             </td>
                             <td class="fw-semibold">{{ item.payee }}</td>
@@ -765,7 +776,7 @@ const hasAuditNotes = payout => Boolean(
                             </td>
                             <td class="text-end">
                                 <button
-                                    v-if="item.can_transfer"
+                                    v-if="item.can_transfer && !isFounder"
                                     type="button"
                                     class="btn btn-sm btn-outline-info"
                                     :disabled="transferForm.processing"
@@ -868,7 +879,7 @@ const hasAuditNotes = payout => Boolean(
                         </div>
                         <div class="text-xl-end">
                             <button
-                                v-if="canVoid && payout.status === 'paid'"
+                                v-if="canVoid && !isFounder && payout.status === 'paid'"
                                 type="button"
                                 class="btn btn-sm btn-outline-danger"
                                 :disabled="voidForm.processing"
@@ -915,7 +926,7 @@ const hasAuditNotes = payout => Boolean(
                                     </small>
                                 </div>
                                 <button
-                                    v-if="canVoid && payout.status === 'paid' && item.refundable_amount > 0"
+                                    v-if="canVoid && !isFounder && payout.status === 'paid' && item.refundable_amount > 0"
                                     type="button"
                                     class="btn btn-sm btn-outline-warning"
                                     :disabled="refundForm.processing"

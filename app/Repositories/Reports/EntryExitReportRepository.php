@@ -87,8 +87,8 @@ class EntryExitReportRepository implements EntryExitReportRepositoryInterface
     protected function baseQuery(User $user, array $filters = []): Builder
     {
         return AttendanceSheet::query()
-            ->when(!$user->hasRole('owner'), fn (Builder $query) => $query->where('gym_id', $user->gym_id))
-            ->when($user->hasRole('owner') && !empty($filters['client_id']), fn (Builder $query) => $query->where('gym_id', $filters['client_id']))
+            ->when(!$user->hasAnyRole(['owner', 'founder']), fn (Builder $query) => $query->where('gym_id', $user->gym_id))
+            ->when($user->hasAnyRole(['owner', 'founder']) && !empty($filters['client_id']), fn (Builder $query) => $query->where('gym_id', $filters['client_id']))
             ->when($filters['start_date'] ?? null, fn (Builder $query, $startDate) => $query->whereDate('date', '>=', $startDate))
             ->when($filters['end_date'] ?? null, fn (Builder $query, $endDate) => $query->whereDate('date', '<=', $endDate))
             ->when($filters['owner_type'] ?? null, fn (Builder $query, $ownerType) => $query->where('relation_type', $ownerType === 'user' ? User::class : Person::class))

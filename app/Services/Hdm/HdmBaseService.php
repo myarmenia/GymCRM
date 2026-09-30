@@ -67,6 +67,11 @@ abstract class HdmBaseService
         return false;
     }
 
+    protected function isExternalProcessing(): bool
+    {
+        return config('hdm.processing_mode', 'integrated') === 'external';
+    }
+
     /**
      * Создать операцию
      */
@@ -80,6 +85,8 @@ abstract class HdmBaseService
         string $cashierNumber,
         array $payments,
         ?array $request = null,
+        string $status = 'pending',
+        ?int $parentOperationId = null,
     ) {
         $operationData = [
             'hdm_config_id' => $deviceId,
@@ -89,7 +96,8 @@ abstract class HdmBaseService
             'operationable_id' => $operationableId,
             'transaction_type' => $transactionType,
             'cashier_number' => $cashierNumber,
-            'status' => 'pending',
+            'status' => $status,
+            'parent_operation_id' => $parentOperationId,
         ];
 
         if ($request !== null) {

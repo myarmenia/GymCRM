@@ -8,7 +8,8 @@ const page = usePage();
 const currentLocale = computed(
     () => page.props.locale ?? page.props.lang ?? "hy",
 );
-const { hasRole, hasAnyRole } = useAuth();
+const { hasRole, hasAnyRole: hasAnyRoleBase } = useAuth();
+const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
 </script>
 
 <template>
@@ -45,6 +46,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                         'manager',
@@ -71,6 +73,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                         'manager',
@@ -95,6 +98,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'sales_manager',
                         'admin',
+                        'founder',
                         'super_admin',
                         'manager',
                     ])
@@ -114,7 +118,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasRole('owner')"
+                v-if="hasAnyRole(['owner'])"
                 :class="[
                     'menu-item',
                     route().current('gym.list') ? 'active' : '',
@@ -130,7 +134,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasRole('owner')"
+                v-if="hasAnyRole(['owner'])"
                 :class="[
                     'menu-item',
                     route().current('hdm-configurations.*') ? 'active' : '',
@@ -150,6 +154,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -173,6 +178,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -247,6 +253,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                         'manager',
@@ -272,6 +279,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -301,6 +309,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                         'manager',
@@ -321,7 +330,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasAnyRole(['owner', 'admin', 'super_admin'])"
+                v-if="hasAnyRole(['owner', 'admin', 'super_admin', 'founder'])"
                 :class="[
                     'menu-item',
                     route().current('logs.*') ? 'active' : '',
@@ -341,6 +350,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -370,6 +380,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                         'manager',
@@ -390,7 +401,7 @@ const { hasRole, hasAnyRole } = useAuth();
             </li>
 
             <li
-                v-if="hasAnyRole(['manager', 'admin', 'super_admin', 'owner'])"
+                v-if="hasAnyRole(['manager', 'admin', 'super_admin', 'owner','founder'])"
                 :class="[
                     'menu-item',
                     route().current('entry-reports.*') ? 'active' : '',
@@ -419,6 +430,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'owner',
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -443,6 +455,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 v-if="
                     hasAnyRole([
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -469,6 +482,7 @@ const { hasRole, hasAnyRole } = useAuth();
                 v-if="
                     hasAnyRole([
                         'admin',
+                        'founder',
                         'super_admin',
                         'sales_manager',
                     ])
@@ -492,6 +506,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'sales_manager',
                         'admin',
+                        'founder',
                         'super_admin',
                         'owner',
                     ])
@@ -611,6 +626,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     hasAnyRole([
                         'sales_manager',
                         'admin',
+                        'founder',
                         'super_admin',
                         'owner',
                     ])
@@ -628,6 +644,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         hasAnyRole([
                             'sales_manager',
                             'admin',
+                            'founder',
                             'super_admin',
                             'owner',
                             'manager',
@@ -649,6 +666,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'owner',
+                        'founder',
                         'sales_manager',
                         // 'manager',
                         'accountant',
@@ -692,6 +710,7 @@ const { hasRole, hasAnyRole } = useAuth();
                             hasAnyRole([
                                 'owner',
                                 'admin',
+                                'founder',
                                 'super_admin',
                                 'accountant',
                             ])
@@ -714,6 +733,7 @@ const { hasRole, hasAnyRole } = useAuth();
                     </li>
 
                     <li
+                        v-if="!hasRole('founder')"
                         :class="[
                             'menu-item',
                             route().current('purchase.index') ? 'active' : '',

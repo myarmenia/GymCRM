@@ -9,6 +9,9 @@ import { todayInYerevan } from '@/utils/yerevanDate'
 const page = usePage()
 const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const isFounder = computed(() =>
+    page.props.auth?.user?.roles?.some(role => role.name === 'founder'),
+)
 
 const props = defineProps({
     person: Object,
@@ -159,13 +162,15 @@ const isMembershipCurrentlyValid = membership => {
     return true
 }
 const canFreezeMembership = membership => {
-    return Boolean(membershipSaleId(membership))
+    return !isFounder.value
+        && Boolean(membershipSaleId(membership))
         && Number(membership?.freeze_left || 0) > 0
         && ['waiting', 'active', 'frozen'].includes(membership?.status)
         && isMembershipCurrentlyValid(membership)
 }
 const canAddGuest = membership => {
-    return Boolean(membershipSaleId(membership))
+    return !isFounder.value
+        && Boolean(membershipSaleId(membership))
         && membership?.status === 'active'
         && isMembershipCurrentlyValid(membership)
 }
@@ -210,6 +215,10 @@ const membershipHasDebt = membership => saleDebtAmount(saleForMembership(members
 const selectedReminderDebt = computed(() => saleDebtAmount(saleForMembership(selectedReminderMembership.value)))
 
 const openPaymentReminder = membership => {
+    if (isFounder.value) {
+        return
+    }
+
     selectedReminderMembership.value = membership
     reminderForm.clearErrors()
     reminderForm.reminder_scheduled_at = ''
@@ -224,6 +233,10 @@ const closePaymentReminder = () => {
 }
 
 const submitPaymentReminder = () => {
+    if (isFounder.value) {
+        return
+    }
+
     reminderForm.clearErrors()
 
     if (!reminderForm.reminder_scheduled_at) {
@@ -510,7 +523,7 @@ const secondaryInfoItems = computed(() => [
                                             {{ membershipPaymentStatusLabel(membership) }}
                                         </span>
                                         <Link
-                                            v-if="membershipSaleId(membership)"
+                                            v-if="membershipSaleId(membership) && !isFounder"
                                             class="btn btn-sm btn-outline-primary"
                                             :href="route('membership_sale.payments', {
                                                 locale: currentLocale,
@@ -521,7 +534,7 @@ const secondaryInfoItems = computed(() => [
                                             {{ t('payments') }}
                                         </Link>
                                         <button
-                                            v-if="membershipPaymentStatus(membership) === 'partial'"
+                                            v-if="membershipPaymentStatus(membership) === 'partial' && !isFounder"
                                             type="button"
                                             class="btn btn-sm btn-outline-warning"
                                             @click="openPaymentReminder(membership)"

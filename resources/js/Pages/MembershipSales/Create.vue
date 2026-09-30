@@ -78,7 +78,7 @@ const form = useForm({
     apply_discount: false,
     discount_type: 'percent',
     discount_value: null,
-    is_hdm: false,
+    is_hdm: true,
     notes: '',
     trainer_id: '',
     is_partial_payment: false,
