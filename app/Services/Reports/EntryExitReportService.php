@@ -270,10 +270,10 @@ class EntryExitReportService
                 ['value' => 'visitor', 'label' => __('backend_messages.client')],
                 ['value' => 'guest', 'label' => __('backend_messages.guest')],
             ],
-            'clients' => $user->hasRole('owner')
+            'clients' => $user->hasAnyRole(['owner', 'founder'])
                 ? Gym::query()->orderBy('name')->get(['id', 'name'])
                 : [],
-            'canSelectClient' => $user->hasRole('owner'),
+            'canSelectClient' => $user->hasAnyRole(['owner', 'founder']),
         ];
     }
 

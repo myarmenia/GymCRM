@@ -58,9 +58,10 @@
     },
     "roles": {
         "super_admin": "Super admin",
+        "staff": "Staff",
         "admin": "Admin",
         "manager": "Manager",
-        "staff": "Staff",
+        "founder": "Founder",
         "accountant": "Accountant",
         "owner": "Owner",
         "cleaner": "Cleaner",

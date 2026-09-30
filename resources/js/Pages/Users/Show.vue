@@ -2,7 +2,8 @@
 import { translate } from '/resources/js/trans'
 import { usePage as useTranslationPage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import InputLabel from '@/Components/InputLabel.vue';
 
 const translationPage = useTranslationPage()
@@ -10,6 +11,9 @@ const t = (key, replacements = {}) => translate(translationPage.props.translatio
 
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
+const isFounder = computed(() =>
+    page.props.auth?.user?.roles?.some((role) => role.name === 'founder'),
+);
 
 const props = defineProps({
     user: Object,
@@ -33,6 +37,10 @@ const staffAttendanceForm = useForm({
 const staffInside = () => props.lastAttendance?.direction === 'entry';
 
 const recordAttendance = (action) => {
+    if (isFounder.value) {
+        return;
+    }
+
     staffAttendanceForm.action = action;
     staffAttendanceForm.post(route('user.attendance.store', {
         locale: currentLocale,
@@ -105,7 +113,7 @@ const recordAttendance = (action) => {
                         <button
                             type="button"
                             class="btn btn-success"
-                            :disabled="staffAttendanceForm.processing || staffInside()"
+                            :disabled="isFounder || staffAttendanceForm.processing || staffInside()"
                             @click="recordAttendance('entry')"
                         >
                             {{ t('operations.record_entry') }}
@@ -113,7 +121,7 @@ const recordAttendance = (action) => {
                         <button
                             type="button"
                             class="btn btn-outline-secondary"
-                            :disabled="staffAttendanceForm.processing || !staffInside()"
+                            :disabled="isFounder || staffAttendanceForm.processing || !staffInside()"
                             @click="recordAttendance('exit')"
                         >
                             {{ t('operations.record_exit') }}

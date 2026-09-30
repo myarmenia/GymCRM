@@ -15,6 +15,9 @@ const t = (key, replacements = {}) => translate(translationPage.props.translatio
 
 const page = usePage()
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
+const isFounder = computed(() =>
+    page.props.auth?.user?.roles?.some(role => role.name === 'founder'),
+)
 
 const props = defineProps({
     discounts: Object,
@@ -142,6 +145,7 @@ const resetFilters = () => {
                 </h5>
 
                 <Link
+                    v-if="!isFounder"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     type="button"
@@ -198,7 +202,7 @@ const resetFilters = () => {
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="dropdown">
+                                    <div v-if="!isFounder" class="dropdown">
                                         <button
                                             type="button"
                                             class="btn p-0 dropdown-toggle hide-arrow"
