@@ -114,6 +114,25 @@ const insideNow = computed(() => props.lastAttendance?.direction === "entry");
 const visitDateTime = ref(nowDateTimeLocalInYerevan());
 const selectedMembershipId = ref(null);
 
+const membershipIsExpiredForSelectedDate = (membership) => {
+    const validUntil = membership?.valid_at;
+    const selectedDate = String(visitDateTime.value ?? "").slice(0, 10);
+
+    return Boolean(
+        validUntil &&
+        selectedDate &&
+        String(validUntil).slice(0, 10) < selectedDate,
+    );
+};
+
+const orderedMemberships = computed(() =>
+    [...(props.memberships ?? [])].sort(
+        (first, second) =>
+            Number(membershipIsExpiredForSelectedDate(first)) -
+            Number(membershipIsExpiredForSelectedDate(second)),
+    ),
+);
+
 const entryForm = useForm({
     action: "entry",
     membership_id: null,
@@ -274,13 +293,16 @@ const submitEntry = (membershipId) => {
                             class="d-flex flex-column gap-3"
                         >
                             <div
-                                v-for="membership in memberships"
+                                v-for="membership in orderedMemberships"
                                 :key="membership.id"
                                 class="membership-card"
                             >
                                 <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
                                     <div>
                                         <h5 class="mb-1">{{ membershipPlanName(membership) }}</h5>
+                                        <div v-if="membership.person_id !== person.id && membership.person" class="text-muted small">
+                                            {{ membership.person.name }} {{ membership.person.surname }}
+                                        </div>
                                         <div class="text-muted small">
                                             {{ membershipCategoryName(membership) }}
                                         </div>
@@ -336,7 +358,7 @@ const submitEntry = (membershipId) => {
                                     <button
                                         type="button"
                                         class="btn btn-primary"
-                                        :disabled="entryForm.processing"
+                                        :disabled="entryForm.processing || membershipIsExpiredForSelectedDate(membership)"
                                         @click="submitEntry(membership.id)"
                                     >
                                         <span
@@ -345,6 +367,12 @@ const submitEntry = (membershipId) => {
                                         ></span>
                                         {{ t('add_entry') }}
                                     </button>
+                                </div>
+                                <div
+                                    v-if="membershipIsExpiredForSelectedDate(membership)"
+                                    class="text-danger small mt-2"
+                                >
+                                    {{ t('membership_expired') }}
                                 </div>
                                 <div
                                     v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"

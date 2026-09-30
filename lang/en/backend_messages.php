@@ -77,6 +77,7 @@ return [
     'enter_start_and_end_working_hours_least_one_day' => 'Enter the start and end of working hours for at least one day.',
     'entry_code_required' => 'Entry code is required.',
     'entry_denied_membership_has_expired_or_there_no_active_membership' => 'Entry denied: the membership has expired or there is no active membership',
+    'guest_entry_limit_reached' => 'Entry denied: the allowed number of guest entries for this membership has been reached.',
     'entry_exit_report' => 'Entry / exit report',
     'entry_time' => 'Entry time',
     'exit' => 'Exit',

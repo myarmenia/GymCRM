@@ -11,6 +11,7 @@ use App\Models\AttendanceSheet;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\User;
+use App\Services\People\GuestEntryService;
 use Carbon\Carbon;
 use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,7 @@ class EntryExitSystemService
         }
 
         [$entryCode, $timestamp] = $this->parseEntryCode($data->entry_code);
-
-        $entryCode = $this->normalizeEntryCode(
+        $entryCodeCandidates = $this->entryCodeCandidates(
             $entryCode,
             $data->entry_code_type ?? null
         );
@@ -49,8 +49,8 @@ class EntryExitSystemService
         $detectedAt = $deviceTime ?? now(self::LOCAL_TIMEZONE);
         $action = 'entry';
 
-        $resolved = $this->resolveEntryCodeOwner(
-            $entryCode,
+        $resolved = $this->resolveEesEntryCodeOwner(
+            $entryCodeCandidates,
             (int) $clientId,
             $data->type ?? null,
             $data->auto_add ?? 0
@@ -75,23 +75,55 @@ class EntryExitSystemService
             return $this->deniedResponse('denied', 'invalid_entry_code');
         }
 
+        // Persist and broadcast the token that was actually found for this
+        // turnstile's gym, rather than a possible binary representation sent
+        // by the device.
+        $entryCode = $resolved['entry_code']->token;
         $ownerType = $resolved['owner_type'];
         $owner = $resolved['owner'];
+        $displayOwnerType = $this->displayOwnerType($ownerType, $owner);
         $selectedMembership = null;
         $selectedMemberships = collect();
 
+        if ($ownerType === 'person' && $action === 'entry' && $owner->is_blocked) {
+            $payload = $this->makeSocketPayload([
+                'status' => 'denied',
+                'access_allowed' => false,
+                'owner_type' => $displayOwnerType,
+                'action' => $action,
+                'reason' => 'person_blocked',
+                'message' => 'Person is blocked and cannot enter.',
+                'person' => $this->personPayload($owner),
+                'entry_code' => $entryCode,
+                'client_id' => $clientId,
+                'mac' => $data->mac ?? null,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+
+            $this->broadcastEntryAttempt((int) $clientId, $payload);
+
+            return $this->deniedResponse('denied', 'person_blocked', $displayOwnerType, $action);
+        }
         if (
             $ownerType === 'person' &&
             $action === 'entry' &&
             !$this->hasActiveSubscription($owner, (int) $clientId, $detectedAt)
         ) {
+            $reason = $owner->type === 'guest'
+                && app(GuestEntryService::class)->hasExhaustedGuestEntryLimit($owner, (int) $clientId, $detectedAt)
+                    ? 'guest_entry_limit_reached'
+                    : 'subscription_expired';
+            $message = $reason === 'guest_entry_limit_reached'
+                ? __('backend_messages.guest_entry_limit_reached')
+                : __('backend_messages.entry_denied_membership_has_expired_or_there_no_active_membership');
+
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
                 'access_allowed' => false,
-                'owner_type' => 'person',
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
-                'reason' => 'subscription_expired',
-                'message' => __('backend_messages.entry_denied_membership_has_expired_or_there_no_active_membership'),
+                'reason' => $reason,
+                'message' => $message,
                 'person' => $this->personPayload($owner),
                 'entry_code' => $entryCode,
                 'client_id' => $clientId,
@@ -107,10 +139,20 @@ class EntryExitSystemService
                 'owner_type' => $ownerType,
                 'owner_id' => $owner->id,
                 'status' => 'denied',
-                'reason' => 'subscription_expired',
+                'reason' => $reason,
             ]);
 
-            return $this->deniedResponse('denied', 'subscription_expired', $ownerType, $action);
+            return $this->deniedResponse('denied', $reason, $displayOwnerType, $action);
+        }
+
+        if ($this->isDuplicatePersonEntryOnDetectedDate($owner, $action, $detectedAt)) {
+            return $this->duplicateEntryResponse($owner, $action, $clientId, $entryCode, $detectedAt, [
+                'mac' => $data->mac ?? null,
+                'scan_type' => $data->type ?? null,
+                'online' => $data->online ?? null,
+                'local_ip' => $data->local_ip ?? null,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
         }
 
         if ($ownerType === 'person' && $action === 'entry') {
@@ -132,7 +174,7 @@ class EntryExitSystemService
             $payload = $this->makeSocketPayload([
                 'status' => 'success',
                 'access_allowed' => true,
-                'owner_type' => 'person',
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
                 'message' => 'Person entry allowed',
                 'person' => $this->personPayload($owner),
@@ -154,12 +196,13 @@ class EntryExitSystemService
                 'result' => [
                     'access_allowed' => true,
                     'status' => 'success',
-                    'owner_type' => $ownerType,
+                    'owner_type' => $displayOwnerType,
                     'action' => $action,
                 ],
             ];
         }
 
+        $duplicateEntry = false;
         $attendance = DB::transaction(function () use (
             $owner,
             $clientId,
@@ -168,10 +211,23 @@ class EntryExitSystemService
             $data,
             $action,
             &$selectedMemberships,
-        ): AttendanceSheet {
+            &$duplicateEntry,
+        ): ?AttendanceSheet {
+            if ($owner instanceof Person) {
+                $owner = Person::query()->lockForUpdate()->findOrFail($owner->id);
+
+                if ($this->isDuplicatePersonEntryOnDetectedDate($owner, $action, $detectedAt)) {
+                    $duplicateEntry = true;
+
+                    return null;
+                }
+            }
+
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership, $detectedAt))
+                    ->map(fn(PersonMembership $membership) => $membership->person_id === $owner->id
+                        ? $this->consumeMembershipVisit($membership, $detectedAt)
+                        : app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true))
                     ->values();
             }
 
@@ -186,6 +242,8 @@ class EntryExitSystemService
                 'online' => $data->online ?? null,
                 'local_ip' => $data->local_ip ?? null,
                 'mac' => $data->mac ?? null,
+                'created_at' => $detectedAt,
+                'updated_at' => $detectedAt,
             ]);
 
             if ($selectedMemberships->isNotEmpty()) {
@@ -195,12 +253,22 @@ class EntryExitSystemService
             return $attendance;
         });
 
+        if ($duplicateEntry) {
+            return $this->duplicateEntryResponse($owner, $action, $clientId, $entryCode, $detectedAt, [
+                'mac' => $data->mac ?? null,
+                'scan_type' => $data->type ?? null,
+                'online' => $data->online ?? null,
+                'local_ip' => $data->local_ip ?? null,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+        }
+
         $selectedMembership = $selectedMemberships->first();
 
         $payload = $this->makeSocketPayload([
             'status' => 'success',
             'access_allowed' => true,
-            'owner_type' => $ownerType,
+            'owner_type' => $displayOwnerType,
             'action' => $action,
             'message' => $ownerType === 'user' ? 'User entry allowed' : 'Person entry allowed',
             'person' => $ownerType === 'person' ? $this->personPayload($owner) : null,
@@ -214,7 +282,7 @@ class EntryExitSystemService
             'scan_type' => $data->type ?? null,
             'selected_membership' => $selectedMembership ? $this->membershipPayload($selectedMembership) : null,
             'selected_memberships' => $selectedMemberships
-                ->map(fn (PersonMembership $membership) => $this->membershipPayload($membership))
+                ->map(fn(PersonMembership $membership) => $this->membershipPayload($membership))
                 ->values()
                 ->all(),
             'attendance_id' => $attendance->id,
@@ -238,7 +306,7 @@ class EntryExitSystemService
             'result' => [
                 'access_allowed' => true,
                 'status' => 'success',
-                'owner_type' => $ownerType,
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
             ],
         ];
@@ -297,6 +365,27 @@ class EntryExitSystemService
         $owner = $resolved['owner'];
         $selectedMemberships = collect();
 
+        if ($ownerType === 'person' && $action === 'entry' && $owner->is_blocked) {
+            $payload = $this->makeSocketPayload([
+                'status' => 'denied',
+                'access_allowed' => false,
+                'owner_type' => 'person',
+                'action' => $action,
+                'reason' => 'person_blocked',
+                'message' => 'Person is blocked and cannot enter.',
+                'person' => $this->personPayload($owner),
+                'entry_code' => $entryCode,
+                'client_id' => $clientId,
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+
+            $this->broadcastEntryAttempt($clientId, $payload);
+
+            return $this->deniedResponse('denied', 'person_blocked', $ownerType, $action);
+        }
+
         if ($ownerType === 'person' && $action === 'entry' && !$this->hasActiveSubscription($owner, $clientId, $detectedAt)) {
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
@@ -315,6 +404,14 @@ class EntryExitSystemService
             $this->broadcastEntryAttempt($clientId, $payload);
 
             return $this->deniedResponse('denied', 'subscription_expired', $ownerType, $action);
+        }
+
+        if ($this->isDuplicatePersonEntryOnDetectedDate($owner, $action, $detectedAt)) {
+            return $this->duplicateEntryResponse($owner, $action, $clientId, $entryCode, $detectedAt, [
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
         }
 
         if ($ownerType === 'person' && $action === 'entry') {
@@ -365,6 +462,7 @@ class EntryExitSystemService
             ];
         }
 
+        $duplicateEntry = false;
         $attendance = DB::transaction(function () use (
             $owner,
             $clientId,
@@ -372,10 +470,23 @@ class EntryExitSystemService
             $detectedAt,
             $action,
             &$selectedMemberships,
-        ): AttendanceSheet {
+            &$duplicateEntry,
+        ): ?AttendanceSheet {
+            if ($owner instanceof Person) {
+                $owner = Person::query()->lockForUpdate()->findOrFail($owner->id);
+
+                if ($this->isDuplicatePersonEntryOnDetectedDate($owner, $action, $detectedAt)) {
+                    $duplicateEntry = true;
+
+                    return null;
+                }
+            }
+
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership, $detectedAt))
+                    ->map(fn(PersonMembership $membership) => $membership->person_id === $owner->id
+                        ? $this->consumeMembershipVisit($membership, $detectedAt)
+                        : app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true))
                     ->values();
             }
 
@@ -387,6 +498,8 @@ class EntryExitSystemService
                 'date' => $detectedAt,
                 'type' => 'rfId',
                 'direction' => $action,
+                'created_at' => $detectedAt,
+                'updated_at' => $detectedAt,
             ]);
 
             if ($selectedMemberships->isNotEmpty()) {
@@ -395,6 +508,14 @@ class EntryExitSystemService
 
             return $attendance;
         });
+
+        if ($duplicateEntry) {
+            return $this->duplicateEntryResponse($owner, $action, $clientId, $entryCode, $detectedAt, [
+                'scan_type' => 'rfId',
+                'manual_scan' => true,
+                'detected_at' => $detectedAt->toDateTimeString(),
+            ]);
+        }
 
         $selectedMembership = $selectedMemberships->first();
         $payload = $this->makeSocketPayload([
@@ -414,7 +535,7 @@ class EntryExitSystemService
             'manual_scan' => true,
             'selected_membership' => $selectedMembership ? $this->membershipPayload($selectedMembership) : null,
             'selected_memberships' => $selectedMemberships
-                ->map(fn (PersonMembership $membership) => $this->membershipPayload($membership))
+                ->map(fn(PersonMembership $membership) => $this->membershipPayload($membership))
                 ->values()
                 ->all(),
             'attendance_id' => $attendance->id,
@@ -462,6 +583,52 @@ class EntryExitSystemService
         return $type === 'standart'
             ? $code
             : MyHelper::binaryToDecimal($code);
+    }
+
+    /**
+     * A turnstile can send either an already stored token (for example "1")
+     * or a binary RFID payload. Always try the literal token first: this is
+     * essential when different gyms use the same short code. The converted
+     * fallback preserves support for existing RFID readers.
+     */
+    private function entryCodeCandidates(?string $entryCode, ?string $entryCodeType): array
+    {
+        $entryCode = trim((string) $entryCode);
+
+        if ($entryCode === '') {
+            return [];
+        }
+
+        $normalized = $this->normalizeEntryCode($entryCode, $entryCodeType);
+
+        return array_values(array_unique(array_filter([
+            $entryCode,
+            $normalized,
+        ], fn (?string $candidate) => $candidate !== null && $candidate !== '')));
+    }
+
+    private function resolveEesEntryCodeOwner(array $entryCodeCandidates, int $clientId, ?string $type, mixed $autoAdd): ?array
+    {
+        foreach ($entryCodeCandidates as $entryCode) {
+            $resolved = $this->resolveEntryCodeOwner($entryCode, $clientId, $type, 0);
+
+            if ($resolved) {
+                return $resolved;
+            }
+        }
+
+        if (!$autoAdd || $entryCodeCandidates === []) {
+            return null;
+        }
+
+        // Keep the legacy auto-add behavior for binary readers, while never
+        // creating a literal code before all valid lookup candidates fail.
+        return $this->resolveEntryCodeOwner(
+            $entryCodeCandidates[array_key_last($entryCodeCandidates)],
+            $clientId,
+            $type,
+            $autoAdd,
+        );
     }
 
     private function resolveDeviceTime(mixed $timestamp): ?Carbon
@@ -545,11 +712,16 @@ class EntryExitSystemService
     {
         $membershipIds = array_values(array_unique(array_filter(
             array_map('intval', $membershipIds),
-            fn (int $membershipId) => $membershipId > 0,
+            fn(int $membershipId) => $membershipId > 0,
         )));
 
         if ($membershipIds === []) {
             throw ValidationException::withMessages(['membership_ids' => 'Select at least one membership.']);
+        }
+
+        $guestId = (int) ($context['guest_id'] ?? 0);
+        if ($guestId > 0 && count($membershipIds) !== 1) {
+            throw ValidationException::withMessages(['membership_ids' => 'Select exactly one membership for a guest entry.']);
         }
 
         if (($context['action'] ?? null) !== 'entry') {
@@ -560,7 +732,19 @@ class EntryExitSystemService
             ? Carbon::parse($context['detected_at'], self::LOCAL_TIMEZONE)
             : now(self::LOCAL_TIMEZONE);
 
-        return DB::transaction(function () use ($membershipIds, $user, $context, $detectedAt): array {
+        return DB::transaction(function () use ($membershipIds, $user, $context, $detectedAt, $guestId): array {
+            $firstMembership = PersonMembership::query()
+                ->whereKey($membershipIds[0])
+                ->first();
+
+            if (!$firstMembership) {
+                throw ValidationException::withMessages(['membership_ids' => 'One or more selected memberships do not exist.']);
+            }
+
+            // Every entry flow locks the person before memberships. This keeps the
+            // daily-entry check atomic and avoids a lock-order conflict with manual entry.
+            $person = Person::query()->lockForUpdate()->findOrFail($guestId ?: $firstMembership->person_id);
+
             $memberships = PersonMembership::query()
                 ->with(['person', 'membershipPlan.translations', 'membershipPlan.MembershipCategory.translations'])
                 ->whereIn('id', $membershipIds)
@@ -572,11 +756,19 @@ class EntryExitSystemService
                 throw ValidationException::withMessages(['membership_ids' => 'One or more selected memberships do not exist.']);
             }
 
-            $selected = collect($membershipIds)->map(fn (int $id) => $memberships->get($id));
+            $selected = collect($membershipIds)->map(fn(int $id) => $memberships->get($id));
             $first = $selected->first();
 
+            if ($person->is_blocked) {
+                throw ValidationException::withMessages([
+                    'membership_ids' => 'This person is blocked and cannot enter.',
+                ]);
+            }
+
             foreach ($selected as $membership) {
-                if ($membership->person_id !== $first->person_id || $membership->gym_id !== $first->gym_id) {
+                if ($membership->gym_id !== $first->gym_id
+                    || ($guestId === 0 && $membership->person_id !== $first->person_id)
+                    || ($guestId > 0 && !app(GuestEntryService::class)->isLinked($person, $membership))) {
                     throw ValidationException::withMessages(['membership_ids' => 'Selected memberships must belong to the same person and gym.']);
                 }
 
@@ -587,21 +779,33 @@ class EntryExitSystemService
                 if (!$this->membershipIsValidForTurnstile($membership, $detectedAt)) {
                     throw ValidationException::withMessages(['membership_ids' => 'Every selected membership must be active and have visits remaining.']);
                 }
-
-                if ($membership->status === 'waiting') {
-                    $membership->update(['status' => 'active', 'activated_at' => now(self::LOCAL_TIMEZONE)]);
-                }
             }
 
+            if ($this->isDuplicatePersonEntryOnDetectedDate($person, 'entry', $detectedAt)) {
+                throw ValidationException::withMessages([
+                    'membership_ids' => 'This person already has an entry recorded for this day.',
+                ]);
+            }
+
+            $selected->whereIn('status', ['waiting', 'expired'])
+                ->each(fn(PersonMembership $membership) => $membership->update([
+                    'status' => 'active',
+                    'activated_at' => now(self::LOCAL_TIMEZONE),
+                ]));
+
             $selected = $selected
-                ->map(fn (PersonMembership $membership) => $this->consumeMembershipVisit($membership->fresh([
-                    'person', 'membershipPlan.translations', 'membershipPlan.MembershipCategory.translations',
+                ->map(fn(PersonMembership $membership) => $guestId > 0
+                    ? app(GuestEntryService::class)->consumeVisit($person, $membership, $detectedAt, true)
+                    : $this->consumeMembershipVisit($membership->fresh([
+                    'person',
+                    'membershipPlan.translations',
+                    'membershipPlan.MembershipCategory.translations',
                 ]), $detectedAt))
                 ->values();
             $primaryMembership = $selected->first();
 
             $attendance = $this->attendanceSheetRepository->create([
-                'relation_id' => $primaryMembership->person_id,
+                'relation_id' => $person->id,
                 'relation_type' => Person::class,
                 'gym_id' => $primaryMembership->gym_id,
                 'entry_code' => $context['entry_code'] ?? null,
@@ -611,11 +815,13 @@ class EntryExitSystemService
                 'online' => $context['online'] ?? null,
                 'local_ip' => $context['local_ip'] ?? null,
                 'mac' => $context['mac'] ?? null,
+                'created_at' => $detectedAt,
+                'updated_at' => $detectedAt,
             ]);
             $attendance->personMemberships()->sync($selected->pluck('id')->all());
 
             $membershipPayloads = $selected
-                ->map(fn (PersonMembership $membership) => $this->membershipPayload($membership))
+                ->map(fn(PersonMembership $membership) => $this->membershipPayload($membership))
                 ->all();
 
             return [
@@ -642,6 +848,89 @@ class EntryExitSystemService
             ->first();
 
         return $lastAttendance?->direction === 'entry' ? 'exit' : 'entry';
+    }
+
+    private function isDuplicatePersonEntryOnDetectedDate(User|Person $owner, string $action, Carbon $detectedAt): bool
+    {
+        if (!$owner instanceof Person || $action !== 'entry') {
+            return false;
+        }
+
+        return AttendanceSheet::query()
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $owner->id)
+            ->where('direction', 'entry')
+            ->whereDate('created_at', $detectedAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString())
+            ->exists();
+    }
+
+    private function duplicateEntryResponse(
+        Person $person,
+        string $action,
+        int $clientId,
+        ?string $entryCode,
+        Carbon $detectedAt,
+        array $details = [],
+    ): object {
+        $usedMemberships = $this->membershipsUsedForPersonEntryOnDetectedDate($person, $detectedAt);
+
+        Log::info('duplicate_person_entry_ignored', [
+            'client_id' => $clientId,
+            'entry_code' => $entryCode,
+            'owner_type' => 'person',
+            'owner_id' => $person->id,
+            'action' => $action,
+        ]);
+
+        // The manager receives an information-only modal, without membership
+        // selection or an action that could create a second daily entry.
+        $this->broadcastEntryAttempt($clientId, $this->makeSocketPayload(array_merge([
+            'status' => 'duplicate',
+            'access_allowed' => true,
+            'owner_type' => 'person',
+            'action' => $action,
+            'reason' => 'entry_already_recorded_today',
+            'message' => 'This person already has an entry recorded for this day.',
+            'person' => $this->personPayload($person),
+            'membership_activation_context' => null,
+            'selected_membership' => $usedMemberships->first(),
+            'selected_memberships' => $usedMemberships->all(),
+            'entry_code' => $entryCode,
+            'client_id' => $clientId,
+            'duplicate_entry' => true,
+        ], $details)));
+
+        return (object) [
+            'message' => 'entry_already_recorded_today',
+            'result' => [
+                'access_allowed' => true,
+                'status' => 'duplicate',
+                'reason' => 'entry_already_recorded_today',
+                'owner_type' => 'person',
+                'action' => $action,
+            ],
+        ];
+    }
+
+    private function membershipsUsedForPersonEntryOnDetectedDate(Person $person, Carbon $detectedAt)
+    {
+        return AttendanceSheet::query()
+            ->with([
+                'personMemberships.person:id,name,surname',
+                'personMemberships.membershipPlan.translations',
+                'personMemberships.membershipPlan.MembershipCategory.translations',
+            ])
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $person->id)
+            ->where('direction', 'entry')
+            ->whereDate('created_at', $detectedAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString())
+            ->latest('created_at')
+            ->latest('id')
+            ->get()
+            ->flatMap(fn(AttendanceSheet $attendance) => $attendance->personMemberships)
+            ->unique('id')
+            ->map(fn(PersonMembership $membership) => $this->membershipPayload($membership))
+            ->values();
     }
 
     private function broadcastEntryAttempt(int $clientId, array $payload): void
@@ -679,6 +968,13 @@ class EntryExitSystemService
         ];
     }
 
+    private function displayOwnerType(string $ownerType, User|Person $owner): string
+    {
+        return $owner instanceof Person && $owner->type === 'guest'
+            ? 'guest'
+            : $ownerType;
+    }
+
     private function userPayload(User $user): array
     {
         $user->loadMissing('roles');
@@ -714,39 +1010,40 @@ class EntryExitSystemService
     {
         $referenceDate = $referenceTime->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
 
-        return $person->memberships()
+        if ($person->type === 'guest') {
+            return app(GuestEntryService::class)->availableMemberships($person, $clientId, $referenceTime);
+        }
+
+        $memberships = $person->memberships()
             ->with([
                 'membershipPlan.translations',
                 'membershipPlan.MembershipCategory.translations',
             ])
             ->where('gym_id', $clientId)
-            ->whereIn('status', ['active', 'waiting'])
+            // An old expiration process may leave status as expired.  For entry
+            // validity, valid_at is the sole expiration source of truth.
+            ->whereIn('status', ['active', 'waiting', 'expired'])
             ->where(function ($query) use ($referenceDate) {
                 $query->whereNull('start_date')
                     ->orWhereDate('start_date', '<=', $referenceDate);
             })
             ->where(function ($query) use ($referenceDate) {
-                $query->where(function ($validAtQuery) use ($referenceDate) {
-                    $validAtQuery->whereNotNull('valid_at')
-                        ->whereDate('valid_at', '>=', $referenceDate);
-                })->orWhere(function ($endDateQuery) use ($referenceDate) {
-                    $endDateQuery->whereNull('valid_at')
-                        ->whereDate('end_date', '>=', $referenceDate);
-                });
-            })
-            ->where(function ($query) use ($referenceTime) {
-                $query->whereNull('expired_at')
-                    ->orWhere('expired_at', '>=', $referenceTime);
+                $query->whereNull('valid_at')
+                    ->orWhereDate('valid_at', '>=', $referenceDate);
             })
             ->orderByDesc('id')
             ->get()
-            ->filter(fn (PersonMembership $membership) => $this->membershipHasVisitAvailableForEntry($membership, $referenceTime))
+            ->filter(fn(PersonMembership $membership) => $this->membershipHasVisitAvailableForEntry($membership, $referenceTime))
             ->values();
+
+        return $memberships->isNotEmpty()
+            ? $memberships
+            : app(GuestEntryService::class)->availableMemberships($person, $clientId, $referenceTime);
     }
 
     private function membershipIsValidForTurnstile(PersonMembership $membership, Carbon $referenceTime): bool
     {
-        if (!in_array($membership->status, ['waiting', 'active'], true)) {
+        if (!in_array($membership->status, ['waiting', 'active', 'expired'], true)) {
             return false;
         }
 
@@ -754,12 +1051,7 @@ class EntryExitSystemService
             return false;
         }
 
-        $validUntil = $membership->valid_at ?? $membership->end_date;
-        if ($validUntil && $validUntil->lt($referenceTime->copy()->startOfDay())) {
-            return false;
-        }
-
-        if ($membership->expired_at && $membership->expired_at->lt($referenceTime)) {
+        if ($membership->valid_at && $membership->valid_at->lt($referenceTime->copy()->startOfDay())) {
             return false;
         }
 
@@ -787,19 +1079,21 @@ class EntryExitSystemService
             ->unique()
             ->values();
         $selectionMemberships = $memberships->values();
+        $guestEntry = $selectionMemberships->first()?->person_id !== $person->id;
 
         return [
-            'requires_manager_selection' => $selectionMemberships->count() > 1,
+            'requires_manager_selection' => $selectionMemberships->count() > ($guestEntry ? 1 : 2),
+            'guest_entry' => $guestEntry,
             'has_multiple_plans' => $distinctPlanIds->count() > 1,
             'has_multiple_categories' => $distinctCategoryIds->count() > 1,
             'active_memberships' => collect($activeMemberships)->map(
-                fn (PersonMembership $membership) => $this->membershipPayload($membership)
+                fn(PersonMembership $membership) => $this->membershipPayload($membership)
             )->values()->all(),
             'waiting_memberships' => collect($waitingMemberships)->map(
-                fn (PersonMembership $membership) => $this->membershipPayload($membership)
+                fn(PersonMembership $membership) => $this->membershipPayload($membership)
             )->values()->all(),
             'selectable_memberships' => $selectionMemberships->map(
-                fn (PersonMembership $membership) => $this->membershipPayload($membership)
+                fn(PersonMembership $membership) => $this->membershipPayload($membership)
             )->values()->all(),
         ];
     }
@@ -813,15 +1107,16 @@ class EntryExitSystemService
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
         $selectionMemberships = $memberships->values();
 
-        // One or two valid memberships are unambiguous business-wise: consume
-        // every valid membership and create one attendance row linked to all of them.
-        if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > 2) {
+        // One or two valid memberships are registered automatically together.
+        // With three or more, the manager must choose the memberships to use.
+        $guestEntry = $selectionMemberships->first()?->person_id !== $person->id;
+        if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > ($guestEntry ? 1 : 2)) {
             return collect();
         }
 
         return $selectionMemberships
             ->map(function (PersonMembership $membership) {
-                if ($membership->status === 'waiting') {
+                if (in_array($membership->status, ['waiting', 'expired'], true)) {
                     $membership->update([
                         'status' => 'active',
                         'activated_at' => now(self::LOCAL_TIMEZONE),
@@ -854,7 +1149,8 @@ class EntryExitSystemService
         }
 
         return $lastEntryAttendance->personMemberships
-            ->where('person_id', $person->id)
+            ->filter(fn (PersonMembership $membership) => $membership->person_id === $person->id
+                || app(GuestEntryService::class)->isLinked($person, $membership))
             ->where('gym_id', $clientId)
             ->whereIn('status', ['active', 'waiting'])
             ->values();
@@ -864,7 +1160,9 @@ class EntryExitSystemService
     {
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
 
-        return $memberships->count() > 2;
+        $guestEntry = $memberships->first()?->person_id !== $person->id;
+
+        return $memberships->count() > ($guestEntry ? 1 : 2);
     }
 
     private function consumeMembershipVisit(PersonMembership $membership, Carbon $entryAt): PersonMembership
@@ -913,7 +1211,7 @@ class EntryExitSystemService
             ->where('direction', 'entry')
             ->where('date', '>=', $dayStart)
             ->where('date', '<', $dayEnd)
-            ->whereHas('personMemberships', fn ($query) => $query->where('person_memberships.id', $membership->id))
+            ->whereHas('personMemberships', fn($query) => $query->where('person_memberships.id', $membership->id))
             ->exists();
     }
 
@@ -924,6 +1222,10 @@ class EntryExitSystemService
 
         return [
             'id' => $membership->id,
+            'person_id' => $membership->person_id,
+            'membership_owner_name' => $membership->relationLoaded('person')
+                ? trim(($membership->person?->name ?? '').' '.($membership->person?->surname ?? ''))
+                : null,
             'status' => $membership->status,
             'start_date' => optional($membership->start_date)->toDateString() ?? $membership->start_date,
             'valid_at' => optional($membership->valid_at)->toDateString() ?? $membership->valid_at,

@@ -269,7 +269,7 @@ class PersonService
     {
         $user = Auth::user();
 
-        if ($user->hasAnyRole(['sales_manager', 'super_admin']) && $user->gym_id) {
+        if ($user->hasAnyRole(['sales_manager', 'super_admin','admin']) && $user->gym_id) {
             $changes = $person->gyms()->syncWithoutDetaching([(int) $user->gym_id]);
 
             return $changes['attached'] !== [] || $changes['updated'] !== [];

@@ -27,6 +27,7 @@ class EntryExitSystemController extends BaseController
         $additionals = ['online' => $request->online];
 
         Log::info("ees message", ["ees message" => $ees->message]);
+        // Դեպք՝ ծառայությունը թույլատրել է մուտքը/ելքը․ վերադարձնում ենք հաջող API response։
         if (($ees->result['access_allowed'] ?? false) === true) {
             return $this->sendResponse($ees->result, $ees->message, $additionals);
         }

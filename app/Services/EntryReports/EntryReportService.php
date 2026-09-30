@@ -9,6 +9,7 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -55,9 +56,13 @@ class EntryReportService
 
         $clientId = $this->restrictedClientId($user);
 
-        if ($clientId && (int) $entryReport->gym_id !== (int) $clientId) {
-            abort(403);
-        }
+        abort_unless(
+            $this->customerReportsQuery()
+                ->whereKey($entryReport->id)
+                ->when($clientId, fn(Builder $query) => $query->where('gym_id', $clientId))
+                ->exists(),
+            403,
+        );
 
         $entryReport->loadMissing(['gym', 'personMemberships.membershipPlan.translations']);
 
@@ -84,7 +89,7 @@ class EntryReportService
 
     private function filteredQuery(array $filters, ?int $clientId, bool $canSelectClient): Builder
     {
-        $query = $this->entryReportRepository->query();
+        $query = $this->customerReportsQuery();
 
         if ($clientId) {
             $query->where('gym_id', $clientId);
@@ -110,6 +115,18 @@ class EntryReportService
         }
 
         return $query;
+    }
+
+    private function customerReportsQuery(): Builder
+    {
+        return $this->entryReportRepository->query()
+            ->where('relation_type', Person::class)
+            ->whereExists(function (QueryBuilder $query): void {
+                $query->selectRaw('1')
+                    ->from('gym_person')
+                    ->whereColumn('gym_person.person_id', 'attendance_sheets.relation_id')
+                    ->whereColumn('gym_person.gym_id', 'attendance_sheets.gym_id');
+            });
     }
 
     private function applySearch(Builder $query, string $search): void
@@ -158,7 +175,7 @@ class EntryReportService
             'invalid_code_count' => 0,
             'expired_subscription_count' => 0,
             'no_active_subscription_count' => 0,
-            'users_count' => (clone $query)->where('relation_type', User::class)->count(),
+            'users_count' => 0,
             'people_count' => (clone $query)->where('relation_type', Person::class)->count(),
             'today_count' => (clone $query)->whereDate('date', today())->count(),
         ];
@@ -270,7 +287,6 @@ class EntryReportService
                 ['value' => 'unknown', 'label' => __('backend_messages.unknown')],
             ],
             'ownerTypes' => [
-                ['value' => 'user', 'label' => __('backend_messages.user')],
                 ['value' => 'person', 'label' => __('backend_messages.client')],
             ],
             'reasons' => [
@@ -314,13 +330,17 @@ class EntryReportService
 
     private function canViewAllClients(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'owner']);
+        return $user->hasRole('owner');
     }
 
     private function restrictedClientId(User $user): ?int
     {
-        return $this->canViewAllClients($user)
-            ? null
-            : ($user->gym_id ? (int) $user->gym_id : null);
+        if ($this->canViewAllClients($user)) {
+            return null;
+        }
+
+        abort_unless($user->gym_id, 403);
+
+        return (int) $user->gym_id;
     }
 }
