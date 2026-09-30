@@ -167,7 +167,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -191,7 +190,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -291,7 +289,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -439,7 +436,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -464,7 +460,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -491,7 +486,6 @@ const { hasRole, hasAnyRole } = useAuth();
                         'admin',
                         'super_admin',
                         'sales_manager',
-                        'manager',
                     ])
                 "
                 :class="[
@@ -671,7 +665,7 @@ const { hasRole, hasAnyRole } = useAuth();
                         'super_admin',
                         'owner',
                         'sales_manager',
-                        'manager',
+                        // 'manager',
                         'accountant',
                     ])
                 "

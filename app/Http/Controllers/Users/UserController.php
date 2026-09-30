@@ -33,7 +33,7 @@ class UserController extends Controller
     private function authorizeUserManagement(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['owner', 'super_admin', 'sales_manager']),
+            Auth::user()?->hasAnyRole(['owner', 'super_admin', 'sales_manager','admin']),
             403,
             'You are not allowed to manage users.'
         );
@@ -42,7 +42,7 @@ class UserController extends Controller
     private function authorizeStaffAttendance(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'owner', 'super_admin']),
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'owner', 'super_admin','admin']),
             403,
             'You are not allowed to manage staff attendance.'
         );
@@ -80,7 +80,7 @@ class UserController extends Controller
         $gyms = $this->gymService->getAll();
         $gyms = $user->hasRole('owner') ? $this->gymService->getAll() : [];
 
-        $entryCodes =$user->hasAnyRole(['super_admin', 'sales_manager']) ? $this->entryCodeService->getByGymId($user->gym_id ?? null) : [];
+        $entryCodes =$user->hasAnyRole(['super_admin', 'sales_manager','admin']) ? $this->entryCodeService->getByGymId($user->gym_id ?? null) : [];
         
         return Inertia::render('Users/Create', [
                 'roles' => $roles,

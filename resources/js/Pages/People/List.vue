@@ -20,13 +20,16 @@ const t = (key, replacements = {}) => translate(page.props.translations, `app.pe
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 const { hasRole, hasAnyRole } = useAuth();
 const canManagePeople = computed(() =>
-    hasAnyRole(["sales_manager", "super_admin"]),
+    hasAnyRole(["sales_manager", "super_admin","manager","admin"]),
+);
+const canManagePeopleAction = computed(() =>
+    hasAnyRole(["sales_manager", "super_admin","admin"]),
 );
 const canManagePersonVisits = computed(() =>
-    hasAnyRole(["manager", "sales_manager", "super_admin"]),
+    hasAnyRole(["manager", "sales_manager", "super_admin","admin"]),
 );
 const canManualScan = computed(() =>
-    hasRole("manager") &&
+    hasRole("manager") && 
     Boolean(page.props.auth?.user?.gym_id),
 );
 const toast = useToast();
@@ -45,6 +48,13 @@ const filters = ref({
 const peopleTypes = computed(() => [
     { value: "visitor", label: t('visitor') },
     { value: "guest", label: t('guest') },
+]);
+const peopleFilterTextFields = computed(() => [
+    { name: "name", label: t('name'), col: "col-md-3" },
+    { name: "surname", label: t('surname'), col: "col-md-3" },
+    { name: "phone", label: t('phone'), col: "col-md-3" },
+    { name: "email", label: t('email'), type: "email", col: "col-md-3" },
+    { name: "entry_code", label: t('entry_code'), col: "col-md-3" },
 ]);
 const peopleFilterSelectFields = computed(() => [
     {
@@ -207,6 +217,7 @@ const submitManualScan = async () => {
         <TableFilter
             v-model="filters"
             name-mode="separate"
+            :text-fields="peopleFilterTextFields"
             :select-fields="peopleFilterSelectFields"
             :date-fields="peopleFilterDateFields"
             @filter="applyFilters"
@@ -329,7 +340,7 @@ const submitManualScan = async () => {
                                                 {{ t('view_profile') }}
                                             </Link>
                                             <Link
-                                                v-if="canManagePeople"
+                                                v-if="canManagePeopleAction"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {
@@ -355,7 +366,7 @@ const submitManualScan = async () => {
                                                 {{ t('visits_management') }}
                                             </Link>
                                             <Link
-                                                v-if="canManagePeople"
+                                                v-if="canManagePeopleAction"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('person.edit', {
@@ -368,7 +379,7 @@ const submitManualScan = async () => {
                                                 {{ t('edit') }}
                                             </Link>
                                             <button
-                                                v-if="canManagePeople && !person.is_blocked"
+                                                v-if="canManagePeopleAction && !person.is_blocked"
                                                 type="button"
                                                 class="dropdown-item waves-effect text-danger"
                                                 :disabled="blockingPersonId === person.id"
@@ -378,7 +389,7 @@ const submitManualScan = async () => {
                                                 {{ t('block_user') }}
                                             </button>
                                             <a
-                                                v-if="canManagePeople"
+                                                v-if="canManagePeopleAction"
                                                 class="dropdown-item waves-effect"
                                                 href="javascript:void(0);"
                                             >

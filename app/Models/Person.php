@@ -60,6 +60,9 @@ class Person extends Authenticatable
             'method' => 'where',
             'operator' => 'like',
         ],
+        'entry_code' => [
+            'callback' => 'filterEntryCode',
+        ],
         'type' => [
             'method' => 'where',
         ],
@@ -97,6 +100,17 @@ class Person extends Authenticatable
                 $q->orWhere('name', 'like', "%{$term}%")
                     ->orWhere('surname', 'like', "%{$term}%");
             }
+        });
+    }
+
+    protected function filterEntryCode(Builder $query, mixed $value): void
+    {
+        $query->whereHas('entryPermissions', function (Builder $permissionQuery) use ($value) {
+            $permissionQuery
+                ->where('status', true)
+                ->whereHas('entryCode', function (Builder $entryCodeQuery) use ($value) {
+                    $entryCodeQuery->where('token', 'like', "%{$value}%");
+                });
         });
     }
 

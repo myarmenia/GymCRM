@@ -46,6 +46,7 @@ const canShowStatus = computed(() => {
             "client_admin_rfID",
             "client_sport",
             "super_admin",
+            "admin",
         ].includes(role),
     );
 });
