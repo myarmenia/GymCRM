@@ -42,7 +42,7 @@ class UserController extends Controller
     private function authorizeStaffAttendance(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'owner', 'super_admin','admin']),
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'owner', 'super_admin', 'admin', 'founder']),
             403,
             'You are not allowed to manage staff attendance.'
         );

@@ -16,6 +16,9 @@ const props = defineProps({
 const page = usePage();
 const t = (key, replacements = {}) => translate(page.props.translations, `app.membership.${key}`, replacements);
 const currentLocale = computed(() => page.props.locale ?? "hy");
+const isFounder = computed(() =>
+    page.props.auth?.user?.roles?.some((role) => role.name === "founder"),
+);
 const membershipPlansList = ref(props.membershipPlans.data);
 const pagination = ref(props.membershipPlans);
 const durationTypes = computed(() => [
@@ -49,6 +52,7 @@ function findingDurationType(value) {
             >
                 <h5 class="mb-0">{{ t('list') }}</h5>
                 <Link
+                    v-if="!isFounder"
                     class="btn create-new btn-primary"
                     tabindex="0"
                     aria-controls="DataTables_Table_0"
@@ -123,7 +127,7 @@ function findingDurationType(value) {
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="dropdown">
+                                    <div v-if="!isFounder" class="dropdown">
                                         <button
                                             type="button"
                                             class="btn p-0 dropdown-toggle hide-arrow"

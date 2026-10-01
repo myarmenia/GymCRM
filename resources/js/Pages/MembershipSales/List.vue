@@ -11,7 +11,8 @@ import { useAuth } from '@/composables/useAuth'
 const page = usePage()
 const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
-const { hasAnyRole } = useAuth()
+const { hasAnyRole, hasRole } = useAuth()
+const isFounder = computed(() => hasRole('founder'))
 const canManageSales = computed(() =>
     hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager']),
 )
@@ -412,7 +413,7 @@ const resetFilters = () => {
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="dropdown">
+                                    <div v-if="canManageSales && !isFounder" class="dropdown">
                                         <button
                                             type="button"
                                             class="btn p-0 dropdown-toggle hide-arrow"

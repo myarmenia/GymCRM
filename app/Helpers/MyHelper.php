@@ -46,6 +46,7 @@ class MyHelper
             $user->hasAnyRole([
                 'super_admin',
                 'admin',
+                'founder',
                 'sales_manager',
                 'trainer',
                 'manager',

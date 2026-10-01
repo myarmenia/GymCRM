@@ -325,12 +325,12 @@ class EntryReportService
 
     private function canViewReports(?User $user): bool
     {
-        return $user?->hasAnyRole(['super_admin', 'admin', 'manager', 'owner']) ?? false;
+        return $user?->hasAnyRole(['super_admin', 'admin', 'manager', 'owner', 'founder']) ?? false;
     }
 
     private function canViewAllClients(User $user): bool
     {
-        return $user->hasRole('owner');
+        return $user->hasAnyRole(['owner', 'founder']);
     }
 
     private function restrictedClientId(User $user): ?int

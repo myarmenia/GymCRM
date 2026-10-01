@@ -47,7 +47,9 @@ class PersonVisitService
             $person,
             $user->hasRole('owner') ? null : (int) $user->gym_id,
         );
-        $memberships = $memberships->concat($guestMemberships)->unique('id')->values();
+        $memberships = $person->type === 'guest'
+            ? $guestMemberships->values()
+            : $memberships->concat($guestMemberships)->unique('id')->values();
 
         $recentAttendances = AttendanceSheet::query()
             ->with('personMemberships.membershipPlan.translations')
@@ -121,7 +123,7 @@ class PersonVisitService
                 $membership = $this->activateWaitingMembership($membership, $now);
                 $membership = $membership->person_id === $person->id
                     ? $this->consumeVisitIfNeeded($membership, $now)
-                    : app(GuestEntryService::class)->consumeVisit($person, $membership, $now);
+                    : app(GuestEntryService::class)->consumeVisit($person, $membership, $now, true);
                 $attendance = AttendanceSheet::create([
                     'relation_id' => $person->id,
                     'relation_type' => Person::class,
@@ -197,6 +199,15 @@ class PersonVisitService
             ])
             ->where('id', $membershipId)
             ->where(function ($query) use ($person) {
+                if ($person->type === 'guest') {
+                    $query->whereHas('guests', function ($guestQuery) use ($person) {
+                        $guestQuery->where('guest_id', $person->id)
+                            ->whereColumn('guests.person_id', 'person_memberships.person_id');
+                    });
+
+                    return;
+                }
+
                 $query->where('person_id', $person->id)
                     ->orWhereHas('guests', function ($guestQuery) use ($person) {
                         $guestQuery->where('guest_id', $person->id)

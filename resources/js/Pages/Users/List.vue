@@ -37,7 +37,7 @@ const canManageUsers = computed(() =>
     hasAnyRole(["owner", "super_admin", "sales_manager","admin"]),
 );
 const canViewUsers = computed(() =>
-    hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager"]),
+    hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager", "founder"]),
 );
 const filters = ref({
     date_field: "created_at",
