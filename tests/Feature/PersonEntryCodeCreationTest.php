@@ -171,6 +171,54 @@ class PersonEntryCodeCreationTest extends TestCase
         $this->assertSame($password, $person->password);
     }
 
+    public function test_manager_can_edit_a_person_from_another_gym(): void
+    {
+        $managerGym = Gym::query()->create(['name' => 'Manager gym']);
+        $personGym = Gym::query()->create(['name' => 'Person gym']);
+        $manager = $this->userWithRole($managerGym, 'manager');
+        $person = Person::query()->create([
+            'name' => 'John',
+            'surname' => 'Doe',
+            'email' => 'john@example.com',
+            'phone' => '+37499123456',
+            'type' => 'visitor',
+            'birth_date' => '1990-01-01',
+        ]);
+        $person->gyms()->attach($personGym->id);
+        $entryCode = EntryCode::query()->create([
+            'gym_id' => $personGym->id,
+            'token' => 'MANAGER-EDIT-1001',
+            'status' => true,
+            'activation' => true,
+            'type' => 'rfId',
+        ]);
+        EntryPermission::query()->create([
+            'entry_code_id' => $entryCode->id,
+            'relation_type' => Person::class,
+            'relation_id' => $person->id,
+            'status' => true,
+        ]);
+
+        $this->actingAs($manager)->patch(
+            route('person.update', ['locale' => 'hy', 'id' => $person->id]),
+            [
+                'name' => 'Updated John',
+                'surname' => $person->surname,
+                'email' => $person->email,
+                'phone' => $person->phone,
+                'type' => $person->type,
+                'entry_code_id' => $entryCode->id,
+                'birth_date' => $person->birth_date,
+                'gender' => null,
+            ],
+        )->assertRedirect(route('person.list', ['locale' => 'hy']));
+
+        $person->refresh();
+        $this->assertSame('Updated John', $person->name);
+        $this->assertTrue($person->gyms()->whereKey($personGym->id)->exists());
+        $this->assertFalse($person->gyms()->whereKey($managerGym->id)->exists());
+    }
+
     public function test_missing_or_invalid_gym_entry_code_type_falls_back_to_rfid(): void
     {
         config()->set('sync.enabled', false);

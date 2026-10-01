@@ -43,6 +43,15 @@ class PersonController extends Controller
         );
     }
 
+    private function authorizePersonEditing(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin', 'admin']),
+            403,
+            'You are not allowed to manage people.'
+        );
+    }
+
     private function authorizePersonVisitManagement(): void
     {
         abort_unless(
@@ -94,7 +103,7 @@ class PersonController extends Controller
 
     public function edit($locale, $id)
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonEditing();
 
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
@@ -142,7 +151,7 @@ class PersonController extends Controller
 
     public function update(UpdatePersonRequest $request, $locale, $id)
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonEditing();
 
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
