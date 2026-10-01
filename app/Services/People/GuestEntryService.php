@@ -16,6 +16,8 @@ class GuestEntryService
 
     public function linkedMemberships(Person $guest, ?int $gymId = null): Collection
     {
+        $membershipIds = $this->linkedMembershipIds($guest);
+
         return PersonMembership::query()
             ->with([
                 'person:id,name,surname,is_blocked',
@@ -23,14 +25,28 @@ class GuestEntryService
                 'membershipPlan.MembershipCategory.translations',
                 'gym:id,name',
             ])
-            ->whereHas('guests', function ($query) use ($guest) {
-                $query->where('guest_id', $guest->id)
-                    ->whereColumn('guests.person_id', 'person_memberships.person_id');
-            })
+            ->whereIn('id', $membershipIds)
             ->when($gymId, fn ($query) => $query->where('gym_id', $gymId))
             ->whereIn('status', ['waiting', 'active', 'expired'])
             ->orderByDesc('id')
             ->get();
+    }
+
+    public function hasLinkedMemberships(Person $guest): bool
+    {
+        return $this->linkedMembershipIds($guest)->isNotEmpty();
+    }
+
+    /**
+     * The guest record's person_membership_id is the authoritative link. Do
+     * not infer it from the host person, since a host can own many memberships.
+     */
+    public function linkedMembershipIds(Person $guest): Collection
+    {
+        return Guest::query()
+            ->where('guest_id', $guest->id)
+            ->whereNotNull('person_membership_id')
+            ->pluck('person_membership_id');
     }
 
     public function availableMemberships(Person $guest, int $gymId, Carbon $entryAt): Collection
@@ -65,7 +81,6 @@ class GuestEntryService
     {
         return Guest::query()
             ->where('guest_id', $guest->id)
-            ->where('person_id', $membership->person_id)
             ->where('person_membership_id', $membership->id)
             ->exists();
     }

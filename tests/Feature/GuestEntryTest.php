@@ -85,9 +85,34 @@ class GuestEntryTest extends TestCase
         $this->assertSame(1, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
     }
 
+    public function test_manager_manual_scan_treats_a_guest_as_a_guest_entry(): void
+    {
+        [$gym, $host, $guest, $membership, $code] = $this->fixture(2);
+        $manager = User::query()->where('gym_id', $gym->id)->firstOrFail();
+        $manager->assignRole(Role::query()->create([
+            'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
+        ]));
+        $service = $this->manualScanService($code);
+
+        $result = $service->manualScan(
+            $manager,
+            'GUEST-CARD#'.Carbon::parse('2026-09-28 10:00:00', 'Asia/Yerevan')->timestamp,
+            'enter',
+        );
+
+        $this->assertTrue($result->result['access_allowed']);
+        $this->assertSame('guest', $result->result['owner_type']);
+        $this->assertSame(1, $membership->fresh()->guest_used);
+        $this->assertSame(0, $membership->fresh()->guest_left);
+        $this->assertSame(1, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
+    }
+
     public function test_manual_guest_entry_shows_and_consumes_the_hosts_membership(): void
     {
         [$gym, $host, $guest, $membership] = $this->fixture(2);
+        $guest->update(['type' => 'visitor']);
+        $unlinkedHostMembership = $membership->replicate(['uuid']);
+        $unlinkedHostMembership->save();
         $guestOwnedMembership = $membership->replicate(['uuid']);
         $guestOwnedMembership->person_id = $guest->id;
         $guestOwnedMembership->save();
@@ -299,6 +324,18 @@ class GuestEntryTest extends TestCase
         $turnstile->shouldReceive('getClientId')->times($scans)->andReturn($gym->id);
         $checker = \Mockery::mock(CheckEntryCodeInterface::class);
         $checker->shouldReceive('checkEntryCode')->times($scans)->andReturn((object) ['result' => $code]);
+        app()->instance(ClientIdFromTurnstileInterface::class, $turnstile);
+        app()->instance(CheckEntryCodeInterface::class, $checker);
+        Event::fake([TurnstileEntryDetected::class]);
+
+        return app(EntryExitSystemService::class);
+    }
+
+    private function manualScanService(EntryCode $code): EntryExitSystemService
+    {
+        $turnstile = \Mockery::mock(TurnstileRepository::class);
+        $checker = \Mockery::mock(CheckEntryCodeInterface::class);
+        $checker->shouldReceive('checkEntryCode')->once()->andReturn((object) ['result' => $code]);
         app()->instance(ClientIdFromTurnstileInterface::class, $turnstile);
         app()->instance(CheckEntryCodeInterface::class, $checker);
         Event::fake([TurnstileEntryDetected::class]);
