@@ -225,9 +225,9 @@ class EntryExitSystemService
 
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn(PersonMembership $membership) => $membership->person_id === $owner->id
-                        ? $this->consumeMembershipVisit($membership, $detectedAt)
-                        : app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true))
+                    ->map(fn(PersonMembership $membership) => $this->isGuestEntryPerson($owner)
+                        ? app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true)
+                        : $this->consumeMembershipVisit($membership, $detectedAt))
                     ->values();
             }
 
@@ -363,13 +363,14 @@ class EntryExitSystemService
 
         $ownerType = $resolved['owner_type'];
         $owner = $resolved['owner'];
+        $displayOwnerType = $this->displayOwnerType($ownerType, $owner);
         $selectedMemberships = collect();
 
         if ($ownerType === 'person' && $action === 'entry' && $owner->is_blocked) {
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
                 'access_allowed' => false,
-                'owner_type' => 'person',
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
                 'reason' => 'person_blocked',
                 'message' => 'Person is blocked and cannot enter.',
@@ -383,16 +384,22 @@ class EntryExitSystemService
 
             $this->broadcastEntryAttempt($clientId, $payload);
 
-            return $this->deniedResponse('denied', 'person_blocked', $ownerType, $action);
+            return $this->deniedResponse('denied', 'person_blocked', $displayOwnerType, $action);
         }
 
         if ($ownerType === 'person' && $action === 'entry' && !$this->hasActiveSubscription($owner, $clientId, $detectedAt)) {
+            $reason = $this->isGuestEntryPerson($owner)
+                && app(GuestEntryService::class)->hasExhaustedGuestEntryLimit($owner, $clientId, $detectedAt)
+                ? 'guest_entry_limit_reached'
+                : 'subscription_expired';
             $payload = $this->makeSocketPayload([
                 'status' => 'denied',
                 'access_allowed' => false,
-                'owner_type' => 'person',
-                'reason' => 'subscription_expired',
-                'message' => 'Subscription expired or unavailable.',
+                'owner_type' => $displayOwnerType,
+                'reason' => $reason,
+                'message' => $reason === 'guest_entry_limit_reached'
+                    ? 'No guest entries left for this membership.'
+                    : 'Subscription expired or unavailable.',
                 'person' => $this->personPayload($owner),
                 'entry_code' => $entryCode,
                 'client_id' => $clientId,
@@ -403,7 +410,7 @@ class EntryExitSystemService
 
             $this->broadcastEntryAttempt($clientId, $payload);
 
-            return $this->deniedResponse('denied', 'subscription_expired', $ownerType, $action);
+            return $this->deniedResponse('denied', $reason, $displayOwnerType, $action);
         }
 
         if ($this->isDuplicatePersonEntryOnDetectedDate($owner, $action, $detectedAt)) {
@@ -436,7 +443,7 @@ class EntryExitSystemService
             $payload = $this->makeSocketPayload([
                 'status' => 'success',
                 'access_allowed' => true,
-                'owner_type' => 'person',
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
                 'message' => 'Person entry allowed',
                 'person' => $this->personPayload($owner),
@@ -456,7 +463,7 @@ class EntryExitSystemService
                 'result' => [
                     'access_allowed' => true,
                     'status' => 'success',
-                    'owner_type' => $ownerType,
+                    'owner_type' => $displayOwnerType,
                     'action' => $action,
                 ],
             ];
@@ -484,9 +491,9 @@ class EntryExitSystemService
 
             if ($owner instanceof Person && $action === 'entry' && $selectedMemberships->isNotEmpty()) {
                 $selectedMemberships = $selectedMemberships
-                    ->map(fn(PersonMembership $membership) => $membership->person_id === $owner->id
-                        ? $this->consumeMembershipVisit($membership, $detectedAt)
-                        : app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true))
+                    ->map(fn(PersonMembership $membership) => $this->isGuestEntryPerson($owner)
+                        ? app(GuestEntryService::class)->consumeVisit($owner, $membership, $detectedAt, true)
+                        : $this->consumeMembershipVisit($membership, $detectedAt))
                     ->values();
             }
 
@@ -521,7 +528,7 @@ class EntryExitSystemService
         $payload = $this->makeSocketPayload([
             'status' => 'success',
             'access_allowed' => true,
-            'owner_type' => $ownerType,
+            'owner_type' => $displayOwnerType,
             'action' => $action,
             'message' => $ownerType === 'user' ? 'User entry allowed' : 'Person entry allowed',
             'person' => $ownerType === 'person' ? $this->personPayload($owner) : null,
@@ -558,7 +565,7 @@ class EntryExitSystemService
             'result' => [
                 'access_allowed' => true,
                 'status' => 'success',
-                'owner_type' => $ownerType,
+                'owner_type' => $displayOwnerType,
                 'action' => $action,
             ],
         ];
@@ -975,6 +982,11 @@ class EntryExitSystemService
             : $ownerType;
     }
 
+    private function isGuestEntryPerson(Person $person): bool
+    {
+        return $person->type === 'guest';
+    }
+
     private function userPayload(User $user): array
     {
         $user->loadMissing('roles');
@@ -1079,7 +1091,7 @@ class EntryExitSystemService
             ->unique()
             ->values();
         $selectionMemberships = $memberships->values();
-        $guestEntry = $selectionMemberships->first()?->person_id !== $person->id;
+        $guestEntry = $this->isGuestEntryPerson($person);
 
         return [
             'requires_manager_selection' => $selectionMemberships->count() > ($guestEntry ? 1 : 2),
@@ -1109,7 +1121,7 @@ class EntryExitSystemService
 
         // One or two valid memberships are registered automatically together.
         // With three or more, the manager must choose the memberships to use.
-        $guestEntry = $selectionMemberships->first()?->person_id !== $person->id;
+        $guestEntry = $this->isGuestEntryPerson($person);
         if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > ($guestEntry ? 1 : 2)) {
             return collect();
         }
@@ -1160,7 +1172,7 @@ class EntryExitSystemService
     {
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
 
-        $guestEntry = $memberships->first()?->person_id !== $person->id;
+        $guestEntry = $this->isGuestEntryPerson($person);
 
         return $memberships->count() > ($guestEntry ? 1 : 2);
     }
