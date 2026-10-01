@@ -97,7 +97,7 @@ class PersonService
                 $entryCode = $this->resolveEntryCode($data);
                 $person = $this->personRepository->create($dataStore);
 
-                $this->syncGyms($person);
+                $this->syncGyms($person, assignManagerGym: true);
                 EntryPermission::query()->create([
                     'entry_code_id' => $entryCode->id,
                     'relation_type' => Person::class,
@@ -222,7 +222,7 @@ class PersonService
         $entryCode = EntryCode::query()
             ->where('id', $entryCodeId)
             ->where('status', true)
-            ->when($user->gym_id, function ($query) use ($user) {
+            ->when($user->gym_id && ! $user->hasRole('manager'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->lockForUpdate()
@@ -262,14 +262,19 @@ class PersonService
 
     /**
      * Automatically assign gym(s) based on the authenticated user's role.
-     * - sales_manager: force person to belong to his own gym (user->gym_id)
+     * - sales_manager, super_admin, and admin: force person to belong to their own gym (user->gym_id)
+     * - manager: assign their gym only when creating a new person
      * - other roles: do nothing (leave current gyms unchanged)
      */
-    protected function syncGyms(Person $person): bool
+    protected function syncGyms(Person $person, bool $assignManagerGym = false): bool
     {
         $user = Auth::user();
 
-        if ($user->hasAnyRole(['sales_manager', 'super_admin','admin']) && $user->gym_id) {
+        if (
+            ($assignManagerGym && $user->hasRole('manager')
+                || $user->hasAnyRole(['sales_manager', 'super_admin', 'admin']))
+            && $user->gym_id
+        ) {
             $changes = $person->gyms()->syncWithoutDetaching([(int) $user->gym_id]);
 
             return $changes['attached'] !== [] || $changes['updated'] !== [];

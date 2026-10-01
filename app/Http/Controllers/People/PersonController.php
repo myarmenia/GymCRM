@@ -25,10 +25,28 @@ class PersonController extends Controller
         protected PersonVisitService $personVisitService
     ) {}
 
+    private function authorizePersonCreation(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin', 'admin']),
+            403,
+            'You are not allowed to manage people.'
+        );
+    }
+
     private function authorizePersonManagement(): void
     {
         abort_unless(
-            Auth::user()?->hasAnyRole(['sales_manager', 'super_admin', "admin"]),
+            Auth::user()?->hasAnyRole(['sales_manager', 'super_admin', 'admin']),
+            403,
+            'You are not allowed to manage people.'
+        );
+    }
+
+    private function authorizePersonEditing(): void
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['manager', 'sales_manager', 'super_admin', 'admin']),
             403,
             'You are not allowed to manage people.'
         );
@@ -55,7 +73,7 @@ class PersonController extends Controller
 
     public function create()
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonCreation();
 
         $user = Auth::user();
         //dd( $user);
@@ -71,7 +89,7 @@ class PersonController extends Controller
 
     public function store(StorePersonRequest $request)
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonCreation();
 
         $this->personService->store(PersonDTO::fromArray([
             ...$request->all(),
@@ -85,7 +103,7 @@ class PersonController extends Controller
 
     public function edit($locale, $id)
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonEditing();
 
         $person = $this->personService->getById($id);
         $authUser = Auth::user();
@@ -133,7 +151,7 @@ class PersonController extends Controller
 
     public function update(UpdatePersonRequest $request, $locale, $id)
     {
-        $this->authorizePersonManagement();
+        $this->authorizePersonEditing();
 
         $person = $this->personService->getById($id);
         $authUser = Auth::user();

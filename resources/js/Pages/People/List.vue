@@ -25,6 +25,9 @@ const canManagePeople = computed(() =>
 const canManagePeopleAction = computed(() =>
     hasAnyRole(["sales_manager", "super_admin","admin"]),
 );
+const canEditPeople = computed(() =>
+    hasAnyRole(["manager", "sales_manager", "super_admin", "admin"]),
+);
 const canManagePersonVisits = computed(() =>
     hasAnyRole(["manager", "sales_manager", "super_admin","admin"]),
 );
@@ -407,7 +410,7 @@ const submitManualScan = async () => {
                                                 {{ t('visits_management') }}
                                             </Link>
                                             <Link
-                                                v-if="canManagePeopleAction"
+                                                v-if="canEditPeople"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('person.edit', {
