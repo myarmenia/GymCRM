@@ -236,13 +236,13 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             unset($allocation);
 
             $workflow = $this->operationRepository->createWithPayments([
-                'hdm_config_id' => $allocations[0]['operation']->hdm_config_id,
-                'hdm_cashier_id' => $allocations[0]['return_cashier']->id,
+                'hdm_config_id' => $external ? null : $allocations[0]['operation']->hdm_config_id,
+                'hdm_cashier_id' => $external ? null : $allocations[0]['return_cashier']->id,
                 'user_id' => $sale->user_id,
                 'operationable_type' => MembershipPlanPayment::class,
                 'operationable_id' => $firstRefund->id,
                 'transaction_type' => self::WORKFLOW_TRANSACTION_TYPE,
-                'cashier_number' => $allocations[0]['return_cashier']->login,
+                'cashier_number' => $external ? null : $allocations[0]['return_cashier']->login,
                 'status' => $external ? 'success' : 'pending',
                 'request' => [
                     'version' => 1,
@@ -376,24 +376,25 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         array $source,
         float $serviceAmount,
     ): HdmOperation {
-        $device = $source['operation']->config;
-        $cashier = $this->activeCashier($device?->id, $sale->user_id);
+        $external = $this->isExternalProcessing();
+        $device = $external ? null : $source['operation']->config;
+        $cashier = $external ? null : $this->activeCashier($device?->id, $sale->user_id);
 
-        if (! $device || ! $device->status || ! $cashier) {
+        if (! $external && (! $device || ! $device->status || ! $cashier)) {
             throw ValidationException::withMessages([
                 'refund_amount' => __('backend_messages.cash_register_device_or_cashier_original_advance_payment_unavailable'),
             ]);
         }
 
         return $this->operationRepository->createWithPayments([
-            'hdm_config_id' => $device->id,
-            'hdm_cashier_id' => $cashier->id,
+            'hdm_config_id' => $device?->id,
+            'hdm_cashier_id' => $cashier?->id,
             'user_id' => $sale->user_id,
             'operationable_type' => MembershipPlanPayment::class,
             'operationable_id' => $refundPayment->id,
             'transaction_type' => 'sale',
-            'cashier_number' => $cashier->login,
-            'status' => $this->isExternalProcessing() ? 'external' : 'pending',
+            'cashier_number' => $cashier?->login,
+            'status' => $external ? 'external' : 'pending',
             'request' => [
                 'paidAmount' => 0,
                 'paidAmountCard' => 0,
@@ -414,10 +415,11 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         $originalPayment = $allocation['payment'];
         /** @var MembershipPlanPayment $refundPayment */
         $refundPayment = $allocation['refund_payment'];
-        $device = $originalOperation->config;
-        $cashier = $this->activeCashier($device?->id, $sale->user_id);
+        $external = $this->isExternalProcessing();
+        $device = $external ? null : $originalOperation->config;
+        $cashier = $external ? null : $this->activeCashier($device?->id, $sale->user_id);
 
-        if (! $device || ! $device->status || ! $cashier) {
+        if (! $external && (! $device || ! $device->status || ! $cashier)) {
             throw ValidationException::withMessages([
                 'refund_amount' => __('backend_messages.cash_register_device_or_cashier_original_advance_payment_unavailable'),
             ]);
@@ -448,14 +450,14 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         }
 
         $operation = $this->operationRepository->createWithPayments([
-            'hdm_config_id' => $device->id,
-            'hdm_cashier_id' => $cashier->id,
+            'hdm_config_id' => $device?->id,
+            'hdm_cashier_id' => $cashier?->id,
             'user_id' => $sale->user_id,
             'operationable_type' => MembershipPlanPayment::class,
             'operationable_id' => $refundPayment->id,
             'transaction_type' => 'refund',
-            'cashier_number' => $cashier->login,
-            'status' => $this->isExternalProcessing() ? 'external' : 'pending',
+            'cashier_number' => $cashier?->login,
+            'status' => $external ? 'external' : 'pending',
             'parent_operation_id' => $originalOperation->id,
             'crn' => $originalOperation->crn,
             'request' => $request,

@@ -261,7 +261,7 @@ class HdmReturnService extends HdmBaseService
             ->latest('id')
             ->first();
 
-        if (! $originalOperation || ! $originalOperation->config) {
+        if (! $originalOperation) {
             return [
                 'success' => false,
                 'message' => 'Original externally processed HDM operation was not found.',
@@ -269,15 +269,6 @@ class HdmReturnService extends HdmBaseService
         }
 
         $sale = $refund->membershipSale;
-        $device = $originalOperation->config;
-        $cashier = $this->getCashier($device->id, $sale?->user_id);
-
-        if (! $cashier) {
-            return [
-                'success' => false,
-                'message' => 'Active HDM cashier was not found.',
-            ];
-        }
 
         $amount = (float) $refund->amount;
         $paymentType = $this->getPaymentType($refund->payment_method_id);
@@ -286,19 +277,17 @@ class HdmReturnService extends HdmBaseService
             $originalPayment,
             $originalOperation,
             $sale,
-            $device,
-            $cashier,
             $amount,
             $paymentType,
         ) {
             $operation = $this->createOperation(
-                deviceId: $device->id,
-                cashierId: $cashier->id,
+                deviceId: null,
+                cashierId: null,
                 userId: (int) $sale->user_id,
                 operationableType: MembershipPlanPayment::class,
                 operationableId: $refund->id,
                 transactionType: 'refund',
-                cashierNumber: $cashier->login,
+                cashierNumber: null,
                 payments: [[
                     'method' => $paymentType === 'cash' ? 'cash' : 'card',
                     'amount' => $amount,
