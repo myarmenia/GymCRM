@@ -76,13 +76,13 @@ abstract class HdmBaseService
      * Создать операцию
      */
     protected function createOperation(
-        int $deviceId,
-        int $cashierId,
+        ?int $deviceId,
+        ?int $cashierId,
         int $userId,
         string $operationableType,
         int $operationableId,
         string $transactionType,
-        string $cashierNumber,
+        ?string $cashierNumber,
         array $payments,
         ?array $request = null,
         string $status = 'pending',

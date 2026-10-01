@@ -207,7 +207,6 @@ class MembershipSaleHdmModeTest extends TestCase
     {
         $this->assertSame('integrated', config('hdm.processing_mode'));
         config()->set('hdm.processing_mode', 'external');
-        $this->createHdmDevice();
 
         $sale = $this->service->store($this->payload());
         $payment = $sale->payments->firstOrFail();
@@ -221,6 +220,8 @@ class MembershipSaleHdmModeTest extends TestCase
             'operationable_id' => $payment->id,
             'transaction_type' => 'sale',
             'status' => 'external',
+            'hdm_config_id' => null,
+            'hdm_cashier_id' => null,
         ]);
 
         $pagePayment = $this->service->paymentPageData($sale->id)['membershipSale']->payments->first();
@@ -249,7 +250,6 @@ class MembershipSaleHdmModeTest extends TestCase
     public function test_external_full_payment_uses_regular_refund_flow(): void
     {
         config()->set('hdm.processing_mode', 'external');
-        $this->createHdmDevice();
 
         $sale = $this->service->store([
             ...$this->payload(amount: 80),
@@ -280,7 +280,6 @@ class MembershipSaleHdmModeTest extends TestCase
     public function test_external_prepayment_can_be_terminated_without_device_printing(): void
     {
         config()->set('hdm.processing_mode', 'external');
-        $this->createHdmDevice();
 
         $sale = $this->service->store($this->payload());
         $payment = $sale->payments->firstOrFail();
