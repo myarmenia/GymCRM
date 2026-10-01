@@ -52,16 +52,17 @@ class HdmPrintService extends HdmBaseService
                 ];
             }
 
-            $device = $this->getDevice((int) $sale->gym_id, 'reception');
-            if (! $device) {
+            $external = $this->isExternalProcessing();
+            $device = $external ? null : $this->getDevice((int) $sale->gym_id, 'reception');
+            if (! $external && ! $device) {
                 return [
                     'success' => false,
                     'message' => 'Active HDM device was not found for the gym.',
                 ];
             }
 
-            $cashier = $this->getCashier($device->id, $sale->user_id);
-            if (! $cashier) {
+            $cashier = $external ? null : $this->getCashier($device->id, $sale->user_id);
+            if (! $external && ! $cashier) {
                 return [
                     'success' => false,
                     'message' => 'Active HDM cashier was not found.',
@@ -97,22 +98,22 @@ class HdmPrintService extends HdmBaseService
                 );
 
             $operation = $this->createOperation(
-                deviceId: $device->id,
-                cashierId: $cashier->id,
+                deviceId: $device?->id,
+                cashierId: $cashier?->id,
                 userId: $sale->user_id,
                 operationableType: MembershipPlanPayment::class,
                 operationableId: $entity->id,
                 transactionType: 'sale',
-                cashierNumber: $cashier->login,
+                cashierNumber: $cashier?->login,
                 payments: [[
                     'method' => $this->operationPaymentMethod($paymentType),
                     'amount' => $amount,
                 ]],
                 request: $receiptData,
-                status: $this->isExternalProcessing() ? 'external' : 'pending',
+                status: $external ? 'external' : 'pending',
             );
 
-            if ($this->isExternalProcessing()) {
+            if ($external) {
                 return [
                     'success' => true,
                     'need_print' => false,
@@ -363,10 +364,9 @@ class HdmPrintService extends HdmBaseService
             ->sum(function (MembershipPlanPayment $previousPayment): float {
                 $hasSuccessfulPrepayment = $previousPayment->is_hdm
                     && $previousPayment->hdmOperations->contains(fn ($operation) => $operation->transaction_type === 'sale'
-                        && $operation->status === 'success'
+                        && in_array($operation->status, ['success', 'external'], true)
                         && (int) data_get($operation->request, 'mode') === 3
-                        && $operation->crn
-                        && $operation->rseq);
+                        && ($operation->status === 'external' || ($operation->crn && $operation->rseq)));
 
                 if (! $hasSuccessfulPrepayment) {
                     return 0;
