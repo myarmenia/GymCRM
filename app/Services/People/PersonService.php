@@ -262,14 +262,14 @@ class PersonService
 
     /**
      * Automatically assign gym(s) based on the authenticated user's role.
-     * - sales_manager: force person to belong to his own gym (user->gym_id)
+     * - manager and sales_manager: force person to belong to their own gym (user->gym_id)
      * - other roles: do nothing (leave current gyms unchanged)
      */
     protected function syncGyms(Person $person): bool
     {
         $user = Auth::user();
 
-        if ($user->hasAnyRole(['sales_manager', 'super_admin','admin']) && $user->gym_id) {
+        if ($user->hasAnyRole(['manager', 'sales_manager', 'super_admin', 'admin']) && $user->gym_id) {
             $changes = $person->gyms()->syncWithoutDetaching([(int) $user->gym_id]);
 
             return $changes['attached'] !== [] || $changes['updated'] !== [];

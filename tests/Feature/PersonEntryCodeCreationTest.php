@@ -38,6 +38,23 @@ class PersonEntryCodeCreationTest extends TestCase
                 ->has('entryCodes', 0));
     }
 
+    public function test_manager_can_create_a_person_in_their_gym(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Main gym']);
+        $manager = $this->userWithRole($gym, 'manager');
+
+        $this->actingAs($manager)->post(
+            route('person.store', ['locale' => 'hy']),
+            $this->personPayload([
+                'entry_code_mode' => 'new',
+                'entry_code_token' => 'MANAGER-1001',
+            ]),
+        )->assertRedirect(route('person.list', ['locale' => 'hy']));
+
+        $person = Person::query()->sole();
+        $this->assertTrue($person->gyms()->whereKey($gym->id)->exists());
+    }
+
     public function test_person_can_be_created_with_a_new_entry_code_in_one_request(): void
     {
         $gym = Gym::query()->create([
@@ -270,12 +287,12 @@ class PersonEntryCodeCreationTest extends TestCase
         $this->assertDatabaseCount('entry_permissions', 0);
     }
 
-    private function userWithRole(Gym $gym): User
+    private function userWithRole(Gym $gym, string $roleName = 'super_admin'): User
     {
         $role = Role::query()->create([
-            'name' => 'super_admin',
+            'name' => $roleName,
             'guard_name' => 'web',
-            'g_name' => 'super_admin',
+            'g_name' => $roleName,
         ]);
         $user = User::query()->create([
             'gym_id' => $gym->id,
