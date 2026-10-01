@@ -56,7 +56,7 @@ class UpdatePersonRequest extends FormRequest
                             }
                         });
 
-                    if ($this->user()?->gym_id) {
+                    if ($this->user()?->gym_id && ! $this->user()->hasRole('manager')) {
                         $query->where('gym_id', $this->user()->gym_id);
                     }
                 }),
