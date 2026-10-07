@@ -193,6 +193,11 @@ class User extends Authenticatable
         return $this->hasMany(Notification::class, 'recipient_id');
     }
 
+    public function createdOwnerSales()
+    {
+        return $this->hasMany(OwnerSale::class, 'created_by');
+    }
+
     public function createdReminders()
     {
         return $this->hasMany(Reminder::class, 'created_by');
