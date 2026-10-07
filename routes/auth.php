@@ -23,6 +23,7 @@ use App\Http\Controllers\Membership\MembershipCategoryController;
 use App\Http\Controllers\Membership\MembershipPlanController;
 use App\Http\Controllers\Membership\MembershipSaleController;
 use App\Http\Controllers\Notifications\NotificationController;
+use App\Http\Controllers\OwnerSales\OwnerSaleController;
 use App\Http\Controllers\Partners\PartnerController;
 use App\Http\Controllers\People\ManualEntryScanController;
 use App\Http\Controllers\People\PersonController;
@@ -112,6 +113,20 @@ Route::prefix('{locale}')
                 Route::post('/', [NotificationController::class, 'store'])->name('store');
                 Route::delete('/all', [NotificationController::class, 'destroyAll'])->name('destroy-all');
                 Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
+            });
+
+            Route::get('subscription-expired', [OwnerSaleController::class, 'accessExpired'])
+                ->name('owner-sales.access-expired');
+
+            Route::prefix('owner-sales')->name('owner-sales.')->middleware('role:owner')->group(function () {
+                Route::get('/', [OwnerSaleController::class, 'index'])->name('index');
+                Route::get('/create', [OwnerSaleController::class, 'create'])->name('create');
+                Route::post('/', [OwnerSaleController::class, 'store'])->name('store');
+                Route::get('/{ownerSale}/edit', [OwnerSaleController::class, 'edit'])->name('edit');
+                Route::put('/{ownerSale}', [OwnerSaleController::class, 'update'])->name('update');
+                Route::patch('/{ownerSale}/cancel', [OwnerSaleController::class, 'cancel'])->name('cancel');
+                Route::patch('/{ownerSale}/archive', [OwnerSaleController::class, 'archive'])->name('archive');
+                Route::delete('/{ownerSale}', [OwnerSaleController::class, 'destroy'])->name('destroy');
             });
 
             Route::prefix('reminders')->name('reminders.')->group(function () {

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckGymAccess;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureGymSubscriptionIsActive;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\MyGuest;
 use App\Http\Middleware\SetLocale;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocale::class,
             EnsureUserIsActive::class,
+            EnsureGymSubscriptionIsActive::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
