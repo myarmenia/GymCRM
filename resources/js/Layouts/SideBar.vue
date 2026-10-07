@@ -137,6 +137,22 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                 v-if="hasAnyRole(['owner'])"
                 :class="[
                     'menu-item',
+                    route().current('owner-sales.*') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('owner-sales.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-receipt-dollar"></i>
+                    <div>{{ useTrans('app.sidebar.owner_sales') }}</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="hasAnyRole(['owner'])"
+                :class="[
+                    'menu-item',
                     route().current('hdm-configurations.*') ? 'active' : '',
                 ]"
             >

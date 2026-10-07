@@ -12,3 +12,4 @@ Schedule::command('memberships:update-freeze-statuses')->everyMinute()->withoutO
 Schedule::command('mobile-notifications:send-membership-reminders')->everyMinute()->withoutOverlapping();
 Schedule::command('trainer-monthly-salaries:generate')->everyMinute()->withoutOverlapping();
 Schedule::command('reminders:send')->everyMinute()->withoutOverlapping();
+Schedule::command('owner-sales:notify-expiring')->dailyAt('09:00')->withoutOverlapping();

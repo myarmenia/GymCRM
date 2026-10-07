@@ -34,7 +34,7 @@ class RecordIdentitySchemaTest extends TestCase
         'salary_payout_items', 'salary_payout_refunds', 'salary_payout_refund_items',
         'salary_payable_assignments', 'salary_payable_transfers', 'financial_categories',
         'financial_transactions', 'reminder_categories', 'reminders',
-        'reminder_recipients',
+        'reminder_recipients', 'owner_sales',
     ];
 
     private const IDENTITY_FREE_TABLES = [

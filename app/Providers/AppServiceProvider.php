@@ -28,6 +28,7 @@ use App\Interfaces\MobileNotifications\MobileNotificationInterface;
 use App\Interfaces\MobileProfile\MobilePersonProfileInterface;
 use App\Interfaces\MobileSchedule\MobileScheduleInterface;
 use App\Interfaces\Notifications\NotificationRepositoryInterface;
+use App\Interfaces\OwnerSales\OwnerSaleInterface;
 use App\Interfaces\Partners\PartnerInterface;
 use App\Interfaces\PaymentMethods\PaymentMethodInterface;
 use App\Interfaces\People\PersonInterface;
@@ -99,6 +100,7 @@ use App\Repositories\MobileNotifications\MobileNotificationRepository;
 use App\Repositories\MobileProfile\MobilePersonProfileRepository;
 use App\Repositories\MobileSchedule\MobileScheduleRepository;
 use App\Repositories\Notifications\NotificationRepository;
+use App\Repositories\OwnerSales\OwnerSaleRepository;
 use App\Repositories\Partners\PartnerRepository;
 use App\Repositories\PaymentMethods\PaymentMethodRepository;
 use App\Repositories\People\PersonRepository;
@@ -193,6 +195,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(EntryReportInterface::class, EntryReportRepository::class);
 
         $this->app->bind(NotificationRepositoryInterface::class, NotificationRepository::class);
+        $this->app->bind(OwnerSaleInterface::class, OwnerSaleRepository::class);
         $this->app->bind(CommissionsReportRepositoryInterface::class, CommissionsReportRepository::class);
         $this->app->bind(EntryExitReportRepositoryInterface::class, EntryExitReportRepository::class);
         $this->app->bind(MembershipSalesReportRepositoryInterface::class, MembershipSalesReportRepository::class);
