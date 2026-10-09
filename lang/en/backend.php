@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Sales manager',
         'person' => 'customer',
         'membership_plan' => 'membership',
         'start' => 'start date',
@@ -11,6 +12,7 @@ return [
         'discount_type' => 'discount type',
         'discount_value' => 'discount value',
         'cash_register' => 'cash register receipt',
+        'external_fiscalization' => 'external fiscalization',
         'notes' => 'notes',
         'trainer' => 'trainer',
         'stay_debt' => 'remaining debt',
@@ -40,6 +42,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'This contact note belongs to another sales manager.',
+        'invalid_sales_manager' => 'Select a sales manager from this gym.',
         'discount_type_required' => 'The discount type is required.',
         'discount_value_required' => 'The discount value is required.',
         'percentage_discount_max' => 'The percentage discount may not be greater than 100.',
@@ -74,6 +78,7 @@ return [
         'terminate_from_advance_refund' => 'A sale with a cash register advance payment must be terminated from the advance refund section.',
         'percentage_discount_only' => 'Only a percentage discount is allowed.',
         'main_price_required' => 'The membership Main price must be set for a sale without a cash register receipt.',
+        'external_fiscalization_requires_hdm_payment' => 'External fiscalization requires a paid cash register payment.',
         'reminder_time_required' => 'Enter the payment reminder date and time.',
         'reminder_recipients_required' => 'Select at least one reminder recipient.',
         'discounts_locked_after_payment' => 'Sale discounts cannot be changed after the final payment.',

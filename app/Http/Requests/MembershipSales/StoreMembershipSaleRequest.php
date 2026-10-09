@@ -65,6 +65,7 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         return [
             'person_id' => ['required', 'integer', 'exists:people,id'],
+            'sales_manager_id' => ['required', 'integer', 'exists:users,id'],
             'membership_plan_id' => ['required', 'integer', 'exists:membership_plans,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -74,6 +75,7 @@ class StoreMembershipSaleRequest extends FormRequest
             'discount_type' => ['nullable', Rule::in($this->discountTypes())],
             'discount_value' => ['nullable', 'numeric', 'min:0'],
             'is_hdm' => ['sometimes', 'boolean'],
+            'hdm_processed_externally' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
             'trainer_id' => ['nullable', 'integer', 'exists:users,id'],
             'stay_debt' => ['sometimes', 'boolean'],
@@ -105,6 +107,16 @@ class StoreMembershipSaleRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            if ($this->boolean('hdm_processed_externally')
+                && (! $this->boolean('is_hdm')
+                    || $this->boolean('stay_debt')
+                    || $this->submittedPaymentAmount() <= 0)) {
+                $validator->errors()->add(
+                    'hdm_processed_externally',
+                    __('backend.membership_sales.external_fiscalization_requires_hdm_payment'),
+                );
+            }
+
             if ($this->boolean('is_partial_payment') && $this->boolean('is_full_payment')) {
                 $validator->errors()->add('is_full_payment', __('backend.membership_sales.select_partial_or_full_payment'));
             }
@@ -192,6 +204,7 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         return [
             'person_id' => __('backend.attributes.person'),
+            'sales_manager_id' => __('backend.attributes.sales_manager'),
             'membership_plan_id' => __('backend.attributes.membership_plan'),
             'start_date' => __('backend.attributes.start'),
             'end_date' => __('backend.attributes.end'),
@@ -200,6 +213,7 @@ class StoreMembershipSaleRequest extends FormRequest
             'discount_type' => __('backend.attributes.discount_type'),
             'discount_value' => __('backend.attributes.discount_value'),
             'is_hdm' => __('backend.attributes.cash_register'),
+            'hdm_processed_externally' => __('backend.attributes.external_fiscalization'),
             'notes' => __('backend.attributes.notes'),
             'trainer_id' => __('backend.attributes.trainer'),
             'stay_debt' => __('backend.attributes.stay_debt'),

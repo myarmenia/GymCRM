@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Менеджер по продажам',
         'person' => 'клиент',
         'membership_plan' => 'абонемент',
         'start' => 'дата начала',
@@ -11,6 +12,7 @@ return [
         'discount_type' => 'тип скидки',
         'discount_value' => 'размер скидки',
         'cash_register' => 'кассовый чек',
+        'external_fiscalization' => 'внешняя фискализация',
         'notes' => 'примечания',
         'trainer' => 'тренер',
         'stay_debt' => 'остаток долга',
@@ -40,6 +42,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'Контактная заметка этого клиента закреплена за другим менеджером по продажам.',
+        'invalid_sales_manager' => 'Выберите менеджера по продажам этого зала.',
         'discount_type_required' => 'Необходимо указать тип скидки.',
         'discount_value_required' => 'Необходимо указать размер скидки.',
         'percentage_discount_max' => 'Процентная скидка не может превышать 100.',
@@ -74,6 +78,7 @@ return [
         'terminate_from_advance_refund' => 'Продажу с кассовым авансом следует расторгнуть в разделе возврата аванса.',
         'percentage_discount_only' => 'Разрешена только процентная скидка.',
         'main_price_required' => 'Для продажи без кассового чека необходимо указать Main цену абонемента.',
+        'external_fiscalization_requires_hdm_payment' => 'Внешнюю фискализацию можно выбрать только для оплаченного фискального платежа.',
         'reminder_time_required' => 'Укажите дату и время напоминания об оплате.',
         'reminder_recipients_required' => 'Выберите хотя бы одного получателя напоминания.',
         'discounts_locked_after_payment' => 'После окончательной оплаты скидки продажи изменить нельзя.',

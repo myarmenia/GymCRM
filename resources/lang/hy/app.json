@@ -1,5 +1,23 @@
 {
+    "contact_notes": {
+        "title": "Նշումներ կոնտակտների մասին",
+        "new_contact": "Նոր կոնտակտի նշում",
+        "phone_number": "Հեռախոսահամար",
+        "note": "Նշում",
+        "sales_manager": "Վաճառքի մենեջեր",
+        "all_managers": "Բոլոր վաճառքի մենեջերները",
+        "created_at": "Ստեղծման ամսաթիվ",
+        "date_from": "Սկսած",
+        "date_to": "Մինչև",
+        "filter": "Ֆիլտրել",
+        "reset": "Մաքրել",
+        "save": "Պահպանել",
+        "add_note": "Ավելացնել նշում",
+        "no_more_notes": "Այլ նշումներ չկան",
+        "empty": "Նշումներ չկան"
+    },
     "sidebar": {
+        "contact_notes": "Կոնտակտների նշումներ",
         "profile": "Իմ հաշիվը",
         "notifications": "Ծանուցումներ",
         "gym": "Մարզադահլիճ",
@@ -389,6 +407,10 @@
         "no": "Ոչ"
     },
     "sales": {
+        "sales_manager": "Վաճառքի մենեջեր",
+        "select_sales_manager": "Ընտրեք վաճառքի մենեջերին",
+        "contact_note_manager_commission": "Այս հաճախորդի կոնտակտային նշումը պատկանում է նշված մենեջերին։ Վաճառքի տոկոսը կստանա նա։",
+        "current_sales_manager": "Մուտք գործած վաճառքի մենեջեր",
         "receipt_price": "(ՀԴՄ գին)",
         "fiscal_receipt": "(ՀԴՄ)",
         "internal_price": "(Ներքին գին)",
@@ -480,6 +502,8 @@
         "the_fiscal_operation_has_not_finished_yet": "ՀԴՄ գործողությունը դեռ ավարտված չէ։",
         "the_fiscal_operation_is_pending_check_its_status_first": "ՀԴՄ գործողությունը դեռ սպասման մեջ է։ Նախ ստուգեք դրա կարգավիճակը։",
         "fiscal_receipt_3": "ՀԴՄ կտրոն",
+        "payment_already_fiscalized_externally": "Վճարման ՀԴՄ կտրոնն արդեն տպվել է CRM-ից դուրս / տպման անհրաժեշտություն չկա",
+        "payment_already_fiscalized_externally_help": "Վճարումը կներառվի ֆինանսական հաշվետվություններում և կհամաժամացվի՝ առանց ՀԴՄ կտրոն տպելու։",
         "fiscal_receipt_printed_successfully": "ՀԴՄ կտրոնը հաջողությամբ տպվել է։",
         "fiscal_receipt_amount": "ՀԴՄ կտրոնի գումար",
         "fiscal_receipt_fully_refunded": "ՀԴՄ կտրոնն ամբողջությամբ վերադարձված է",

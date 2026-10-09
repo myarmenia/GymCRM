@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Վաճառքի մենեջեր',
         'person' => 'հաճախորդ',
         'membership_plan' => 'աբոնեմենտ',
         'start' => 'սկիզբ',
@@ -11,6 +12,7 @@ return [
         'discount_type' => 'զեղչի տեսակ',
         'discount_value' => 'զեղչի արժեք',
         'cash_register' => 'ՀԴՄ',
+        'external_fiscalization' => 'արտաքին ֆիսկալացում',
         'notes' => 'նշումներ',
         'trainer' => 'մարզիչ',
         'stay_debt' => 'մնալ պարտք',
@@ -40,6 +42,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'Այս հաճախորդի կոնտակտային նշումը պատկանում է այլ վաճառքի մենեջերին։',
+        'invalid_sales_manager' => 'Ընտրեք այս մարզասրահի վաճառքի մենեջերին։',
         'discount_type_required' => 'Զեղչի տեսակը պարտադիր է։',
         'discount_value_required' => 'Զեղչի արժեքը պարտադիր է։',
         'percentage_discount_max' => 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։',
@@ -74,6 +78,7 @@ return [
         'terminate_from_advance_refund' => 'ՀԴՄ կանխավճարով վաճառքը պետք է խզել կանխավճարի վերադարձի բաժնից։',
         'percentage_discount_only' => 'Թույլատրվում է միայն տոկոսային զեղչ։',
         'main_price_required' => 'Առանց ՀԴՄ վաճառքի համար անհրաժեշտ է սահմանել աբոնեմենտի Main գինը։',
+        'external_fiscalization_requires_hdm_payment' => 'Արտաքին ֆիսկալացումը հասանելի է միայն վճարված ՀԴՄ վճարման համար։',
         'reminder_time_required' => 'Նշեք վճարման հիշեցման օրն ու ժամը։',
         'reminder_recipients_required' => 'Ընտրեք առնվազն մեկ հիշեցման ստացող։',
         'discounts_locked_after_payment' => 'Վերջնական վճարումից հետո վաճառքի զեղչերը հնարավոր չէ փոփոխել։',

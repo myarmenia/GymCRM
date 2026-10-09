@@ -35,6 +35,10 @@ const canManualScan = computed(() =>
     hasRole("manager") && 
     Boolean(page.props.auth?.user?.gym_id),
 );
+
+const canSalesPersonVisits = computed(() =>
+    hasAnyRole(["sales_manager"]),
+);
 const toast = useToast();
 const { confirm } = useConfirm();
 const manualScanCode = ref("");
@@ -384,7 +388,7 @@ const submitManualScan = async () => {
                                                 {{ t('view_profile') }}
                                             </Link>
                                             <Link
-                                                v-if="canManagePeopleAction"
+                                                v-if="canSalesPersonVisits"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {

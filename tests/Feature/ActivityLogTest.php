@@ -136,9 +136,11 @@ class ActivityLogTest extends TestCase
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
 
+        $salesManager = $this->userWithRole($gym, 'sales_manager');
         $this->actingAs($actor);
 
         $sale = app(MembershipSaleService::class)->store([
+            'sales_manager_id' => $salesManager->id,
             'person_id' => $person->id,
             'membership_plan_id' => $plan->id,
             'start_date' => '2026-08-03',
@@ -203,9 +205,11 @@ class ActivityLogTest extends TestCase
         $plan->discounts()->attach($discount->id);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
 
+        $salesManager = $this->userWithRole($gym, 'sales_manager');
         $this->actingAs($actor);
         $service = app(MembershipSaleService::class);
         $sale = $service->store([
+            'sales_manager_id' => $salesManager->id,
             'person_id' => $person->id,
             'membership_plan_id' => $plan->id,
             'start_date' => '2026-08-03',
@@ -326,9 +330,11 @@ class ActivityLogTest extends TestCase
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
 
+        $salesManager = $this->userWithRole($gym, 'sales_manager');
         $this->actingAs($actor);
         $service = app(MembershipSaleService::class);
         $sale = $service->store([
+            'sales_manager_id' => $salesManager->id,
             'person_id' => $person->id,
             'membership_plan_id' => $plan->id,
             'trainer_id' => $oldTrainer->id,

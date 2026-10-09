@@ -39,6 +39,7 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->ids = $this->insertSaleDependencies();
         $user = User::findOrFail($this->ids['userId']);
         $user->assignRole(Role::create(['name' => 'owner', 'guard_name' => 'web', 'g_name' => 'owner']));
+        $user->assignRole(Role::create(['name' => 'sales_manager', 'guard_name' => 'web', 'g_name' => 'sales_manager']));
         $this->actingAs($user);
         $this->service = app(MembershipSaleService::class);
     }
@@ -47,6 +48,7 @@ class MembershipSaleHdmModeTest extends TestCase
     {
         return [
             'person_id' => $this->ids['personId'],
+            'sales_manager_id' => $this->ids['userId'],
             'membership_plan_id' => $this->ids['planId'],
             'start_date' => now()->toDateString(),
             'apply_discount' => true,
@@ -70,6 +72,21 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(40.0, (float) $sale->payments->first()->amount);
         $this->assertTrue($sale->payments->first()->is_hdm);
         $this->assertSame('partial', $sale->payment_status);
+    }
+
+    public function test_manual_discount_percentage_preserves_eight_decimal_places(): void
+    {
+        $sale = $this->service->store([
+            ...$this->payload(),
+            'discount_value' => '26.66666667',
+        ]);
+
+        $this->assertSame('26.66666667', $sale->refresh()->discount_value);
+        $this->assertEqualsWithDelta(
+            26.66666667,
+            (float) DB::table('membership_sales')->where('id', $sale->id)->value('discount_value'),
+            0.000000001,
+        );
     }
 
     public function test_salesperson_commission_report_excludes_zero_amount_records(): void

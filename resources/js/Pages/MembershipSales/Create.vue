@@ -34,6 +34,18 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    salesManagers: {
+        type: Array,
+        default: () => [],
+    },
+    currentSalesManagerId: {
+        type: Number,
+        default: null,
+    },
+    contactNoteManagerIdsByGym: {
+        type: Object,
+        default: () => ({}),
+    },
     customerMemberships: {
         type: Array,
         default: () => [],
@@ -71,6 +83,7 @@ const today = todayInYerevan()
 
 const form = useForm({
     person_id: props.selectedPerson?.id ?? '',
+    sales_manager_id: Object.values(props.contactNoteManagerIdsByGym).find(Boolean) ?? props.currentSalesManagerId ?? '',
     membership_plan_id: '',
     membership_discount_ids: [],
     start_date: today,
@@ -79,6 +92,7 @@ const form = useForm({
     discount_type: 'percent',
     discount_value: null,
     is_hdm: true,
+    hdm_processed_externally: false,
     notes: '',
     trainer_id: '',
     is_partial_payment: false,
@@ -104,6 +118,20 @@ const planName = plan => {
 }
 
 const selectedPlan = computed(() => props.membershipPlans.find(item => Number(item.id) === Number(form.membership_plan_id)))
+const availableSalesManagers = computed(() => selectedPlan.value
+    ? props.salesManagers.filter(manager =>
+        Number(manager.gym_id) === Number(selectedPlan.value.gym_id)
+        || Number(manager.id) === Number(form.sales_manager_id),
+    )
+    : props.salesManagers)
+const currentSalesManager = computed(() => availableSalesManagers.value.find(
+    manager => Number(manager.id) === Number(props.currentSalesManagerId),
+))
+const contactNoteManagerId = computed(() => selectedPlan.value
+    ? props.contactNoteManagerIdsByGym[selectedPlan.value.gym_id]
+    : Object.values(props.contactNoteManagerIdsByGym).find(Boolean))
+const salesManagerLocked = computed(() => Boolean(contactNoteManagerId.value)
+    && Number(form.sales_manager_id) === Number(contactNoteManagerId.value))
 const trainerSalaryModeLabel = computed(() => ({
     prepaid: t('sales.prepaid'),
     postpaid: t('sales.postpaid'),
@@ -388,6 +416,12 @@ watch(() => form.amount, (value) => {
     }
 })
 
+watch(() => form.is_hdm, isHdm => {
+    if (!isHdm) {
+        form.hdm_processed_externally = false
+    }
+})
+
 const postSale = async stayDebt => {
     form.clearErrors()
     if (!stayDebt && partialPaymentError.value) {
@@ -405,6 +439,7 @@ const postSale = async stayDebt => {
             amount: 0,
             payment_method_id: null,
             card_type_id: null,
+            hdm_processed_externally: false,
         } : {}),
     }
 
@@ -483,6 +518,10 @@ const confirmReminder = () => {
 }
 
 const submit = () => {
+    if (!form.sales_manager_id) {
+        form.setError('sales_manager_id', t('sales.select_sales_manager'))
+        return
+    }
     if (partialPaymentError.value) {
         form.setError('amount', partialPaymentError.value)
         return
@@ -502,6 +541,10 @@ const submit = () => {
 }
 
 const submitDebt = () => {
+    if (!form.sales_manager_id) {
+        form.setError('sales_manager_id', t('sales.select_sales_manager'))
+        return
+    }
     if (startDateRestrictionMessage.value) {
         form.setError('start_date', startDateRestrictionMessage.value)
         return
@@ -555,6 +598,20 @@ const submitDebt = () => {
                             </option>
                         </select>
                         <InputError :message="form.errors.membership_plan_id" />
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <InputLabel :value="t('sales.sales_manager') + ' *'" />
+                        <select v-model="form.sales_manager_id" class="form-select" required :disabled="salesManagerLocked">
+                            <option value="" disabled>{{ t('sales.select_sales_manager') }}</option>
+                            <option v-for="manager in availableSalesManagers" :key="manager.id" :value="manager.id">
+                                {{ formatUser(manager) }}
+                            </option>
+                        </select>
+                        <div v-if="contactNoteManagerId" class="form-text">{{ t('sales.contact_note_manager_commission') }}</div>
+                        <div v-if="contactNoteManagerId && currentSalesManager" class="form-text">
+                            {{ t('sales.current_sales_manager') }}: {{ formatUser(currentSalesManager) }}
+                        </div>
+                        <InputError :message="form.errors.sales_manager_id" />
                     </div>
                 </div>
 
@@ -820,7 +877,7 @@ const submitDebt = () => {
                                 <input
                                     v-model="form.discount_value"
                                     type="number"
-                                    step="0.01"
+                                    step="0.00000001"
                                     min="0"
                                     :max="form.discount_type === 'percent' ? 100 : membershipDiscountedPrice"
                                     class="form-control"
@@ -948,6 +1005,22 @@ const submitDebt = () => {
                                     </span>
                                 </label>
                                 <InputError :message="form.errors.is_hdm" />
+                                <div v-if="form.is_hdm" class="mt-3 ms-4">
+                                    <label class="form-check">
+                                        <input
+                                            v-model="form.hdm_processed_externally"
+                                            type="checkbox"
+                                            class="form-check-input"
+                                        />
+                                        <span class="form-check-label">
+                                            {{ t('sales.payment_already_fiscalized_externally') }}
+                                        </span>
+                                    </label>
+                                    <small class="text-muted d-block mt-1">
+                                        {{ t('sales.payment_already_fiscalized_externally_help') }}
+                                    </small>
+                                    <InputError :message="form.errors.hdm_processed_externally" />
+                                </div>
                             </div>
                         </div>
                     </div>

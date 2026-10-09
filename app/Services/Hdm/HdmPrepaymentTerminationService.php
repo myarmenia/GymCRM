@@ -216,10 +216,17 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             $firstRefund = $allocations[0]['refund_payment'];
             $steps = [];
             $serviceOperation = null;
-            $external = $this->isExternalProcessing();
+            $external = $this->isExternalProcessing()
+                || $sources->every(fn (array $source): bool => $source['operation']->status === 'external');
 
             if ($serviceAmount > 0) {
-                $serviceOperation = $this->createServiceOperation($sale, $firstRefund, $sources->first(), $serviceAmount);
+                $serviceOperation = $this->createServiceOperation(
+                    $sale,
+                    $firstRefund,
+                    $sources->first(),
+                    $serviceAmount,
+                    $external,
+                );
                 if (! $external) {
                     $steps[] = $this->operationPrintData($serviceOperation, $sale, 'service');
                 }
@@ -227,7 +234,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
 
             $refundOperations = [];
             foreach ($allocations as &$allocation) {
-                $operation = $this->createPrepaymentReturnOperation($sale, $allocation);
+                $operation = $this->createPrepaymentReturnOperation($sale, $allocation, $external);
                 $refundOperations[] = $operation;
                 if (! $external) {
                     $steps[] = $this->operationPrintData($operation, $sale, 'refund');
@@ -375,8 +382,8 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         MembershipPlanPayment $refundPayment,
         array $source,
         float $serviceAmount,
+        bool $external,
     ): HdmOperation {
-        $external = $this->isExternalProcessing();
         $device = $external ? null : $source['operation']->config;
         $cashier = $external ? null : $this->activeCashier($device?->id, $sale->user_id);
 
@@ -407,7 +414,11 @@ class HdmPrepaymentTerminationService extends HdmBaseService
     }
 
     /** @param array<string, mixed> $allocation */
-    private function createPrepaymentReturnOperation(MembershipSale $sale, array &$allocation): HdmOperation
+    private function createPrepaymentReturnOperation(
+        MembershipSale $sale,
+        array &$allocation,
+        bool $external,
+    ): HdmOperation
     {
         /** @var HdmOperation $originalOperation */
         $originalOperation = $allocation['operation'];
@@ -415,7 +426,6 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         $originalPayment = $allocation['payment'];
         /** @var MembershipPlanPayment $refundPayment */
         $refundPayment = $allocation['refund_payment'];
-        $external = $this->isExternalProcessing();
         $device = $external ? null : $originalOperation->config;
         $cashier = $external ? null : $this->activeCashier($device?->id, $sale->user_id);
 
@@ -434,7 +444,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'returnTicketId' => (int) $originalOperation->rseq,
         ];
 
-        if ($this->isExternalProcessing()) {
+        if ($external) {
             $request = [
                 'external' => true,
                 'amount' => $refundAmount,
@@ -442,7 +452,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             ];
         }
 
-        if (! $this->isExternalProcessing() && ! $isWholeOriginalReceipt) {
+        if (! $external && ! $isWholeOriginalReceipt) {
             $paymentType = $this->getPaymentType($originalPayment->payment_method_id);
             $request['cashAmountForReturn'] = $paymentType === 'cash' ? round($refundAmount, 2) : 0;
             $request['cardAmountForReturn'] = $paymentType === 'cash' ? 0 : round($refundAmount, 2);

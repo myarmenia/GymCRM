@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Category\CategoryController;
+use App\Http\Controllers\ContactNoteController;
 use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
@@ -133,6 +134,12 @@ Route::prefix('{locale}')
                 Route::get('/', [ReminderController::class, 'index'])->name('index');
                 Route::post('/', [ReminderController::class, 'store'])->name('store');
                 Route::patch('/{reminder}/cancel', [ReminderController::class, 'cancel'])->name('cancel');
+            });
+
+            Route::prefix('contact-notes')->name('contact-notes.')->group(function () {
+                Route::get('/', [ContactNoteController::class, 'index'])->name('index');
+                Route::post('/', [ContactNoteController::class, 'store'])->name('store');
+                Route::post('/{contactNote}/notes', [ContactNoteController::class, 'addNote'])->name('add-note');
             });
 
             Route::prefix('reports')->name('reports.')->group(function () {

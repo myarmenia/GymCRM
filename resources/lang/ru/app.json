@@ -1,5 +1,23 @@
 {
+    "contact_notes": {
+        "title": "Заметки по контактам",
+        "new_contact": "Новая заметка по контакту",
+        "phone_number": "Номер телефона",
+        "note": "Заметка",
+        "sales_manager": "Менеджер по продажам",
+        "all_managers": "Все менеджеры по продажам",
+        "created_at": "Дата создания",
+        "date_from": "С",
+        "date_to": "По",
+        "filter": "Фильтр",
+        "reset": "Сбросить",
+        "save": "Сохранить",
+        "add_note": "Добавить заметку",
+        "no_more_notes": "Других заметок нет",
+        "empty": "Заметок нет"
+    },
     "sidebar": {
+        "contact_notes": "Заметки по контактам",
         "profile": "Профиль",
         "notifications": "Уведомления",
         "gym": "Тренажёрный зал",
@@ -389,6 +407,10 @@
         "no": "Нет"
     },
     "sales": {
+        "sales_manager": "Менеджер по продажам",
+        "select_sales_manager": "Выберите менеджера по продажам",
+        "contact_note_manager_commission": "Контактная заметка этого клиента закреплена за указанным менеджером. Комиссия за продажу будет начислена ему.",
+        "current_sales_manager": "Вошедший менеджер по продажам",
         "receipt_price": "(Цена чека)",
         "fiscal_receipt": "(Фискальный чек)",
         "internal_price": "(Внутренняя цена)",
@@ -480,6 +502,8 @@
         "the_fiscal_operation_has_not_finished_yet": "Фискальная операция ещё не завершена.",
         "the_fiscal_operation_is_pending_check_its_status_first": "Фискальная операция ожидает завершения. Сначала проверьте её статус.",
         "fiscal_receipt_3": "Фискальный чек",
+        "payment_already_fiscalized_externally": "Оплата уже фискализирована вне CRM",
+        "payment_already_fiscalized_externally_help": "Платёж будет учтён в финансовых отчётах и синхронизирован без печати чека ККМ.",
         "fiscal_receipt_printed_successfully": "Фискальный чек успешно напечатан.",
         "fiscal_receipt_amount": "Сумма фискального чека",
         "fiscal_receipt_fully_refunded": "Фискальный чек полностью возвращён",

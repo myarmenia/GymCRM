@@ -1,5 +1,23 @@
 {
+    "contact_notes": {
+        "title": "Contact notes",
+        "new_contact": "New contact note",
+        "phone_number": "Phone number",
+        "note": "Note",
+        "sales_manager": "Sales manager",
+        "all_managers": "All sales managers",
+        "created_at": "Created at",
+        "date_from": "From",
+        "date_to": "To",
+        "filter": "Filter",
+        "reset": "Reset",
+        "save": "Save",
+        "add_note": "Add note",
+        "no_more_notes": "No other notes",
+        "empty": "No contact notes"
+    },
     "sidebar": {
+        "contact_notes": "Contact notes",
         "profile": "Profile",
         "notifications": "Notifications",
         "gym": "Gym",
@@ -389,6 +407,10 @@
         "no": "No"
     },
     "sales": {
+        "sales_manager": "Sales manager",
+        "select_sales_manager": "Select a sales manager",
+        "contact_note_manager_commission": "This customer's contact note belongs to this sales manager. The sale commission will go to them.",
+        "current_sales_manager": "Signed-in sales manager",
         "receipt_price": "(Receipt price)",
         "fiscal_receipt": "(Fiscal receipt)",
         "internal_price": "(Internal price)",
@@ -480,6 +502,8 @@
         "the_fiscal_operation_has_not_finished_yet": "The fiscal operation has not finished yet.",
         "the_fiscal_operation_is_pending_check_its_status_first": "The fiscal operation is pending. Check its status first.",
         "fiscal_receipt_3": "Fiscal receipt",
+        "payment_already_fiscalized_externally": "Payment already fiscalized outside CRM",
+        "payment_already_fiscalized_externally_help": "The payment will be included in financial reports and synchronized without printing an HDM receipt.",
         "fiscal_receipt_printed_successfully": "Fiscal receipt printed successfully.",
         "fiscal_receipt_amount": "Fiscal receipt amount",
         "fiscal_receipt_fully_refunded": "Fiscal receipt fully refunded",

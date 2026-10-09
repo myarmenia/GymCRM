@@ -74,7 +74,7 @@ class MembershipSale extends Model
         return [
             'is_hdm' => 'boolean',
             'total_price' => 'decimal:2',
-            'discount_value' => 'decimal:2',
+            'discount_value' => 'decimal:8',
             'discount_amount' => 'decimal:2',
             'final_price' => 'decimal:2',
             'discount_membership_amount' => 'decimal:2',
