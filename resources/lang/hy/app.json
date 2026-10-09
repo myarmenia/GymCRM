@@ -1,5 +1,23 @@
 {
+    "contact_notes": {
+        "title": "Նշումներ կոնտակտների մասին",
+        "new_contact": "Նոր կոնտակտի նշում",
+        "phone_number": "Հեռախոսահամար",
+        "note": "Նշում",
+        "sales_manager": "Վաճառքի մենեջեր",
+        "all_managers": "Բոլոր վաճառքի մենեջերները",
+        "created_at": "Ստեղծման ամսաթիվ",
+        "date_from": "Սկսած",
+        "date_to": "Մինչև",
+        "filter": "Ֆիլտրել",
+        "reset": "Մաքրել",
+        "save": "Պահպանել",
+        "add_note": "Ավելացնել նշում",
+        "no_more_notes": "Այլ նշումներ չկան",
+        "empty": "Նշումներ չկան"
+    },
     "sidebar": {
+        "contact_notes": "Կոնտակտների նշումներ",
         "profile": "Իմ հաշիվը",
         "notifications": "Ծանուցումներ",
         "gym": "Մարզադահլիճ",
@@ -389,6 +407,10 @@
         "no": "Ոչ"
     },
     "sales": {
+        "sales_manager": "Վաճառքի մենեջեր",
+        "select_sales_manager": "Ընտրեք վաճառքի մենեջերին",
+        "contact_note_manager_commission": "Այս հաճախորդի կոնտակտային նշումը պատկանում է նշված մենեջերին։ Վաճառքի տոկոսը կստանա նա։",
+        "current_sales_manager": "Մուտք գործած վաճառքի մենեջեր",
         "receipt_price": "(ՀԴՄ գին)",
         "fiscal_receipt": "(ՀԴՄ)",
         "internal_price": "(Ներքին գին)",

@@ -39,6 +39,7 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->ids = $this->insertSaleDependencies();
         $user = User::findOrFail($this->ids['userId']);
         $user->assignRole(Role::create(['name' => 'owner', 'guard_name' => 'web', 'g_name' => 'owner']));
+        $user->assignRole(Role::create(['name' => 'sales_manager', 'guard_name' => 'web', 'g_name' => 'sales_manager']));
         $this->actingAs($user);
         $this->service = app(MembershipSaleService::class);
     }
@@ -47,6 +48,7 @@ class MembershipSaleHdmModeTest extends TestCase
     {
         return [
             'person_id' => $this->ids['personId'],
+            'sales_manager_id' => $this->ids['userId'],
             'membership_plan_id' => $this->ids['planId'],
             'start_date' => now()->toDateString(),
             'apply_discount' => true,

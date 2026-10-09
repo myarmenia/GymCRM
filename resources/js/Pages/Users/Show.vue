@@ -12,7 +12,7 @@ const t = (key, replacements = {}) => translate(translationPage.props.translatio
 const page = usePage();
 const currentLocale = page.props.locale ?? "hy";
 const isFounder = computed(() =>
-    page.props.auth?.user?.roles?.some((role) => role.name === 'founder'),
+    page.props.auth?.user?.roles?.some((role) => role.name === 'founder' || role.name === 'sales_manager'),
 );
 
 const props = defineProps({

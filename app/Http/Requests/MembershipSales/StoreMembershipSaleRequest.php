@@ -65,6 +65,7 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         return [
             'person_id' => ['required', 'integer', 'exists:people,id'],
+            'sales_manager_id' => ['required', 'integer', 'exists:users,id'],
             'membership_plan_id' => ['required', 'integer', 'exists:membership_plans,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -203,6 +204,7 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         return [
             'person_id' => __('backend.attributes.person'),
+            'sales_manager_id' => __('backend.attributes.sales_manager'),
             'membership_plan_id' => __('backend.attributes.membership_plan'),
             'start_date' => __('backend.attributes.start'),
             'end_date' => __('backend.attributes.end'),

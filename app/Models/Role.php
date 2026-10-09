@@ -16,6 +16,10 @@ class Role extends SpatieRole
     {
         $roles = $user->getRoleNames();
 
+        if ($roles->contains('admin')) {
+            $roles->push('super_admin');
+        }
+
         return $query->when($roles, function ($q) use ($roles) {
             $q->whereIn('g_name', $roles);
         });

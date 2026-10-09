@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Վաճառքի մենեջեր',
         'person' => 'հաճախորդ',
         'membership_plan' => 'աբոնեմենտ',
         'start' => 'սկիզբ',
@@ -41,6 +42,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'Այս հաճախորդի կոնտակտային նշումը պատկանում է այլ վաճառքի մենեջերին։',
+        'invalid_sales_manager' => 'Ընտրեք այս մարզասրահի վաճառքի մենեջերին։',
         'discount_type_required' => 'Զեղչի տեսակը պարտադիր է։',
         'discount_value_required' => 'Զեղչի արժեքը պարտադիր է։',
         'percentage_discount_max' => 'Տոկոսային զեղչը չի կարող լինել 100-ից մեծ։',

@@ -54,6 +54,8 @@ class MembershipSaleService
         protected MembershipSaleAuditService $membershipSaleAuditService,
         protected MembershipSalaryCalculator $salaryCalculator,
         protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
+        protected ContactNoteOwnerResolver $contactNoteOwnerResolver,
+        protected ContactNoteOwnershipService $contactNoteOwnership,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -675,6 +677,23 @@ class MembershipSaleService
             ->orderBy('id', 'desc')
             ->get();
 
+        $gymIds = $membershipPlans->pluck('gym_id')->filter()->unique()->values();
+        $salesManagers = User::query()
+            ->whereHas('roles', fn ($query) => $query->where('name', 'sales_manager'))
+            ->where('active', true)
+            ->whereIn('gym_id', $gymIds)
+            ->orderBy('name')
+            ->orderBy('surname')
+            ->get(['id', 'name', 'surname', 'gym_id']);
+        $currentSalesManagerId = $salesManagers->firstWhere('id', $user->id)?->id;
+        $contactNoteManagerIdsByGym = [];
+        if ($selectedPerson) {
+            foreach ($gymIds as $gymId) {
+                $contactNoteManagerIdsByGym[$gymId] = $this->contactNoteOwnerResolver
+                    ->forPerson($selectedPerson, (int) $gymId)?->id;
+            }
+        }
+
         $people = Person::query()
             ->with('gyms')
             ->when(! $user->hasRole('owner'), function ($query) use ($user) {
@@ -718,6 +737,9 @@ class MembershipSaleService
             'paymentMethods',
             'discountTypes',
             'selectedPerson',
+            'salesManagers',
+            'currentSalesManagerId',
+            'contactNoteManagerIdsByGym',
             'customerMemberships',
             'reminderUsers',
             'defaultReminderRecipientIds',
@@ -735,10 +757,29 @@ class MembershipSaleService
         DB::beginTransaction();
 
         try {
+            Person::query()->lockForUpdate()->findOrFail((int) $data['person_id']);
             $user = Auth::user();
             $membershipPlan = $this->getMembershipPlan((int) $data['membership_plan_id'], $user);
             $person = $this->getPerson((int) $data['person_id'], $user, $membershipPlan);
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
+            $contactNoteManager = $this->contactNoteOwnerResolver->forPerson($person, $gymId);
+            $salesManagerId = (int) ($data['sales_manager_id'] ?? ($user->hasRole('sales_manager') ? $user->id : 0));
+            if ($contactNoteManager && $salesManagerId !== $contactNoteManager->id) {
+                throw ValidationException::withMessages([
+                    'sales_manager_id' => __('backend.membership_sales.contact_note_manager_required'),
+                ]);
+            }
+            $salesManager = User::query()
+                ->whereHas('roles', fn ($query) => $query->where('name', 'sales_manager'))
+                ->where('active', true)
+                ->where('gym_id', $gymId)
+                ->whereKey($salesManagerId)
+                ->first();
+            if (! $salesManager) {
+                throw ValidationException::withMessages([
+                    'sales_manager_id' => __('backend.membership_sales.invalid_sales_manager'),
+                ]);
+            }
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
             $previousMatchingMembership = $this->previousMatchingMembershipForSale($person, $membershipPlan);
@@ -874,7 +915,7 @@ class MembershipSaleService
             $salespersonCommissionData = $this->calculateSalespersonCommission($membershipPlan, $finalPrice);
             $salespersonCommission = $this->salespersonCommissionRepository->create(
                 $this->salespersonCommissionDtoData([
-                    'salesperson_id' => $user->id,
+                    'salesperson_id' => $salesManagerId,
                     'membership_sale_id' => $membershipSale->id,
                     'person_membership_id' => $personMembership->id,
                     'membership_plan_id' => $membershipPlan->id,
@@ -931,6 +972,13 @@ class MembershipSaleService
             }
 
             $this->membershipSaleAuditService->afterCreated($membershipSale);
+
+            if ($contactNoteManager === null
+                && $user->hasRole('sales_manager')
+                && (int) $user->gym_id === $gymId
+                && filled($person->phone)) {
+                $this->contactNoteOwnership->create($salesManager, (string) $person->phone, 'Նոր վաճառք');
+            }
 
             DB::commit();
 

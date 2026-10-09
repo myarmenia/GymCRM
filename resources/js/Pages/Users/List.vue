@@ -34,7 +34,7 @@ const usersList = ref(props.users.data);
 const pagination = ref(props.users);
 const { hasAnyRole } = useAuth();
 const canManageUsers = computed(() =>
-    hasAnyRole(["owner", "super_admin", "sales_manager","admin"]),
+    hasAnyRole(["owner", "super_admin", "admin"]),
 );
 const canViewUsers = computed(() =>
     hasAnyRole(["owner", "admin", "super_admin", "sales_manager", "manager", "founder"]),

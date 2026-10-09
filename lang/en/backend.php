@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Sales manager',
         'person' => 'customer',
         'membership_plan' => 'membership',
         'start' => 'start date',
@@ -41,6 +42,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'This contact note belongs to another sales manager.',
+        'invalid_sales_manager' => 'Select a sales manager from this gym.',
         'discount_type_required' => 'The discount type is required.',
         'discount_value_required' => 'The discount value is required.',
         'percentage_discount_max' => 'The percentage discount may not be greater than 100.',
