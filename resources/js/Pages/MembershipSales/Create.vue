@@ -820,7 +820,7 @@ const submitDebt = () => {
                                 <input
                                     v-model="form.discount_value"
                                     type="number"
-                                    step="0.01"
+                                    step="0.00000001"
                                     min="0"
                                     :max="form.discount_type === 'percent' ? 100 : membershipDiscountedPrice"
                                     class="form-control"
