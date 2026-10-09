@@ -118,6 +118,16 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
             </li>
 
             <li
+                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
+                :class="['menu-item', route().current('contact-notes.*') ? 'active' : '']"
+            >
+                <Link :href="route('contact-notes.index', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-notes"></i>
+                    <div>{{ useTrans('app.sidebar.contact_notes') }}</div>
+                </Link>
+            </li>
+
+            <li
                 v-if="hasAnyRole(['owner'])"
                 :class="[
                     'menu-item',

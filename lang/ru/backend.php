@@ -2,6 +2,7 @@
 
 return [
     'attributes' => [
+        'sales_manager' => 'Менеджер по продажам',
         'person' => 'клиент',
         'membership_plan' => 'абонемент',
         'start' => 'дата начала',
@@ -40,6 +41,8 @@ return [
     ],
 
     'membership_sales' => [
+        'contact_note_manager_required' => 'Контактная заметка этого клиента закреплена за другим менеджером по продажам.',
+        'invalid_sales_manager' => 'Выберите менеджера по продажам этого зала.',
         'discount_type_required' => 'Необходимо указать тип скидки.',
         'discount_value_required' => 'Необходимо указать размер скидки.',
         'percentage_discount_max' => 'Процентная скидка не может превышать 100.',

@@ -1,5 +1,23 @@
 {
+    "contact_notes": {
+        "title": "Contact notes",
+        "new_contact": "New contact note",
+        "phone_number": "Phone number",
+        "note": "Note",
+        "sales_manager": "Sales manager",
+        "all_managers": "All sales managers",
+        "created_at": "Created at",
+        "date_from": "From",
+        "date_to": "To",
+        "filter": "Filter",
+        "reset": "Reset",
+        "save": "Save",
+        "add_note": "Add note",
+        "no_more_notes": "No other notes",
+        "empty": "No contact notes"
+    },
     "sidebar": {
+        "contact_notes": "Contact notes",
         "profile": "Profile",
         "notifications": "Notifications",
         "gym": "Gym",
@@ -388,6 +406,10 @@
         "no": "No"
     },
     "sales": {
+        "sales_manager": "Sales manager",
+        "select_sales_manager": "Select a sales manager",
+        "contact_note_manager_commission": "This customer's contact note belongs to this sales manager. The sale commission will go to them.",
+        "current_sales_manager": "Signed-in sales manager",
         "receipt_price": "(Receipt price)",
         "fiscal_receipt": "(Fiscal receipt)",
         "internal_price": "(Internal price)",
