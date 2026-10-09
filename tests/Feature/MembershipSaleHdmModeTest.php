@@ -72,6 +72,21 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame('partial', $sale->payment_status);
     }
 
+    public function test_manual_discount_percentage_preserves_eight_decimal_places(): void
+    {
+        $sale = $this->service->store([
+            ...$this->payload(),
+            'discount_value' => '26.66666667',
+        ]);
+
+        $this->assertSame('26.66666667', $sale->refresh()->discount_value);
+        $this->assertEqualsWithDelta(
+            26.66666667,
+            (float) DB::table('membership_sales')->where('id', $sale->id)->value('discount_value'),
+            0.000000001,
+        );
+    }
+
     public function test_salesperson_commission_report_excludes_zero_amount_records(): void
     {
         $sale = $this->service->store($this->payload());
