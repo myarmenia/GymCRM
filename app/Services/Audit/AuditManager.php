@@ -65,4 +65,26 @@ class AuditManager
             gymId: $gymId,
         );
     }
+
+    public function deleted(
+        Model $entity,
+        string $action,
+        array $oldSnapshot,
+        ?string $message = null,
+        ?int $gymId = null,
+    ): ActivityLog {
+        return $this->activityLogService->log(
+            action: $action,
+            message: $message ?? sprintf('%s #%s deleted', class_basename($entity), $entity->getKey()),
+            entity: $entity,
+            changes: [[
+                'field' => class_basename($entity),
+                'type' => 'deleted',
+                'old' => $oldSnapshot,
+                'new' => null,
+            ]],
+            meta: ['old_snapshot' => $oldSnapshot],
+            gymId: $gymId,
+        );
+    }
 }

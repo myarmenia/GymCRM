@@ -76,6 +76,11 @@ class Gym extends Model
         return $this->hasMany(MembershipSale::class);
     }
 
+    public function ownerSales(): HasMany
+    {
+        return $this->hasMany(OwnerSale::class);
+    }
+
     public function reminders()
     {
         return $this->hasMany(Reminder::class);
