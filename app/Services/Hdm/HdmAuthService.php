@@ -49,7 +49,7 @@ class HdmAuthService
 
     /**
      * Определить тип оплаты по payment_method_id
-     * slug: cash, card, transfer
+     * slug: cash, card, transfer, installment
      */
     public function getPaymentType(?int $paymentMethodId): string
     {
@@ -70,6 +70,7 @@ class HdmAuthService
             case 'card':
                 return 'card';
             case 'transfer':
+            case 'installment':
                 return 'otherPos'; // или 'transfer'
             default:
                 return 'cash';
