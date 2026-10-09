@@ -480,6 +480,8 @@
         "the_fiscal_operation_has_not_finished_yet": "The fiscal operation has not finished yet.",
         "the_fiscal_operation_is_pending_check_its_status_first": "The fiscal operation is pending. Check its status first.",
         "fiscal_receipt_3": "Fiscal receipt",
+        "payment_already_fiscalized_externally": "Payment already fiscalized outside CRM",
+        "payment_already_fiscalized_externally_help": "The payment will be included in financial reports and synchronized without printing an HDM receipt.",
         "fiscal_receipt_printed_successfully": "Fiscal receipt printed successfully.",
         "fiscal_receipt_amount": "Fiscal receipt amount",
         "fiscal_receipt_fully_refunded": "Fiscal receipt fully refunded",

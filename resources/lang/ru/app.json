@@ -480,6 +480,8 @@
         "the_fiscal_operation_has_not_finished_yet": "Фискальная операция ещё не завершена.",
         "the_fiscal_operation_is_pending_check_its_status_first": "Фискальная операция ожидает завершения. Сначала проверьте её статус.",
         "fiscal_receipt_3": "Фискальный чек",
+        "payment_already_fiscalized_externally": "Оплата уже фискализирована вне CRM",
+        "payment_already_fiscalized_externally_help": "Платёж будет учтён в финансовых отчётах и синхронизирован без печати чека ККМ.",
         "fiscal_receipt_printed_successfully": "Фискальный чек успешно напечатан.",
         "fiscal_receipt_amount": "Сумма фискального чека",
         "fiscal_receipt_fully_refunded": "Фискальный чек полностью возвращён",

@@ -53,7 +53,8 @@ class MembershipSaleController extends Controller
 
     public function store(StoreMembershipSaleRequest $request, $locale, $person)
     {
-        $membershipSale = $this->membershipSaleService->store($request->validated());
+        $data = $request->validated();
+        $membershipSale = $this->membershipSaleService->store($data);
 
         if ($request->expectsJson()) {
             $payment = $membershipSale->payments
@@ -63,7 +64,10 @@ class MembershipSaleController extends Controller
                 ->sortByDesc('id')
                 ->first();
             $printResult = $payment?->is_hdm
-                ? $this->hdmPrintService->preparePrintData($payment)
+                ? $this->hdmPrintService->preparePrintData(
+                    $payment,
+                    (bool) ($data['hdm_processed_externally'] ?? false),
+                )
                 : ['success' => true, 'need_print' => false];
 
             return response()->json([
