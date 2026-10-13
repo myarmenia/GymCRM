@@ -376,6 +376,11 @@ const subscribeToTurnstileChannel = () => {
             return;
         }
 
+        // Staff scans are recorded by the API without manager interaction.
+        if (event?.owner_type === "user") {
+            return;
+        }
+
         if (showEntryModal.value || entryData.value) {
             entryQueue.value.push(event);
             return;
