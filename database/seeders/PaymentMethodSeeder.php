@@ -43,20 +43,33 @@ class PaymentMethodSeeder extends Seeder
                     'hy' => 'Անվճար',
                 ],
             ],
+            [
+                'slug' => 'installment',
+                'translations' => [
+                    'en' => 'Installment',
+                    'ru' => 'Рассрочка',
+                    'hy' => 'Ապառիկ',
+                ],
+            ],
         ];
 
         foreach ($methods as $methodData) {
-            $method = PaymentMethod::create([
-                'slug' => $methodData['slug'],
-                ...StableUuid::seedIdentity('payment-methods', $methodData['slug']),
-            ]);
+            $method = PaymentMethod::query()->firstOrCreate(
+                ['slug' => $methodData['slug']],
+                StableUuid::seedIdentity('payment-methods', $methodData['slug']),
+            );
 
             foreach ($methodData['translations'] as $locale => $name) {
-                $method->translations()->create([
-                    'locale' => $locale,
-                    'name' => $name,
-                    ...StableUuid::seedIdentity('payment-method-translations', "{$methodData['slug']}:{$locale}"),
-                ]);
+                $translation = $method->translations()->firstOrNew(['locale' => $locale]);
+                $translation->name = $name;
+
+                if (! $translation->exists) {
+                    $translation->fill(
+                        StableUuid::seedIdentity('payment-method-translations', "{$methodData['slug']}:{$locale}"),
+                    );
+                }
+
+                $translation->save();
             }
         }
     }

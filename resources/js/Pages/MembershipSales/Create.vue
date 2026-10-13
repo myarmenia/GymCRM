@@ -92,6 +92,7 @@ const form = useForm({
     discount_type: 'percent',
     discount_value: null,
     is_hdm: true,
+    hdm_processed_externally: false,
     notes: '',
     trainer_id: '',
     is_partial_payment: false,
@@ -415,6 +416,12 @@ watch(() => form.amount, (value) => {
     }
 })
 
+watch(() => form.is_hdm, isHdm => {
+    if (!isHdm) {
+        form.hdm_processed_externally = false
+    }
+})
+
 const postSale = async stayDebt => {
     form.clearErrors()
     if (!stayDebt && partialPaymentError.value) {
@@ -432,6 +439,7 @@ const postSale = async stayDebt => {
             amount: 0,
             payment_method_id: null,
             card_type_id: null,
+            hdm_processed_externally: false,
         } : {}),
     }
 
@@ -997,6 +1005,22 @@ const submitDebt = () => {
                                     </span>
                                 </label>
                                 <InputError :message="form.errors.is_hdm" />
+                                <div v-if="form.is_hdm" class="mt-3 ms-4">
+                                    <label class="form-check">
+                                        <input
+                                            v-model="form.hdm_processed_externally"
+                                            type="checkbox"
+                                            class="form-check-input"
+                                        />
+                                        <span class="form-check-label">
+                                            {{ t('sales.payment_already_fiscalized_externally') }}
+                                        </span>
+                                    </label>
+                                    <small class="text-muted d-block mt-1">
+                                        {{ t('sales.payment_already_fiscalized_externally_help') }}
+                                    </small>
+                                    <InputError :message="form.errors.hdm_processed_externally" />
+                                </div>
                             </div>
                         </div>
                     </div>

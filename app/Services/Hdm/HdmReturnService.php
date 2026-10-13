@@ -74,7 +74,11 @@ class HdmReturnService extends HdmBaseService
                 ];
             }
 
-            if ($this->isExternalProcessing()) {
+            $wasProcessedExternally = $originalPayment->hdmOperations
+                ->contains(fn ($operation) => $operation->transaction_type === 'sale'
+                    && $operation->status === 'external');
+
+            if ($this->isExternalProcessing() || $wasProcessedExternally) {
                 return $this->prepareExternalReturnData($refund, $originalPayment);
             }
 
@@ -236,9 +240,16 @@ class HdmReturnService extends HdmBaseService
             ->where('payment_method_id', $refund->payment_method_id)
             ->whereHas('hdmOperations', function ($query) {
                 $query->where('transaction_type', 'sale')
-                    ->where('status', 'success')
-                    ->whereNotNull('crn')
-                    ->whereNotNull('rseq');
+                    ->where(function ($operationQuery) {
+                        $operationQuery
+                            ->where('status', 'external')
+                            ->orWhere(function ($successfulQuery) {
+                                $successfulQuery
+                                    ->where('status', 'success')
+                                    ->whereNotNull('crn')
+                                    ->whereNotNull('rseq');
+                            });
+                    });
             })
             ->withSum([
                 'refunds as refunded_amount' => fn ($query) => $query->where('status', 'paid'),

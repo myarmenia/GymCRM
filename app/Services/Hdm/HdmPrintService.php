@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class HdmPrintService extends HdmBaseService
 {
-    public function preparePrintData($entity): array
+    public function preparePrintData($entity, bool $processedExternally = false): array
     {
         try {
             if (! $entity instanceof MembershipPlanPayment) {
@@ -52,7 +52,7 @@ class HdmPrintService extends HdmBaseService
                 ];
             }
 
-            $external = $this->isExternalProcessing();
+            $external = $processedExternally || $this->isExternalProcessing();
             $device = $external ? null : $this->getDevice((int) $sale->gym_id, 'reception');
             if (! $external && ! $device) {
                 return [
@@ -172,6 +172,19 @@ class HdmPrintService extends HdmBaseService
                     'success' => true,
                     'need_print' => false,
                     'message' => 'The HDM receipt is already printed.',
+                ];
+            }
+
+            $externalOperation = $payment->hdmOperations
+                ->where('transaction_type', 'sale')
+                ->first(fn ($operation) => $operation->status === 'external');
+
+            if ($externalOperation) {
+                return [
+                    'success' => true,
+                    'need_print' => false,
+                    'external' => true,
+                    'message' => 'The fiscal receipt is processed outside CRM.',
                 ];
             }
 
