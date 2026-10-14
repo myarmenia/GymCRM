@@ -1,4 +1,17 @@
 {
+    "sale_contract": {
+        "title": "Договоры продажи",
+        "generating_notice": "Договор создаётся. Страница обновится автоматически.",
+        "no_contract": "Для этой продажи пока нет договора. Проверьте настройки договора спортзала.",
+        "revision": "версия :revision",
+        "currency": "драм",
+        "download_pdf": "Скачать PDF",
+        "retry": "Создать повторно",
+        "creating": "Создаётся…",
+        "create_revision": "Создать новую версию",
+        "back": "Назад",
+        "status": {"ready": "Готов", "pending": "В ожидании", "failed": "Ошибка"}
+    },
     "contact_notes": {
         "title": "Заметки по контактам",
         "new_contact": "Новая заметка по контакту",
@@ -224,6 +237,10 @@
         "birth_date": "Дата рождения",
         "created_at": "Дата создания",
         "gender": "Пол",
+        "passport_series": "Серия паспорта",
+        "passport_issued_by": "Кем выдан",
+        "passport_issued_at": "Дата выдачи",
+        "address": "Адрес",
         "male": "Мужской",
         "female": "Женский",
         "status": "Статус",

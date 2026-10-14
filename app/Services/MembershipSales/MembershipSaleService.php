@@ -32,6 +32,7 @@ use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Memberships\MembershipSalaryCalculator;
 use App\Services\MobileNotifications\MobilePushNotificationService;
 use App\Services\Reminders\ReminderService;
+use App\Services\SaleContracts\SaleContractService;
 use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,7 @@ class MembershipSaleService
         protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
         protected ContactNoteOwnerResolver $contactNoteOwnerResolver,
         protected ContactNoteOwnershipService $contactNoteOwnership,
+        protected SaleContractService $saleContractService,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -980,6 +982,8 @@ class MembershipSaleService
                 $this->contactNoteOwnership->create($salesManager, (string) $person->phone, 'Նոր վաճառք');
             }
 
+            $this->saleContractService->issueForSale($membershipSale);
+
             DB::commit();
 
             $this->mobileNotifications->sendMembershipPurchased($personMembership->loadMissing('person'));
@@ -1086,6 +1090,8 @@ class MembershipSaleService
                 'membership_sale.updated',
                 "Membership sale #{$membershipSale->id} updated",
             );
+
+            $this->saleContractService->issueForSale($membershipSale);
 
             DB::commit();
 

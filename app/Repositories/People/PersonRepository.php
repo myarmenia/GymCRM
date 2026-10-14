@@ -45,6 +45,8 @@ class PersonRepository extends BaseRepository implements PersonInterface
 
         return $query
             ->filter($this->normalizeFilters($filters))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString();
     }
