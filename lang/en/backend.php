@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'contact_notes' => [
+        'already_linked' => 'This phone is already linked to the selected main contact.',
+        'standalone_required' => 'Only a standalone main contact can be linked here.',
+    ],
     'attributes' => [
         'sales_manager' => 'Sales manager',
         'person' => 'customer',

@@ -139,7 +139,12 @@ Route::prefix('{locale}')
 
             Route::prefix('contact-notes')->name('contact-notes.')->group(function () {
                 Route::get('/', [ContactNoteController::class, 'index'])->name('index');
+                Route::get('/lookup', [ContactNoteController::class, 'lookup'])->name('lookup');
                 Route::post('/', [ContactNoteController::class, 'store'])->name('store');
+                Route::post('/profiles/{contactProfile}/phones', [ContactNoteController::class, 'addRelated'])->name('add-related');
+                Route::post('/profiles/{contactProfile}/link-existing', [ContactNoteController::class, 'linkExisting'])->name('link-existing');
+                Route::patch('/profiles/{contactProfile}', [ContactNoteController::class, 'updateProfile'])->name('update-profile');
+                Route::post('/profiles/{contactProfile}/notes', [ContactNoteController::class, 'addProfileNote'])->name('add-profile-note');
                 Route::post('/{contactNote}/notes', [ContactNoteController::class, 'addNote'])->name('add-note');
             });
 

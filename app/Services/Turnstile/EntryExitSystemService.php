@@ -8,6 +8,7 @@ use App\Interfaces\AttendanceSheets\AttendanceSheetInterface;
 use App\Interfaces\Turnstile\CheckEntryCodeInterface;
 use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Models\AttendanceSheet;
+use App\Models\Gym;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\User;
@@ -330,6 +331,12 @@ class EntryExitSystemService
                 'gym' => 'A gym must be assigned before using the manual scanner.',
             ]);
         }
+
+        abort_unless(
+            Gym::query()->whereKey($clientId)->value('entry_code_type') === Gym::DEFAULT_ENTRY_CODE_TYPE,
+            403,
+            'Manual scanning is available only for RFID gyms.'
+        );
 
         $action = match ($direction) {
             'enter' => 'entry',

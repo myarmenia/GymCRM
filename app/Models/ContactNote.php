@@ -11,7 +11,7 @@ class ContactNote extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'phone_number', 'note'];
+    protected $fillable = ['user_id', 'phone_number', 'note', 'contact_profile_id'];
 
     protected function casts(): array
     {
@@ -21,5 +21,10 @@ class ContactNote extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function profile()
+    {
+        return $this->belongsTo(ContactProfile::class, 'contact_profile_id');
     }
 }

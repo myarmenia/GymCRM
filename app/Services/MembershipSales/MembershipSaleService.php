@@ -979,7 +979,13 @@ class MembershipSaleService
                 && $user->hasRole('sales_manager')
                 && (int) $user->gym_id === $gymId
                 && filled($person->phone)) {
-                $this->contactNoteOwnership->create($salesManager, (string) $person->phone, 'Նոր վաճառք');
+                $this->contactNoteOwnership->create($salesManager, (string) $person->phone, 'Նոր վաճառք', [
+                    'name' => $person->name,
+                    'surname' => $person->surname,
+                    'email' => $person->email,
+                    'birth_date' => $person->birth_date,
+                    'gender' => $person->gender,
+                ]);
             }
 
             $this->saleContractService->issueForSale($membershipSale);

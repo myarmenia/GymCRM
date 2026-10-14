@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'contact_notes' => [
+        'already_linked' => 'Этот номер уже связан с выбранным основным контактом.',
+        'standalone_required' => 'Здесь можно связать только отдельный основной контакт.',
+    ],
     'attributes' => [
         'sales_manager' => 'Менеджер по продажам',
         'person' => 'клиент',
