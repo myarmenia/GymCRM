@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'sale_contract_revision_queued' => 'Создаётся новая версия договора.',
+    'sale_contract_created' => 'Договор создан.',
     'accounting_type' => 'Тип учёта',
     'action_required' => 'Необходимо выбрать действие.',
     'activation_date' => 'дата активации',

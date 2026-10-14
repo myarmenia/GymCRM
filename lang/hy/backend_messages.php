@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'sale_contract_revision_queued' => 'Պայմանագրի նոր տարբերակը ստեղծվում է։',
+    'sale_contract_created' => 'Պայմանագիրը ստեղծվեց։',
     'accounting_type' => 'Հաշվառման տեսակ',
     'action_required' => 'Գործողությունը պարտադիր է։',
     'activation_date' => 'ակտիվացման ամսաթիվ',

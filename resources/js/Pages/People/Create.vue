@@ -37,6 +37,10 @@ const form = useForm({
     entry_code_token: '',
     birth_date: '',
     gender: '',
+    passport_series: '',
+    passport_issued_by: '',
+    passport_issued_at: '',
+    address: '',
 });
 
 const handleImageUpload = (event) => {
@@ -218,6 +222,26 @@ const submit = () => {
                             <option value="female">{{ t('female') }}</option>
                         </select>
                         <InputError :message="form.errors.gender" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_series" class="form-label" :value="t('passport_series')" />
+                        <TextInput id="passport_series" type="text" class="form-control" v-model="form.passport_series" />
+                        <InputError :message="form.errors.passport_series" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_issued_by" class="form-label" :value="t('passport_issued_by')" />
+                        <TextInput id="passport_issued_by" type="text" class="form-control" v-model="form.passport_issued_by" />
+                        <InputError :message="form.errors.passport_issued_by" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_issued_at" class="form-label" :value="t('passport_issued_at')" />
+                        <TextInput id="passport_issued_at" type="date" class="form-control" v-model="form.passport_issued_at" />
+                        <InputError :message="form.errors.passport_issued_at" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="address" class="form-label" :value="t('address')" />
+                        <TextInput id="address" type="text" class="form-control" v-model="form.address" />
+                        <InputError :message="form.errors.address" />
                     </div>
                 </div>
 

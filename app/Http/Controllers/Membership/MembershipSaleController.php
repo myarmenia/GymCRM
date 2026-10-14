@@ -12,6 +12,7 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleReminderRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
+use App\Models\SaleContract;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
 use App\Services\Hdm\HdmReturnService;
@@ -55,6 +56,9 @@ class MembershipSaleController extends Controller
     {
         $data = $request->validated();
         $membershipSale = $this->membershipSaleService->store($data);
+        $redirect = SaleContract::query()->where('membership_sale_id', $membershipSale->id)->exists()
+            ? route('sale_contract.show', ['locale' => app()->getLocale(), 'sale' => $membershipSale->id])
+            : route('membership_sale.list', ['locale' => app()->getLocale()]);
 
         if ($request->expectsJson()) {
             $payment = $membershipSale->payments
@@ -79,12 +83,12 @@ class MembershipSaleController extends Controller
                 'need_print' => ($printResult['success'] ?? false) && ($printResult['need_print'] ?? false),
                 'print_data' => $printResult['data'] ?? null,
                 'print_error' => ($printResult['success'] ?? false) ? null : $printResult,
-                'redirect' => route('membership_sale.list', ['locale' => app()->getLocale()]),
+                'redirect' => $redirect,
             ], 201);
         }
 
         return redirect()
-            ->route('membership_sale.list', ['locale' => app()->getLocale()])
+            ->to($redirect)
             ->with('success', 'Membership sale created successfully.');
     }
 

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\HdmCashier;
 use App\Models\HdmConfig;
 use App\Models\HdmOperation;
+use App\Models\Gym;
+use App\Models\SaleContract;
 use App\Models\MembershipPlanPayment;
 use App\Models\SalespersonCommission;
 use App\Models\User;
@@ -14,10 +16,12 @@ use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
 use App\Services\Hdm\HdmReturnService;
 use App\Services\MembershipSales\MembershipSaleService;
+use App\Services\SaleContracts\SaleContractService;
 use App\Services\Reports\SalespersonCommissionsReportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
@@ -62,6 +66,101 @@ class MembershipSaleHdmModeTest extends TestCase
             'reminder_scheduled_at' => now()->addDay()->toDateTimeString(),
             'reminder_recipient_ids' => [$this->ids['userId']],
         ];
+    }
+
+    public function test_sale_redirects_to_its_contract_when_automatic_contracts_are_enabled(): void
+    {
+        app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']))
+            ->update(['enabled' => true]);
+
+        $response = $this->postJson(route('membership_sale.store', [
+            'locale' => 'hy', 'person' => $this->ids['personId'],
+        ]), [...$this->payload(false),
+            'is_partial_payment' => false,
+            'is_full_payment' => true,
+            'reminder_scheduled_at' => null,
+            'reminder_recipient_ids' => null,
+        ])->assertCreated();
+
+        $saleId = $response->json('membership_sale.id');
+        $this->assertDatabaseHas('sale_contracts', ['membership_sale_id' => $saleId]);
+        $response->assertJsonPath('redirect', route('sale_contract.show', [
+            'locale' => 'hy', 'sale' => $saleId,
+        ]));
+    }
+
+    public function test_sale_keeps_list_redirect_when_automatic_contracts_are_disabled(): void
+    {
+        $response = $this->postJson(route('membership_sale.store', [
+            'locale' => 'hy', 'person' => $this->ids['personId'],
+        ]), [...$this->payload(false),
+            'is_partial_payment' => false,
+            'is_full_payment' => true,
+            'reminder_scheduled_at' => null,
+            'reminder_recipient_ids' => null,
+        ])->assertCreated();
+
+        $this->assertDatabaseMissing('sale_contracts', [
+            'membership_sale_id' => $response->json('membership_sale.id'),
+        ]);
+        $response->assertJsonPath('redirect', route('membership_sale.list', ['locale' => 'hy']));
+    }
+
+    public function test_enabled_gym_issues_a_numbered_white_contract_with_final_price(): void
+    {
+        $settings = app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']));
+        $settings->update(['enabled' => true, 'next_number' => 741,
+            'contract_title' => 'Անհատական անդամակցության պայմանագիր']);
+
+        $sale = $this->service->store($this->payload(true));
+        $contract = SaleContract::query()->where('membership_sale_id', $sale->id)->firstOrFail();
+
+        $this->assertSame(741, $contract->number);
+        $this->assertSame('80.00', $contract->price);
+        $this->assertSame('80.00', $contract->snapshot['price']);
+        $this->assertSame('Անհատական անդամակցության պայմանագիր', $contract->contract_title);
+        $this->assertSame('Անհատական անդամակցության պայմանագիր', $contract->snapshot['contract_title']);
+        $this->assertStringContainsString('Անհատական անդամակցության պայմանագիր',
+            view('contracts.sale', ['contract' => $contract, 'snapshot' => $contract->snapshot])->render());
+        $this->assertNull($contract->pdf_path);
+        $this->assertSame(742, $settings->fresh()->next_number);
+    }
+
+    public function test_white_pdf_is_generated_locally_from_final_price(): void
+    {
+        Storage::fake('local');
+        $settings = app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']));
+        $settings->update(['enabled' => true, 'next_number' => 30]);
+
+        $sale = $this->service->store($this->payload(true));
+        $contract = SaleContract::query()->where('membership_sale_id', $sale->id)->firstOrFail();
+        app(SaleContractService::class)->render($contract);
+
+        $contract->refresh();
+        $this->assertSame('80.00', $contract->price);
+        $this->assertSame('local', $contract->pdf_disk);
+        $this->assertStringStartsWith('%PDF-', Storage::disk('local')->get($contract->pdf_path));
+    }
+
+    public function test_sales_manager_can_reissue_white_contract_without_owner_role(): void
+    {
+        $settings = app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']));
+        $settings->update(['enabled' => true]);
+        $sale = $this->service->store($this->payload(true));
+        SaleContract::query()->where('membership_sale_id', $sale->id)->update(['status' => 'ready']);
+
+        auth()->user()->removeRole('owner');
+        $this->assertFalse(auth()->user()->hasRole('owner'));
+        $this->assertTrue(auth()->user()->hasRole('sales_manager'));
+
+        $this->post(route('sale_contract.reissue', ['locale' => 'hy', 'sale' => $sale->id]))
+            ->assertRedirect();
+
+        $this->assertSame([2, 1], SaleContract::query()
+            ->where('membership_sale_id', $sale->id)
+            ->orderByDesc('revision')
+            ->pluck('revision')
+            ->all());
     }
 
     public function test_create_preserves_mode_and_discounted_price_with_a_prepayment(): void
