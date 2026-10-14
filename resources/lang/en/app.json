@@ -1,5 +1,21 @@
 {
     "contact_notes": {
+        "name": "First name",
+        "surname": "Last name",
+        "email": "Email",
+        "birth_date": "Date of birth",
+        "gender": "Gender",
+        "male": "Male",
+        "female": "Female",
+        "relationship": "Family or other relationship",
+        "new_phone": "New phone",
+        "existing_phone": "Existing contact",
+        "link_existing": "Link existing contact",
+        "existing_phone_help": "Enter an existing standalone phone number. Its notes and personal details will be kept.",
+        "related_phones": "Related phones",
+        "add_phone": "Add phone",
+        "primary": "Primary",
+        "edit": "Edit",
         "title": "Contact notes",
         "new_contact": "New contact note",
         "phone_number": "Phone number",
@@ -173,6 +189,8 @@
         "delete_password_help": "Enter your password to confirm permanent account deletion."
     },
     "people": {
+        "contact_profile_loaded": "Contact details loaded from this phone number. Please review them.",
+        "person_with_this_phone_number_already_exists": "A customer with this phone number already exists.",
         "clients": "Clients",
         "create_person": "Create client",
         "edit_person": "Edit client",

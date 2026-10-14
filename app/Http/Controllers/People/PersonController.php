@@ -67,6 +67,9 @@ class PersonController extends Controller
 
         return Inertia::render('People/List', [
             'people' => $people,
+            'entryCodeType' => Gym::query()
+                ->whereKey($request->user()?->gym_id)
+                ->value('entry_code_type'),
         ]);
     }
 

@@ -13,6 +13,7 @@ import { useConfirm } from '@/composables/useConfirm';
 
 const props = defineProps({
     people: Object,
+    entryCodeType: String,
 });
 
 const page = usePage();
@@ -32,8 +33,9 @@ const canManagePersonVisits = computed(() =>
     hasAnyRole(["manager", "sales_manager", "super_admin","admin"]),
 );
 const canManualScan = computed(() =>
-    hasRole("manager") && 
-    Boolean(page.props.auth?.user?.gym_id),
+    hasRole("manager") &&
+    Boolean(page.props.auth?.user?.gym_id) &&
+    props.entryCodeType === "rfId",
 );
 
 const canSalesPersonVisits = computed(() =>

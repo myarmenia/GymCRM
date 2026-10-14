@@ -11,10 +11,12 @@ const props = defineProps({
     filters: { type: Object, default: () => ({}) },
     canCreate: { type: Boolean, default: false },
 })
-
 const page = usePage()
 const locale = computed(() => page.props.locale ?? 'hy')
 const t = key => translate(page.props.translations, `app.contact_notes.${key}`)
+const personFields = ['name', 'surname', 'email', 'birth_date', 'gender']
+const fields = [...personFields, 'relationship']
+const blank = () => ({ phone_number: '', note: '', name: '', surname: '', email: '', birth_date: '', gender: '', relationship: '' })
 const filter = ref({
     sales_manager_id: props.filters.sales_manager_id ?? '',
     phone_number: props.filters.phone_number ?? '',
@@ -24,166 +26,151 @@ const filter = ref({
 const createOpen = ref(false)
 const expanded = ref(null)
 const addingTo = ref(null)
-const createForm = useForm({ phone_number: '', note: '' })
+const relatedMode = ref('new')
+const editing = ref(null)
+const notingTo = ref(null)
+const createForm = useForm(blank())
+const relatedForm = useForm(blank())
+const linkForm = useForm({ phone_number: '', relationship: '' })
 const noteForm = useForm({ note: '' })
+const editForm = useForm(blank())
 
 const applyFilters = () => router.get(
     route('contact-notes.index', { locale: locale.value }),
     Object.fromEntries(Object.entries(filter.value).filter(([, value]) => value !== '')),
     { preserveState: true, preserveScroll: true, replace: true },
 )
-
 const resetFilters = () => {
     filter.value = { sales_manager_id: '', phone_number: '', date_from: '', date_to: '' }
     applyFilters()
 }
-
 const create = () => createForm.post(route('contact-notes.store', { locale: locale.value }), {
     preserveScroll: true,
-    onSuccess: () => {
-        createForm.reset()
-        createOpen.value = false
-    },
+    onSuccess: () => { createForm.reset(); createOpen.value = false },
 })
-
-const startNote = row => {
-    addingTo.value = row.id
-    expanded.value = row.id
-    noteForm.reset()
-    noteForm.clearErrors()
+const startRelated = group => {
+    expanded.value = group.id
+    addingTo.value = group.id
+    relatedMode.value = 'new'
+    relatedForm.reset()
+    relatedForm.clearErrors()
+    linkForm.reset()
+    linkForm.clearErrors()
 }
-
-const addNote = row => noteForm.post(route('contact-notes.add-note', {
-    locale: locale.value,
-    contactNote: row.id,
+const addRelated = group => relatedForm.post(route('contact-notes.add-related', {
+    locale: locale.value, contactProfile: group.id,
 }), {
     preserveScroll: true,
-    onSuccess: () => {
-        noteForm.reset()
-        addingTo.value = null
-        expanded.value = row.id
-    },
+    onSuccess: () => { relatedForm.reset(); addingTo.value = null; expanded.value = group.id },
 })
-
+const linkExisting = group => linkForm.post(route('contact-notes.link-existing', {
+    locale: locale.value, contactProfile: group.id,
+}), {
+    preserveScroll: true,
+    onSuccess: () => { linkForm.reset(); addingTo.value = null; expanded.value = group.id },
+})
+const startEdit = member => {
+    editing.value = member.id
+    for (const field of fields) editForm[field] = member[field] ?? ''
+    editForm.clearErrors()
+}
+const saveEdit = member => editForm.patch(route('contact-notes.update-profile', {
+    locale: locale.value, contactProfile: member.id,
+}), { preserveScroll: true, onSuccess: () => { editing.value = null } })
+const addNote = member => noteForm.post(route('contact-notes.add-profile-note', {
+    locale: locale.value, contactProfile: member.id,
+}), { preserveScroll: true, onSuccess: () => { noteForm.reset(); notingTo.value = null } })
 const formatDate = value => value ? new Date(value).toLocaleString(locale.value) : '—'
-const managerName = user => [user?.name, user?.surname].filter(Boolean).join(' ') || '—'
+const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' ') || '—'
 </script>
 
 <template>
     <Head :title="t('title')" />
     <Index>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="mb-0">{{ t('title') }}</h2>
-            <button v-if="canCreate" type="button" class="btn btn-primary" @click="createOpen = !createOpen">
-                <i class="icon-base ti tabler-plus me-1"></i>{{ t('new_contact') }}
-            </button>
+            <button v-if="canCreate" class="btn btn-primary" type="button" @click="createOpen = !createOpen">{{ t('new_contact') }}</button>
         </div>
 
-        <div v-if="createOpen && canCreate" class="card mb-4">
-            <div class="card-body">
-                <h5>{{ t('new_contact') }}</h5>
-                <form @submit.prevent="create">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label" for="contact-phone">{{ t('phone_number') }}</label>
-                            <input id="contact-phone" v-model="createForm.phone_number" type="tel" class="form-control" maxlength="32" required>
-                            <div v-if="createForm.errors.phone_number" class="text-danger small">{{ createForm.errors.phone_number }}</div>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label" for="contact-note">{{ t('note') }}</label>
-                            <textarea id="contact-note" v-model="createForm.note" class="form-control" rows="2" required></textarea>
-                            <div v-if="createForm.errors.note" class="text-danger small">{{ createForm.errors.note }}</div>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary mt-3" :disabled="createForm.processing">{{ t('save') }}</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <form class="card-body" @submit.prevent="applyFilters">
-                <div class="row g-3 align-items-end">
-                    <div v-if="!canCreate" class="col-md-3">
-                        <label class="form-label" for="contact-manager">{{ t('sales_manager') }}</label>
-                        <select id="contact-manager" v-model="filter.sales_manager_id" class="form-select">
-                            <option value="">{{ t('all_managers') }}</option>
-                            <option v-for="manager in salesManagers" :key="manager.id" :value="manager.id">{{ managerName(manager) }}</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label" for="filter-phone">{{ t('phone_number') }}</label>
-                        <input id="filter-phone" v-model="filter.phone_number" type="search" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label" for="filter-from">{{ t('date_from') }}</label>
-                        <input id="filter-from" v-model="filter.date_from" type="date" class="form-control">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label" for="filter-to">{{ t('date_to') }}</label>
-                        <input id="filter-to" v-model="filter.date_to" type="date" class="form-control" :min="filter.date_from || undefined">
-                    </div>
-                    <div class="col-md-2 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">{{ t('filter') }}</button>
-                        <button type="button" class="btn btn-outline-secondary" @click="resetFilters">{{ t('reset') }}</button>
-                    </div>
+        <div v-if="createOpen && canCreate" class="card mb-4"><form class="card-body" @submit.prevent="create">
+            <h5>{{ t('new_contact') }}</h5>
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-label">{{ t('phone_number') }} *</label><input v-model="createForm.phone_number" class="form-control" type="tel" required><div class="text-danger small">{{ createForm.errors.phone_number }}</div></div>
+                <div class="col-md-8"><label class="form-label">{{ t('note') }} *</label><textarea v-model="createForm.note" class="form-control" required></textarea><div class="text-danger small">{{ createForm.errors.note }}</div></div>
+                <div v-for="field in personFields" :key="field" class="col-md-4">
+                    <label class="form-label">{{ t(field) }}</label>
+                    <select v-if="field === 'gender'" v-model="createForm[field]" class="form-select"><option value="">—</option><option value="male">{{ t('male') }}</option><option value="female">{{ t('female') }}</option></select>
+                    <input v-else v-model="createForm[field]" class="form-control" :type="field === 'birth_date' ? 'date' : field === 'email' ? 'email' : 'text'">
+                    <div class="text-danger small">{{ createForm.errors[field] }}</div>
                 </div>
-            </form>
-        </div>
-
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>{{ t('phone_number') }}</th>
-                            <th>{{ t('note') }}</th>
-                            <th v-if="!canCreate">{{ t('sales_manager') }}</th>
-                            <th>{{ t('created_at') }}</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template v-for="row in contacts.data" :key="row.id">
-                            <tr>
-                                <td>
-                                    <button type="button" class="btn btn-link p-0 text-start" @click="expanded = expanded === row.id ? null : row.id">
-                                        <i :class="`icon-base ti tabler-chevron-${expanded === row.id ? 'down' : 'right'} me-1`"></i>
-                                        {{ row.phone_number }}
-                                    </button>
-                                    <span v-if="row.children.length" class="badge bg-label-secondary ms-1">{{ row.children.length }}</span>
-                                </td>
-                                <td class="text-break" style="white-space: pre-wrap">{{ row.note }}</td>
-                                <td v-if="!canCreate">{{ managerName(row.user) }}</td>
-                                <td class="text-nowrap">{{ formatDate(row.created_at) }}</td>
-                                <td class="text-end">
-                                    <button v-if="canCreate" type="button" class="btn btn-sm btn-outline-primary" :aria-label="t('add_note')" @click="startNote(row)">+</button>
-                                </td>
-                            </tr>
-                            <tr v-if="expanded === row.id">
-                                <td :colspan="canCreate ? 4 : 5" class="bg-light ps-4">
-                                    <div v-if="row.children.length" class="mb-2">
-                                        <div v-for="child in row.children" :key="child.id" class="d-flex gap-3 border-bottom py-2">
-                                            <span class="text-muted text-nowrap">{{ formatDate(child.created_at) }}</span>
-                                            <span class="text-break" style="white-space: pre-wrap">{{ child.note }}</span>
-                                            <button v-if="canCreate" type="button" class="btn btn-sm btn-outline-primary ms-auto" :aria-label="t('add_note')" @click="startNote(row)">+</button>
-                                        </div>
-                                    </div>
-                                    <div v-else class="text-muted mb-2">{{ t('no_more_notes') }}</div>
-                                    <form v-if="canCreate && addingTo === row.id" class="d-flex gap-2 align-items-start" @submit.prevent="addNote(row)">
-                                        <div class="flex-grow-1">
-                                            <textarea v-model="noteForm.note" class="form-control" :placeholder="t('note')" rows="2" required></textarea>
-                                            <div v-if="noteForm.errors.note" class="text-danger small">{{ noteForm.errors.note }}</div>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary" :disabled="noteForm.processing">{{ t('save') }}</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        </template>
-                        <tr v-if="!contacts.data.length"><td :colspan="canCreate ? 4 : 5" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
-                    </tbody>
-                </table>
             </div>
-            <div v-if="contacts.links?.length > 3" class="card-body"><Pagination :links="contacts.links" /></div>
-        </div>
+            <button class="btn btn-primary mt-3" type="submit" :disabled="createForm.processing">{{ t('save') }}</button>
+        </form></div>
+
+        <div class="card mb-4"><form class="card-body" @submit.prevent="applyFilters"><div class="row g-3 align-items-end">
+            <div v-if="!canCreate" class="col-md-3"><label class="form-label">{{ t('sales_manager') }}</label><select v-model="filter.sales_manager_id" class="form-select"><option value="">{{ t('all_managers') }}</option><option v-for="manager in salesManagers" :key="manager.id" :value="manager.id">{{ fullName(manager) }}</option></select></div>
+            <div class="col-md-3"><label class="form-label">{{ t('phone_number') }}</label><input v-model="filter.phone_number" class="form-control" type="search"></div>
+            <div class="col-md-2"><label class="form-label">{{ t('date_from') }}</label><input v-model="filter.date_from" class="form-control" type="date"></div>
+            <div class="col-md-2"><label class="form-label">{{ t('date_to') }}</label><input v-model="filter.date_to" class="form-control" type="date" :min="filter.date_from || undefined"></div>
+            <div class="col-md-2 d-flex gap-2"><button class="btn btn-primary" type="submit">{{ t('filter') }}</button><button class="btn btn-outline-secondary" type="button" @click="resetFilters">{{ t('reset') }}</button></div>
+        </div></form></div>
+
+        <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+            <thead><tr><th>{{ t('phone_number') }}</th><th>{{ t('name') }}</th><th v-if="!canCreate">{{ t('sales_manager') }}</th><th>{{ t('related_phones') }}</th><th></th></tr></thead>
+            <tbody>
+                <template v-for="group in contacts.data" :key="group.id">
+                    <tr>
+                        <td><button class="btn btn-link p-0" type="button" @click="expanded = expanded === group.id ? null : group.id">{{ group.phone_number }}</button></td>
+                        <td>{{ fullName(group) }}</td><td v-if="!canCreate">{{ fullName(group.user) }}</td>
+                        <td>{{ Math.max(0, (group.members?.length ?? 0) - 1) }}</td>
+                        <td class="text-end"><button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click="startRelated(group)">{{ t('add_phone') }}</button></td>
+                    </tr>
+                    <tr v-if="expanded === group.id"><td :colspan="canCreate ? 4 : 5" class="bg-light">
+                        <div v-for="member in group.members" :key="member.id" class="border-bottom p-3">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <strong>{{ member.phone_number }}</strong><span>{{ fullName(member) }}</span>
+                                <span v-if="member.relationship && !member.is_primary" class="badge bg-label-secondary">{{ member.relationship }}</span>
+                                <span v-if="member.is_primary" class="badge bg-label-primary">{{ t('primary') }}</span>
+                                <button v-if="canCreate" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
+                            </div>
+                            <div class="small text-muted mb-2">{{ member.email || '—' }} · {{ member.birth_date || '—' }} · {{ member.gender ? t(member.gender) : '—' }}</div>
+                            <form v-if="editing === member.id && canCreate" class="row g-2 mb-3" @submit.prevent="saveEdit(member)">
+                                <div v-for="field in (member.is_primary ? personFields : fields)" :key="field" class="col-md-4"><label class="form-label">{{ t(field) }}</label>
+                                    <select v-if="field === 'gender'" v-model="editForm[field]" class="form-select"><option value="">—</option><option value="male">{{ t('male') }}</option><option value="female">{{ t('female') }}</option></select>
+                                    <input v-else v-model="editForm[field]" class="form-control" :type="field === 'birth_date' ? 'date' : field === 'email' ? 'email' : 'text'">
+                                    <div class="text-danger small">{{ editForm.errors[field] }}</div>
+                                </div><div class="col-12"><button class="btn btn-primary" type="submit" :disabled="editForm.processing">{{ t('save') }}</button></div>
+                            </form>
+                            <div v-for="note in member.notes" :key="note.id" class="small py-1"><span class="text-muted me-2">{{ formatDate(note.created_at) }}</span><span style="white-space: pre-wrap">{{ note.note }}</span></div>
+                            <button v-if="canCreate && notingTo !== member.id" class="btn btn-sm btn-outline-primary mt-2" type="button" @click="notingTo = member.id; noteForm.reset(); noteForm.clearErrors()">{{ t('add_note') }}</button>
+                            <form v-if="canCreate && notingTo === member.id" class="d-flex gap-2 mt-2" @submit.prevent="addNote(member)"><textarea v-model="noteForm.note" class="form-control" :placeholder="t('note')" rows="1" required></textarea><button class="btn btn-outline-primary" type="submit" :disabled="noteForm.processing">{{ t('save') }}</button></form>
+                        </div>
+                        <div v-if="addingTo === group.id && canCreate" class="d-flex gap-3 px-3 pt-3">
+                            <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="new">{{ t('new_phone') }}</label>
+                            <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="existing">{{ t('existing_phone') }}</label>
+                        </div>
+                        <form v-if="addingTo === group.id && canCreate && relatedMode === 'new'" class="row g-2 p-3" @submit.prevent="addRelated(group)">
+                            <h6>{{ t('add_phone') }}</h6>
+                            <div class="col-md-4"><label class="form-label">{{ t('phone_number') }} *</label><input v-model="relatedForm.phone_number" class="form-control" type="tel" required><div class="text-danger small">{{ relatedForm.errors.phone_number }}</div></div>
+                            <div v-for="field in fields" :key="field" class="col-md-4"><label class="form-label">{{ t(field) }}</label>
+                                <select v-if="field === 'gender'" v-model="relatedForm[field]" class="form-select"><option value="">—</option><option value="male">{{ t('male') }}</option><option value="female">{{ t('female') }}</option></select>
+                                <input v-else v-model="relatedForm[field]" class="form-control" :type="field === 'birth_date' ? 'date' : field === 'email' ? 'email' : 'text'">
+                                <div class="text-danger small">{{ relatedForm.errors[field] }}</div>
+                            </div>
+                            <div class="col-12"><label class="form-label">{{ t('note') }}</label><textarea v-model="relatedForm.note" class="form-control"></textarea><div class="text-danger small">{{ relatedForm.errors.note }}</div></div>
+                            <div class="col-12"><button class="btn btn-primary" type="submit" :disabled="relatedForm.processing">{{ t('save') }}</button></div>
+                        </form>
+                        <form v-if="addingTo === group.id && canCreate && relatedMode === 'existing'" class="row g-2 p-3" @submit.prevent="linkExisting(group)">
+                            <h6>{{ t('link_existing') }}</h6>
+                            <p class="form-text mb-0">{{ t('existing_phone_help') }}</p>
+                            <div class="col-md-6"><label class="form-label">{{ t('phone_number') }} *</label><input v-model="linkForm.phone_number" class="form-control" type="tel" required><div class="text-danger small">{{ linkForm.errors.phone_number }}</div></div>
+                            <div class="col-md-6"><label class="form-label">{{ t('relationship') }}</label><input v-model="linkForm.relationship" class="form-control" type="text"><div class="text-danger small">{{ linkForm.errors.relationship }}</div></div>
+                            <div class="col-12"><button class="btn btn-primary" type="submit" :disabled="linkForm.processing">{{ t('link_existing') }}</button></div>
+                        </form>
+                    </td></tr>
+                </template>
+                <tr v-if="!contacts.data.length"><td :colspan="canCreate ? 4 : 5" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
+            </tbody>
+        </table></div><div v-if="contacts.links?.length > 3" class="card-body"><Pagination :links="contacts.links" /></div></div>
     </Index>
 </template>

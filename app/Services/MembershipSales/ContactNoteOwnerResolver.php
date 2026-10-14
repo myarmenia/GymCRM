@@ -3,6 +3,7 @@
 namespace App\Services\MembershipSales;
 
 use App\Models\ContactNote;
+use App\Models\ContactProfile;
 use App\Models\Person;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,19 @@ class ContactNoteOwnerResolver
             return null;
         }
 
-        // The first matching contact note establishes the customer's sales manager.
+        $profile = ContactProfile::query()
+            ->with('user')
+            ->where('gym_id', $gymId)
+            ->where('phone_normalized', ContactNotePhone::canonical($phone))
+            ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
+            ->first();
+        if ($profile) {
+            return $profile->user?->active && (int) $profile->user->gym_id === $gymId
+                && $profile->user->hasRole('sales_manager')
+                ? $profile->user : null;
+        }
+
+        // Legacy notes without a profile retain the original first-note rule.
         return ContactNote::query()
             ->with('user')
             ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone_number')), $phones)

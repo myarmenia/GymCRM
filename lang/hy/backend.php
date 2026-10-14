@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'contact_notes' => [
+        'already_linked' => 'Այս համարն արդեն կապված է ընտրված գլխավոր կոնտակտին։',
+        'standalone_required' => 'Այստեղ կարելի է կապել միայն առանձին գլխավոր կոնտակտ։',
+    ],
     'attributes' => [
         'sales_manager' => 'Վաճառքի մենեջեր',
         'person' => 'հաճախորդ',
