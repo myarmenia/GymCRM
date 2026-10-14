@@ -38,6 +38,7 @@ use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Reports\SalespersonCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerMonthlySalariesReportController;
+use App\Http\Controllers\SaleContracts\SaleContractController;
 use App\Http\Controllers\SalaryPayoutController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\TableDeleteController;
@@ -372,6 +373,13 @@ Route::prefix('{locale}')
                     Route::patch('/update/{id}', [MembershipSaleController::class, 'update'])->name('update');
                     Route::delete('/{id}', [MembershipSaleController::class, 'destroy'])->name('destroy');
                 });
+            });
+
+            Route::prefix('sale-contract')->name('sale_contract.')->group(function () {
+                Route::get('/sale/{sale}', [SaleContractController::class, 'show'])->name('show');
+                Route::get('/sale/{sale}/pdf/{contract}', [SaleContractController::class, 'download'])->name('download');
+                Route::post('/sale/{sale}/reissue', [SaleContractController::class, 'reissue'])->name('reissue');
+                Route::post('/sale/{sale}/retry/{contract}', [SaleContractController::class, 'retry'])->name('retry');
             });
 
             Route::prefix('hdm')->name('hdm.')->group(function () {

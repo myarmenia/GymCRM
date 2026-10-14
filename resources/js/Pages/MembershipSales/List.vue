@@ -424,6 +424,13 @@ const resetFilters = () => {
 
                                         <div class="dropdown-menu">
                                             <Link
+                                                class="dropdown-item waves-effect"
+                                                :href="route('sale_contract.show', { locale: currentLocale, sale: sale.id })"
+                                            >
+                                                <i class="icon-base ti tabler-file-text me-1"></i>
+                                                Պայմանագիր
+                                            </Link>
+                                            <Link
                                                 v-if="canManageSales"
                                                 class="dropdown-item waves-effect"
                                                 :href="route('membership_sale.payments', { locale: currentLocale, id: sale.id })"

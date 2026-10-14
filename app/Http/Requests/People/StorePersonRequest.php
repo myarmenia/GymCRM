@@ -56,6 +56,10 @@ class StorePersonRequest extends FormRequest
             ],
             'birth_date' => 'required|date',
             'gender' => 'nullable|string|in:male,female',
+            'passport_series' => 'nullable|string|max:100',
+            'passport_issued_by' => 'nullable|string|max:255',
+            'passport_issued_at' => 'nullable|date',
+            'address' => 'nullable|string|max:500',
         ];
     }
 

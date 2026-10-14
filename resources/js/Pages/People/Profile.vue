@@ -318,6 +318,10 @@ const secondaryInfoItems = computed(() => [
     { label: t('status'), value: personStatusLabel.value, icon: 'tabler-circle-check' },
     { label: t('birth_date'), value: formatDate(props.person?.birth_date), icon: 'tabler-calendar' },
     { label: t('gender'), value: genderLabel(props.person?.gender), icon: 'tabler-gender-bigender' },
+    { label: t('passport_series'), value: props.person?.passport_series || '-', icon: 'tabler-id' },
+    { label: t('passport_issued_by'), value: props.person?.passport_issued_by || '-', icon: 'tabler-building-bank' },
+    { label: t('passport_issued_at'), value: formatDate(props.person?.passport_issued_at), icon: 'tabler-calendar' },
+    { label: t('address'), value: props.person?.address || '-', icon: 'tabler-map-pin' },
     { label: t('gym'), value: props.person?.gyms?.length ? props.person.gyms.map(gym => gym.name).join(', ') : '-', icon: 'tabler-building' },
 ])
 </script>

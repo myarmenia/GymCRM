@@ -1,4 +1,17 @@
 {
+    "sale_contract": {
+        "title": "Վաճառքի պայմանագրեր",
+        "generating_notice": "Պայմանագիրը ստեղծվում է․ էջը ինքնաբար կթարմացվի։",
+        "no_contract": "Այս վաճառքի համար պայմանագիր դեռ չկա։ Ստուգեք gym-ի պայմանագրի կարգավորումները։",
+        "revision": "տարբերակ :revision",
+        "currency": "դրամ",
+        "download_pdf": "Բեռնել PDF",
+        "retry": "Կրկին ստեղծել",
+        "creating": "Ստեղծվում է…",
+        "create_revision": "Ստեղծել նոր տարբերակ",
+        "back": "Վերադառնալ",
+        "status": {"ready": "Պատրաստ", "pending": "Սպասման մեջ", "failed": "Ձախողվեց"}
+    },
     "contact_notes": {
         "name": "Անուն",
         "surname": "Ազգանուն",
@@ -242,6 +255,10 @@
         "birth_date": "Ծննդյան ամսաթիվ",
         "created_at": "Ստեղծման ամսաթիվ",
         "gender": "Սեռ",
+        "passport_series": "Անձնագրի սերիա",
+        "passport_issued_by": "Ում կողմից է տրված",
+        "passport_issued_at": "Տրման ամսաթիվ",
+        "address": "Հասցե",
         "male": "Արական",
         "female": "Իգական",
         "status": "Կարգավիճակ",

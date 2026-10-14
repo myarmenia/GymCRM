@@ -1,4 +1,17 @@
 {
+    "sale_contract": {
+        "title": "Sale contracts",
+        "generating_notice": "The contract is being generated. This page will refresh automatically.",
+        "no_contract": "There is no contract for this sale yet. Check the gym's contract settings.",
+        "revision": "version :revision",
+        "currency": "AMD",
+        "download_pdf": "Download PDF",
+        "retry": "Retry generation",
+        "creating": "Generating…",
+        "create_revision": "Create a new version",
+        "back": "Back",
+        "status": {"ready": "Ready", "pending": "Pending", "failed": "Failed"}
+    },
     "contact_notes": {
         "name": "First name",
         "surname": "Last name",
@@ -242,6 +255,10 @@
         "birth_date": "Date of birth",
         "created_at": "Creation date",
         "gender": "Gender",
+        "passport_series": "Passport series",
+        "passport_issued_by": "Issued by",
+        "passport_issued_at": "Date of issue",
+        "address": "Address",
         "male": "Male",
         "female": "Female",
         "status": "Status",
