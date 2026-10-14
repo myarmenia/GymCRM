@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\People;
 
+use App\Models\Person;
+use App\Services\MembershipSales\ContactNotePhone;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StorePersonRequest extends FormRequest
@@ -20,7 +23,15 @@ class StorePersonRequest extends FormRequest
             'image' => 'nullable|image|max:2048',
             'email' => 'nullable|email|max:255|unique:people,email',
             'password' => 'nullable|string|min:6',
-            'phone' => ['nullable', 'string', 'max:50', Rule::unique('people', 'phone')],
+            'phone' => ['nullable', 'string', 'max:50', Rule::unique('people', 'phone'),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $variants = ContactNotePhone::variants((string) $value);
+                    if ($variants !== [] && Person::query()
+                        ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone')), $variants)->exists()) {
+                        $fail(__('backend_messages.person_with_this_phone_number_already_exists'));
+                    }
+                },
+            ],
             'type' => 'required|in:visitor,guest',
             'entry_code_mode' => ['required', Rule::in(['existing', 'new'])],
             'entry_code_id' => [
@@ -45,6 +56,10 @@ class StorePersonRequest extends FormRequest
             ],
             'birth_date' => 'required|date',
             'gender' => 'nullable|string|in:male,female',
+            'passport_series' => 'nullable|string|max:100',
+            'passport_issued_by' => 'nullable|string|max:255',
+            'passport_issued_at' => 'nullable|date',
+            'address' => 'nullable|string|max:500',
         ];
     }
 

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { translate, useTrans } from '/resources/js/trans'
 import { Head, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -23,6 +24,17 @@ const props = defineProps({
 
 const entryCodes = ref(props.entryCodes || []);
 const imagePreview = ref(null);
+const phoneLookup = ref(null);
+let lookupSequence = 0;
+const autoFilled = ref({});
+const onPhoneInput = () => {
+    for (const [field, value] of Object.entries(autoFilled.value)) {
+        if (form[field] === value) form[field] = '';
+    }
+    autoFilled.value = {};
+    phoneLookup.value = null;
+    lookupSequence++;
+};
 
 const form = useForm({
     name: '',
@@ -37,7 +49,32 @@ const form = useForm({
     entry_code_token: '',
     birth_date: '',
     gender: '',
+    passport_series: '',
+    passport_issued_by: '',
+    passport_issued_at: '',
+    address: '',
 });
+
+const lookupPhone = async () => {
+    const phone = form.phone.trim();
+    const sequence = ++lookupSequence;
+    phoneLookup.value = null;
+    if (!phone) return;
+    try {
+        const { data } = await axios.get(route('contact-notes.lookup', { locale: currentLocale.value }), { params: { phone } });
+        if (sequence !== lookupSequence || phone !== form.phone.trim()) return;
+        phoneLookup.value = data;
+        if (data.existing_person_id || !data.profile) return;
+        for (const field of ['name', 'surname', 'email', 'birth_date', 'gender']) {
+            if (!form[field] && data.profile[field]) {
+                form[field] = data.profile[field];
+                autoFilled.value[field] = data.profile[field];
+            }
+        }
+    } catch {
+        phoneLookup.value = null;
+    }
+};
 
 const handleImageUpload = (event) => {
     const file = event.target.files?.[0] ?? null;
@@ -191,8 +228,13 @@ const submit = () => {
 
                     <div class="col-md-6">
                         <InputLabel for="phone" class="form-label" :value="t('phone_number')" />
-                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" />
+                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" @input="onPhoneInput" @blur="lookupPhone" />
                         <InputError :message="form.errors.phone" />
+                        <div v-if="phoneLookup?.existing_person_id" class="alert alert-warning mt-2">
+                            {{ t('person_with_this_phone_number_already_exists') }}
+                            <a :href="route('person.profile', { locale: currentLocale, id: phoneLookup.existing_person_id })">{{ t('view_profile') }}</a>
+                        </div>
+                        <div v-else-if="phoneLookup?.profile" class="form-text">{{ t('contact_profile_loaded') }}</div>
                     </div>
 
                     <div class="col-md-6">
@@ -219,10 +261,30 @@ const submit = () => {
                         </select>
                         <InputError :message="form.errors.gender" />
                     </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_series" class="form-label" :value="t('passport_series')" />
+                        <TextInput id="passport_series" type="text" class="form-control" v-model="form.passport_series" />
+                        <InputError :message="form.errors.passport_series" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_issued_by" class="form-label" :value="t('passport_issued_by')" />
+                        <TextInput id="passport_issued_by" type="text" class="form-control" v-model="form.passport_issued_by" />
+                        <InputError :message="form.errors.passport_issued_by" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="passport_issued_at" class="form-label" :value="t('passport_issued_at')" />
+                        <TextInput id="passport_issued_at" type="date" class="form-control" v-model="form.passport_issued_at" />
+                        <InputError :message="form.errors.passport_issued_at" />
+                    </div>
+                    <div class="col-md-6">
+                        <InputLabel for="address" class="form-label" :value="t('address')" />
+                        <TextInput id="address" type="text" class="form-control" v-model="form.address" />
+                        <InputError :message="form.errors.address" />
+                    </div>
                 </div>
 
                 <div class="pt-6 d-flex justify-content-end gap-2">
-                    <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing || Boolean(phoneLookup?.existing_person_id)">
                         {{ t('create') }}
                     </PrimaryButton>
                     <button type="reset" class="btn btn-label-secondary waves-effect">{{ t('cancel') }}</button>

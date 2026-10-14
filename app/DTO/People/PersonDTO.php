@@ -21,6 +21,10 @@ class PersonDTO
         public ?string $gender = null,
         public bool $mobile_deleted = false,
         public ?string $fcm_token = null,
+        public ?string $passport_series = null,
+        public ?string $passport_issued_by = null,
+        public ?string $passport_issued_at = null,
+        public ?string $address = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -40,6 +44,10 @@ class PersonDTO
             gender: $data['gender'] ?? null,
             mobile_deleted: (bool) ($data['mobile_deleted'] ?? false),
             fcm_token: $data['fcm_token'] ?? null,
+            passport_series: $data['passport_series'] ?? null,
+            passport_issued_by: $data['passport_issued_by'] ?? null,
+            passport_issued_at: $data['passport_issued_at'] ?? null,
+            address: $data['address'] ?? null,
         );
     }
 
@@ -55,6 +63,10 @@ class PersonDTO
             'type' => $this->type,
             'birth_date' => $this->birth_date,
             'gender' => $this->gender,
+            'passport_series' => $this->passport_series,
+            'passport_issued_by' => $this->passport_issued_by,
+            'passport_issued_at' => $this->passport_issued_at,
+            'address' => $this->address,
         ];
     }
 }

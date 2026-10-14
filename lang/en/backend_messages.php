@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'sale_contract_revision_queued' => 'A new contract version is being generated.',
+    'sale_contract_created' => 'The contract was generated.',
     'accounting_type' => 'Accounting type',
     'action_required' => 'The action is required.',
     'activation_date' => 'activation date',

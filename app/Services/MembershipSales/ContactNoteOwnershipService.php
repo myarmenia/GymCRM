@@ -10,9 +10,12 @@ use Illuminate\Validation\ValidationException;
 
 class ContactNoteOwnershipService
 {
-    public function __construct(private readonly ContactNoteOwnerResolver $owners) {}
+    public function __construct(
+        private readonly ContactNoteOwnerResolver $owners,
+        private readonly ContactProfileService $profiles,
+    ) {}
 
-    public function create(User $manager, string $phone, string $note): ContactNote
+    public function create(User $manager, string $phone, string $note, array $details = []): ContactNote
     {
         $phone = trim($phone);
         if (ContactNotePhone::variants($phone) === []) {
@@ -27,7 +30,7 @@ class ContactNoteOwnershipService
             ]);
         }
 
-        return DB::transaction(function () use ($manager, $phone, $note): ContactNote {
+        return DB::transaction(function () use ($manager, $phone, $note, $details): ContactNote {
             $gymId = (int) $manager->gym_id;
             Gym::query()->whereKey($gymId)->lockForUpdate()->firstOrFail();
             $owner = $this->owners->forPhone($phone, $gymId, lockForUpdate: true);
@@ -38,8 +41,10 @@ class ContactNoteOwnershipService
                 ]);
             }
 
+            $profile = $this->profiles->forNote($manager, $phone, $details);
             return ContactNote::query()->create([
                 'user_id' => $manager->id,
+                'contact_profile_id' => $profile->id,
                 'phone_number' => $phone,
                 'note' => $note,
             ]);

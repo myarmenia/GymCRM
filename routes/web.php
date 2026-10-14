@@ -4,6 +4,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SaleContracts\InternalSaleContractController;
 use Inertia\Inertia;
 use App\Support\SupportedLocales;
 
@@ -15,6 +16,9 @@ use App\Support\SupportedLocales;
 //         'phpVersion' => PHP_VERSION,
 //     ]);
 // });
+
+Route::get('/internal/sale-contracts/{uuid}/pdf', [InternalSaleContractController::class, 'download'])
+    ->whereUuid('uuid')->middleware('throttle:60,1');
 
 Route::get('/', function () {
     return redirect('/'.SupportedLocales::resolve(request()).'/login');

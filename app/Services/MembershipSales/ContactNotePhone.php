@@ -4,6 +4,21 @@ namespace App\Services\MembershipSales;
 
 class ContactNotePhone
 {
+    public static function canonical(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if (strlen($digits) === 11 && str_starts_with($digits, '374')) {
+            return $digits;
+        }
+        if (strlen($digits) === 9 && str_starts_with($digits, '0')) {
+            return '374'.substr($digits, 1);
+        }
+        if (strlen($digits) === 8) {
+            return '374'.$digits;
+        }
+        return $digits;
+    }
+
     /** @return list<string> */
     public static function variants(string $phone): array
     {

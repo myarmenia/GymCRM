@@ -6,6 +6,7 @@ use App\Models\ContactNote;
 use App\Models\Gym;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\MembershipSales\ContactNoteOwnershipService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -39,8 +40,8 @@ class ContactNoteTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ContactNotes/Index')
                 ->where('contacts.total', 1)
-                ->where('contacts.data.0.id', $root->id)
-                ->where('contacts.data.0.children.0.note', 'Called again')
+                ->where('contacts.data.0.id', $root->contact_profile_id)
+                ->where('contacts.data.0.members.0.notes.0.note', 'Called again')
                 ->where('canCreate', true)
                 ->etc());
     }
@@ -55,7 +56,7 @@ class ContactNoteTest extends TestCase
         $admin = $this->userWithRole('admin', $gym->id);
 
         foreach ([$first, $second, $outside] as $user) {
-            ContactNote::create(['user_id' => $user->id, 'phone_number' => '123', 'note' => 'Call']);
+            app(ContactNoteOwnershipService::class)->create($user, (string) $user->id.'123', 'Call');
         }
 
         $this->actingAs($admin)->get(route('contact-notes.index', ['locale' => 'en']))
@@ -119,42 +120,39 @@ class ContactNoteTest extends TestCase
 
     public function test_contacts_are_newest_first_and_filters_match_child_note_dates(): void
     {
-        $manager = $this->userWithRole('sales_manager');
-        $old = ContactNote::create([
-            'user_id' => $manager->id, 'phone_number' => '111', 'note' => 'First',
-        ]);
+        $gym = Gym::query()->create(['name' => 'Central']);
+        $manager = $this->userWithRole('sales_manager', $gym->id);
+        $old = app(ContactNoteOwnershipService::class)->create($manager, '111', 'First');
         $old->forceFill(['created_at' => '2026-01-01 10:00:00'])->save();
+        $old->profile->forceFill(['created_at' => '2026-01-01 10:00:00'])->save();
 
-        $child = ContactNote::create([
-            'user_id' => $manager->id, 'phone_number' => '111', 'note' => 'Follow up',
-        ]);
+        $child = app(ContactNoteOwnershipService::class)->create($manager, '111', 'Follow up');
         $child->forceFill(['created_at' => '2026-01-03 10:00:00'])->save();
 
-        $new = ContactNote::create([
-            'user_id' => $manager->id, 'phone_number' => '222', 'note' => 'New contact',
-        ]);
+        $new = app(ContactNoteOwnershipService::class)->create($manager, '222', 'New contact');
         $new->forceFill(['created_at' => '2026-01-02 10:00:00'])->save();
+        $new->profile->forceFill(['created_at' => '2026-01-02 10:00:00'])->save();
 
         $this->actingAs($manager)->get(route('contact-notes.index', ['locale' => 'en']))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('contacts.total', 2)
-                ->where('contacts.data.0.id', $old->id)
-                ->where('contacts.data.0.children.0.id', $child->id)
-                ->where('contacts.data.1.id', $new->id)
+                ->where('contacts.data.0.id', $old->contact_profile_id)
+                ->where('contacts.data.0.members.0.notes.0.id', $child->id)
+                ->where('contacts.data.1.id', $new->contact_profile_id)
                 ->etc());
 
         $this->actingAs($manager)->get(route('contact-notes.index', [
             'locale' => 'en', 'date_from' => '2026-01-03', 'date_to' => '2026-01-03',
         ]))->assertInertia(fn (Assert $page) => $page
             ->where('contacts.total', 1)
-            ->where('contacts.data.0.id', $old->id)
+            ->where('contacts.data.0.id', $old->contact_profile_id)
             ->etc());
 
         $this->actingAs($manager)->get(route('contact-notes.index', [
             'locale' => 'en', 'phone_number' => '22',
         ]))->assertInertia(fn (Assert $page) => $page
             ->where('contacts.total', 1)
-            ->where('contacts.data.0.id', $new->id)
+            ->where('contacts.data.0.id', $new->contact_profile_id)
             ->etc());
     }
 

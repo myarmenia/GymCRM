@@ -21,6 +21,43 @@ class PersonEntryCodeCreationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_people_list_exposes_the_managers_gym_entry_code_type(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Main gym', 'entry_code_type' => 'FaceId']);
+        $manager = $this->userWithRole($gym, 'manager');
+
+        $this->actingAs($manager)
+            ->get(route('person.list', ['locale' => 'hy']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('People/List')
+                ->where('entryCodeType', 'FaceId'));
+
+        $gym->update(['entry_code_type' => 'rfId']);
+
+        $this->get(route('person.list', ['locale' => 'hy']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('People/List')
+                ->where('entryCodeType', 'rfId'));
+    }
+
+    public function test_manager_cannot_manual_scan_in_a_face_id_gym(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Main gym', 'entry_code_type' => 'FaceId']);
+        $manager = $this->userWithRole($gym, 'manager');
+
+        $this->actingAs($manager)
+            ->postJson(route('person.manual-scan', ['locale' => 'hy']), [
+                'entry_code' => 'FACE-119',
+                'direction' => 'enter',
+                'type' => 'rfId',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('attendance_sheets', 0);
+    }
+
     public function test_create_page_uses_the_gyms_entry_code_type(): void
     {
         $gym = Gym::query()->create([
