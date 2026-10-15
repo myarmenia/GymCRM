@@ -33,6 +33,7 @@
         "new_contact": "New contact note",
         "phone_number": "Phone number",
         "note": "Note",
+        "latest_note": "Latest note",
         "sales_manager": "Sales manager",
         "all_managers": "All sales managers",
         "created_at": "Created at",
