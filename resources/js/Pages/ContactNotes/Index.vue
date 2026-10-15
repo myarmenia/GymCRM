@@ -14,6 +14,7 @@ const props = defineProps({
 const page = usePage()
 const locale = computed(() => page.props.locale ?? 'hy')
 const t = key => translate(page.props.translations, `app.contact_notes.${key}`)
+const contactRows = computed(() => Array.isArray(props.contacts?.data) ? props.contacts.data : [])
 const personFields = ['name', 'surname', 'email', 'birth_date', 'gender']
 const fields = [...personFields, 'relationship']
 const blank = () => ({ phone_number: '', note: '', name: '', surname: '', email: '', birth_date: '', gender: '', relationship: '' })
@@ -82,6 +83,8 @@ const addNote = member => noteForm.post(route('contact-notes.add-profile-note', 
 }), { preserveScroll: true, onSuccess: () => { noteForm.reset(); notingTo.value = null } })
 const formatDate = value => value ? new Date(value).toLocaleString(locale.value) : '—'
 const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' ') || '—'
+const latestPrimaryNote = group => group.members?.find(member => member.id === group.id)?.notes?.[0]?.note || '—'
+const toggleGroup = group => { expanded.value = expanded.value === group.id ? null : group.id }
 </script>
 
 <template>
@@ -116,17 +119,17 @@ const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' '
         </div></form></div>
 
         <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-            <thead><tr><th>{{ t('phone_number') }}</th><th>{{ t('name') }}</th><th v-if="!canCreate">{{ t('sales_manager') }}</th><th>{{ t('related_phones') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('phone_number') }}</th><th>{{ t('name') }}</th><th>{{ t('latest_note') }}</th><th v-if="!canCreate">{{ t('sales_manager') }}</th><th>{{ t('related_phones') }}</th><th></th></tr></thead>
             <tbody>
-                <template v-for="group in contacts.data" :key="group.id">
-                    <tr>
-                        <td><button class="btn btn-link p-0" type="button" @click="expanded = expanded === group.id ? null : group.id">{{ group.phone_number }}</button></td>
-                        <td>{{ fullName(group) }}</td><td v-if="!canCreate">{{ fullName(group.user) }}</td>
+                <template v-for="group in contactRows" :key="group.id">
+                    <tr class="contact-group-row" role="button" tabindex="0" :aria-expanded="expanded === group.id" @click="toggleGroup(group)" @keydown.enter.self.prevent="toggleGroup(group)" @keydown.space.self.prevent="toggleGroup(group)">
+                        <td><i class="icon-base ti me-1" :class="expanded === group.id ? 'tabler-chevron-down' : 'tabler-chevron-right'" aria-hidden="true"></i>{{ group.phone_number }}</td>
+                        <td>{{ fullName(group) }}</td><td class="text-break" style="white-space: pre-wrap">{{ latestPrimaryNote(group) }}</td><td v-if="!canCreate">{{ fullName(group.user) }}</td>
                         <td>{{ Math.max(0, (group.members?.length ?? 0) - 1) }}</td>
-                        <td class="text-end"><button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click="startRelated(group)">{{ t('add_phone') }}</button></td>
+                        <td class="text-end"><button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click.stop="startRelated(group)">{{ t('add_phone') }}</button></td>
                     </tr>
-                    <tr v-if="expanded === group.id"><td :colspan="canCreate ? 4 : 5" class="bg-light">
-                        <div v-for="member in group.members" :key="member.id" class="border-bottom p-3">
+                    <tr v-if="expanded === group.id"><td :colspan="canCreate ? 5 : 6" class="bg-light">
+                        <div v-for="member in group.members" :key="member.id" class="p-3" id="border-div">
                             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                 <strong>{{ member.phone_number }}</strong><span>{{ fullName(member) }}</span>
                                 <span v-if="member.relationship && !member.is_primary" class="badge bg-label-secondary">{{ member.relationship }}</span>
@@ -147,7 +150,7 @@ const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' '
                         </div>
                         <div v-if="addingTo === group.id && canCreate" class="d-flex gap-3 px-3 pt-3">
                             <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="new">{{ t('new_phone') }}</label>
-                            <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="existing">{{ t('existing_phone') }}</label>
+                            <!-- <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="existing">{{ t('existing_phone') }}</label> -->
                         </div>
                         <form v-if="addingTo === group.id && canCreate && relatedMode === 'new'" class="row g-2 p-3" @submit.prevent="addRelated(group)">
                             <h6>{{ t('add_phone') }}</h6>
@@ -169,8 +172,16 @@ const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' '
                         </form>
                     </td></tr>
                 </template>
-                <tr v-if="!contacts.data.length"><td :colspan="canCreate ? 4 : 5" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
+                <tr v-if="!contactRows.length"><td :colspan="canCreate ? 5 : 6" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
             </tbody>
         </table></div><div v-if="contacts.links?.length > 3" class="card-body"><Pagination :links="contacts.links" /></div></div>
     </Index>
 </template>
+
+<style scoped>
+.form-control { background-color: #f8f9fa; }
+.form-select { background-color: #f8f9fa; }
+#border-div { border-bottom: 2px solid #faf9f9; }
+.contact-group-row { cursor: pointer; }
+.contact-group-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+</style>
