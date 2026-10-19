@@ -24,6 +24,7 @@ class StoreMembershipSaleRequest extends FormRequest
 
         $nullableFields = [
             'end_date',
+            'sales_manager_id',
             'trainer_id',
             'payment_method_id',
             'card_type_id',
@@ -65,7 +66,7 @@ class StoreMembershipSaleRequest extends FormRequest
     {
         return [
             'person_id' => ['required', 'integer', 'exists:people,id'],
-            'sales_manager_id' => ['required', 'integer', 'exists:users,id'],
+            'sales_manager_id' => [($this->user()?->hasRole('manager') && ! $this->user()->hasRole('sales_manager')) ? 'nullable' : 'required', 'integer', 'exists:users,id'],
             'membership_plan_id' => ['required', 'integer', 'exists:membership_plans,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],

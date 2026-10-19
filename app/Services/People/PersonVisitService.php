@@ -43,14 +43,12 @@ class PersonVisitService
             ->orderByDesc('id')
             ->get();
 
-        $guestEntryService = app(GuestEntryService::class);
-        $guestMemberships = $guestEntryService->linkedMemberships(
-            $person,
-            $user->hasRole('owner') ? null : (int) $user->gym_id,
-        );
-        $memberships = $this->isGuestEntryPerson($person, $guestEntryService)
-            ? $guestMemberships->values()
-            : $memberships->concat($guestMemberships)->unique('id')->values();
+        if ($person->type === 'guest') {
+            $memberships = app(GuestEntryService::class)->linkedMemberships(
+                $person,
+                $user->hasRole('owner') ? null : (int) $user->gym_id,
+            );
+        }
 
         $recentAttendances = AttendanceSheet::query()
             ->with('personMemberships.membershipPlan.translations')
@@ -115,16 +113,15 @@ class PersonVisitService
 
                 $membership = $this->entryMembership($person, $user, $membershipId, $now);
 
-                if ($this->personAlreadyEnteredOnSelectedDate($person, $now)) {
+                if ($this->personAlreadyEnteredOnSelectedDate($person, $membership, $now)) {
                     throw ValidationException::withMessages([
-                        'membership_id' => 'This person already has an entry recorded for this day.',
+                        'membership_id' => 'This membership already has an entry recorded for this day.',
                     ]);
                 }
 
                 $membership = $this->activateWaitingMembership($membership, $now);
-                $guestEntryService = app(GuestEntryService::class);
-                $membership = $guestEntryService->isLinked($person, $membership)
-                    ? $guestEntryService->consumeVisit($person, $membership, $now, true)
+                $membership = $person->type === 'guest'
+                    ? app(GuestEntryService::class)->consumeVisit($person, $membership, $now, true)
                     : $this->consumeVisitIfNeeded($membership, $now);
                 $attendance = AttendanceSheet::create([
                     'relation_id' => $person->id,
@@ -186,11 +183,6 @@ class PersonVisitService
         });
     }
 
-    protected function isGuestEntryPerson(Person $person, GuestEntryService $guestEntryService): bool
-    {
-        return $person->type === 'guest' || $guestEntryService->hasLinkedMemberships($person);
-    }
-
     protected function entryMembership(Person $person, User $user, ?int $membershipId, Carbon $now): PersonMembership
     {
         if (!$membershipId) {
@@ -199,9 +191,10 @@ class PersonVisitService
             ]);
         }
 
-        $guestEntryService = app(GuestEntryService::class);
-        $isGuestEntryPerson = $this->isGuestEntryPerson($person, $guestEntryService);
-        $linkedMembershipIds = $guestEntryService->linkedMembershipIds($person);
+        $isGuestEntryPerson = $person->type === 'guest';
+        $linkedMembershipIds = $isGuestEntryPerson
+            ? app(GuestEntryService::class)->linkedMembershipIds($person)
+            : collect();
 
         $membership = PersonMembership::query()
             ->with([
@@ -209,19 +202,11 @@ class PersonVisitService
                 'membershipPlan.MembershipCategory.translations',
             ])
             ->where('id', $membershipId)
-            ->where(function ($query) use ($person, $isGuestEntryPerson, $linkedMembershipIds) {
-                if ($isGuestEntryPerson) {
-                    $query->whereIn('id', $linkedMembershipIds);
-
-                    return;
-                }
-
-                $query->where('person_id', $person->id);
-
-                if ($linkedMembershipIds->isNotEmpty()) {
-                    $query->orWhereIn('id', $linkedMembershipIds);
-                }
-            })
+            ->when(
+                $isGuestEntryPerson,
+                fn ($query) => $query->whereIn('id', $linkedMembershipIds),
+                fn ($query) => $query->where('person_id', $person->id),
+            )
             ->whereIn('status', ['waiting', 'active', 'expired'])
             ->when(!$user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
@@ -236,7 +221,7 @@ class PersonVisitService
         }
 
         if ($membership->person_id !== $person->id
-            && !$guestEntryService->isLinked($person, $membership)) {
+            && !app(GuestEntryService::class)->isLinked($person, $membership)) {
             throw ValidationException::withMessages([
                 'membership_id' => 'This guest is not linked to the selected membership.',
             ]);
@@ -319,13 +304,22 @@ class PersonVisitService
             ->exists();
     }
 
-    protected function personAlreadyEnteredOnSelectedDate(Person $person, Carbon $selectedEntryAt): bool
+    protected function personAlreadyEnteredOnSelectedDate(
+        Person $person,
+        PersonMembership $membership,
+        Carbon $selectedEntryAt,
+    ): bool
     {
+        $dayStart = $selectedEntryAt->copy()->timezone(self::LOCAL_TIMEZONE)->startOfDay();
+        $dayEnd = $dayStart->copy()->addDay();
+
         return AttendanceSheet::query()
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->where('direction', 'entry')
-            ->whereDate('created_at', $selectedEntryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString())
+            ->where('date', '>=', $dayStart)
+            ->where('date', '<', $dayEnd)
+            ->whereHas('personMemberships', fn ($query) => $query->where('person_memberships.id', $membership->id))
             ->exists();
     }
 

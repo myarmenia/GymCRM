@@ -140,6 +140,7 @@ const entryForm = useForm({
 });
 
 const submitEntry = (membershipId) => {
+    entryForm.clearErrors();
     entryForm.action = "entry";
     entryForm.membership_id = membershipId;
     entryForm.manual_datetime = visitDateTime.value;
@@ -375,7 +376,7 @@ const submitEntry = (membershipId) => {
                                     {{ t('membership_expired') }}
                                 </div>
                                 <div
-                                    v-if="entryForm.errors.manual_datetime || entryForm.errors.membership_id"
+                                    v-if="entryForm.membership_id === membership.id && (entryForm.errors.manual_datetime || entryForm.errors.membership_id)"
                                     class="text-danger small mt-2"
                                 >
                                     {{ entryForm.errors.manual_datetime || entryForm.errors.membership_id }}

@@ -60,9 +60,16 @@ class ContactNoteMembershipSaleTest extends TestCase
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
         ContactNote::query()->create([
+            'user_id' => $seller->id,
+            'phone_number' => '+37499123456',
+            'note' => 'Older active contact',
+            'created_at' => now()->subDays(2),
+        ]);
+        ContactNote::query()->create([
             'user_id' => $inactiveManager->id,
             'phone_number' => '099 123-456',
             'note' => 'First contact',
+            'created_at' => now()->subDay(),
         ]);
 
         $this->actingAs($seller)->get(route('membership_sale.create', [
@@ -135,14 +142,16 @@ class ContactNoteMembershipSaleTest extends TestCase
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
         ContactNote::query()->create([
-            'user_id' => $owner->id,
+            'user_id' => $seller->id,
             'phone_number' => '099 123-456',
             'note' => 'First contact',
+            'created_at' => now()->subDays(2),
         ]);
         ContactNote::query()->create([
-            'user_id' => $seller->id,
+            'user_id' => $owner->id,
             'phone_number' => '+374 99 123 456',
             'note' => 'Later contact',
+            'created_at' => now()->subDay(),
         ]);
 
         $this->actingAs($seller)->get(route('membership_sale.create', [

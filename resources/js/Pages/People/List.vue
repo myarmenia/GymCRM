@@ -41,6 +41,10 @@ const canManualScan = computed(() =>
 const canSalesPersonVisits = computed(() =>
     hasAnyRole(["sales_manager"]),
 );
+
+const canSalesPersonVisitsForManager = computed(() =>
+    hasAnyRole(["manager", "sales_manager"]),
+);
 const toast = useToast();
 const { confirm } = useConfirm();
 const manualScanCode = ref("");
@@ -390,7 +394,7 @@ const submitManualScan = async () => {
                                                 {{ t('view_profile') }}
                                             </Link>
                                             <Link
-                                                v-if="canSalesPersonVisits"
+                                                v-if="canSalesPersonVisitsForManager"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {

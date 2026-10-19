@@ -9,7 +9,7 @@ const currentLocale = computed(
     () => page.props.locale ?? page.props.lang ?? "hy",
 );
 const { hasRole, hasAnyRole: hasAnyRoleBase } = useAuth();
-const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
+const hasAnyRole = (roles) => hasAnyRoleBase(roles);
 </script>
 
 <template>
@@ -63,7 +63,13 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                 >
                     <i class="menu-icon icon-base ti tabler-users"></i>
                     <div>
-                        {{ useTrans(hasRole("owner") ? "app.sidebar.users" : "app.sidebar.staff") }}
+                        {{
+                            useTrans(
+                                hasRole("owner")
+                                    ? "app.sidebar.users"
+                                    : "app.sidebar.staff",
+                            )
+                        }}
                     </div>
                 </Link>
             </li>
@@ -76,7 +82,7 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                         'founder',
                         'super_admin',
                         'sales_manager',
-                        'manager',
+                        // 'manager',
                     ])
                 "
                 :class="[
@@ -119,11 +125,19 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
 
             <li
                 v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
-                :class="['menu-item', route().current('contact-notes.*') ? 'active' : '']"
+                :class="[
+                    'menu-item',
+                    route().current('contact-notes.*') ? 'active' : '',
+                ]"
             >
-                <Link :href="route('contact-notes.index', { locale: currentLocale })" class="menu-link">
+                <Link
+                    :href="
+                        route('contact-notes.index', { locale: currentLocale })
+                    "
+                    class="menu-link"
+                >
                     <i class="menu-icon icon-base ti tabler-notes"></i>
-                    <div>{{ useTrans('app.sidebar.contact_notes') }}</div>
+                    <div>{{ useTrans("app.sidebar.contact_notes") }}</div>
                 </Link>
             </li>
 
@@ -151,11 +165,13 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                 ]"
             >
                 <Link
-                    :href="route('owner-sales.index', { locale: currentLocale })"
+                    :href="
+                        route('owner-sales.index', { locale: currentLocale })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-receipt-dollar"></i>
-                    <div>{{ useTrans('app.sidebar.owner_sales') }}</div>
+                    <div>{{ useTrans("app.sidebar.owner_sales") }}</div>
                 </Link>
             </li>
 
@@ -167,10 +183,16 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                 ]"
             >
                 <Link
-                    :href="route('hdm-configurations.index', { locale: currentLocale })"
+                    :href="
+                        route('hdm-configurations.index', {
+                            locale: currentLocale,
+                        })
+                    "
                     class="menu-link"
                 >
-                    <i class="menu-icon icon-base ti tabler-device-desktop-cog"></i>
+                    <i
+                        class="menu-icon icon-base ti tabler-device-desktop-cog"
+                    ></i>
                     <div>{{ useTrans("app.sidebar.hdm_configurations") }}</div>
                 </Link>
             </li>
@@ -248,7 +270,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                 ]"
             >
                 <Link
-                    :href="route('trainer.my-salaries', { locale: currentLocale })"
+                    :href="
+                        route('trainer.my-salaries', { locale: currentLocale })
+                    "
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-cash"></i>
@@ -282,7 +306,7 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                         'founder',
                         'super_admin',
                         'sales_manager',
-                        'manager',
+                        // 'manager',
                         'trainer',
                     ])
                 "
@@ -427,7 +451,15 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
             </li>
 
             <li
-                v-if="hasAnyRole(['manager', 'admin', 'super_admin', 'owner','founder'])"
+                v-if="
+                    hasAnyRole([
+                        'manager',
+                        'admin',
+                        'super_admin',
+                        'owner',
+                        'founder',
+                    ])
+                "
                 :class="[
                     'menu-item',
                     route().current('entry-reports.*') ? 'active' : '',
@@ -500,7 +532,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                     class="menu-link"
                 >
                     <i class="menu-icon icon-base ti tabler-category"></i>
-                    <div>{{ useTrans("app.sidebar.membership_categories") }}</div>
+                    <div>
+                        {{ useTrans("app.sidebar.membership_categories") }}
+                    </div>
                 </Link>
             </li>
 
@@ -565,7 +599,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.report_memberships") }}</div>
+                            <div>
+                                {{ useTrans("app.sidebar.report_memberships") }}
+                            </div>
                         </Link>
                     </li>
                     <!-- <li
@@ -603,7 +639,11 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.trainer_commissions") }}</div>
+                            <div>
+                                {{
+                                    useTrans("app.sidebar.trainer_commissions")
+                                }}
+                            </div>
                         </Link>
                     </li>
                     <li
@@ -622,7 +662,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.trainer_salaries") }}</div>
+                            <div>
+                                {{ useTrans("app.sidebar.trainer_salaries") }}
+                            </div>
                         </Link>
                     </li>
                     <li
@@ -641,7 +683,13 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.salesperson_commissions") }}</div>
+                            <div>
+                                {{
+                                    useTrans(
+                                        "app.sidebar.salesperson_commissions",
+                                    )
+                                }}
+                            </div>
                         </Link>
                     </li>
                 </ul>
@@ -694,7 +742,7 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                         'owner',
                         'founder',
                         'sales_manager',
-                        // 'manager',
+                        'manager',
                         'accountant',
                     ])
                 "
@@ -714,6 +762,15 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
 
                 <ul class="menu-sub">
                     <li
+                        v-if="
+                            hasAnyRole([
+                                'owner',
+                                'admin',
+                                'founder',
+                                'super_admin',
+                                'accountant',
+                            ])
+                        "
                         :class="[
                             'menu-item',
                             route().current('finance.*') ? 'active' : '',
@@ -754,7 +811,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.salary_payouts") }}</div>
+                            <div>
+                                {{ useTrans("app.sidebar.salary_payouts") }}
+                            </div>
                         </Link>
                     </li>
 
@@ -793,7 +852,9 @@ const hasAnyRole = (roles) =>  hasAnyRoleBase(roles);
                             "
                             class="menu-link"
                         >
-                            <div>{{ useTrans("app.sidebar.sales_history") }}</div>
+                            <div>
+                                {{ useTrans("app.sidebar.sales_history") }}
+                            </div>
                         </Link>
                     </li>
                 </ul>

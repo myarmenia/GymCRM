@@ -13,6 +13,8 @@ class ContactProfileService
 {
     private const DETAILS = ['name', 'surname', 'email', 'birth_date', 'gender', 'relationship'];
 
+    public function __construct(private readonly ContactNoteOwnerResolver $owners) {}
+
     public function forPhone(int $gymId, string $phone): ?ContactProfile
     {
         $normalized = ContactNotePhone::canonical($phone);
@@ -31,7 +33,9 @@ class ContactProfileService
             ->where('phone_normalized', $normalized)->lockForUpdate()->first();
         if ($profile && (int) $profile->user_id !== (int) $manager->id) {
             $prior = User::query()->find($profile->user_id);
-            if ($prior?->active && (int) $prior->gym_id === (int) $manager->gym_id && $prior->hasRole('sales_manager')) {
+            if ($prior?->active && (int) $prior->gym_id === (int) $manager->gym_id
+                && $prior->hasRole('sales_manager')
+                && ($this->owners->forPhone($phone, (int) $manager->gym_id)?->id ?? $manager->id) !== $manager->id) {
                 throw ValidationException::withMessages(['phone_number' => __('backend.membership_sales.contact_note_manager_required')]);
             }
             ContactProfile::query()->where('group_uuid', $profile->group_uuid)->lockForUpdate()->get()
