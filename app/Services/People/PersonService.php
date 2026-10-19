@@ -3,6 +3,7 @@
 namespace App\Services\People;
 
 use App\Interfaces\People\PersonInterface;
+use App\Models\AttendanceSheet;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Person;
@@ -77,9 +78,25 @@ class PersonService
             ->first(fn ($permission) => (bool) $permission->status)
             ?? $person->entryPermissions->sortByDesc('id')->first();
 
+        $entries = AttendanceSheet::query()
+            ->where('relation_type', Person::class)
+            ->where('relation_id', $person->id)
+            ->where('direction', 'entry')
+            ->when(! $user->hasRole('owner'), fn ($query) => $query->where('gym_id', $user->gym_id));
+        $monthStart = now('Asia/Yerevan')->startOfMonth();
+        $lastEntry = (clone $entries)->orderByDesc('date')->orderByDesc('id')->first(['date']);
+
         return [
             'person' => $person,
             'entryCode' => $entryPermission?->entryCode,
+            'visitStats' => [
+                'total' => (clone $entries)->count(),
+                'thisMonth' => (clone $entries)
+                    ->where('date', '>=', $monthStart->toDateTimeString())
+                    ->where('date', '<', $monthStart->copy()->addMonth()->toDateTimeString())
+                    ->count(),
+                'lastVisitAt' => $lastEntry?->date?->toIso8601String(),
+            ],
             'reminderUsers' => $this->reminderService->usersForSelect($user),
             'defaultReminderRecipientIds' => $this->reminderService->defaultMembershipRecipients($user),
         ];

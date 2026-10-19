@@ -249,7 +249,7 @@ class MembershipSaleGuestService
             $guest = Person::query()->create([
                 'name' => $data['name'],
                 'surname' => $data['surname'] ?? null,
-                'email' => $data['email'] ?? 'guest-'.Str::uuid().'@guest.local',
+                'email' => $data['email'] ?? null,
                 'password' => Hash::make(Str::random(16)),
                 'phone' => $data['phone'],
                 'type' => 'guest',

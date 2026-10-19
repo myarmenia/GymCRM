@@ -74,6 +74,10 @@
         <tr><th>Ծննդյան ամսաթիվ</th><td>{{ $snapshot['person']['birth_date'] ?: 'Չի նշված' }}</td></tr>
         <tr><th>Անդամակցության տեսակ</th><td>{{ $snapshot['membership']['name'] ?: 'Չի նշված' }}</td></tr>
         <tr><th>Պայմանագրի գին</th><td>{{ number_format((float) $snapshot['price'], 2, '.', ' ') }} դրամ</td></tr>
+        @if(isset($snapshot['paid_amount'], $snapshot['debt_amount']))
+            <tr><th>Վճարված է</th><td>{{ number_format((float) $snapshot['paid_amount'], 2, '.', ' ') }} դրամ</td></tr>
+            <tr><th>Մնացել է պարտք</th><td>{{ number_format((float) $snapshot['debt_amount'], 2, '.', ' ') }} դրամ</td></tr>
+        @endif
         <tr><th>Պայմանագրի ժամկետ</th><td>{{ $snapshot['membership']['start_date'] ?: 'Չի նշված' }} - {{ $snapshot['membership']['end_date'] ?: 'Չի նշված' }}</td></tr>
     </table>
 

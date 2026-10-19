@@ -65,6 +65,8 @@ const entryCodeOptions = computed(() => {
 })
 
 const personName = person => `${person?.name ?? ''} ${person?.surname ?? ''}`.trim() || '-'
+const generatedGuestEmail = /^guest-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@guest\.local$/i
+const realEmail = email => email && !generatedGuestEmail.test(email) ? email : ''
 const translatedName = item => {
     return item?.translations?.find(translation => translation.locale === currentLocale.value)?.name
         ?? item?.name
@@ -84,7 +86,7 @@ const statusLabel = status => ({
 const fillFromPerson = person => {
     form.name = person.name ?? ''
     form.surname = person.surname ?? ''
-    form.email = person.email ?? ''
+    form.email = realEmail(person.email)
     form.birth_date = person.birth_date ? String(person.birth_date).slice(0, 10) : ''
     form.gender = person.gender ?? ''
     form.entry_code_id = person.entry_code_id ?? null
@@ -236,7 +238,7 @@ const submit = () => {
                                     >
                                         <td>{{ personName(guestRecord.guest) }}</td>
                                         <td>{{ guestRecord.guest?.phone ?? '-' }}</td>
-                                        <td>{{ guestRecord.guest?.email ?? '-' }}</td>
+                                        <td>{{ realEmail(guestRecord.guest?.email) || '-' }}</td>
                                         <td>{{ formatDate(guestRecord.created_at) }}</td>
                                     </tr>
                                 </tbody>

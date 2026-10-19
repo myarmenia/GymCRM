@@ -6,6 +6,7 @@
         "revision": "версия :revision",
         "currency": "драм",
         "download_pdf": "Скачать PDF",
+        "print_pdf": "Открыть для печати",
         "retry": "Создать повторно",
         "creating": "Создаётся…",
         "create_revision": "Создать новую версию",

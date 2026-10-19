@@ -31,7 +31,7 @@ class SaleContractController extends Controller
         ]);
     }
 
-    public function download(string $locale, int $sale, int $contract)
+    public function download(Request $request, string $locale, int $sale, int $contract)
     {
         $membershipSale = $this->sale($sale);
         $document = SaleContract::query()
@@ -40,10 +40,14 @@ class SaleContractController extends Controller
         abort_unless($document->status === 'ready' && $document->pdf_path, 404);
         abort_unless(Storage::disk($document->pdf_disk)->exists($document->pdf_path), 404);
 
-        return Storage::disk($document->pdf_disk)->download(
-            $document->pdf_path,
-            "contract-{$document->number}-v{$document->revision}.pdf",
-        );
+        $filename = "contract-{$document->number}-v{$document->revision}.pdf";
+        if ($request->boolean('inline')) {
+            return Storage::disk($document->pdf_disk)->response($document->pdf_path, $filename, [
+                'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            ]);
+        }
+
+        return Storage::disk($document->pdf_disk)->download($document->pdf_path, $filename);
     }
 
     public function reissue(string $locale, int $sale)
