@@ -28,23 +28,23 @@ class ContactNoteOwnerResolver
             ->where('phone_normalized', ContactNotePhone::canonical($phone))
             ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
             ->first();
-        if ($profile) {
-            return $profile->user?->active && (int) $profile->user->gym_id === $gymId
-                && $profile->user->hasRole('sales_manager')
-                ? $profile->user : null;
-        }
-
-        // Legacy notes without a profile retain the original first-note rule.
-        return ContactNote::query()
+        // A related phone shares the group's owner. The newest group note also
+        // corrects profiles migrated from the old first-note ownership rule.
+        $latestNote = ContactNote::query()
             ->with('user')
-            ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone_number')), $phones)
-            ->whereHas('user', fn ($query) => $query
-                ->whereHas('roles', fn ($roles) => $roles->where('name', 'sales_manager'))
-                ->where('active', true)
-                ->where('gym_id', $gymId))
-            ->orderBy('created_at')
-            ->orderBy('id')
+            ->when($profile, fn ($query) => $query->whereHas('profile', fn ($profiles) => $profiles
+                ->where('gym_id', $gymId)->where('group_uuid', $profile->group_uuid)))
+            ->when(! $profile, fn ($query) => $query
+                ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone_number')), $phones)
+                ->whereHas('user', fn ($users) => $users->where('gym_id', $gymId)))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->when($lockForUpdate, fn ($query) => $query->lockForUpdate())
-            ->first()?->user;
+            ->first();
+
+        $owner = $latestNote?->user ?? $profile?->user;
+
+        return $owner?->active && (int) $owner->gym_id === $gymId
+            && $owner->hasRole('sales_manager') ? $owner : null;
     }
 }

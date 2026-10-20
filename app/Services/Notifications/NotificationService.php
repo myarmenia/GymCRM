@@ -121,9 +121,9 @@ class NotificationService
         return $this->notificationRepository->usersForSelect($sender);
     }
 
-    public function peopleForSelect(): Collection
+    public function peopleForSelect(User $sender): Collection
     {
-        return $this->notificationRepository->peopleForSelect();
+        return $this->notificationRepository->peopleForSelect($sender);
     }
 
     public function deleteReceived(User $user, int $notificationId): bool
@@ -140,7 +140,7 @@ class NotificationService
     {
         if (! empty($data['send_to_all'])) {
             return $this->notificationRepository
-                ->userIdsExcept($sender->id)
+                ->userIdsExcept($sender)
                 ->unique()
                 ->values();
         }

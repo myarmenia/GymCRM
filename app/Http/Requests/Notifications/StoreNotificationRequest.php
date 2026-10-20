@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Notifications;
 
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -41,29 +42,41 @@ class StoreNotificationRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
-            if ((bool) $this->input('send_to_all')) {
+            $sender = $this->user();
+
+            if (! $sender) {
                 return;
             }
 
-            $recipientIds = collect($this->input('recipient_ids', []))
-                ->map(fn ($id) => (int) $id)
-                ->filter()
-                ->unique();
+            if (! $this->boolean('send_to_all')) {
+                $recipientIds = collect($this->input('recipient_ids', []))
+                    ->filter(fn ($id) => filter_var($id, FILTER_VALIDATE_INT) !== false)
+                    ->map(fn ($id) => (int) $id)
+                    ->unique();
 
-            if ($recipientIds->isEmpty()) {
-                return;
+                if ($recipientIds->isNotEmpty()) {
+                    $allowedCount = User::query()
+                        ->whereIn('id', $recipientIds)
+                        ->whereKeyNot($sender->id)
+                        ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
+                        ->when(! $sender->hasRole('owner'), fn ($query) => $query->where('gym_id', $sender->gym_id))
+                        ->count();
+
+                    if ($allowedCount !== $recipientIds->count()) {
+                        $validator->errors()->add('recipient_ids', __('backend_messages.one_selected_recipients_unavailable'));
+                    }
+                }
             }
 
-            $hasOwnerRecipient = User::query()
-                ->whereIn('id', $recipientIds)
-                ->whereHas('roles', fn ($query) => $query->where('name', 'owner'))
-                ->exists();
+            if ($this->filled('about_id') && ! $sender->hasRole('owner')) {
+                $personAvailable = Person::query()
+                    ->whereKey($this->input('about_id'))
+                    ->whereHas('gyms', fn ($query) => $query->where('gyms.id', $sender->gym_id))
+                    ->exists();
 
-            if ($hasOwnerRecipient) {
-                $validator->errors()->add(
-                    'recipient_ids',
-                    'Owner users cannot be selected as notification recipients.'
-                );
+                if (! $personAvailable) {
+                    $validator->errors()->add('about_id', __('backend_messages.selected_customer_not_found'));
+                }
             }
         });
     }

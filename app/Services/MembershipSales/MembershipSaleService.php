@@ -15,6 +15,7 @@ use App\Interfaces\PersonMemberships\PersonMembershipInterface;
 use App\Interfaces\SalespersonCommissions\SalespersonCommissionInterface;
 use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
+use App\Models\Guest;
 use App\Models\Gym;
 use App\Models\MembershipPlan;
 use App\Models\MembershipPlanPayment;
@@ -27,6 +28,7 @@ use App\Models\TrainerCommission;
 use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\Audit\MembershipSaleAuditService;
+use App\Services\Audit\PersonAuditService;
 use App\Services\Finance\FinancialLedgerService;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Memberships\MembershipSalaryCalculator;
@@ -53,6 +55,7 @@ class MembershipSaleService
         protected FinancialLedgerService $financialLedgerService,
         protected ReminderService $reminderService,
         protected MembershipSaleAuditService $membershipSaleAuditService,
+        protected PersonAuditService $personAuditService,
         protected MembershipSalaryCalculator $salaryCalculator,
         protected HdmPrepaymentTerminationService $hdmPrepaymentTerminationService,
         protected ContactNoteOwnerResolver $contactNoteOwnerResolver,
@@ -448,6 +451,8 @@ class MembershipSaleService
                 "Payment added to membership sale #{$membershipSale->id}",
             );
 
+            $this->saleContractService->issueAfterPayment($membershipSale);
+
             DB::commit();
 
             return $payment->load([
@@ -688,6 +693,7 @@ class MembershipSaleService
             ->orderBy('surname')
             ->get(['id', 'name', 'surname', 'gym_id']);
         $currentSalesManagerId = $salesManagers->firstWhere('id', $user->id)?->id;
+        $salesManagerOptional = $user->hasRole('manager') && ! $user->hasRole('sales_manager');
         $contactNoteManagerIdsByGym = [];
         if ($selectedPerson) {
             foreach ($gymIds as $gymId) {
@@ -741,6 +747,7 @@ class MembershipSaleService
             'selectedPerson',
             'salesManagers',
             'currentSalesManagerId',
+            'salesManagerOptional',
             'contactNoteManagerIdsByGym',
             'customerMemberships',
             'reminderUsers',
@@ -763,21 +770,24 @@ class MembershipSaleService
             $user = Auth::user();
             $membershipPlan = $this->getMembershipPlan((int) $data['membership_plan_id'], $user);
             $person = $this->getPerson((int) $data['person_id'], $user, $membershipPlan);
+            $promoteLinkedGuest = $person->type === 'guest'
+                && Guest::query()->where('guest_id', $person->id)->exists();
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
             $contactNoteManager = $this->contactNoteOwnerResolver->forPerson($person, $gymId);
+            $salesManagerOptional = $user->hasRole('manager') && ! $user->hasRole('sales_manager');
             $salesManagerId = (int) ($data['sales_manager_id'] ?? ($user->hasRole('sales_manager') ? $user->id : 0));
             if ($contactNoteManager && $salesManagerId !== $contactNoteManager->id) {
                 throw ValidationException::withMessages([
                     'sales_manager_id' => __('backend.membership_sales.contact_note_manager_required'),
                 ]);
             }
-            $salesManager = User::query()
+            $salesManager = $salesManagerId ? User::query()
                 ->whereHas('roles', fn ($query) => $query->where('name', 'sales_manager'))
                 ->where('active', true)
                 ->where('gym_id', $gymId)
                 ->whereKey($salesManagerId)
-                ->first();
-            if (! $salesManager) {
+                ->first() : null;
+            if (! $salesManager && (! $salesManagerOptional || $salesManagerId)) {
                 throw ValidationException::withMessages([
                     'sales_manager_id' => __('backend.membership_sales.invalid_sales_manager'),
                 ]);
@@ -914,34 +924,36 @@ class MembershipSaleService
                 );
             }
 
-            $salespersonCommissionData = $this->calculateSalespersonCommission($membershipPlan, $finalPrice);
-            $salespersonCommission = $this->salespersonCommissionRepository->create(
-                $this->salespersonCommissionDtoData([
-                    'salesperson_id' => $salesManagerId,
-                    'membership_sale_id' => $membershipSale->id,
-                    'person_membership_id' => $personMembership->id,
-                    'membership_plan_id' => $membershipPlan->id,
-                    'salary_type' => $salespersonCommissionData['type'],
-                    'salary_value' => $salespersonCommissionData['value'],
-                    'salary_amount' => $salespersonCommissionData['amount'],
-                    'sale_amount' => $finalPrice,
-                    'status' => 'pending',
-                    'paid_at' => null,
-                ])
-            );
+            if ($salesManager) {
+                $salespersonCommissionData = $this->calculateSalespersonCommission($membershipPlan, $finalPrice);
+                $salespersonCommission = $this->salespersonCommissionRepository->create(
+                    $this->salespersonCommissionDtoData([
+                        'salesperson_id' => $salesManagerId,
+                        'membership_sale_id' => $membershipSale->id,
+                        'person_membership_id' => $personMembership->id,
+                        'membership_plan_id' => $membershipPlan->id,
+                        'salary_type' => $salespersonCommissionData['type'],
+                        'salary_value' => $salespersonCommissionData['value'],
+                        'salary_amount' => $salespersonCommissionData['amount'],
+                        'sale_amount' => $finalPrice,
+                        'status' => 'pending',
+                        'paid_at' => null,
+                    ])
+                );
 
-            SalaryPayableAssignment::query()->create([
-                'gym_id' => $gymId,
-                'payee_id' => $salespersonCommission->salesperson_id,
-                'source_type' => 'salesperson_commission',
-                'trainer_monthly_salary_id' => null,
-                'salesperson_commission_id' => $salespersonCommission->id,
-                'trainer_commission_id' => null,
-                'parent_assignment_id' => null,
-                'root_key' => "salesperson:{$salespersonCommission->id}",
-                'amount' => $salespersonCommission->salary_amount,
-                'available_amount' => $salespersonCommission->salary_amount,
-            ]);
+                SalaryPayableAssignment::query()->create([
+                    'gym_id' => $gymId,
+                    'payee_id' => $salespersonCommission->salesperson_id,
+                    'source_type' => 'salesperson_commission',
+                    'trainer_monthly_salary_id' => null,
+                    'salesperson_commission_id' => $salespersonCommission->id,
+                    'trainer_commission_id' => null,
+                    'parent_assignment_id' => null,
+                    'root_key' => "salesperson:{$salespersonCommission->id}",
+                    'amount' => $salespersonCommission->salary_amount,
+                    'available_amount' => $salespersonCommission->salary_amount,
+                ]);
+            }
 
             $debtAmount = max($finalPrice - $paymentAmount, 0);
 
@@ -973,10 +985,17 @@ class MembershipSaleService
                 );
             }
 
+            if ($promoteLinkedGuest) {
+                $oldPersonSnapshot = $this->personAuditService->snapshot($person);
+                $person->update(['type' => 'visitor']);
+                $this->personAuditService->afterChanged($person, $oldPersonSnapshot);
+            }
+
             $this->membershipSaleAuditService->afterCreated($membershipSale);
 
             if ($contactNoteManager === null
-                && $user->hasRole('sales_manager')
+                && $salesManager
+                && $user->hasAnyRole(['sales_manager', 'manager'])
                 && (int) $user->gym_id === $gymId
                 && filled($person->phone)) {
                 $this->contactNoteOwnership->create($salesManager, (string) $person->phone, 'Նոր վաճառք', [

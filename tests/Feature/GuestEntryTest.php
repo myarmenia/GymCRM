@@ -107,7 +107,7 @@ class GuestEntryTest extends TestCase
         $this->assertSame(1, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
     }
 
-    public function test_manual_guest_entry_shows_and_consumes_the_hosts_membership(): void
+    public function test_promoted_visitor_uses_owned_membership_instead_of_old_guest_link(): void
     {
         [$gym, $host, $guest, $membership] = $this->fixture(2);
         $guest->update(['type' => 'visitor']);
@@ -116,6 +116,7 @@ class GuestEntryTest extends TestCase
         $guestOwnedMembership = $membership->replicate(['uuid']);
         $guestOwnedMembership->person_id = $guest->id;
         $guestOwnedMembership->save();
+        $membership->update(['guest_left' => 0]);
         $manager = User::query()->where('gym_id', $gym->id)->firstOrFail();
         $manager->assignRole(Role::query()->create([
             'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
@@ -124,17 +125,71 @@ class GuestEntryTest extends TestCase
         $service = app(PersonVisitService::class);
 
         $page = $service->pageData($guest->id);
-        $this->assertSame([$membership->id], $page['memberships']->modelKeys());
+        $this->assertSame([$guestOwnedMembership->id], $page['memberships']->modelKeys());
 
-        $entry = $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-28T10:00');
+        $entry = $service->storeManualVisit($guest->id, 'entry', $guestOwnedMembership->id, '2026-09-28T10:00');
         $this->assertSame($guest->id, $entry->relation_id);
-        $this->assertSame($membership->id, $entry->personMemberships->firstOrFail()->id);
-        $this->assertSame(1, $membership->fresh()->visits_left);
-        $this->assertSame(1, $membership->fresh()->guest_used);
+        $this->assertSame($guestOwnedMembership->id, $entry->personMemberships->firstOrFail()->id);
+        $this->assertSame(1, $guestOwnedMembership->fresh()->visits_left);
+        $this->assertSame(2, $membership->fresh()->visits_left);
+        $this->assertSame(0, $membership->fresh()->guest_used);
         $this->assertSame(0, $membership->fresh()->guest_left);
 
         $this->expectException(ValidationException::class);
-        $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-28T12:00');
+        $this->expectExceptionMessage('Selected membership is not available for this person.');
+        $service->storeManualVisit($guest->id, 'entry', $membership->id, '2026-09-29T12:00');
+    }
+
+    public function test_promoted_visitor_turnstile_does_not_fall_back_to_old_guest_link(): void
+    {
+        [$gym, $host, $guest, $membership, $code] = $this->fixture(1);
+        $guest->update(['type' => 'visitor']);
+        $ownedMembership = $membership->replicate(['uuid']);
+        $ownedMembership->person_id = $guest->id;
+        $ownedMembership->save();
+        $service = $this->eesService($gym, $code, 2);
+
+        $first = $service->ees($this->scan('2026-09-28 10:00:00'));
+        $this->assertTrue($first->result['access_allowed']);
+        $entry = AttendanceSheet::query()->where('relation_id', $guest->id)->sole();
+        $this->assertSame($ownedMembership->id, $entry->personMemberships->sole()->id);
+        $this->assertSame(0, $ownedMembership->fresh()->visits_left);
+        $this->assertSame(1, $membership->fresh()->guest_left);
+
+        $nextDay = $service->ees($this->scan('2026-09-29 10:00:00'));
+        $this->assertFalse($nextDay->result['access_allowed']);
+        $this->assertSame(1, AttendanceSheet::query()->where('relation_id', $guest->id)->count());
+    }
+
+    public function test_manual_entry_allows_each_membership_once_on_the_same_day(): void
+    {
+        [$gym, $host, $person, $hostMembership] = $this->fixture(2);
+        $person->update(['type' => 'visitor']);
+        $firstMembership = $hostMembership->replicate(['uuid']);
+        $firstMembership->person_id = $person->id;
+        $firstMembership->save();
+        $secondMembership = $hostMembership->replicate(['uuid']);
+        $secondMembership->person_id = $person->id;
+        $secondMembership->save();
+        $manager = User::query()->where('gym_id', $gym->id)->firstOrFail();
+        $manager->assignRole(Role::query()->create([
+            'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
+        ]));
+        $this->actingAs($manager);
+        $service = app(PersonVisitService::class);
+
+        $first = $service->storeManualVisit($person->id, 'entry', $firstMembership->id, '2026-09-28T10:00');
+        $second = $service->storeManualVisit($person->id, 'entry', $secondMembership->id, '2026-09-28T11:00');
+
+        $this->assertSame($firstMembership->id, $first->personMemberships->sole()->id);
+        $this->assertSame($secondMembership->id, $second->personMemberships->sole()->id);
+        $this->assertSame(1, $firstMembership->fresh()->visits_left);
+        $this->assertSame(1, $secondMembership->fresh()->visits_left);
+        $this->assertSame(2, AttendanceSheet::query()->where('relation_id', $person->id)->count());
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('This membership already has an entry recorded for this day.');
+        $service->storeManualVisit($person->id, 'entry', $firstMembership->id, '2026-09-28T12:00');
     }
 
     public function test_guest_without_valid_host_membership_is_denied(): void
@@ -223,6 +278,24 @@ class GuestEntryTest extends TestCase
         $this->assertSame(1, $page['allowedGuestCount']);
         $this->assertSame(0, $page['usedGuestCount']);
         $this->assertSame(1, $page['remainingGuestCount']);
+    }
+
+    public function test_new_guest_without_email_is_saved_without_a_placeholder(): void
+    {
+        [$gym, , , $membership] = $this->fixture(2);
+        $this->actingAs(User::query()->where('gym_id', $gym->id)->firstOrFail());
+        $code = EntryCode::query()->create([
+            'gym_id' => $gym->id, 'token' => 'NEW-GUEST-CARD', 'type' => 'rfId',
+            'status' => true, 'activation' => false,
+        ]);
+
+        app(MembershipSaleGuestService::class)->storeGuest($membership->membership_sale_id, [
+            'name' => 'New',
+            'phone' => '+37499333333',
+            'entry_code_id' => $code->id,
+        ]);
+
+        $this->assertNull(Person::query()->where('phone', '+37499333333')->sole()->email);
     }
 
     public function test_adding_guest_does_not_update_guest_entry_counters(): void

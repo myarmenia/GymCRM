@@ -42,6 +42,10 @@ const props = defineProps({
         type: Number,
         default: null,
     },
+    salesManagerOptional: {
+        type: Boolean,
+        default: false,
+    },
     contactNoteManagerIdsByGym: {
         type: Object,
         default: () => ({}),
@@ -130,6 +134,7 @@ const currentSalesManager = computed(() => availableSalesManagers.value.find(
 const contactNoteManagerId = computed(() => selectedPlan.value
     ? props.contactNoteManagerIdsByGym[selectedPlan.value.gym_id]
     : Object.values(props.contactNoteManagerIdsByGym).find(Boolean))
+const salesManagerRequired = computed(() => !props.salesManagerOptional || Boolean(contactNoteManagerId.value))
 const salesManagerLocked = computed(() => Boolean(contactNoteManagerId.value)
     && Number(form.sales_manager_id) === Number(contactNoteManagerId.value))
 const trainerSalaryModeLabel = computed(() => ({
@@ -518,7 +523,7 @@ const confirmReminder = () => {
 }
 
 const submit = () => {
-    if (!form.sales_manager_id) {
+    if (salesManagerRequired.value && !form.sales_manager_id) {
         form.setError('sales_manager_id', t('sales.select_sales_manager'))
         return
     }
@@ -541,7 +546,7 @@ const submit = () => {
 }
 
 const submitDebt = () => {
-    if (!form.sales_manager_id) {
+    if (salesManagerRequired.value && !form.sales_manager_id) {
         form.setError('sales_manager_id', t('sales.select_sales_manager'))
         return
     }
@@ -600,9 +605,9 @@ const submitDebt = () => {
                         <InputError :message="form.errors.membership_plan_id" />
                     </div>
                     <div class="col-md-6 mb-4">
-                        <InputLabel :value="t('sales.sales_manager') + ' *'" />
-                        <select v-model="form.sales_manager_id" class="form-select" required :disabled="salesManagerLocked">
-                            <option value="" disabled>{{ t('sales.select_sales_manager') }}</option>
+                        <InputLabel :value="t('sales.sales_manager') + (salesManagerRequired ? ' *' : '')" />
+                        <select v-model="form.sales_manager_id" class="form-select" :required="salesManagerRequired" :disabled="salesManagerLocked">
+                            <option value="" :disabled="salesManagerRequired">{{ t('sales.select_sales_manager') }}</option>
                             <option v-for="manager in availableSalesManagers" :key="manager.id" :value="manager.id">
                                 {{ formatUser(manager) }}
                             </option>

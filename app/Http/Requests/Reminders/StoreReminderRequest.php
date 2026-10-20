@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Reminders;
 
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -47,23 +48,33 @@ class StoreReminderRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             $actor = $this->user();
-            $recipientIds = $this->input('recipient_ids', []);
+            $recipientIds = collect($this->input('recipient_ids', []));
 
-            if (! $actor || empty($recipientIds)) {
+            if (! $actor) {
                 return;
             }
 
-            $invalidRecipients = User::query()
-                ->whereIn('id', $recipientIds)
-                ->where(function ($query) use ($actor) {
-                    $query
-                        ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('name', 'owner'))
-                        ->when(! $actor->hasRole('owner'), fn ($userQuery) => $userQuery->orWhere('gym_id', '!=', $actor->gym_id));
-                })
-                ->exists();
+            if ($recipientIds->isNotEmpty()) {
+                $allowedCount = User::query()
+                    ->whereIn('id', $recipientIds)
+                    ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
+                    ->when(! $actor->hasRole('owner'), fn ($query) => $query->where('gym_id', $actor->gym_id))
+                    ->count();
 
-            if ($invalidRecipients) {
-                $validator->errors()->add('recipient_ids', __('backend_messages.one_selected_recipients_unavailable'));
+                if ($allowedCount !== $recipientIds->count()) {
+                    $validator->errors()->add('recipient_ids', __('backend_messages.one_selected_recipients_unavailable'));
+                }
+            }
+
+            if ($this->filled('about_id') && ! $actor->hasRole('owner')) {
+                $personAvailable = Person::query()
+                    ->whereKey($this->input('about_id'))
+                    ->whereHas('gyms', fn ($query) => $query->where('gyms.id', $actor->gym_id))
+                    ->exists();
+
+                if (! $personAvailable) {
+                    $validator->errors()->add('about_id', __('backend_messages.selected_customer_not_found'));
+                }
             }
         });
     }

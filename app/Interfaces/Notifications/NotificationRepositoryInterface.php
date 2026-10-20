@@ -24,11 +24,11 @@ interface NotificationRepositoryInterface
 
     public function unreadCountsForRecipients(Collection $recipientIds): Collection;
 
-    public function userIdsExcept(int $userId): Collection;
+    public function userIdsExcept(User $sender): Collection;
 
     public function usersForSelect(User $sender): Collection;
 
-    public function peopleForSelect(int $limit = 500): Collection;
+    public function peopleForSelect(User $sender, int $limit = 500): Collection;
 
     public function deleteReceivedById(User $user, int $notificationId): bool;
 
