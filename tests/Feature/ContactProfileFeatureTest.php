@@ -18,6 +18,37 @@ class ContactProfileFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_latest_blocked_note_on_an_initial_profile_can_be_replaced_by_current_manager(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Central']);
+        $role = Role::query()->firstOrCreate([
+            'name' => 'sales_manager', 'guard_name' => 'web', 'g_name' => 'sales_manager',
+        ]);
+        $first = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
+        $first->assignRole($role);
+        $blocked = User::factory()->create(['gym_id' => $gym->id, 'active' => false]);
+        $blocked->assignRole($role);
+        $seller = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
+        $seller->assignRole($role);
+
+        $firstNote = app(ContactNoteOwnershipService::class)->create($first, '099123456', 'First');
+        $firstNote->update(['created_at' => now()->subDays(2)]);
+        $profile = ContactProfile::query()->sole();
+        ContactNote::query()->create([
+            'user_id' => $blocked->id,
+            'contact_profile_id' => $profile->id,
+            'phone_number' => '+37499123456',
+            'note' => 'Latest blocked contact',
+            'created_at' => now()->subDay(),
+        ]);
+
+        $this->assertNull(app(ContactNoteOwnerResolver::class)->forPhone('099123456', $gym->id));
+        app(ContactNoteOwnershipService::class)->create($seller, '099123456', 'New sale');
+        $this->assertSame($seller->id, $profile->fresh()->user_id);
+        $this->assertSame($seller->id, app(ContactNoteOwnerResolver::class)
+            ->forPhone('099123456', $gym->id)?->id);
+    }
+
     public function test_related_phone_keeps_its_own_details_notes_and_sales_manager(): void
     {
         $gym = Gym::query()->create(['name' => 'Central']);

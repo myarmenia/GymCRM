@@ -1055,9 +1055,7 @@ class EntryExitSystemService
             ->filter(fn(PersonMembership $membership) => $this->membershipHasVisitAvailableForEntry($membership, $referenceTime))
             ->values();
 
-        return $memberships->isNotEmpty()
-            ? $memberships
-            : app(GuestEntryService::class)->availableMemberships($person, $clientId, $referenceTime);
+        return $memberships;
     }
 
     private function membershipIsValidForTurnstile(PersonMembership $membership, Carbon $referenceTime): bool
