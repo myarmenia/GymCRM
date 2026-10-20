@@ -118,12 +118,77 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(741, $contract->number);
         $this->assertSame('80.00', $contract->price);
         $this->assertSame('80.00', $contract->snapshot['price']);
+        $this->assertSame('40.00', $contract->paid_amount);
+        $this->assertSame('40.00', $contract->debt_amount);
+        $this->assertSame('40.00', $contract->snapshot['paid_amount']);
+        $this->assertSame('40.00', $contract->snapshot['debt_amount']);
         $this->assertSame('Անհատական անդամակցության պայմանագիր', $contract->contract_title);
         $this->assertSame('Անհատական անդամակցության պայմանագիր', $contract->snapshot['contract_title']);
         $this->assertStringContainsString('Անհատական անդամակցության պայմանագիր',
             view('contracts.sale', ['contract' => $contract, 'snapshot' => $contract->snapshot])->render());
+        $renderedContract = view('contracts.sale', ['contract' => $contract, 'snapshot' => $contract->snapshot])->render();
+        $this->assertStringContainsString('Վճարված է', $renderedContract);
+        $this->assertStringContainsString('Մնացել է պարտք', $renderedContract);
         $this->assertNull($contract->pdf_path);
         $this->assertSame(742, $settings->fresh()->next_number);
+    }
+
+    public function test_contract_financials_cover_full_payment(): void
+    {
+        app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']))
+            ->update(['enabled' => true]);
+
+        $sale = $this->service->store([
+            ...$this->payload(false),
+            'is_partial_payment' => false,
+            'is_full_payment' => true,
+            'reminder_scheduled_at' => null,
+            'reminder_recipient_ids' => null,
+        ]);
+        $contract = SaleContract::query()->where('membership_sale_id', $sale->id)->sole();
+        $this->assertSame('80.00', $contract->snapshot['paid_amount']);
+        $this->assertSame('0.00', $contract->snapshot['debt_amount']);
+
+    }
+
+    public function test_additional_payment_creates_a_white_revision_with_original_terms(): void
+    {
+        $settings = app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']));
+        $settings->update(['enabled' => true, 'contract_title' => 'Սկզբնական պայմանագիր']);
+        $sale = $this->service->store($this->payload(true));
+        $settings->update(['contract_title' => 'Փոփոխված ձևանմուշ']);
+
+        $this->postJson(route('membership_sale.payments.store', ['locale' => 'hy', 'id' => $sale->id]), [
+            'is_partial_payment' => true,
+            'is_full_payment' => false,
+            'amount' => 20,
+            'payment_method_id' => $this->ids['paymentMethodId'],
+        ])->assertCreated()->assertJsonPath('redirect', route('sale_contract.show', [
+            'locale' => 'hy', 'sale' => $sale->id,
+        ]));
+
+        $contracts = SaleContract::query()->where('membership_sale_id', $sale->id)->orderBy('revision')->get();
+        $this->assertCount(2, $contracts);
+        $this->assertSame($contracts[0]->number, $contracts[1]->number);
+        $this->assertSame(['40.00', '60.00'], $contracts->pluck('paid_amount')->all());
+        $this->assertSame(['40.00', '20.00'], $contracts->pluck('debt_amount')->all());
+        $this->assertSame($contracts[0]->snapshot['contract_title'], $contracts[1]->snapshot['contract_title']);
+    }
+
+    public function test_contract_financials_cover_unpaid_sale(): void
+    {
+        app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']))
+            ->update(['enabled' => true]);
+
+        $unpaidSale = $this->service->store([
+            ...$this->payload(false),
+            'stay_debt' => true,
+            'amount' => 0,
+            'payment_method_id' => null,
+        ]);
+        $unpaidContract = SaleContract::query()->where('membership_sale_id', $unpaidSale->id)->sole();
+        $this->assertSame('0.00', $unpaidContract->snapshot['paid_amount']);
+        $this->assertSame('80.00', $unpaidContract->snapshot['debt_amount']);
     }
 
     public function test_white_pdf_is_generated_locally_from_final_price(): void
@@ -140,6 +205,29 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame('80.00', $contract->price);
         $this->assertSame('local', $contract->pdf_disk);
         $this->assertStringStartsWith('%PDF-', Storage::disk('local')->get($contract->pdf_path));
+        $response = $this->get(route('sale_contract.download', [
+            'locale' => 'hy', 'sale' => $sale->id, 'contract' => $contract->id, 'inline' => 1,
+        ]))->assertOk();
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_delayed_white_pdf_uses_financial_amounts_frozen_on_contract_row(): void
+    {
+        Storage::fake('local');
+        app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']))
+            ->update(['enabled' => true]);
+
+        $sale = $this->service->store($this->payload(true));
+        $contract = SaleContract::query()->where('membership_sale_id', $sale->id)->sole();
+        $contract->update(['snapshot' => null]); // Mirrored contracts wait for the white PDF worker.
+        DB::table('membership_plan_payments')->where('membership_sale_id', $sale->id)
+            ->update(['amount' => 60]);
+
+        app(SaleContractService::class)->render($contract->fresh());
+        $snapshot = $contract->fresh()->snapshot;
+        $this->assertSame('80.00', $snapshot['price']);
+        $this->assertSame('40.00', $snapshot['paid_amount']);
+        $this->assertSame('40.00', $snapshot['debt_amount']);
     }
 
     public function test_sales_manager_can_reissue_white_contract_without_owner_role(): void

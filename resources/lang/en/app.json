@@ -6,6 +6,7 @@
         "revision": "version :revision",
         "currency": "AMD",
         "download_pdf": "Download PDF",
+        "print_pdf": "Open to print",
         "retry": "Retry generation",
         "creating": "Generating…",
         "create_revision": "Create a new version",

@@ -448,6 +448,8 @@ class MembershipSaleService
                 "Payment added to membership sale #{$membershipSale->id}",
             );
 
+            $this->saleContractService->issueAfterPayment($membershipSale);
+
             DB::commit();
 
             return $payment->load([

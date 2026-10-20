@@ -55,6 +55,7 @@ const retry = contract => submit(route('sale_contract.retry', { locale: locale.v
                         <div v-if="contract.error" class="text-danger small">{{ contract.error }}</div>
                     </div>
                     <div class="d-flex gap-2">
+                        <a v-if="contract.status === 'ready'" class="btn btn-outline-primary btn-sm" :href="route('sale_contract.download', { locale, sale: sale.id, contract: contract.id, inline: 1 })" target="_blank" rel="noopener">{{ t('print_pdf') }}</a>
                         <a v-if="contract.status === 'ready'" class="btn btn-primary btn-sm" :href="route('sale_contract.download', { locale, sale: sale.id, contract: contract.id })">{{ t('download_pdf') }}</a>
                         <button v-else-if="canManage && contract.status === 'failed'" type="button" class="btn btn-outline-primary btn-sm" :disabled="submitting" @click="retry(contract)">{{ t('retry') }}</button>
                     </div>

@@ -34,9 +34,9 @@ class SaleContractService
         ]);
     }
 
-    public function issueForSale(MembershipSale $sale, bool $forceRevision = false): ?SaleContract
+    public function issueForSale(MembershipSale $sale, bool $forceRevision = false, bool $preservePreviousSnapshot = false): ?SaleContract
     {
-        return DB::transaction(function () use ($sale, $forceRevision): ?SaleContract {
+        return DB::transaction(function () use ($sale, $forceRevision, $preservePreviousSnapshot): ?SaleContract {
             $settings = SaleContractSetting::query()
                 ->where('gym_id', $sale->gym_id)
                 ->lockForUpdate()
@@ -51,7 +51,12 @@ class SaleContractService
                 ->where('membership_sale_id', $sale->id)
                 ->orderByDesc('revision')
                 ->first();
-            $snapshot = $this->snapshot($sale, $settings);
+            $snapshot = $preservePreviousSnapshot && isset($latest?->snapshot['price'])
+                ? [
+                    ...$latest->snapshot,
+                    ...$this->paymentAmounts($sale, (float) $latest->snapshot['price']),
+                ]
+                : $this->snapshot($sale, $settings);
             if ($latest) {
                 $snapshot['contract_number'] = $latest->number;
             }
@@ -88,6 +93,11 @@ class SaleContractService
 
             return $contract;
         });
+    }
+
+    public function issueAfterPayment(MembershipSale $sale): ?SaleContract
+    {
+        return $this->issueForSale($sale, preservePreviousSnapshot: true);
     }
 
     public function snapshot(MembershipSale $sale, SaleContractSetting $settings): array
@@ -139,6 +149,7 @@ class SaleContractService
                 'visits_limit' => $plan?->visits_limit,
             ],
             'price' => number_format((float) $price, 2, '.', ''),
+            ...$this->paymentAmounts($sale, (float) $price),
             'template_version' => $settings->template_version,
             'clauses' => $settings->clauses ?? [],
             'rules' => $settings->rules ?? [],
@@ -158,11 +169,18 @@ class SaleContractService
                 $settings = SaleContractSetting::query()->where('gym_id', $contract->gym_id)->firstOrFail();
                 $snapshot = $this->snapshot($contract->sale, $settings);
                 $snapshot['price'] = number_format((float) $contract->price, 2, '.', '');
+                if ($contract->paid_amount !== null && $contract->debt_amount !== null) {
+                    $snapshot['paid_amount'] = number_format((float) $contract->paid_amount, 2, '.', '');
+                    $snapshot['debt_amount'] = number_format((float) $contract->debt_amount, 2, '.', '');
+                } else {
+                    $snapshot = array_merge($snapshot, $this->paymentAmounts($contract->sale, (float) $contract->price));
+                }
                 $snapshot['contract_number'] = $contract->number;
                 $contract->snapshot = $snapshot;
-                $contract->fill($this->snapshotColumns($contract->snapshot));
-                $contract->save();
             }
+            // Mirrored payment revisions already carry their frozen white snapshot.
+            $contract->fill($this->snapshotColumns($contract->snapshot));
+            $contract->save();
 
             $options = new Options;
             $options->set('defaultFont', 'DejaVu Sans');
@@ -206,9 +224,25 @@ class SaleContractService
         return $value ? Carbon::parse($value)->toDateString() : null;
     }
 
+    private function paymentAmounts(MembershipSale $sale, float $price): array
+    {
+        $payments = $sale->payments()->where('status', 'paid')->get();
+        $amount = static fn ($payment): float => (float) ($payment->amount);
+        $netPaid = (float) $payments->where('type', 'payment')->sum($amount)
+            - (float) $payments->where('type', 'refund')->sum($amount);
+        $paid = min(max(round($netPaid, 2), 0), round($price, 2));
+
+        return [
+            'paid_amount' => number_format($paid, 2, '.', ''),
+            'debt_amount' => number_format(max(round($price - $paid, 2), 0), 2, '.', ''),
+        ];
+    }
+
     private function snapshotColumns(array $snapshot): array
     {
         return [
+            'paid_amount' => $snapshot['paid_amount'],
+            'debt_amount' => $snapshot['debt_amount'],
             'contract_title' => $snapshot['contract_title'],
             'issued_on' => $snapshot['issued_at'],
             'gym_legal_name' => $snapshot['gym']['name'],
