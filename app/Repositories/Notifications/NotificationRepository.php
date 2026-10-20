@@ -83,11 +83,12 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->pluck('unread_count', 'recipient_id');
     }
 
-    public function userIdsExcept(int $userId): Collection
+    public function userIdsExcept(User $sender): Collection
     {
         return User::query()
-            ->whereKeyNot($userId)
+            ->whereKeyNot($sender->id)
             ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
+            ->when(! $sender->hasRole('owner'), fn ($query) => $query->where('gym_id', $sender->gym_id))
             ->pluck('id')
             ->map(fn ($id) => (int) $id);
     }
@@ -97,6 +98,7 @@ class NotificationRepository implements NotificationRepositoryInterface
         return User::query()
             ->whereKeyNot($sender->id)
             ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'owner'))
+            ->when(! $sender->hasRole('owner'), fn ($query) => $query->where('gym_id', $sender->gym_id))
             ->orderBy('name')
             ->orderBy('surname')
             ->get(['id', 'name', 'surname', 'email'])
@@ -106,9 +108,10 @@ class NotificationRepository implements NotificationRepositoryInterface
             ]);
     }
 
-    public function peopleForSelect(int $limit = 500): Collection
+    public function peopleForSelect(User $sender, int $limit = 500): Collection
     {
         return Person::query()
+            ->when(! $sender->hasRole('owner'), fn ($query) => $query->whereHas('gyms', fn ($gymQuery) => $gymQuery->where('gyms.id', $sender->gym_id)))
             ->orderBy('name')
             ->orderBy('surname')
             ->limit($limit)
