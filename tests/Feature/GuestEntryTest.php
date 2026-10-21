@@ -280,6 +280,24 @@ class GuestEntryTest extends TestCase
         $this->assertSame(1, $page['remainingGuestCount']);
     }
 
+    public function test_new_guest_without_email_is_saved_without_a_placeholder(): void
+    {
+        [$gym, , , $membership] = $this->fixture(2);
+        $this->actingAs(User::query()->where('gym_id', $gym->id)->firstOrFail());
+        $code = EntryCode::query()->create([
+            'gym_id' => $gym->id, 'token' => 'NEW-GUEST-CARD', 'type' => 'rfId',
+            'status' => true, 'activation' => false,
+        ]);
+
+        app(MembershipSaleGuestService::class)->storeGuest($membership->membership_sale_id, [
+            'name' => 'New',
+            'phone' => '+37499333333',
+            'entry_code_id' => $code->id,
+        ]);
+
+        $this->assertNull(Person::query()->where('phone', '+37499333333')->sole()->email);
+    }
+
     public function test_adding_guest_does_not_update_guest_entry_counters(): void
     {
         [$gym, $host, $guest, $membership, $code] = $this->fixture(2);

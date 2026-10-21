@@ -35,7 +35,7 @@ class NotificationController extends Controller
         return Inertia::render('Notifications/Create', [
             'users' => $this->notificationService->usersForSelect($user),
             'reminderUsers' => $this->reminderService->usersForSelect($user),
-            'people' => $this->notificationService->peopleForSelect(),
+            'people' => $this->notificationService->peopleForSelect($user),
             'reminderCategories' => $this->reminderService->categoriesForSelect(),
         ]);
     }

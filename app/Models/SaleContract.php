@@ -13,6 +13,8 @@ class SaleContract extends Model
         return [
             'snapshot' => 'array',
             'price' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
+            'debt_amount' => 'decimal:2',
             'generated_at' => 'datetime',
         ];
     }

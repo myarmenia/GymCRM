@@ -13,6 +13,7 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Models\SaleContract;
+use App\Models\SaleContractSetting;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
 use App\Services\Hdm\HdmReturnService;
@@ -192,6 +193,11 @@ class MembershipSaleController extends Controller
     public function storePayment(StoreMembershipSalePaymentRequest $request, $locale, $id)
     {
         $payment = $this->membershipSaleService->storePayment((int) $id, $request->validated());
+        $showContract = SaleContractSetting::query()->where('gym_id', $payment->membershipSale->gym_id)->where('enabled', true)->exists()
+            && SaleContract::query()->where('membership_sale_id', $id)->exists();
+        $redirect = $showContract
+            ? route('sale_contract.show', ['locale' => app()->getLocale(), 'sale' => $id])
+            : route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id]);
 
         if ($request->expectsJson()) {
             $printResult = $payment->is_hdm
@@ -206,15 +212,12 @@ class MembershipSaleController extends Controller
                 'need_print' => ($printResult['success'] ?? false) && ($printResult['need_print'] ?? false),
                 'print_data' => $printResult['data'] ?? null,
                 'print_error' => ($printResult['success'] ?? false) ? null : $printResult,
-                'redirect' => route('membership_sale.payments', [
-                    'locale' => app()->getLocale(),
-                    'id' => $id,
-                ]),
+                'redirect' => $redirect,
             ], 201);
         }
 
         return redirect()
-            ->route('membership_sale.payments', ['locale' => app()->getLocale(), 'id' => $id])
+            ->to($redirect)
             ->with('success', 'Payment saved successfully.');
     }
 

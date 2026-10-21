@@ -5,7 +5,7 @@ import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PersonContactNotes from './PersonContactNotes.vue'
 import { translate } from '/resources/js/trans'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
-import { todayInYerevan } from '@/utils/yerevanDate'
+import { formatDateTimeInYerevan, todayInYerevan } from '@/utils/yerevanDate'
 
 const page = usePage()
 const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements)
@@ -21,6 +21,10 @@ const props = defineProps({
     entryCode: {
         type: Object,
         default: null,
+    },
+    visitStats: {
+        type: Object,
+        default: () => ({ total: 0, thisMonth: 0, lastVisitAt: null }),
     },
     reminderUsers: {
         type: Array,
@@ -302,9 +306,9 @@ const initials = computed(() => {
 })
 
 const visitStats = computed(() => [
-    { label: t('visits'), value: '0', icon: 'tabler-walk', className: 'bg-label-primary' },
-    { label: t('this_month'), value: '0', icon: 'tabler-calendar-stats', className: 'bg-label-info' },
-    { label: t('last_visit'), value: '-', icon: 'tabler-clock', className: 'bg-label-warning' },
+    { label: t('visits'), value: props.visitStats.total ?? 0, icon: 'tabler-walk', className: 'bg-label-primary' },
+    { label: t('this_month'), value: props.visitStats.thisMonth ?? 0, icon: 'tabler-calendar-stats', className: 'bg-label-info' },
+    { label: t('last_visit'), value: formatDateTimeInYerevan(props.visitStats.lastVisitAt), icon: 'tabler-clock', className: 'bg-label-warning' },
     { label: t('active_memberships'), value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success' },
 ])
 
