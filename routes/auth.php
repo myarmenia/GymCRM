@@ -222,6 +222,7 @@ Route::prefix('{locale}')
 
                 // Route::middleware('check.gym:Person,id')->group(function () {
                 Route::get('/profile/{id}', [PersonController::class, 'profile'])->name('profile');
+                Route::post('/profile/{id}/notes', [PersonController::class, 'storeProfileNote'])->name('profile.notes.store');
                 Route::get('/visits/{id}', [PersonController::class, 'visitManagement'])->name('visits');
                 Route::post('/visits/{id}', [PersonController::class, 'storeVisit'])->name('visits.store');
                 Route::get('/edit/{id}', [PersonController::class, 'edit'])->name('edit');

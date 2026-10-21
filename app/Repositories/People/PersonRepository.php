@@ -5,6 +5,8 @@ namespace App\Repositories\People;
 use App\Interfaces\People\PersonInterface;
 use App\Models\Person;
 use App\Repositories\BaseRepository;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 class PersonRepository extends BaseRepository implements PersonInterface
 {
@@ -22,10 +24,16 @@ class PersonRepository extends BaseRepository implements PersonInterface
     {
         $membershipFilter = $filters['has_membership'] ?? null;
         unset($filters['has_membership']);
+        $today = Carbon::today('Asia/Yerevan')->toDateString();
 
         $query = $this->query()
             ->with([
                 'gyms',
+                'memberships' => fn ($memberships) => $memberships
+                    ->whereIn('status', ['waiting', 'active', 'frozen'])
+                    ->where(fn (Builder $dates) => $dates->whereNull('start_date')->orWhereDate('start_date', '<=', $today))
+                    ->where(fn (Builder $dates) => $dates->whereNull('end_date')->orWhereDate('end_date', '>=', $today))
+                    ->where(fn (Builder $dates) => $dates->whereNull('valid_at')->orWhereDate('valid_at', '>=', $today)),
                 'memberships.membershipPlan.translations',
             ]);
 

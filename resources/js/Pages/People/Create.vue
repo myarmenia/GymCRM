@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Index from '@/Layouts/Index.vue';
 import { translate, useTrans } from '/resources/js/trans'
 import { Head, useForm, usePage } from '@inertiajs/vue3';
@@ -15,6 +15,8 @@ const currentLocale = computed(() => page.props.locale ?? 'en');
 
 const props = defineProps({
     initialGymId: Number,
+    initialPhone: { type: String, default: '' },
+    initialContact: { type: Object, default: null },
     entryCodes: Array,
     entryCodeType: {
         type: String,
@@ -26,7 +28,11 @@ const entryCodes = ref(props.entryCodes || []);
 const imagePreview = ref(null);
 const phoneLookup = ref(null);
 let lookupSequence = 0;
-const autoFilled = ref({});
+const contactFields = ['name', 'surname', 'email', 'birth_date', 'gender'];
+const initialDetails = Object.fromEntries(contactFields
+    .filter(field => props.initialContact?.[field])
+    .map(field => [field, props.initialContact[field]]));
+const autoFilled = ref({ ...initialDetails });
 const onPhoneInput = () => {
     for (const [field, value] of Object.entries(autoFilled.value)) {
         if (form[field] === value) form[field] = '';
@@ -37,18 +43,18 @@ const onPhoneInput = () => {
 };
 
 const form = useForm({
-    name: '',
-    surname: '',
+    name: initialDetails.name ?? '',
+    surname: initialDetails.surname ?? '',
     image: null,
-    email: '',
+    email: initialDetails.email ?? '',
     password: '',
-    phone: '',
+    phone: props.initialPhone,
     type: 'visitor',
     entry_code_mode: entryCodes.value.length ? 'existing' : 'new',
     entry_code_id: null,
     entry_code_token: '',
-    birth_date: '',
-    gender: '',
+    birth_date: initialDetails.birth_date ?? '',
+    gender: initialDetails.gender ?? '',
     passport_series: '',
     passport_issued_by: '',
     passport_issued_at: '',
@@ -65,7 +71,7 @@ const lookupPhone = async () => {
         if (sequence !== lookupSequence || phone !== form.phone.trim()) return;
         phoneLookup.value = data;
         if (data.existing_person_id || !data.profile) return;
-        for (const field of ['name', 'surname', 'email', 'birth_date', 'gender']) {
+        for (const field of contactFields) {
             if (!form[field] && data.profile[field]) {
                 form[field] = data.profile[field];
                 autoFilled.value[field] = data.profile[field];
@@ -75,6 +81,10 @@ const lookupPhone = async () => {
         phoneLookup.value = null;
     }
 };
+
+onMounted(() => {
+    if (form.phone) lookupPhone();
+});
 
 const handleImageUpload = (event) => {
     const file = event.target.files?.[0] ?? null;
