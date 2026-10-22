@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
+import PersonContactNotes from './PersonContactNotes.vue'
 import { translate } from '/resources/js/trans'
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
 import { formatDateTimeInYerevan, todayInYerevan } from '@/utils/yerevanDate'
@@ -15,6 +16,8 @@ const isFounder = computed(() =>
 
 const props = defineProps({
     person: Object,
+    contactNotes: { type: Array, default: () => [] },
+    canAddContactNote: { type: Boolean, default: false },
     entryCode: {
         type: Object,
         default: null,
@@ -462,6 +465,8 @@ const secondaryInfoItems = computed(() => [
                 </div>
             </div>
         </div>
+
+        <PersonContactNotes :person="person" :notes="contactNotes" :can-add="canAddContactNote" />
 
         <div class="card">
             <div class="card-header pb-0">

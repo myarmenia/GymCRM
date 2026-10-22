@@ -18,6 +18,89 @@ class ContactProfileFeatureTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_contact_actions_resolve_each_phone_and_prefill_visitor_creation(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Central']);
+        $seller = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
+        $seller->assignRole(Role::query()->firstOrCreate([
+            'name' => 'sales_manager', 'guard_name' => 'web', 'g_name' => 'sales_manager',
+        ]));
+        $this->actingAs($seller)->post(route('contact-notes.store', ['locale' => 'en']), [
+            'phone_number' => '099123456', 'note' => 'Interested',
+            'name' => 'Main', 'surname' => 'Client', 'email' => 'main@example.test',
+            'birth_date' => '2000-01-02', 'gender' => 'female',
+        ])->assertRedirect();
+        $primary = ContactProfile::query()->where('is_primary', true)->sole();
+        $related = app(ContactProfileService::class)->addRelated($seller, $primary, [
+            'phone_number' => '098765432', 'name' => 'Child',
+        ]);
+        $guest = Person::query()->create([
+            'name' => 'Child', 'phone' => '+374 98 765432', 'type' => 'guest',
+        ]);
+        $guest->gyms()->attach($gym->id);
+
+        $this->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('ContactNotes/Index')
+                ->where('canSellMembership', true)
+                ->where('contacts.data.0.existing_person_id', null)
+                ->where('contacts.data.0.existing_person_blocked', false)
+                ->where('contacts.data.0.members.0.existing_person_id', null)
+                ->where('contacts.data.0.members.1.existing_person_id', $guest->id)
+                ->where('contacts.data.0.members.1.existing_person_blocked', false)
+                ->etc());
+        $this->get(route('person.create', ['locale' => 'en', 'phone' => $primary->phone_number]))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('People/Create')
+                ->where('initialPhone', '099123456')
+                ->where('initialContact.name', 'Main')
+                ->where('initialContact.surname', 'Client')
+                ->where('initialContact.email', 'main@example.test')
+                ->where('initialContact.birth_date', '2000-01-02')
+                ->where('initialContact.gender', 'female')
+                ->etc());
+        $this->get(route('person.create', ['locale' => 'en', 'phone' => $related->phone_number]))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('initialContact.name', 'Child')
+                ->where('initialContact.email', null)
+                ->etc());
+        $this->getJson(route('contact-notes.lookup', ['locale' => 'en', 'phone' => '099123456']))
+            ->assertOk()->assertJsonPath('profile.name', 'Main')
+            ->assertJsonPath('profile.email', 'main@example.test')
+            ->assertJsonPath('profile.birth_date', '2000-01-02');
+
+        $manager = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
+        $manager->assignRole(Role::query()->firstOrCreate([
+            'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
+        ]));
+        $this->actingAs($manager)->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('ContactNotes/Index')
+                ->where('canSellMembership', true)
+                ->where('contacts.data.0.members.1.existing_person_id', $guest->id)
+                ->etc());
+
+        $this->actingAs($seller)->patch(route('person.block', ['locale' => 'en', 'id' => $guest->id]))
+            ->assertRedirect();
+        $this->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('ContactNotes/Index')
+                ->where('contacts.data.0.members.1.existing_person_blocked', true)
+                ->etc());
+
+        $visitor = Person::query()->create([
+            'name' => 'Main', 'phone' => '+374 99 123456', 'type' => 'visitor',
+        ]);
+        $visitor->gyms()->attach($gym->id);
+        $this->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('ContactNotes/Index')
+                ->where('contacts.data.0.existing_person_id', $visitor->id)
+                ->where('contacts.data.0.members.0.existing_person_id', $visitor->id)
+                ->where('contacts.data.0.members.1.existing_person_id', $guest->id)
+                ->etc());
+    }
+
     public function test_latest_blocked_note_on_an_initial_profile_can_be_replaced_by_current_manager(): void
     {
         $gym = Gym::query()->create(['name' => 'Central']);

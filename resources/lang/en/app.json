@@ -14,6 +14,9 @@
         "status": {"ready": "Ready", "pending": "Pending", "failed": "Failed"}
     },
     "contact_notes": {
+        "actions": "Actions",
+        "create_visitor": "Create visitor",
+        "sell_membership": "Sell membership",
         "name": "First name",
         "surname": "Last name",
         "email": "Email",
