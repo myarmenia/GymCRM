@@ -14,6 +14,9 @@
         "status": {"ready": "Պատրաստ", "pending": "Սպասման մեջ", "failed": "Ձախողվեց"}
     },
     "contact_notes": {
+        "actions": "Գործողություններ",
+        "create_visitor": "Ստեղծել այցելու",
+        "sell_membership": "Վաճառել աբոնեմենտ",
         "name": "Անուն",
         "surname": "Ազգանուն",
         "email": "Էլ. փոստ",

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import Index from '@/Layouts/Index.vue'
 import Pagination from '@/Components/Pagination.vue'
+import ContactPersonActions from './ContactPersonActions.vue'
 import { translate } from '/resources/js/trans'
 
 const props = defineProps({
@@ -10,6 +11,7 @@ const props = defineProps({
     salesManagers: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     canCreate: { type: Boolean, default: false },
+    canSellMembership: { type: Boolean, default: false },
 })
 const page = usePage()
 const locale = computed(() => page.props.locale ?? 'hy')
@@ -126,7 +128,10 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
                         <td><i class="icon-base ti me-1" :class="expanded === group.id ? 'tabler-chevron-down' : 'tabler-chevron-right'" aria-hidden="true"></i>{{ group.phone_number }}</td>
                         <td>{{ fullName(group) }}</td><td class="text-break" style="white-space: pre-wrap">{{ latestPrimaryNote(group) }}</td><td v-if="!canCreate">{{ fullName(group.user) }}</td>
                         <td>{{ Math.max(0, (group.members?.length ?? 0) - 1) }}</td>
-                        <td class="text-end"><button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click.stop="startRelated(group)">{{ t('add_phone') }}</button></td>
+                        <td class="text-end"><div class="d-inline-flex align-items-center gap-2">
+                            <button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click.stop="startRelated(group)">{{ t('add_phone') }}</button>
+                            <ContactPersonActions :contact="group" :can-sell-membership="canSellMembership" />
+                        </div></td>
                     </tr>
                     <tr v-if="expanded === group.id"><td :colspan="canCreate ? 5 : 6" class="bg-light">
                         <div v-for="member in group.members" :key="member.id" class="p-3" id="border-div">
@@ -134,7 +139,11 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
                                 <strong>{{ member.phone_number }}</strong><span>{{ fullName(member) }}</span>
                                 <span v-if="member.relationship && !member.is_primary" class="badge bg-label-secondary">{{ member.relationship }}</span>
                                 <span v-if="member.is_primary" class="badge bg-label-primary">{{ t('primary') }}</span>
-                                <button v-if="canCreate" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
+                                <div v-if="!member.is_primary" class="d-inline-flex align-items-center gap-2 ms-auto">
+                                    <button v-if="canCreate" class="btn btn-sm btn-outline-secondary" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
+                                    <ContactPersonActions :contact="member" :can-sell-membership="canSellMembership" />
+                                </div>
+                                <button v-else-if="canCreate" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
                             </div>
                             <div class="small text-muted mb-2">{{ member.email || '—' }} · {{ member.birth_date || '—' }} · {{ member.gender ? t(member.gender) : '—' }}</div>
                             <form v-if="editing === member.id && canCreate" class="row g-2 mb-3" @submit.prevent="saveEdit(member)">

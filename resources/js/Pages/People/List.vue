@@ -18,6 +18,7 @@ const props = defineProps({
 
 const page = usePage();
 const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements);
+const contactNoteText = key => translate(page.props.translations, `app.contact_notes.${key}`);
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
 const { hasRole, hasAnyRole } = useAuth();
 const canManagePeople = computed(() =>
@@ -311,6 +312,7 @@ const submitManualScan = async () => {
                                 <th>{{ t('surname') }}</th>
                                 <th>{{ t('email') }}</th>
                                 <th>{{ t('phone') }}</th>
+                                <th>{{ contactNoteText('latest_note') }}</th>
                                 <th>{{ t('birth_date') }}</th>
                                 <th>{{ t('type') }}</th>
                                 <th>{{ t('membership') }}</th>
@@ -335,6 +337,7 @@ const submitManualScan = async () => {
                                 <td>{{ person.surname || '-' }}</td>
                                 <td>{{ person.email || '-' }}</td>
                                 <td>{{ person.phone || '-' }}</td>
+                                <td class="text-break" style="min-width: 220px; max-width: 360px; white-space: pre-wrap">{{ person.latest_contact_note || '-' }}</td>
                                 <td>{{ person.birth_date || '-' }}</td>
                                 <td>
                                     <span

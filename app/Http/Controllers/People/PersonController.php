@@ -10,7 +10,9 @@ use App\Http\Requests\People\UpdatePersonRequest;
 use App\Models\Gym;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
+use App\Services\MembershipSales\ContactProfileService;
 use App\Services\People\PersonService;
+use App\Services\People\PersonContactNoteService;
 use App\Services\People\PersonVisitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +24,9 @@ class PersonController extends Controller
         protected PersonService $personService,
         protected GymService $gymService,
         protected EntryCodeService $entryCodeService,
-        protected PersonVisitService $personVisitService
+        protected PersonVisitService $personVisitService,
+        protected PersonContactNoteService $personContactNoteService,
+        protected ContactProfileService $contactProfileService,
     ) {}
 
     private function authorizePersonCreation(): void
@@ -64,6 +68,7 @@ class PersonController extends Controller
     public function list(Request $request)
     {
         $people = $this->personService->getAllPaginated($request->query());
+        $this->personContactNoteService->loadLatestForPeople($people->getCollection(), $request->user());
 
         return Inertia::render('People/List', [
             'people' => $people,
@@ -74,18 +79,27 @@ class PersonController extends Controller
     }
 
 
-    public function create()
+    public function create(Request $request)
     {
         $this->authorizePersonCreation();
 
         $user = Auth::user();
         //dd( $user);
         $entryCodes =$this->entryCodeService->getByGymId($user->gym_id ?? null);
+        $initialPhone = is_string($request->query('phone')) ? trim($request->query('phone')) : '';
+        $contact = $initialPhone !== '' && $user->gym_id !== null
+            ? $this->contactProfileService->forPhone((int) $user->gym_id, $initialPhone)
+            : null;
 
         return Inertia::render('People/Create', [
             'initialGymId' => $user->gym_id,
             'entryCodes' => $entryCodes,
             'entryCodeType' => Gym::resolveEntryCodeType($user->gym?->entry_code_type),
+            'initialPhone' => $initialPhone,
+            'initialContact' => $contact ? [
+                ...$contact->only(['name', 'surname', 'email', 'gender']),
+                'birth_date' => $contact->birth_date?->format('Y-m-d'),
+            ] : null,
         ]);
     }
 
@@ -142,7 +156,21 @@ class PersonController extends Controller
     // Ավելացրու $locale պարամետրը առաջին տեղում
     public function profile($locale, $id)
     {
-        return Inertia::render('People/Profile', $this->personService->profileData((int) $id));
+        $data = $this->personService->profileData((int) $id);
+
+        return Inertia::render('People/Profile', [
+            ...$data,
+            ...$this->personContactNoteService->pageData($data['person'], Auth::user()),
+        ]);
+    }
+
+    public function storeProfileNote(Request $request, $locale, $id)
+    {
+        $person = $this->personService->profileData((int) $id)['person'];
+        $data = $request->validate(['note' => ['required', 'string', 'max:10000']]);
+        $this->personContactNoteService->create($person, $request->user(), $data['note']);
+
+        return back();
     }
 
     public function visitManagement($locale, $id)

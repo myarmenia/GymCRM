@@ -14,6 +14,9 @@
         "status": {"ready": "Готов", "pending": "В ожидании", "failed": "Ошибка"}
     },
     "contact_notes": {
+        "actions": "Действия",
+        "create_visitor": "Создать посетителя",
+        "sell_membership": "Продать абонемент",
         "name": "Имя",
         "surname": "Фамилия",
         "email": "Эл. почта",

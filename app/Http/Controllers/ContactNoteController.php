@@ -51,15 +51,37 @@ class ContactNoteController extends Controller
                 ->when(! empty($filters['date_to']), fn ($q) => $q->whereDate('created_at', '<=', $filters['date_to'])));
         }
 
-        return Inertia::render('ContactNotes/Index', [
-            'contacts' => $query->orderByDesc(ContactNote::query()->selectRaw('MAX(contact_notes.created_at)')
+        $contacts = $query->orderByDesc(ContactNote::query()->selectRaw('MAX(contact_notes.created_at)')
                 ->join('contact_profiles as member_profiles', 'member_profiles.id', '=', 'contact_notes.contact_profile_id')
                 ->whereColumn('member_profiles.group_uuid', 'contact_profiles.group_uuid'))
                 ->orderByDesc('contact_profiles.created_at')->orderByDesc('contact_profiles.id')
-                ->paginate(15)->withQueryString(),
+                ->paginate(15)->withQueryString();
+        $members = $contacts->getCollection()->flatMap(fn (ContactProfile $group) => $group->members);
+        $phoneVariants = $members->flatMap(fn (ContactProfile $member) => ContactNotePhone::variants($member->phone_number))
+            ->unique()->values()->all();
+        $personsByPhone = $phoneVariants === [] ? collect() : Person::query()
+            ->whereHas('gyms', fn ($gyms) => $gyms->where('gyms.id', $viewer->gym_id))
+            ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone')), $phoneVariants)
+            ->whereIn('type', ['visitor', 'guest'])
+            ->get(['id', 'phone', 'is_blocked'])
+            ->keyBy(fn (Person $person) => ContactNotePhone::canonical((string) $person->phone));
+        $members->each(function (ContactProfile $member) use ($personsByPhone): void {
+            $person = $personsByPhone->get(ContactNotePhone::canonical($member->phone_number));
+            $member->setAttribute('existing_person_id', $person?->id);
+            $member->setAttribute('existing_person_blocked', (bool) $person?->is_blocked);
+        });
+        $contacts->getCollection()->each(function (ContactProfile $group): void {
+            $primary = $group->members->firstWhere('id', $group->id);
+            $group->setAttribute('existing_person_id', $primary?->existing_person_id);
+            $group->setAttribute('existing_person_blocked', $primary?->existing_person_blocked ?? false);
+        });
+
+        return Inertia::render('ContactNotes/Index', [
+            'contacts' => $contacts,
             'salesManagers' => $viewer->hasRole('sales_manager') ? [] : $managers,
             'filters' => $filters,
             'canCreate' => $viewer->hasRole('sales_manager'),
+            'canSellMembership' => $viewer->hasAnyRole(['sales_manager', 'manager']),
         ]);
     }
 
