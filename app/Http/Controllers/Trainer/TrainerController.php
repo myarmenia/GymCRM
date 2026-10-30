@@ -9,6 +9,7 @@ use App\Services\Gyms\GymService;
 use App\Services\Roles\RoleService;
 use App\Services\Schedule\ScheduleService;
 use App\Services\Trainer\TrainerService;
+use App\Services\Trainer\TrainerFreezeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -32,6 +33,28 @@ class TrainerController extends Controller
             'users' => $users,
             'filters' => $request->query(),
         ]);
+    }
+
+    public function freeze(Request $request, string $locale, int $id, TrainerFreezeService $trainerFreezeService)
+    {
+        abort_unless(Auth::user()->hasAnyRole(['owner', 'super_admin', 'admin']), 403);
+
+        $data = $request->validate([
+            'start_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+        ]);
+        $trainerFreezeService->freeze($id, $data);
+
+        return redirect()->route('trainer.index', ['locale' => $locale]);
+    }
+
+    public function cancelFreeze(string $locale, int $id, int $freezeId, TrainerFreezeService $trainerFreezeService)
+    {
+        abort_unless(Auth::user()->hasAnyRole(['owner', 'super_admin', 'admin']), 403);
+
+        $trainerFreezeService->cancel($id, $freezeId);
+
+        return redirect()->route('trainer.index', ['locale' => $locale]);
     }
 
     public function edit(string $locale, int $id)

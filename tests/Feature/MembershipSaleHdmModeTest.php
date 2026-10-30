@@ -68,6 +68,29 @@ class MembershipSaleHdmModeTest extends TestCase
         ];
     }
 
+    public function test_sale_copies_freeze_days_allowance_to_person_membership(): void
+    {
+        DB::table('membership_plans')
+            ->where('id', $this->ids['planId'])
+            ->update(['freeze_limit' => 2, 'freeze_days_limit' => 20]);
+
+        $sale = $this->service->store($this->payload(true));
+        $membership = $sale->personMemberships()->firstOrFail();
+
+        $this->assertSame(2, (int) $membership->freeze_left);
+        $this->assertSame(0, (int) $membership->freeze_days_used);
+        $this->assertSame(20, (int) $membership->freeze_days_left);
+    }
+
+    public function test_sale_preserves_legacy_plan_without_freeze_days_allowance(): void
+    {
+        $sale = $this->service->store($this->payload(true));
+        $membership = $sale->personMemberships()->firstOrFail();
+
+        $this->assertNull($membership->freeze_days_used);
+        $this->assertNull($membership->freeze_days_left);
+    }
+
     public function test_sale_redirects_to_its_contract_when_automatic_contracts_are_enabled(): void
     {
         app(SaleContractService::class)->settingsForGym(Gym::findOrFail($this->ids['gymId']))

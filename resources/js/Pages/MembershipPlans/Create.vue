@@ -46,6 +46,7 @@ const form = useForm({
 
     guest_limit: 0,
     freeze_limit: 0,
+    freeze_days_limit: 0,
 
     active: true,
 
@@ -469,6 +470,17 @@ const submit = () => {
                         />
 
                         <InputError :message="form.errors.freeze_limit" />
+                        <div class="mt-3">
+                            <InputLabel :value="t('freeze_days_limit')" />
+                            <input
+                                v-model="form.freeze_days_limit"
+                                type="number"
+                                min="0"
+                                class="form-control"
+                                @wheel.prevent
+                            />
+                            <InputError :message="form.errors.freeze_days_limit" />
+                        </div>
                     </div>
                 </div>
 

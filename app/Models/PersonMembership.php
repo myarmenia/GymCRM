@@ -84,6 +84,11 @@ class PersonMembership extends Model
         return $this->hasMany(PersonMembershipFreeze::class);
     }
 
+    public function trainerMembershipFreezes()
+    {
+        return $this->hasMany(TrainerMembershipFreeze::class);
+    }
+
     public function guests()
     {
         return $this->hasMany(Guest::class);

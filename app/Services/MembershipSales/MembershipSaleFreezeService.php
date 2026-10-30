@@ -20,6 +20,8 @@ class MembershipSaleFreezeService
         protected MembershipSaleInterface $membershipSaleRepository,
         protected MembershipSaleAuditService $membershipSaleAuditService,
         protected TrainerMonthlySalaryService $trainerMonthlySalaryService,
+        protected FreezeCoverageService $freezeCoverage,
+        protected MembershipFreezeStatusService $freezeStatuses,
     ) {}
 
     public function freezePageData(int $id): array
@@ -87,6 +89,21 @@ class MembershipSaleFreezeService
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
             $endDate = Carbon::parse($data['end_date'])->startOfDay();
             $freezeDays = (int) $startDate->diffInDays($endDate) + 1;
+            $extensionDays = $this->freezeCoverage->uncoveredDays($personMembership, $startDate, $endDate);
+
+            if ($personMembership->freeze_days_left !== null) {
+                if ($freezeDays < 7 || $freezeDays > 60) {
+                    throw ValidationException::withMessages([
+                        'end_date' => __('backend.membership_sales.freeze_days_interval'),
+                    ]);
+                }
+
+                if ($freezeDays > (int) $personMembership->freeze_days_left) {
+                    throw ValidationException::withMessages([
+                        'end_date' => __('backend.membership_sales.freeze_days_exceeded'),
+                    ]);
+                }
+            }
 
             if ($this->freezePeriodOutsideMembership($personMembership, $startDate, $endDate)) {
                 throw ValidationException::withMessages([
@@ -104,13 +121,15 @@ class MembershipSaleFreezeService
                 'person_membership_id' => $personMembership->id,
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),
+                'duration_days' => $freezeDays,
+                'counted_days' => $freezeDays,
                 'notes' => $data['notes'] ?? null,
             ]);
 
             $validAt = $personMembership->valid_at
                 ? Carbon::parse($personMembership->valid_at)
                 : ($personMembership->end_date ? Carbon::parse($personMembership->end_date) : null);
-            $extendedValidAt = $validAt?->copy()->addDays($freezeDays);
+            $extendedValidAt = $validAt?->copy()->addDays($extensionDays);
 
             $personMembershipUpdateData = [
                 'freeze_left' => max((int) ($personMembership->freeze_left ?? 0) - 1, 0),
@@ -118,8 +137,13 @@ class MembershipSaleFreezeService
                 'valid_at' => $extendedValidAt?->toDateString(),
             ];
 
+            if ($personMembership->freeze_days_left !== null) {
+                $personMembershipUpdateData['freeze_days_used'] = (int) $personMembership->freeze_days_used + $freezeDays;
+                $personMembershipUpdateData['freeze_days_left'] = (int) $personMembership->freeze_days_left - $freezeDays;
+            }
+
             if ($startDate->isToday()) {
-                $personMembershipUpdateData['status'] = 'frozen';
+                $personMembershipUpdateData['status'] = $this->freezeStatuses->statusFor($personMembership, today());
             }
 
             $personMembership->update($personMembershipUpdateData);
@@ -185,6 +209,10 @@ class MembershipSaleFreezeService
                 ? 0
                 : (int) $startDate->diffInDays($usedEndDate) + 1;
             $remainingDays = max($plannedDays - $usedDays, 0);
+            $remainingStart = $today->copy()->max($startDate);
+            $extensionDaysToReturn = $remainingStart->lte($endDate)
+                ? $this->freezeCoverage->uncoveredDays($personMembership, $remainingStart, $endDate, $freeze->id)
+                : 0;
             $wasEffectiveToday = $today->betweenIncluded($startDate, $endDate);
 
             $freeze->update([
@@ -192,25 +220,28 @@ class MembershipSaleFreezeService
                 'cancelled_at' => now(),
                 'cancelled_by' => Auth::id(),
                 'cancellation_reason' => null,
+                'counted_days' => $freeze->duration_days === null ? null : $usedDays,
             ]);
 
             $validAt = $personMembership->valid_at
                 ? Carbon::parse($personMembership->valid_at)->startOfDay()
                 : null;
             $updateData = [
-                'valid_at' => $validAt?->subDays($remainingDays)->toDateString(),
+                'valid_at' => $validAt?->subDays($extensionDaysToReturn)->toDateString(),
             ];
+
+            if ($personMembership->freeze_days_left !== null) {
+                $updateData['freeze_days_used'] = max((int) $personMembership->freeze_days_used - $remainingDays, 0);
+                $updateData['freeze_days_left'] = (int) $personMembership->freeze_days_left + $remainingDays;
+            }
 
             if ($usedDays === 0) {
                 $updateData['freeze_left'] = (int) ($personMembership->freeze_left ?? 0) + 1;
                 $updateData['freeze_used'] = max((int) ($personMembership->freeze_used ?? 0) - 1, 0);
             }
 
-            if ($wasEffectiveToday && ! $personMembership->freezes()
-                ->whereKeyNot($freeze->id)
-                ->effectiveOn($today)
-                ->exists()) {
-                $updateData['status'] = 'active';
+            if ($wasEffectiveToday) {
+                $updateData['status'] = $this->freezeStatuses->statusFor($personMembership, $today);
             }
 
             $personMembership->update($updateData);
@@ -251,14 +282,10 @@ class MembershipSaleFreezeService
     {
         return $membershipSale
             ->personMemberships()
-            ->whereIn('status', ['waiting', 'active', 'frozen'])
+            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
             ->where(function ($query) {
                 $query->whereNull('valid_at')
                     ->orWhereDate('valid_at', '>=', today());
-            })
-            ->where(function ($query) {
-                $query->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', today());
             })
             ->first();
     }
@@ -267,14 +294,10 @@ class MembershipSaleFreezeService
     {
         return $membershipSale
             ->personMemberships()
-            ->whereIn('status', ['waiting', 'active', 'frozen'])
+            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
             ->where(function ($query) {
                 $query->whereNull('valid_at')
                     ->orWhereDate('valid_at', '>=', today());
-            })
-            ->where(function ($query) {
-                $query->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', today());
             })
             ->first();
     }
@@ -283,15 +306,11 @@ class MembershipSaleFreezeService
     {
         $today = today();
 
-        if (! in_array($personMembership->status, ['waiting', 'active', 'frozen'], true)) {
+        if (! in_array($personMembership->status, ['waiting', 'active', 'frozen', 'trainer_frozen'], true)) {
             return false;
         }
 
         if ($personMembership->valid_at && Carbon::parse($personMembership->valid_at)->lt($today)) {
-            return false;
-        }
-
-        if ($personMembership->end_date && Carbon::parse($personMembership->end_date)->lt($today)) {
             return false;
         }
 
@@ -378,6 +397,11 @@ class MembershipSaleFreezeService
             'allowedFreezeCount' => (int) ($personMembership->freeze_used ?? 0) + (int) ($personMembership->freeze_left ?? 0),
             'usedFreezeCount' => (int) ($personMembership->freeze_used ?? 0),
             'remainingFreezeCount' => max((int) ($personMembership->freeze_left ?? 0), 0),
+            'allowedFreezeDays' => $personMembership->freeze_days_left === null
+                ? null
+                : (int) $personMembership->freeze_days_used + (int) $personMembership->freeze_days_left,
+            'usedFreezeDays' => $personMembership->freeze_days_used,
+            'remainingFreezeDays' => $personMembership->freeze_days_left,
         ];
     }
 

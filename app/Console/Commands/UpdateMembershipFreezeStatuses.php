@@ -16,7 +16,7 @@ class UpdateMembershipFreezeStatuses extends Command
     {
         $result = $membershipFreezeStatusService->updateDailyStatuses();
 
-        $this->info("Membership freeze statuses updated. Frozen: {$result['frozen']}, reactivated: {$result['reactivated']}.");
+        $this->info("Membership freeze statuses updated. Frozen: {$result['frozen']}, trainer frozen: {$result['trainer_frozen']}, reactivated: {$result['reactivated']}.");
 
         return self::SUCCESS;
     }

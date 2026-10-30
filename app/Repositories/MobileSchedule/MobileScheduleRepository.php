@@ -22,7 +22,7 @@ class MobileScheduleRepository implements MobileScheduleInterface
                 'membershipPlan.schedules.gymSchedules',
             ])
             ->where('person_id', $person->id)
-            ->whereIn('status', ['waiting', 'active', 'frozen'])
+            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
             ->when($gymId, fn ($query) => $query->where('gym_id', $gymId))
             ->whereDate('start_date', '<=', $to->toDateString())
             ->where(function ($query) use ($from) {

@@ -78,6 +78,7 @@ const statusLabel = status => ({
     waiting: t('people.waiting'),
     active: t('membership.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
     expired: t('people.expired'),
     deleted: t('people.deleted'),
     cancelled: t('people.cancelled'),

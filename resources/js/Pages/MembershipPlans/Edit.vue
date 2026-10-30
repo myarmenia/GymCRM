@@ -62,6 +62,7 @@ const form = useForm({
 
     guest_limit: props.membershipPlan.guest_limit ?? 0,
     freeze_limit: props.membershipPlan.freeze_limit ?? 0,
+    freeze_days_limit: props.membershipPlan.freeze_days_limit ?? null,
 
     active: Boolean(props.membershipPlan.active),
 
@@ -524,6 +525,18 @@ const submit = () => {
                         />
 
                         <InputError :message="form.errors.freeze_limit" />
+                        <div class="mt-3">
+                            <InputLabel :value="t('freeze_days_limit')" />
+                            <input
+                                v-model="form.freeze_days_limit"
+                                type="number"
+                                min="0"
+                                class="form-control"
+                                :disabled="isPlanLocked"
+                                @wheel.prevent
+                            />
+                            <InputError :message="form.errors.freeze_days_limit" />
+                        </div>
                     </div>
                 </div>
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Memberships;
 
+use App\Models\MembershipPlan;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -64,6 +65,16 @@ class MembershipPlanStoreRequest extends FormRequest
 
             'freeze_limit' => [
                 'required',
+                'integer',
+                'min:0',
+            ],
+            'freeze_days_limit' => [
+                Rule::requiredIf(fn (): bool => $this->isMethod('post')
+                    || MembershipPlan::query()
+                        ->whereKey($this->route('id'))
+                        ->whereNotNull('freeze_days_limit')
+                        ->exists()),
+                'nullable',
                 'integer',
                 'min:0',
             ],
@@ -196,6 +207,7 @@ class MembershipPlanStoreRequest extends FormRequest
             'end_date' => __('backend_messages.end_date'),
             'guest_limit' => __('backend_messages.number_guests'),
             'freeze_limit' => __('backend_messages.number_freezes'),
+            'freeze_days_limit' => __('backend.membership_sales.freeze_days_limit'),
             'active' => __('backend_messages.status_lowercase'),
             'translations' => __('backend_messages.translations'),
             'translations.*.name' => __('backend_messages.first_name'),

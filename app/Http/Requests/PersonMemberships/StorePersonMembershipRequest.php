@@ -21,7 +21,7 @@ class StorePersonMembershipRequest extends FormRequest
             'gym_id' => ['required', 'integer', 'exists:gyms,id'],
             'membership_plan_id' => ['required', 'integer', 'exists:membership_plans,id'],
             'trainer_id' => ['nullable', 'integer', 'exists:users,id'],
-            'status' => ['required', Rule::in(['waiting', 'active', 'frozen', 'expired', 'deleted', 'cancelled'])],
+            'status' => ['required', Rule::in(['waiting', 'active', 'frozen', 'trainer_frozen', 'expired', 'deleted', 'cancelled'])],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'valid_at' => ['nullable', 'date', 'after_or_equal:start_date'],

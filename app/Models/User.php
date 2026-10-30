@@ -158,6 +158,11 @@ class User extends Authenticatable
         return $this->hasMany(PersonMembership::class, 'trainer_id');
     }
 
+    public function trainerFreezes()
+    {
+        return $this->hasMany(TrainerFreeze::class, 'trainer_id');
+    }
+
     public function trainerCommissions()
     {
         return $this->hasMany(TrainerCommission::class, 'trainer_id');

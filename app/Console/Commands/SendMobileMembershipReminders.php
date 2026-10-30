@@ -24,7 +24,7 @@ class SendMobileMembershipReminders extends Command
 
         PersonMembership::query()
             ->with('person')
-            ->whereIn('status', ['active', 'frozen'])
+            ->whereIn('status', ['active', 'frozen', 'trainer_frozen'])
             ->whereDate('valid_at', $membershipDate)
             ->chunkById(200, function ($memberships) use ($notifications, &$membershipCount) {
                 foreach ($memberships as $membership) {
@@ -38,7 +38,7 @@ class SendMobileMembershipReminders extends Command
             ->with('personMembership.person')
             ->whereNull('cancelled_at')
             ->whereDate('end_date', $freezeDate)
-            ->whereHas('personMembership', fn ($query) => $query->whereIn('status', ['active', 'frozen']))
+            ->whereHas('personMembership', fn ($query) => $query->whereIn('status', ['active', 'frozen', 'trainer_frozen']))
             ->chunkById(200, function ($freezes) use ($notifications, &$freezeCount) {
                 foreach ($freezes as $freeze) {
                     if ($notifications->sendFreezeEndsInTwoDays($freeze)?->wasRecentlyCreated) {

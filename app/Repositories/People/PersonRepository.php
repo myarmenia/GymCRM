@@ -30,7 +30,7 @@ class PersonRepository extends BaseRepository implements PersonInterface
             ->with([
                 'gyms',
                 'memberships' => fn ($memberships) => $memberships
-                    ->whereIn('status', ['waiting', 'active', 'frozen'])
+                    ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
                     ->where(fn (Builder $dates) => $dates->whereNull('start_date')->orWhereDate('start_date', '<=', $today))
                     ->where(fn (Builder $dates) => $dates->whereNull('end_date')->orWhereDate('end_date', '>=', $today))
                     ->where(fn (Builder $dates) => $dates->whereNull('valid_at')->orWhereDate('valid_at', '>=', $today)),

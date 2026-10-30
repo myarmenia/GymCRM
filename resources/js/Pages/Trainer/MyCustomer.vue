@@ -24,8 +24,8 @@ const planName = (membership) => {
     const plan = membership?.membership_plan;
     return (plan?.translations ?? []).find((item) => item.locale === currentLocale.value)?.name ?? plan?.name ?? "-";
 };
-const statusLabel = (status) => ({ waiting: "Սպասման մեջ", active: "Ակտիվ", frozen: "Սառեցված" })[status] ?? status ?? "-";
-const statusClass = (status) => ({ waiting: "bg-label-warning", active: "bg-label-success", frozen: "bg-label-info" })[status] ?? "bg-label-secondary";
+const statusLabel = (status) => ({ waiting: "Սպասման մեջ", active: "Ակտիվ", frozen: "Սառեցված", trainer_frozen: "Մարզչի պատճառով սառեցված" })[status] ?? status ?? "-";
+const statusClass = (status) => ({ waiting: "bg-label-warning", active: "bg-label-success", frozen: "bg-label-info", trainer_frozen: "bg-label-info" })[status] ?? "bg-label-secondary";
 const formatDate = (value) => (value ? String(value).slice(0, 10) : "-");
 const monthLabel = (value) => value ? new Intl.DateTimeFormat("hy-AM", { month: "long", year: "numeric" }).format(new Date(`${value}-01T12:00:00`)) : "-";
 const formatHours = (minutes) => {

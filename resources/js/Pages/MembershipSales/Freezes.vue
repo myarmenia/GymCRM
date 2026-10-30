@@ -33,6 +33,18 @@ const props = defineProps({
         type: [Number, String],
         default: 0,
     },
+    allowedFreezeDays: {
+        type: [Number, String],
+        default: null,
+    },
+    usedFreezeDays: {
+        type: [Number, String],
+        default: null,
+    },
+    remainingFreezeDays: {
+        type: [Number, String],
+        default: null,
+    },
 })
 
 const form = useForm({
@@ -42,8 +54,10 @@ const form = useForm({
 })
 
 const remaining = computed(() => Number(props.remainingFreezeCount || 0))
-const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen'].includes(props.personMembership?.status))
-const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value)
+const hasDayBudget = computed(() => props.remainingFreezeDays !== null)
+const remainingDays = computed(() => Number(props.remainingFreezeDays || 0))
+const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen', 'trainer_frozen'].includes(props.personMembership?.status))
+const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value && (!hasDayBudget.value || remainingDays.value >= 7))
 const freezeOverlapMessage = t('sales.freeze_cannot_start_during_an_existing_freeze_period')
 const cancelForm = useForm({
     freeze_id: null,
@@ -62,6 +76,7 @@ const statusLabel = status => ({
     waiting: t('people.waiting'),
     active: t('membership.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
     expired: t('people.expired'),
     deleted: t('people.deleted'),
     cancelled: t('people.cancelled'),
@@ -190,6 +205,21 @@ const cancelFreeze = async freeze => {
                             <span class="text-muted">{{ t('sales.remaining_freezes') }}</span>
                             <strong class="text-primary">{{ remainingFreezeCount }}</strong>
                         </div>
+                        <template v-if="hasDayBudget">
+                            <hr>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">{{ t('sales.allowed_freeze_days') }}</span>
+                                <strong>{{ allowedFreezeDays }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">{{ t('sales.used_freeze_days') }}</span>
+                                <strong>{{ usedFreezeDays }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">{{ t('sales.remaining_freeze_days') }}</span>
+                                <strong class="text-primary">{{ remainingFreezeDays }}</strong>
+                            </div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -209,6 +239,7 @@ const cancelFreeze = async freeze => {
                                     <tr>
                                         <th>{{ t('membership.start') }}</th>
                                         <th>{{ t('membership.end') }}</th>
+                                        <th v-if="hasDayBudget">{{ t('sales.used_freeze_days') }}</th>
                                         <th>{{ t('people.notes') }}</th>
                                         <th>{{ t('sales.actions') }}</th>
                                     </tr>
@@ -220,6 +251,7 @@ const cancelFreeze = async freeze => {
                                     >
                                         <td>{{ formatDate(freeze.start_date) }}</td>
                                         <td>{{ formatDate(freeze.end_date) }}</td>
+                                        <td v-if="hasDayBudget">{{ freeze.counted_days ?? '-' }}</td>
                                         <td>{{ freeze.notes ?? '-' }}</td>
                                         <td>
                                             <span
@@ -295,6 +327,7 @@ const cancelFreeze = async freeze => {
                             class="form-control"
                         />
                         <InputError :message="form.errors.end_date" />
+                        <div v-if="hasDayBudget" class="form-text">{{ t('sales.freeze_days_hint') }}</div>
                     </div>
 
                     <div class="col-md-12">
@@ -331,7 +364,11 @@ const cancelFreeze = async freeze => {
             v-else
             class="alert alert-warning"
         >
-            {{ remaining > 0 && !hasFreezableStatus ? t('sales.a_membership_with_this_status_cannot_be_frozen') : t('sales.no_freezes_remaining') }}
+            {{ remaining > 0 && !hasFreezableStatus
+                ? t('sales.a_membership_with_this_status_cannot_be_frozen')
+                : remaining > 0 && hasDayBudget && remainingDays < 7
+                    ? t('sales.not_enough_freeze_days')
+                    : t('sales.no_freezes_remaining') }}
         </div>
     </Index>
 </template>

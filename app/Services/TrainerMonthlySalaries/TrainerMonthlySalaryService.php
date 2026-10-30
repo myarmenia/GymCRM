@@ -21,7 +21,7 @@ class TrainerMonthlySalaryService
         $skippedCount = 0;
 
         TrainerCommission::query()
-            ->with(['personMembership.freezes', 'personMembership.gym'])
+            ->with(['personMembership.freezes', 'personMembership.trainerMembershipFreezes', 'personMembership.gym'])
             ->whereNotNull('trainer_id')
             ->whereNull('generation_stopped_at')
             ->whereHas('personMembership', function ($query) {
@@ -119,7 +119,7 @@ class TrainerMonthlySalaryService
 
     protected function processCommission(TrainerCommission $trainerCommission, Carbon $runDate): array
     {
-        $trainerCommission->loadMissing(['personMembership.freezes', 'personMembership.gym']);
+        $trainerCommission->loadMissing(['personMembership.freezes', 'personMembership.trainerMembershipFreezes', 'personMembership.gym']);
         $personMembership = $trainerCommission->personMembership;
 
         if (! $personMembership || ! $trainerCommission->created_at) {
@@ -486,7 +486,7 @@ class TrainerMonthlySalaryService
             ->pluck('date');
 
         foreach ($attendances as $attendanceDate) {
-            if (! $this->isFrozenDate(Carbon::parse($attendanceDate)->startOfDay(), $personMembership->freezes)) {
+            if (! $this->isFrozenDate(Carbon::parse($attendanceDate)->startOfDay(), $this->allFreezes($personMembership))) {
                 return true;
             }
         }
@@ -515,7 +515,7 @@ class TrainerMonthlySalaryService
             $periodEndExclusive = $this->advanceByActiveDays(
                 $periodStart,
                 $activeDays,
-                $personMembership->freezes,
+                $this->allFreezes($personMembership),
             );
 
             $periods[$index] = [
@@ -525,7 +525,7 @@ class TrainerMonthlySalaryService
                 'first_active_date' => $this->firstActiveDate(
                     $periodStart,
                     $periodEndExclusive,
-                    $personMembership->freezes,
+                    $this->allFreezes($personMembership),
                 ),
             ];
             $realCursor = $periodEndExclusive->copy();
@@ -574,6 +574,11 @@ class TrainerMonthlySalaryService
         }
 
         return false;
+    }
+
+    protected function allFreezes(PersonMembership $membership)
+    {
+        return $membership->freezes->concat($membership->trainerMembershipFreezes);
     }
 
     protected function syncMutableSalaryPeriod(

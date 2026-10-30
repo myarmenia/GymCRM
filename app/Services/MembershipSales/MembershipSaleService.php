@@ -25,6 +25,7 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\SalaryPayableAssignment;
 use App\Models\TrainerCommission;
+use App\Models\TrainerFreeze;
 use App\Models\TrainerMonthlySalary;
 use App\Models\User;
 use App\Services\Audit\MembershipSaleAuditService;
@@ -39,6 +40,7 @@ use App\Services\TrainerMonthlySalaries\TrainerMonthlySalaryService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class MembershipSaleService
@@ -61,6 +63,8 @@ class MembershipSaleService
         protected ContactNoteOwnerResolver $contactNoteOwnerResolver,
         protected ContactNoteOwnershipService $contactNoteOwnership,
         protected SaleContractService $saleContractService,
+        protected FreezeCoverageService $freezeCoverage,
+        protected MembershipFreezeStatusService $freezeStatuses,
     ) {}
 
     public function getAllPaginated(int $perPage = 10, array $filters = [])
@@ -265,11 +269,19 @@ class MembershipSaleService
             ]);
         }
 
+        $trainers = $membershipSale->membershipPlan?->trainers ?? collect();
+        $trainers->each(function (User $trainer): void {
+            $trainer->setAttribute('frozen_until', TrainerFreeze::query()
+                ->where('trainer_id', $trainer->id)
+                ->effectiveOn(today())
+                ->max('end_date'));
+        });
+
         return [
             'membershipSale' => $membershipSale,
             'personMembership' => $personMembership,
             'currentTrainer' => $personMembership->trainer,
-            'trainers' => $membershipSale->membershipPlan?->trainers ?? collect(),
+            'trainers' => $trainers,
         ];
     }
 
@@ -325,6 +337,26 @@ class MembershipSaleService
                 (int) $membershipSale->gym_id,
                 $membershipSale->membershipPlan
             );
+
+            $returnDays = 0;
+            $restoreShiftDays = 0;
+            $personMembership->trainerMembershipFreezes()
+                ->whereHas('trainerFreeze', fn ($query) => $query->where('trainer_id', $personMembership->trainer_id))
+                ->where(fn ($query) => $query->whereNull('cancel_effective_date')
+                    ->orWhereDate('cancel_effective_date', '>', today()))
+                ->lockForUpdate()->get()
+                ->each(function ($freeze) use ($personMembership, &$returnDays, &$restoreShiftDays): void {
+                    $start = Carbon::parse($freeze->start_date)->startOfDay()->max(today());
+                    $end = Carbon::parse($freeze->end_date)->startOfDay();
+                    if ($start->lte($end)) {
+                        $days = $this->freezeCoverage->uncoveredDays(
+                            $personMembership, $start, $end, null, $freeze->id,
+                        );
+                        $returnDays += $days;
+                        $restoreShiftDays += min((int) $freeze->next_shift_days, $days);
+                    }
+                    $freeze->update(['cancel_effective_date' => today()->toDateString()]);
+                });
 
             $oldTrainerCommission = TrainerCommission::query()
                 ->where('membership_sale_id', $membershipSale->id)
@@ -384,7 +416,23 @@ class MembershipSaleService
 
             $personMembership->update([
                 'trainer_id' => $newTrainer->id,
+                'valid_at' => $personMembership->valid_at?->copy()->subDays($returnDays)->toDateString(),
+                'status' => in_array($personMembership->status, ['waiting', 'active', 'frozen', 'trainer_frozen'], true)
+                    ? $this->freezeStatuses->statusFor($personMembership, today())
+                    : $personMembership->status,
             ]);
+
+            if ($restoreShiftDays > 0 && $personMembership->next_membership_id) {
+                $next = PersonMembership::query()->whereKey($personMembership->next_membership_id)
+                    ->lockForUpdate()->first();
+                if ($next) {
+                    $next->update([
+                        'start_date' => $next->start_date?->copy()->subDays($restoreShiftDays)->toDateString(),
+                        'end_date' => $next->end_date?->copy()->subDays($restoreShiftDays)->toDateString(),
+                        'valid_at' => $next->valid_at?->copy()->subDays($restoreShiftDays)->toDateString(),
+                    ]);
+                }
+            }
 
             $this->membershipSaleAuditService->afterChanged(
                 $membershipSale,
@@ -394,6 +442,15 @@ class MembershipSaleService
             );
 
             DB::commit();
+
+            try {
+                $this->trainerMonthlySalaryService->refreshForMembership($personMembership->fresh());
+            } catch (\Throwable $exception) {
+                Log::error('Trainer salary periods could not be refreshed after trainer change.', [
+                    'person_membership_id' => $personMembership->id,
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
 
             return $this->getById($membershipSale->id);
         } catch (\Throwable $e) {
@@ -793,6 +850,10 @@ class MembershipSaleService
                 ]);
             }
 
+            $trainer = ! empty($data['trainer_id'])
+                ? $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan, allowFrozen: true)
+                : null;
+
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
             $previousMatchingMembership = $this->previousMatchingMembershipForSale($person, $membershipPlan);
             $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
@@ -805,6 +866,9 @@ class MembershipSaleService
             $paymentAmount = $this->resolvePaymentAmount($data, $finalPrice);
             $guestLeft = (int) ($membershipPlan->guest_limit ?? 0);
             $freezeLeft = (int) ($membershipPlan->freeze_limit ?? 0);
+            $freezeDaysLeft = $membershipPlan->freeze_days_limit === null
+                ? null
+                : (int) $membershipPlan->freeze_days_limit;
             $visitsLeft = isset($membershipPlan->visits_limit)
                 ? (int) $membershipPlan->visits_limit
                 : null;
@@ -843,6 +907,8 @@ class MembershipSaleService
                     'visits_used' => 0,
                     'visits_left' => $visitsLeft,
                     'freeze_left' => $freezeLeft,
+                    'freeze_days_used' => $freezeDaysLeft === null ? null : 0,
+                    'freeze_days_left' => $freezeDaysLeft,
                     'guest_left' => $guestLeft,
                     'next_membership_id' => null,
                     'activated_at' => null,
@@ -891,8 +957,8 @@ class MembershipSaleService
                 }
             }
 
-            if (! empty($data['trainer_id'])) {
-                $trainer = $this->getTrainer((int) $data['trainer_id'], $user, $gymId, $membershipPlan);
+            if ($trainer) {
+                $this->applyTrainerFreezesToNewSale($personMembership, $trainer);
                 $commissionData = $this->calculateTrainerCommission($trainer, $finalPrice, $data);
                 $salaryInstallmentCount = $this->trainerMonthlySalaryService
                     ->installmentCountForMembership($personMembership);
@@ -1481,7 +1547,7 @@ class MembershipSaleService
                 'trainer',
             ])
             ->where('person_id', $personId)
-            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->whereIn('status', ['active', 'waiting', 'frozen', 'trainer_frozen'])
             ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
@@ -1495,7 +1561,7 @@ class MembershipSaleService
             ->with('membershipPlan.translations')
             ->where('person_id', $person->id)
             ->where('membership_plan_id', $membershipPlan->id)
-            ->whereIn('status', ['active', 'waiting', 'frozen'])
+            ->whereIn('status', ['active', 'waiting', 'frozen', 'trainer_frozen'])
             ->whereNotNull('valid_at')
             ->orderByDesc('valid_at')
             ->first();
@@ -1693,7 +1759,7 @@ class MembershipSaleService
         return (int) $cardTypeId;
     }
 
-    protected function getTrainer(int $trainerId, User $user, int $gymId, MembershipPlan $membershipPlan): User
+    protected function getTrainer(int $trainerId, User $user, int $gymId, MembershipPlan $membershipPlan, bool $allowFrozen = false): User
     {
         $query = $membershipPlan
             ->trainers()
@@ -1703,6 +1769,15 @@ class MembershipSaleService
                 $query->where('roles.id', 7);
             });
 
+        if (! $allowFrozen) {
+            $query->where('users.trainer_status', 'active')
+                ->whereDoesntHave('trainerFreezes', fn ($query) => $query
+                    ->whereDate('start_date', '<=', today())
+                    ->whereDate('end_date', '>=', today())
+                    ->where(fn ($query) => $query->whereNull('cancel_effective_date')
+                        ->orWhereDate('cancel_effective_date', '>', today())));
+        }
+
         if ($membershipPlan->gym_id) {
             $query->where('users.gym_id', $membershipPlan->gym_id);
         }
@@ -1711,7 +1786,45 @@ class MembershipSaleService
             $query->where('users.gym_id', $gymId);
         }
 
-        return $query->firstOrFail();
+        return $query->lockForUpdate()->firstOrFail();
+    }
+
+    protected function applyTrainerFreezesToNewSale(PersonMembership $membership, User $trainer): void
+    {
+        $freezes = $trainer->trainerFreezes()
+            ->whereDate('end_date', '>=', today())
+            ->whereNull('cancel_effective_date')
+            ->orderBy('start_date')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($freezes as $freeze) {
+            if ($membership->valid_at && $membership->valid_at->lt($freeze->start_date)) {
+                continue;
+            }
+
+            $start = $freeze->start_date->copy()->startOfDay()->max(today()->startOfDay());
+            if ($membership->start_date) {
+                $start = $start->max($membership->start_date->copy()->startOfDay());
+            }
+            $end = $freeze->end_date->copy()->startOfDay();
+            if ($start->gt($end)) {
+                continue;
+            }
+
+            $days = $this->freezeCoverage->uncoveredDays($membership, $start, $end);
+            $membership->trainerMembershipFreezes()->create([
+                'trainer_freeze_id' => $freeze->id,
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString(),
+            ]);
+            $membership->update([
+                'valid_at' => $membership->valid_at?->copy()->addDays($days)->toDateString(),
+                'status' => $start->isToday()
+                    ? $this->freezeStatuses->statusFor($membership, today())
+                    : $membership->status,
+            ]);
+        }
     }
 
     protected function calculateTrainerCommission(User $trainer, float $finalPrice, array $data): array
