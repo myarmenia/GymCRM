@@ -8,12 +8,82 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\MembershipSales\ContactNoteOwnershipService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ContactNoteTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_every_gym_role_can_view_its_sales_managers_contacts_and_add_only_notes(): void
+    {
+        $gym = Gym::query()->create(['name' => 'Central']);
+        $otherGym = Gym::query()->create(['name' => 'Other']);
+        $seller = $this->userWithRole('sales_manager', $gym->id);
+        $outsideSeller = $this->userWithRole('sales_manager', $otherGym->id);
+        $owned = app(ContactNoteOwnershipService::class)->create($seller, '099123456', 'Central contact');
+        $outside = app(ContactNoteOwnershipService::class)->create($outsideSeller, '098765432', 'Other contact');
+        $outside->profile->update(['group_uuid' => $owned->profile->group_uuid]);
+
+        foreach (['manager', 'admin', 'super_admin', 'owner', 'founder', 'trainer'] as $role) {
+            $viewer = $this->userWithRole($role, $gym->id);
+            $this->actingAs($viewer)->get(route('contact-notes.index', ['locale' => 'en']))
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('contacts.total', 1)
+                    ->where('contacts.data.0.id', $owned->contact_profile_id)
+                    ->has('contacts.data.0.members', 1)
+                    ->where('canCreate', false)
+                    ->where('canAddNote', true)
+                    ->where('canShowPersonActions', in_array($role, ['manager', 'admin', 'super_admin'], true))
+                    ->etc());
+
+            $this->post(route('contact-notes.add-profile-note', [
+                'locale' => 'en', 'contactProfile' => $owned->contact_profile_id,
+            ]), ['note' => 'Note by '.$role])->assertRedirect();
+            $this->assertDatabaseHas('contact_notes', [
+                'contact_profile_id' => $owned->contact_profile_id,
+                'user_id' => $seller->id,
+                'writer_id' => $viewer->id,
+                'note' => 'Note by '.$role,
+            ]);
+            $this->post(route('contact-notes.add-profile-note', [
+                'locale' => 'en', 'contactProfile' => $outside->contact_profile_id,
+            ]), ['note' => 'Wrong gym'])->assertForbidden();
+            $this->post(route('contact-notes.store', ['locale' => 'en']), [
+                'phone_number' => '123', 'note' => 'No new contact',
+            ])->assertForbidden();
+        }
+
+        $otherUuid = (string) \Illuminate\Support\Str::uuid();
+        $otherProfileId = DB::table('contact_profiles')->insertGetId([
+            'uuid' => $otherUuid,
+            'group_uuid' => $otherUuid,
+            'gym_id' => $gym->id,
+            'user_id' => $viewer->id,
+            'is_primary' => true,
+            'phone_number' => '091111111',
+            'phone_normalized' => '091111111',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('contacts.total', 1)
+                ->etc());
+        $this->post(route('contact-notes.add-profile-note', [
+            'locale' => 'en', 'contactProfile' => $otherProfileId,
+        ]), ['note' => 'Not a sales manager contact'])->assertForbidden();
+
+        $noGym = $this->userWithRole('owner');
+        DB::table('users')->where('id', $noGym->id)->update(['gym_id' => null]);
+        $noGym->refresh();
+        $this->actingAs($noGym)->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertForbidden();
+        $this->post(route('contact-notes.add-profile-note', [
+            'locale' => 'en', 'contactProfile' => $owned->contact_profile_id,
+        ]), ['note' => 'No gym'])->assertForbidden();
+    }
 
     public function test_sales_manager_creates_a_contact_and_adds_a_note_without_reentering_phone(): void
     {
@@ -46,7 +116,7 @@ class ContactNoteTest extends TestCase
                 ->etc());
     }
 
-    public function test_supervisor_can_filter_managers_and_sales_manager_cannot_see_others(): void
+    public function test_sales_managers_see_same_gym_contacts_and_can_add_notes_as_themselves(): void
     {
         $gym = Gym::query()->create(['name' => 'Central']);
         $otherGym = Gym::query()->create(['name' => 'Other']);
@@ -76,8 +146,14 @@ class ContactNoteTest extends TestCase
             'locale' => 'en', 'sales_manager_id' => $second->id,
         ]))->assertInertia(fn (Assert $page) => $page
             ->where('contacts.total', 1)
-            ->where('contacts.data.0.user_id', $first->id)
+            ->where('contacts.data.0.user_id', $second->id)
             ->etc());
+
+        $this->actingAs($first)->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('contacts.total', 2)
+                ->has('salesManagers', 2)
+                ->etc());
 
         $this->actingAs($admin)->post(route('contact-notes.store', ['locale' => 'en']), [
             'phone_number' => '321', 'note' => 'Forbidden',
@@ -86,7 +162,32 @@ class ContactNoteTest extends TestCase
         $otherNote = ContactNote::query()->where('user_id', $second->id)->firstOrFail();
         $this->actingAs($first)->post(route('contact-notes.add-note', [
             'locale' => 'en', 'contactNote' => $otherNote->id,
-        ]), ['note' => 'Forbidden'])->assertForbidden();
+        ]), ['note' => 'Shared follow up'])->assertRedirect();
+        $shared = ContactNote::query()->where('note', 'Shared follow up')->sole();
+        $this->assertSame($second->id, $shared->user_id);
+        $this->assertSame($first->id, $shared->writer_id);
+        $this->assertSame($otherNote->contact_profile_id, $shared->contact_profile_id);
+
+        $this->actingAs($first)->post(route('contact-notes.add-profile-note', [
+            'locale' => 'en', 'contactProfile' => $otherNote->contact_profile_id,
+        ]), ['note' => 'From contact list'])->assertRedirect();
+        $profileNote = ContactNote::query()->where('note', 'From contact list')->sole();
+        $this->assertSame($second->id, $profileNote->user_id);
+        $this->assertSame($first->id, $profileNote->writer_id);
+
+        $this->actingAs($first)->get(route('contact-notes.index', [
+            'locale' => 'en', 'sales_manager_id' => $second->id,
+        ]))->assertInertia(fn (Assert $page) => $page
+            ->where('contacts.data.0.members.0.notes.0.writer.id', $first->id)
+            ->etc());
+
+        $outsideNote = ContactNote::query()->where('user_id', $outside->id)->sole();
+        $this->actingAs($first)->post(route('contact-notes.add-note', [
+            'locale' => 'en', 'contactNote' => $outsideNote->id,
+        ]), ['note' => 'Wrong gym'])->assertForbidden();
+        $this->actingAs($first)->post(route('contact-notes.add-profile-note', [
+            'locale' => 'en', 'contactProfile' => $outsideNote->contact_profile_id,
+        ]), ['note' => 'Wrong gym'])->assertForbidden();
     }
 
     public function test_phone_belongs_to_one_sales_manager_per_gym_but_can_be_used_in_another_gym(): void

@@ -10,6 +10,14 @@ use Illuminate\Validation\Rule;
 
 class StorePersonRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->routeIs('person.newcomer.store')) {
+            $contact = $this->route('contactProfile');
+            $this->merge(['type' => 'newcomer', 'phone' => $contact->phone_number]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -32,7 +40,8 @@ class StorePersonRequest extends FormRequest
                     }
                 },
             ],
-            'type' => 'required|in:visitor,guest',
+            'type' => ['required', Rule::in($this->routeIs('person.newcomer.store')
+                ? ['newcomer'] : ['visitor', 'guest'])],
             'entry_code_mode' => ['required', Rule::in(['existing', 'new'])],
             'entry_code_id' => [
                 Rule::requiredIf(fn (): bool => $this->input('entry_code_mode') === 'existing'),

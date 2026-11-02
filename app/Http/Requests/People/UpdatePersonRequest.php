@@ -43,7 +43,7 @@ class UpdatePersonRequest extends FormRequest
                 'max:50',
                 Rule::unique('people', 'phone')->ignore($personId),
             ],
-            'type' => 'sometimes|required|in:visitor,guest',
+            'type' => 'sometimes|required|in:visitor,guest,newcomer',
             'entry_code_id' => [
                 'nullable',
                 Rule::exists('entry_codes', 'id')->where(function ($query) use ($currentEntryCodeId): void {

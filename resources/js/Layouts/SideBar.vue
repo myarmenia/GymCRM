@@ -124,7 +124,7 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
             </li>
 
             <li
-                v-if="hasAnyRole(['sales_manager', 'admin', 'super_admin'])"
+                v-if="page.props.auth?.user?.gym_id != null"
                 :class="[
                     'menu-item',
                     route().current('contact-notes.*') ? 'active' : '',

@@ -48,6 +48,14 @@ const localWarehouses = computed(() => {
     return props.warehouses?.data ?? props.warehouses ?? [];
 });
 
+const isSalesWarehouse = computed(() =>
+    localWarehouses.value.some(
+        (warehouse) =>
+            Number(warehouse.id) === Number(form.warehouse_id) &&
+            warehouse.type === "cashier",
+    ),
+);
+
 const form = useForm({
     category_id: "",
     sub_category_id: "",
@@ -64,7 +72,7 @@ const form = useForm({
     sku: "",
     barcode: "",
     default_purchase_price: 0,
-    default_sale_price: 0,
+    default_sale_price: "",
     min_stock_alert: 0,
     image: "",
     status: true,
@@ -88,6 +96,15 @@ watch(
     () => form.category_id,
     () => {
         form.sub_category_id = "";
+    },
+);
+
+watch(
+    () => form.warehouse_id,
+    () => {
+        if (!isSalesWarehouse.value) {
+            form.default_sale_price = "";
+        }
     },
 );
 
@@ -363,12 +380,13 @@ const submit = () => {
                             </div>
                         </div>
 
-                        <div class="col-md-4 mb-3">
+                        <div v-if="isSalesWarehouse" class="col-md-4 mb-3">
                             <label class="form-label">{{ t('inventory.sale_price') }}</label>
                             <input
                                 v-model="form.default_sale_price"
                                 type="number"
                                 step="0.1"
+                                required
                                 class="form-control"
                                 @wheel.prevent
                             />

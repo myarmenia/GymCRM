@@ -11,6 +11,8 @@ const props = defineProps({
     salesManagers: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     canCreate: { type: Boolean, default: false },
+    canAddNote: { type: Boolean, default: false },
+    canShowPersonActions: { type: Boolean, default: false },
     canSellMembership: { type: Boolean, default: false },
 })
 const page = usePage()
@@ -86,6 +88,7 @@ const addNote = member => noteForm.post(route('contact-notes.add-profile-note', 
 const formatDate = value => value ? new Date(value).toLocaleString(locale.value) : '—'
 const fullName = value => [value?.name, value?.surname].filter(Boolean).join(' ') || '—'
 const latestPrimaryNote = group => group.members?.find(member => member.id === group.id)?.notes?.[0]?.note || '—'
+const canEditGroup = () => props.canCreate
 const toggleGroup = group => { expanded.value = expanded.value === group.id ? null : group.id }
 </script>
 
@@ -113,7 +116,7 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
         </form></div>
 
         <div class="card mb-4"><form class="card-body" @submit.prevent="applyFilters"><div class="row g-3 align-items-end">
-            <div v-if="!canCreate" class="col-md-3"><label class="form-label">{{ t('sales_manager') }}</label><select v-model="filter.sales_manager_id" class="form-select"><option value="">{{ t('all_managers') }}</option><option v-for="manager in salesManagers" :key="manager.id" :value="manager.id">{{ fullName(manager) }}</option></select></div>
+            <div class="col-md-3"><label class="form-label">{{ t('sales_manager') }}</label><select v-model="filter.sales_manager_id" class="form-select"><option value="">{{ t('all_managers') }}</option><option v-for="manager in salesManagers" :key="manager.id" :value="manager.id">{{ fullName(manager) }}</option></select></div>
             <div class="col-md-3"><label class="form-label">{{ t('phone_number') }}</label><input v-model="filter.phone_number" class="form-control" type="search"></div>
             <div class="col-md-2"><label class="form-label">{{ t('date_from') }}</label><input v-model="filter.date_from" class="form-control" type="date"></div>
             <div class="col-md-2"><label class="form-label">{{ t('date_to') }}</label><input v-model="filter.date_to" class="form-control" type="date" :min="filter.date_from || undefined"></div>
@@ -121,47 +124,55 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
         </div></form></div>
 
         <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-            <thead><tr><th>{{ t('phone_number') }}</th><th>{{ t('name') }}</th><th>{{ t('latest_note') }}</th><th v-if="!canCreate">{{ t('sales_manager') }}</th><th>{{ t('related_phones') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ t('phone_number') }}</th><th>{{ t('name') }}</th><th>{{ t('latest_note') }}</th><th>{{ t('sales_manager') }}</th><th>{{ t('related_phones') }}</th><th></th></tr></thead>
             <tbody>
                 <template v-for="group in contactRows" :key="group.id">
                     <tr class="contact-group-row" role="button" tabindex="0" :aria-expanded="expanded === group.id" @click="toggleGroup(group)" @keydown.enter.self.prevent="toggleGroup(group)" @keydown.space.self.prevent="toggleGroup(group)">
                         <td><i class="icon-base ti me-1" :class="expanded === group.id ? 'tabler-chevron-down' : 'tabler-chevron-right'" aria-hidden="true"></i>{{ group.phone_number }}</td>
-                        <td>{{ fullName(group) }}</td><td class="text-break" style="white-space: pre-wrap">{{ latestPrimaryNote(group) }}</td><td v-if="!canCreate">{{ fullName(group.user) }}</td>
+                        <td>{{ fullName(group) }}</td><td class="text-break" style="white-space: pre-wrap">{{ latestPrimaryNote(group) }}</td><td>{{ fullName(group.user) }}</td>
                         <td>{{ Math.max(0, (group.members?.length ?? 0) - 1) }}</td>
                         <td class="text-end"><div class="d-inline-flex align-items-center gap-2">
-                            <button v-if="canCreate" class="btn btn-sm btn-outline-primary" type="button" @click.stop="startRelated(group)">{{ t('add_phone') }}</button>
-                            <ContactPersonActions :contact="group" :can-sell-membership="canSellMembership" />
+                            <button v-if="canEditGroup(group)" class="btn btn-sm btn-outline-primary" type="button" @click.stop="startRelated(group)">{{ t('add_phone') }}</button>
+                            <ContactPersonActions v-if="canShowPersonActions" :contact="group" :can-sell-membership="canSellMembership" />
                         </div></td>
                     </tr>
-                    <tr v-if="expanded === group.id"><td :colspan="canCreate ? 5 : 6" class="bg-light">
+                    <tr v-if="expanded === group.id"><td colspan="6" class="bg-light">
                         <div v-for="member in group.members" :key="member.id" class="p-3" id="border-div">
                             <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                                 <strong>{{ member.phone_number }}</strong><span>{{ fullName(member) }}</span>
                                 <span v-if="member.relationship && !member.is_primary" class="badge bg-label-secondary">{{ member.relationship }}</span>
                                 <span v-if="member.is_primary" class="badge bg-label-primary">{{ t('primary') }}</span>
                                 <div v-if="!member.is_primary" class="d-inline-flex align-items-center gap-2 ms-auto">
-                                    <button v-if="canCreate" class="btn btn-sm btn-outline-secondary" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
-                                    <ContactPersonActions :contact="member" :can-sell-membership="canSellMembership" />
+                                    <button v-if="canEditGroup(group)" class="btn btn-sm btn-outline-secondary" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
+                                    <ContactPersonActions v-if="canShowPersonActions" :contact="member" :can-sell-membership="canSellMembership" />
                                 </div>
-                                <button v-else-if="canCreate" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
+                                <button v-else-if="canEditGroup(group)" class="btn btn-sm btn-outline-secondary ms-auto" type="button" @click="startEdit(member)">{{ t('edit') }}</button>
                             </div>
                             <div class="small text-muted mb-2">{{ member.email || '—' }} · {{ member.birth_date || '—' }} · {{ member.gender ? t(member.gender) : '—' }}</div>
-                            <form v-if="editing === member.id && canCreate" class="row g-2 mb-3" @submit.prevent="saveEdit(member)">
+                            <div v-if="member.creator || member.editor" class="small text-muted mb-2">
+                                <span v-if="member.creator">{{ t('added_by') }}: {{ fullName(member.creator) }}</span>
+                                <span v-if="member.editor" class="ms-3">{{ t('edited_by') }}: {{ fullName(member.editor) }}</span>
+                            </div>
+                            <form v-if="editing === member.id && canEditGroup(group)" class="row g-2 mb-3" @submit.prevent="saveEdit(member)">
                                 <div v-for="field in (member.is_primary ? personFields : fields)" :key="field" class="col-md-4"><label class="form-label">{{ t(field) }}</label>
                                     <select v-if="field === 'gender'" v-model="editForm[field]" class="form-select"><option value="">—</option><option value="male">{{ t('male') }}</option><option value="female">{{ t('female') }}</option></select>
                                     <input v-else v-model="editForm[field]" class="form-control" :type="field === 'birth_date' ? 'date' : field === 'email' ? 'email' : 'text'">
                                     <div class="text-danger small">{{ editForm.errors[field] }}</div>
                                 </div><div class="col-12"><button class="btn btn-primary" type="submit" :disabled="editForm.processing">{{ t('save') }}</button></div>
                             </form>
-                            <div v-for="note in member.notes" :key="note.id" class="small py-1"><span class="text-muted me-2">{{ formatDate(note.created_at) }}</span><span style="white-space: pre-wrap">{{ note.note }}</span></div>
-                            <button v-if="canCreate && notingTo !== member.id" class="btn btn-sm btn-outline-primary mt-2" type="button" @click="notingTo = member.id; noteForm.reset(); noteForm.clearErrors()">{{ t('add_note') }}</button>
-                            <form v-if="canCreate && notingTo === member.id" class="d-flex gap-2 mt-2" @submit.prevent="addNote(member)"><textarea v-model="noteForm.note" class="form-control" :placeholder="t('note')" rows="1" required></textarea><button class="btn btn-outline-primary" type="submit" :disabled="noteForm.processing">{{ t('save') }}</button></form>
+                            <div v-for="note in member.notes" :key="note.id" class="contact-note-entry small">
+                                <span class="contact-note-author">{{ fullName(note.writer || note.user) }}</span>
+                                <span class="contact-note-text">{{ note.note }}</span>
+                                <time class="contact-note-date" :datetime="note.created_at">{{ formatDate(note.created_at) }}</time>
+                            </div>
+                            <button v-if="canAddNote && notingTo !== member.id" class="btn btn-sm btn-outline-primary mt-2" type="button" @click="notingTo = member.id; noteForm.reset(); noteForm.clearErrors()">{{ t('add_note') }}</button>
+                            <form v-if="canAddNote && notingTo === member.id" class="d-flex gap-2 mt-2" @submit.prevent="addNote(member)"><textarea v-model="noteForm.note" class="form-control" :placeholder="t('note')" rows="1" required></textarea><button class="btn btn-outline-primary" type="submit" :disabled="noteForm.processing">{{ t('save') }}</button></form>
                         </div>
-                        <div v-if="addingTo === group.id && canCreate" class="d-flex gap-3 px-3 pt-3">
+                        <div v-if="addingTo === group.id && canEditGroup(group)" class="d-flex gap-3 px-3 pt-3">
                             <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="new">{{ t('new_phone') }}</label>
                             <!-- <label class="form-check-label"><input v-model="relatedMode" class="form-check-input me-1" type="radio" value="existing">{{ t('existing_phone') }}</label> -->
                         </div>
-                        <form v-if="addingTo === group.id && canCreate && relatedMode === 'new'" class="row g-2 p-3" @submit.prevent="addRelated(group)">
+                        <form v-if="addingTo === group.id && canEditGroup(group) && relatedMode === 'new'" class="row g-2 p-3" @submit.prevent="addRelated(group)">
                             <h6>{{ t('add_phone') }}</h6>
                             <div class="col-md-4"><label class="form-label">{{ t('phone_number') }} *</label><input v-model="relatedForm.phone_number" class="form-control" type="tel" required><div class="text-danger small">{{ relatedForm.errors.phone_number }}</div></div>
                             <div v-for="field in fields" :key="field" class="col-md-4"><label class="form-label">{{ t(field) }}</label>
@@ -172,7 +183,7 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
                             <div class="col-12"><label class="form-label">{{ t('note') }}</label><textarea v-model="relatedForm.note" class="form-control"></textarea><div class="text-danger small">{{ relatedForm.errors.note }}</div></div>
                             <div class="col-12"><button class="btn btn-primary" type="submit" :disabled="relatedForm.processing">{{ t('save') }}</button></div>
                         </form>
-                        <form v-if="addingTo === group.id && canCreate && relatedMode === 'existing'" class="row g-2 p-3" @submit.prevent="linkExisting(group)">
+                        <form v-if="addingTo === group.id && canEditGroup(group) && relatedMode === 'existing'" class="row g-2 p-3" @submit.prevent="linkExisting(group)">
                             <h6>{{ t('link_existing') }}</h6>
                             <p class="form-text mb-0">{{ t('existing_phone_help') }}</p>
                             <div class="col-md-6"><label class="form-label">{{ t('phone_number') }} *</label><input v-model="linkForm.phone_number" class="form-control" type="tel" required><div class="text-danger small">{{ linkForm.errors.phone_number }}</div></div>
@@ -181,7 +192,7 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
                         </form>
                     </td></tr>
                 </template>
-                <tr v-if="!contactRows.length"><td :colspan="canCreate ? 5 : 6" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
+                <tr v-if="!contactRows.length"><td colspan="6" class="text-center text-muted py-4">{{ t('empty') }}</td></tr>
             </tbody>
         </table></div><div v-if="contacts.links?.length > 3" class="card-body"><Pagination :links="contacts.links" /></div></div>
     </Index>
@@ -193,4 +204,23 @@ const toggleGroup = group => { expanded.value = expanded.value === group.id ? nu
 #border-div { border-bottom: 2px solid #faf9f9; }
 .contact-group-row { cursor: pointer; }
 .contact-group-row:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+.contact-note-entry {
+    display: grid;
+    grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) max-content;
+    gap: 1.25rem;
+    align-items: start;
+    margin-bottom: .5rem;
+    padding: .85rem 1rem;
+    background: #fff;
+    border: 1px solid #e4e7ec;
+    border-radius: .5rem;
+}
+.contact-note-author { font-weight: 600; overflow-wrap: anywhere; }
+.contact-note-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.contact-note-date { color: var(--bs-secondary-color); white-space: nowrap; text-align: right; }
+@media (max-width: 767.98px) {
+    .contact-note-entry { grid-template-columns: minmax(0, 1fr) auto; gap: .4rem 1rem; }
+    .contact-note-text { grid-column: 1 / -1; grid-row: 2; }
+    .contact-note-date { white-space: normal; }
+}
 </style>

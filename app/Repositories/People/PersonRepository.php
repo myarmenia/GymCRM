@@ -22,6 +22,8 @@ class PersonRepository extends BaseRepository implements PersonInterface
      */
     public function paginateForUser($user, int $perPage = 10, array $filters = [])
     {
+        $section = ($filters['section'] ?? null) === 'newcomers' ? 'newcomers' : 'clients';
+        unset($filters['section'], $filters['type']);
         $membershipFilter = $filters['has_membership'] ?? null;
         unset($filters['has_membership']);
         $today = Carbon::today('Asia/Yerevan')->toDateString();
@@ -41,6 +43,13 @@ class PersonRepository extends BaseRepository implements PersonInterface
             $query->whereHas('gyms', function ($q) use ($user) {
                 $q->where('gyms.id', $user->gym_id);
             });
+        }
+
+        if ($section === 'newcomers') {
+            $query->where('type', 'newcomer')
+                ->withExists('membershipSales');
+        } else {
+            $query->whereIn('type', ['visitor', 'guest']);
         }
 
         if ($membershipFilter === 'with') {

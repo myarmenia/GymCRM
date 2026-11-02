@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PersonContactNotes from './PersonContactNotes.vue'
@@ -18,6 +18,8 @@ const props = defineProps({
     person: Object,
     contactNotes: { type: Array, default: () => [] },
     canAddContactNote: { type: Boolean, default: false },
+    contactNoteRequiresSalesManager: { type: Boolean, default: false },
+    contactNoteSalesManagers: { type: Array, default: () => [] },
     entryCode: {
         type: Object,
         default: null,
@@ -37,6 +39,13 @@ const props = defineProps({
 })
 
 const activeTab = ref('memberships')
+const membershipsSection = ref(null)
+const scrollToMemberships = async event => {
+    event.preventDefault()
+    activeTab.value = 'memberships'
+    await nextTick()
+    membershipsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 const reminderModalOpen = ref(false)
 const selectedReminderMembership = ref(null)
 const reminderForm = useForm({
@@ -65,6 +74,7 @@ const formatAmount = value => Number(value || 0).toFixed(2)
 const personTypeLabel = type => ({
     visitor: t('visitor'),
     guest: t('guest'),
+    newcomer: t('newcomer'),
 }[type] ?? type ?? '-')
 
 const genderLabel = gender => ({
@@ -309,7 +319,7 @@ const visitStats = computed(() => [
     { label: t('visits'), value: props.visitStats.total ?? 0, icon: 'tabler-walk', className: 'bg-label-primary' },
     { label: t('this_month'), value: props.visitStats.thisMonth ?? 0, icon: 'tabler-calendar-stats', className: 'bg-label-info' },
     { label: t('last_visit'), value: formatDateTimeInYerevan(props.visitStats.lastVisitAt), icon: 'tabler-clock', className: 'bg-label-warning' },
-    { label: t('active_memberships'), value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success' },
+    { label: t('active_memberships'), value: activeMembershipCount.value, icon: 'tabler-id-badge-2', className: 'bg-label-success', target: 'memberships' },
 ])
 
 const primaryInfoItems = computed(() => [
@@ -400,7 +410,13 @@ const secondaryInfoItems = computed(() => [
                 :key="stat.label"
                 class="col-12 col-sm-6 col-xl-3"
             >
-                <div class="card h-100 stat-card">
+                <component
+                    :is="stat.target ? 'a' : 'div'"
+                    class="card h-100 stat-card"
+                    :class="{ 'stat-card-link': stat.target }"
+                    :href="stat.target ? '#memberships-section' : undefined"
+                    @click="stat.target && scrollToMemberships($event)"
+                >
                     <div class="card-body d-flex align-items-center gap-3">
                         <div
                             class="avatar rounded"
@@ -413,7 +429,7 @@ const secondaryInfoItems = computed(() => [
                             <div class="h4 mb-0">{{ stat.value }}</div>
                         </div>
                     </div>
-                </div>
+                </component>
             </div>
         </div>
 
@@ -466,9 +482,15 @@ const secondaryInfoItems = computed(() => [
             </div>
         </div>
 
-        <PersonContactNotes :person="person" :notes="contactNotes" :can-add="canAddContactNote" />
+        <PersonContactNotes
+            :person="person"
+            :notes="contactNotes"
+            :can-add="canAddContactNote"
+            :requires-sales-manager="contactNoteRequiresSalesManager"
+            :sales-managers="contactNoteSalesManagers"
+        />
 
-        <div class="card">
+        <div id="memberships-section" ref="membershipsSection" class="card memberships-section">
             <div class="card-header pb-0">
                 <ul class="nav nav-pills gap-2">
                     <li class="nav-item">
@@ -873,6 +895,23 @@ const secondaryInfoItems = computed(() => [
 
 .stat-card {
     border-left: 4px solid var(--bs-primary);
+}
+
+.stat-card-link {
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: left;
+    width: 100%;
+}
+
+.stat-card-link:hover,
+.stat-card-link:focus-visible {
+    border-color: var(--bs-primary);
+}
+
+.memberships-section {
+    scroll-margin-top: 6rem;
 }
 
 .avatar {

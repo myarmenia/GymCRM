@@ -78,9 +78,7 @@ class ProductsController extends Controller
     {
         $this->authorizeInventoryManagement();
 
-        $data = $request->all();
-
-        $this->productsService->createProduct($data);
+        $this->productsService->createProduct($request->validated());
 
         return redirect()
             ->route('products.index', ['locale' => $locale])

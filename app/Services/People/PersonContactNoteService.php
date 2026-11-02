@@ -3,9 +3,9 @@
 namespace App\Services\People;
 
 use App\Models\ContactNote;
+use App\Models\ContactProfile;
 use App\Models\Person;
 use App\Models\User;
-use App\Services\MembershipSales\ContactNoteOwnerResolver;
 use App\Services\MembershipSales\ContactNoteOwnershipService;
 use App\Services\MembershipSales\ContactNotePhone;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,33 +16,42 @@ use Illuminate\Validation\ValidationException;
 class PersonContactNoteService
 {
     public function __construct(
-        private readonly ContactNoteOwnerResolver $owners,
         private readonly ContactNoteOwnershipService $ownership,
     ) {}
 
     public function pageData(Person $person, User $viewer): array
     {
         $variants = ContactNotePhone::variants((string) $person->phone);
-        $gymIds = $viewer->hasRole('owner')
-            ? $person->gyms->modelKeys()
-            : [(int) $viewer->gym_id];
+        $canAccessGym = $viewer->gym_id !== null
+            && $person->gyms->contains('id', $viewer->gym_id);
+        $gymIds = $canAccessGym ? [(int) $viewer->gym_id] : [];
+        $profile = $canAccessGym && $variants !== [] ? ContactProfile::query()
+            ->with('user')
+            ->where('gym_id', $viewer->gym_id)
+            ->where('phone_normalized', ContactNotePhone::canonical((string) $person->phone))
+            ->first() : null;
+        $requiresSalesManager = $profile === null && ! $viewer->hasRole('sales_manager');
+        $salesManagers = $canAccessGym && $variants !== [] && $requiresSalesManager
+            ? User::query()->role('sales_manager')->where('gym_id', $viewer->gym_id)
+                ->where('active', true)->orderBy('name')->orderBy('surname')
+                ->get(['id', 'name', 'surname'])
+            : collect();
 
         $notes = $variants === [] || $gymIds === [] ? collect() : $this->notesForPhones($variants, $gymIds)
-            ->with('user:id,name,surname')
+            ->with(['user:id,name,surname', 'writer:id,name,surname'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
-        $owner = $viewer->hasRole('sales_manager') && $variants !== [] && $viewer->gym_id
-            ? $this->owners->forPhone((string) $person->phone, (int) $viewer->gym_id)
-            : null;
-
         return [
             'contactNotes' => $notes,
-            'canAddContactNote' => $viewer->hasRole('sales_manager')
-                && $variants !== []
-                && $viewer->gym_id !== null
-                && ($owner === null || (int) $owner->id === (int) $viewer->id),
+            'canAddContactNote' => $canAccessGym && $variants !== []
+                && ($profile !== null
+                    ? $profile->user?->hasRole('sales_manager')
+                        && (int) $profile->user->gym_id === (int) $viewer->gym_id
+                    : ($viewer->hasRole('sales_manager') || $salesManagers->isNotEmpty())),
+            'contactNoteRequiresSalesManager' => $requiresSalesManager,
+            'contactNoteSalesManagers' => $salesManagers,
         ];
     }
 
@@ -83,23 +92,37 @@ class PersonContactNoteService
         }
     }
 
-    public function create(Person $person, User $viewer, string $note): ContactNote
+    public function create(Person $person, User $viewer, string $note, ?int $salesManagerId = null): ContactNote
     {
-        abort_unless($viewer->hasRole('sales_manager')
-            && $viewer->gym_id !== null
+        abort_unless($viewer->gym_id !== null
             && $person->gyms->contains('id', $viewer->gym_id), 403);
 
         if (ContactNotePhone::variants((string) $person->phone) === []) {
             throw ValidationException::withMessages(['note' => __('validation.required', ['attribute' => 'phone_number'])]);
         }
 
-        return $this->ownership->create($viewer, $person->phone, trim($note), [
+        $profile = ContactProfile::query()->where('gym_id', $viewer->gym_id)
+            ->where('phone_normalized', ContactNotePhone::canonical((string) $person->phone))->first();
+        if ($profile) {
+            return $this->ownership->addToProfile($viewer, $profile, trim($note));
+        }
+
+        $manager = $viewer->hasRole('sales_manager') ? $viewer : User::query()
+            ->role('sales_manager')->where('gym_id', $viewer->gym_id)
+            ->where('active', true)->find($salesManagerId);
+        if (! $manager) {
+            throw ValidationException::withMessages([
+                'sales_manager_id' => __('validation.required', ['attribute' => 'sales_manager_id']),
+            ]);
+        }
+
+        return $this->ownership->create($manager, $person->phone, trim($note), [
             'name' => $person->name,
             'surname' => $person->surname,
             'email' => $person->email,
             'birth_date' => $person->birth_date,
             'gender' => $person->gender,
-        ]);
+        ], $viewer);
     }
 
     private function notesForPhones(array $variants, array $gymIds): Builder

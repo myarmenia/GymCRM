@@ -10,7 +10,7 @@ class ContactProfile extends Model
     use HasUuidAndVersion;
 
     protected $fillable = [
-        'uuid', 'gym_id', 'user_id', 'group_uuid', 'is_primary',
+        'uuid', 'gym_id', 'user_id', 'created_by', 'updated_by', 'group_uuid', 'is_primary',
         'phone_number', 'phone_normalized', 'name', 'surname', 'email',
         'birth_date', 'gender', 'relationship',
     ];
@@ -23,6 +23,16 @@ class ContactProfile extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function members()

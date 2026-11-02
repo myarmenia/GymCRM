@@ -7,6 +7,7 @@ import InputLabel from '@/Components/InputLabel.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { useAlert } from '@/composables/useAlert'
+import { useAuth } from '@/composables/useAuth'
 import { printHdmReceipt } from '@/composables/useHdmPrint'
 import axios from 'axios'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
@@ -20,8 +21,10 @@ const page = usePage()
 const t = (key, replacements = {}) => translate(page.props.translations, `app.${key}`, replacements)
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const alert = useAlert()
+const { hasRole } = useAuth()
 
 const props = defineProps({
+    singleVisitOnly: { type: Boolean, default: false },
     membershipPlans: {
         type: Array,
         default: () => [],
@@ -95,7 +98,7 @@ const form = useForm({
     apply_discount: false,
     discount_type: 'percent',
     discount_value: null,
-    is_hdm: true,
+    is_hdm: !props.singleVisitOnly || hasRole('manager'),
     hdm_processed_externally: false,
     notes: '',
     trainer_id: '',
@@ -149,6 +152,12 @@ const matchingCustomerMemberships = computed(() => {
     return props.customerMemberships.filter(membership => Number(membership.membership_plan_id) === Number(selectedPlan.value.id))
 })
 const latestMatchingMembershipValidAt = computed(() => {
+    if (props.selectedPerson?.type === 'newcomer'
+        && selectedPlan.value?.duration_type === 'visit'
+        && Number(selectedPlan.value?.visits_limit) === 1) {
+        return ''
+    }
+
     return matchingCustomerMemberships.value
         .map(membership => membership.valid_at ? String(membership.valid_at).slice(0, 10) : null)
         .filter(Boolean)
@@ -449,7 +458,7 @@ const postSale = async stayDebt => {
     }
 
     try {
-        const response = await axios.post(route('membership_sale.store', {
+        const response = await axios.post(route(props.singleVisitOnly ? 'membership_sale.single-visit.store' : 'membership_sale.store', {
             locale: currentLocale.value,
             person: props.selectedPerson?.id,
         }), payload)
