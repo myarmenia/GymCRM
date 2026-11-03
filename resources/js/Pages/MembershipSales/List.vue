@@ -224,7 +224,7 @@ const isActiveGuestMembership = sale => {
 const isFreezableMembership = sale => {
     const membership = sale.person_memberships?.[0]
 
-    if (!membership || !['waiting', 'active', 'frozen'].includes(membership.status)) {
+    if (!membership || !['waiting', 'active', 'frozen', 'trainer_frozen'].includes(membership.status)) {
         return false
     }
 
@@ -252,12 +252,14 @@ const membershipStatusLabel = status => ({
     waiting: t('people.waiting'),
     active: t('membership.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
     cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
 const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
     active: 'bg-label-success',
     frozen: 'bg-label-warning',
+    trainer_frozen: 'bg-label-info',
     cancelled: 'bg-label-danger',
 }[status] ?? 'bg-label-secondary')
 const membershipStartDate = sale => sale.person_memberships?.[0]?.start_date

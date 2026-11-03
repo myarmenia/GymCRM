@@ -26,6 +26,7 @@ class MembershipPlanVersioningTest extends TestCase
         $this->assertSame('175.00', $membershipPlan->price);
         $this->assertSame('percent', $membershipPlan->price_type);
         $this->assertSame('10.000000', $membershipPlan->price_value);
+        $this->assertSame(20, (int) $membershipPlan->freeze_days_limit);
         $this->assertSame(1, $membershipPlan->version);
         $this->assertSame(1, $membershipPlan->translations()->count());
         $this->assertSame(1, $membershipPlan->schedules()->count());
@@ -110,6 +111,7 @@ class MembershipPlanVersioningTest extends TestCase
             'end_date' => null,
             'guest_limit' => 0,
             'freeze_limit' => 0,
+            'freeze_days_limit' => 20,
             'active' => true,
             'translations' => [
                 'hy' => [

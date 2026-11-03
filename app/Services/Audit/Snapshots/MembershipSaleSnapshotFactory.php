@@ -54,12 +54,16 @@ class MembershipSaleSnapshotFactory
                 'visits_left' => $membership->visits_left,
                 'freeze_left' => $membership->freeze_left,
                 'freeze_used' => $membership->freeze_used,
+                'freeze_days_left' => $membership->freeze_days_left,
+                'freeze_days_used' => $membership->freeze_days_used,
                 'guest_left' => $membership->guest_left,
                 'valid_at' => $membership->valid_at?->toDateString(),
                 'freezes' => $membership->freezes
                     ->map(fn ($freeze) => [
                         'start_date' => $freeze->start_date?->toDateString(),
                         'end_date' => $freeze->end_date?->toDateString(),
+                        'duration_days' => $freeze->duration_days,
+                        'counted_days' => $freeze->counted_days,
                         'cancel_effective_date' => $freeze->cancel_effective_date?->toDateString(),
                         'cancelled_at' => $freeze->cancelled_at?->format('Y-m-d H:i:s'),
                         'cancelled_by' => $freeze->cancelled_by,

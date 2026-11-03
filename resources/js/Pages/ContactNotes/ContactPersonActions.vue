@@ -53,9 +53,14 @@ const blockPerson = async () => {
             <i class="icon-base ti tabler-dots-vertical" aria-hidden="true"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-end">
-            <Link v-if="!contact.existing_person_id" class="dropdown-item waves-effect" :href="route('person.create', { locale, phone: contact.phone_number })">
-                <i class="icon-base ti tabler-user-plus me-1"></i>{{ contactText('create_visitor') }}
-            </Link>
+            <template v-if="!contact.existing_person_id">
+                <Link class="dropdown-item waves-effect" :href="route('person.create', { locale, phone: contact.phone_number })">
+                    <i class="icon-base ti tabler-user-plus me-1"></i>{{ contactText('create_visitor') }}
+                </Link>
+                <Link v-if="canSellMembership" class="dropdown-item waves-effect" :href="route('person.newcomer.create', { locale, contactProfile: contact.id })">
+                    <i class="icon-base ti tabler-ticket me-1"></i>{{ contactText('single_visit_sale') }}
+                </Link>
+            </template>
             <template v-else>
                 <Link class="dropdown-item waves-effect" :href="route('person.profile', { locale, id: contact.existing_person_id })">
                     <i class="icon-base ti tabler-eye me-1"></i>{{ personText('view_profile') }}

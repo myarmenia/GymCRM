@@ -64,7 +64,7 @@ class ProductsService
                 'sku' => $data['sku'] ?? "",
                 'barcode' => $data['barcode'] ?? null,
                 'default_purchase_price' => $data['default_purchase_price'] ?? 0,
-                'default_sale_price' => $data['default_sale_price'] ?? 0,
+                'default_sale_price' => $data['default_sale_price'] ?? null,
                 'min_stock_alert' => $data['min_stock_alert'] ?? 0,
                 'image' => null,
                 'status' => $data['status'] ?? true,

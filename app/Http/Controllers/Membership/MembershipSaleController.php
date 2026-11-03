@@ -13,6 +13,8 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleRequest;
 use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Models\SaleContract;
+use App\Models\MembershipPlan;
+use App\Models\Person;
 use App\Models\SaleContractSetting;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
 use App\Services\Hdm\HdmPrintService;
@@ -47,10 +49,34 @@ class MembershipSaleController extends Controller
 
     public function create($locale, $person)
     {
+        $singleVisitOnly = request()->boolean('single_visit');
+        $options = $this->membershipSaleService->formOptions((int) $person);
+        if ($singleVisitOnly) {
+            abort_unless($options['selectedPerson']?->type === 'newcomer', 404);
+            $options['membershipPlans'] = $options['membershipPlans']
+                ->filter(fn (MembershipPlan $plan) => $plan->duration_type === 'visit'
+                    && (int) $plan->visits_limit === 1)
+                ->values();
+        }
+
         return Inertia::render('MembershipSales/Create', [
-            ...$this->membershipSaleService->formOptions((int) $person),
+            ...$options,
+            'singleVisitOnly' => $singleVisitOnly,
             'gateway' => $this->hdmGateway(),
         ]);
+    }
+
+    public function storeSingleVisit(StoreMembershipSaleRequest $request, $locale, $person)
+    {
+        abort_unless(Person::query()->findOrFail((int) $person)->type === 'newcomer', 404);
+        $plan = MembershipPlan::query()->findOrFail((int) $request->validated('membership_plan_id'));
+        if ($plan->duration_type !== 'visit' || (int) $plan->visits_limit !== 1) {
+            throw ValidationException::withMessages([
+                'membership_plan_id' => __('validation.in', ['attribute' => __('backend.attributes.membership_plan')]),
+            ]);
+        }
+
+        return $this->store($request, $locale, $person);
     }
 
     public function store(StoreMembershipSaleRequest $request, $locale, $person)

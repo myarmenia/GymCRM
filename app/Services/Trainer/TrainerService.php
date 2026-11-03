@@ -419,7 +419,7 @@ class TrainerService
     {
         return PersonMembership::query()
             ->where('trainer_id', $trainerId)
-            ->whereIn('status', ['waiting', 'active', 'frozen'])
+            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
             ->whereHas('membershipPlan.schedules')
             ->with('membershipPlan.schedules:id')
             ->get()

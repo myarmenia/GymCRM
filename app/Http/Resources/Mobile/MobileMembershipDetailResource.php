@@ -81,6 +81,8 @@ class MobileMembershipDetailResource extends JsonResource
                     'id' => $freeze->id,
                     'start_date' => $freeze->start_date?->toDateString(),
                     'end_date' => $freeze->end_date?->toDateString(),
+                    'duration_days' => $freeze->duration_days,
+                    'counted_days' => $freeze->counted_days,
                     'notes' => $freeze->notes,
                 ])
                 ->values(),

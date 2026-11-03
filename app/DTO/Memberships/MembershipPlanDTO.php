@@ -20,6 +20,7 @@ class MembershipPlanDTO
 
         public int $guest_limit,
         public int $freeze_limit,
+        public ?int $freeze_days_limit,
 
         public bool $active,
 
@@ -51,6 +52,7 @@ class MembershipPlanDTO
             guest_limit: $data['guest_limit'] ?? 0,
 
             freeze_limit: $data['freeze_limit'] ?? 0,
+            freeze_days_limit: isset($data['freeze_days_limit']) ? (int) $data['freeze_days_limit'] : null,
 
             active: (bool) ($data['active'] ?? true),
 
@@ -95,6 +97,7 @@ class MembershipPlanDTO
             'end_date' => $this->end_date,
             'guest_limit' => $this->guest_limit,
             'freeze_limit' => $this->freeze_limit,
+            'freeze_days_limit' => $this->freeze_days_limit,
             'active' => $this->active,
         ];
     }

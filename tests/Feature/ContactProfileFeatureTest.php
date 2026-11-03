@@ -158,6 +158,7 @@ class ContactProfileFeatureTest extends TestCase
         $related = ContactProfile::query()->where('is_primary', false)->sole();
         $this->assertSame($primary->group_uuid, $related->group_uuid);
         $this->assertSame($owner->id, $related->user_id);
+        $this->assertSame($owner->id, $related->created_by);
         $this->assertSame($related->id, ContactNote::query()->where('note', 'Interested')->sole()->contact_profile_id);
         $this->assertSame($owner->id, app(ContactNoteOwnerResolver::class)->forPhone('098765432', $gym->id)?->id);
 
@@ -176,7 +177,42 @@ class ContactProfileFeatureTest extends TestCase
         ])->assertSessionHasErrors('phone_number');
         $this->actingAs($other)->post(route('contact-notes.add-related', [
             'locale' => 'en', 'contactProfile' => $primary->id,
-        ]), ['phone_number' => '097111111'])->assertForbidden();
+        ]), ['phone_number' => '097111111', 'name' => 'New child', 'note' => 'Called'])->assertRedirect();
+
+        $child = ContactProfile::query()->where('phone_number', '097111111')->sole();
+        $this->assertSame($primary->user_id, $child->user_id);
+        $this->assertSame($other->id, $child->created_by);
+        $childNote = ContactNote::query()->where('note', 'Called')->sole();
+        $this->assertSame($owner->id, $childNote->user_id);
+        $this->assertSame($other->id, $childNote->writer_id);
+
+        $this->patch(route('contact-notes.update-profile', [
+            'locale' => 'en', 'contactProfile' => $primary->id,
+        ]), ['name' => 'Updated main'])->assertRedirect();
+        $this->patch(route('contact-notes.update-profile', [
+            'locale' => 'en', 'contactProfile' => $child->id,
+        ]), ['email' => 'new-child@example.com'])->assertRedirect();
+        $this->assertSame($other->id, $primary->fresh()->updated_by);
+        $this->assertSame('Updated main', $primary->fresh()->name);
+        $this->assertSame($other->id, $child->fresh()->updated_by);
+        $this->assertSame('new-child@example.com', $child->fresh()->email);
+
+        $this->get(route('contact-notes.index', ['locale' => 'en']))
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('contacts.data.0.members.0.editor.id', $other->id)
+                ->where('contacts.data.0.members.2.creator.id', $other->id)
+                ->where('contacts.data.0.members.2.editor.id', $other->id)
+                ->etc());
+
+        $outsideGym = Gym::query()->create(['name' => 'Outside']);
+        $outside = User::factory()->create(['gym_id' => $outsideGym->id, 'active' => true]);
+        $outside->assignRole($role);
+        $this->actingAs($outside)->post(route('contact-notes.add-related', [
+            'locale' => 'en', 'contactProfile' => $primary->id,
+        ]), ['phone_number' => '097222222'])->assertForbidden();
+        $this->patch(route('contact-notes.update-profile', [
+            'locale' => 'en', 'contactProfile' => $child->id,
+        ]), ['name' => 'Wrong gym'])->assertForbidden();
     }
 
     public function test_inactive_manager_group_can_be_reassigned_on_a_new_sale(): void

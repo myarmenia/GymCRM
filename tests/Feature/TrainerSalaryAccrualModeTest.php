@@ -11,6 +11,8 @@ use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
 use App\Models\TrainerCommission;
+use App\Models\TrainerFreeze;
+use App\Models\TrainerMembershipFreeze;
 use App\Models\User;
 use App\Services\MembershipSales\MembershipSaleService;
 use App\Services\Reports\TrainerCommissionsReportService;
@@ -155,6 +157,37 @@ class TrainerSalaryAccrualModeTest extends TestCase
         );
         $this->assertSame(['pending'], $salaries->pluck('status')->unique()->values()->all());
         $this->assertSame(30000.0, (float) $salaries->sum('price'));
+    }
+
+    public function test_trainer_freeze_pauses_salary_only_until_the_customer_changes_trainer(): void
+    {
+        [$commission, $membership] = $this->salaryFixture(
+            'postpaid', '2026-01-01', '2026-03-31', 30000, 3,
+        );
+        $freeze = TrainerFreeze::query()->create([
+            'trainer_id' => $membership->trainer_id,
+            'start_date' => '2026-02-01',
+            'end_date' => '2026-02-28',
+        ]);
+        TrainerMembershipFreeze::query()->create([
+            'trainer_freeze_id' => $freeze->id,
+            'person_membership_id' => $membership->id,
+            'start_date' => '2026-02-01',
+            'end_date' => '2026-02-28',
+            'cancel_effective_date' => '2026-02-15',
+        ]);
+        $membership->update(['valid_at' => '2026-04-14']);
+        $this->attendance($membership, '2026-01-15 10:00:00');
+        $this->attendance($membership, '2026-03-15 10:00:00');
+        $this->attendance($membership, '2026-04-10 10:00:00');
+
+        app(TrainerMonthlySalaryService::class)->generateForCommission($commission->fresh(), '2026-04-15');
+
+        $this->assertSame(
+            ['2026-01-31', '2026-03-14', '2026-04-14'],
+            $commission->monthlySalaries()->orderBy('installment_number')->get()
+                ->map(fn ($salary) => $salary->period_end->toDateString())->all(),
+        );
     }
 
     public function test_shifted_cycles_can_begin_in_the_same_calendar_month(): void

@@ -29,7 +29,13 @@ class TrainerRepository extends BaseRepository implements TrainerInterface
     public function paginateForUser($user, int $perPage = 10, array $filters = [], int $roleId = 7)
     {
         return $this->query()
-            ->with('roles')
+            ->with([
+                'roles',
+                'trainerFreezes' => fn ($query) => $query
+                    ->whereDate('end_date', '>=', today())
+                    ->whereNull('cancel_effective_date')
+                    ->orderBy('start_date'),
+            ])
             ->whereHas('roles', function ($q) use ($roleId) {
                 $q->where('roles.id', $roleId);
             })

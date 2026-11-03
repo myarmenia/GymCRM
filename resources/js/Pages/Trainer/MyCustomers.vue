@@ -23,12 +23,14 @@ const statusLabels = {
     waiting: t('status.pending'),
     active: t('status.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
 };
 
 const statusClasses = {
     waiting: "bg-label-warning",
     active: "bg-label-success",
     frozen: "bg-label-info",
+    trainer_frozen: "bg-label-info",
 };
 
 const planName = (membership) => {

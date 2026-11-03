@@ -24,7 +24,7 @@ class ContactNoteController extends Controller
     public function index(Request $request)
     {
         $viewer = $request->user();
-        abort_unless($viewer->hasAnyRole(['sales_manager', 'manager', 'admin', 'super_admin']), 403);
+        abort_unless($viewer->gym_id !== null, 403);
         $filters = $request->validate([
             'sales_manager_id' => ['nullable', 'integer'],
             'phone_number' => ['nullable', 'string', 'max:32'],
@@ -34,26 +34,39 @@ class ContactNoteController extends Controller
         $managers = User::query()->role('sales_manager')->where('gym_id', $viewer->gym_id)
             ->orderBy('name')->orderBy('surname')->get(['id', 'name', 'surname']);
 
-        $query = ContactProfile::query()->with(['user:id,name,surname', 'members.notes'])
-            ->where('gym_id', $viewer->gym_id)->where('is_primary', true);
-        if ($viewer->hasRole('sales_manager')) {
-            $query->where('user_id', $viewer->id);
-        } elseif (! empty($filters['sales_manager_id'])) {
+        $query = ContactProfile::query()->with([
+            'members' => fn ($members) => $members->where('gym_id', $viewer->gym_id)
+                ->whereIn('user_id', $managers->modelKeys()),
+            'user:id,name,surname', 'members.creator:id,name,surname',
+            'members.editor:id,name,surname', 'members.notes.writer:id,name,surname',
+            'members.notes.user:id,name,surname',
+        ])
+            ->where('gym_id', $viewer->gym_id)
+            ->whereIn('user_id', $managers->modelKeys())
+            ->where('is_primary', true);
+        if (! empty($filters['sales_manager_id'])) {
             $query->where('user_id', $filters['sales_manager_id']);
         }
         if (! empty($filters['phone_number'])) {
             $query->whereHas('members', fn ($members) => $members
+                ->where('gym_id', $viewer->gym_id)
+                ->whereIn('user_id', $managers->modelKeys())
                 ->where('phone_number', 'like', '%'.$filters['phone_number'].'%'));
         }
         if (! empty($filters['date_from']) || ! empty($filters['date_to'])) {
-            $query->whereHas('members.notes', fn ($notes) => $notes
-                ->when(! empty($filters['date_from']), fn ($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
-                ->when(! empty($filters['date_to']), fn ($q) => $q->whereDate('created_at', '<=', $filters['date_to'])));
+            $query->whereHas('members', fn ($members) => $members
+                ->where('gym_id', $viewer->gym_id)
+                ->whereIn('user_id', $managers->modelKeys())
+                ->whereHas('notes', fn ($notes) => $notes
+                    ->when(! empty($filters['date_from']), fn ($q) => $q->whereDate('created_at', '>=', $filters['date_from']))
+                    ->when(! empty($filters['date_to']), fn ($q) => $q->whereDate('created_at', '<=', $filters['date_to']))));
         }
 
         $contacts = $query->orderByDesc(ContactNote::query()->selectRaw('MAX(contact_notes.created_at)')
                 ->join('contact_profiles as member_profiles', 'member_profiles.id', '=', 'contact_notes.contact_profile_id')
-                ->whereColumn('member_profiles.group_uuid', 'contact_profiles.group_uuid'))
+                ->whereColumn('member_profiles.group_uuid', 'contact_profiles.group_uuid')
+                ->whereColumn('member_profiles.gym_id', 'contact_profiles.gym_id')
+                ->whereColumn('member_profiles.user_id', 'contact_profiles.user_id'))
                 ->orderByDesc('contact_profiles.created_at')->orderByDesc('contact_profiles.id')
                 ->paginate(15)->withQueryString();
         $members = $contacts->getCollection()->flatMap(fn (ContactProfile $group) => $group->members);
@@ -62,7 +75,7 @@ class ContactNoteController extends Controller
         $personsByPhone = $phoneVariants === [] ? collect() : Person::query()
             ->whereHas('gyms', fn ($gyms) => $gyms->where('gyms.id', $viewer->gym_id))
             ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone')), $phoneVariants)
-            ->whereIn('type', ['visitor', 'guest'])
+            ->whereIn('type', ['visitor', 'guest', 'newcomer'])
             ->get(['id', 'phone', 'is_blocked'])
             ->keyBy(fn (Person $person) => ContactNotePhone::canonical((string) $person->phone));
         $members->each(function (ContactProfile $member) use ($personsByPhone): void {
@@ -78,9 +91,11 @@ class ContactNoteController extends Controller
 
         return Inertia::render('ContactNotes/Index', [
             'contacts' => $contacts,
-            'salesManagers' => $viewer->hasRole('sales_manager') ? [] : $managers,
+            'salesManagers' => $managers,
             'filters' => $filters,
             'canCreate' => $viewer->hasRole('sales_manager'),
+            'canAddNote' => true,
+            'canShowPersonActions' => $viewer->hasAnyRole(['sales_manager', 'manager', 'admin', 'super_admin']),
             'canSellMembership' => $viewer->hasAnyRole(['sales_manager', 'manager']),
         ]);
     }
@@ -128,20 +143,24 @@ class ContactNoteController extends Controller
 
     public function addProfileNote(Request $request, string $locale, ContactProfile $contactProfile)
     {
-        abort_unless($request->user()->hasRole('sales_manager')
-            && (int) $contactProfile->user_id === (int) $request->user()->id
+        abort_unless($request->user()->gym_id !== null
             && (int) $contactProfile->gym_id === (int) $request->user()->gym_id, 403);
         $data = $request->validate(['note' => ['required', 'string', 'max:10000']]);
-        $this->ownership->create($request->user(), $contactProfile->phone_number, trim($data['note']));
+        $this->ownership->addToProfile($request->user(), $contactProfile, trim($data['note']));
         return back();
     }
 
     public function addNote(Request $request, string $locale, ContactNote $contactNote)
     {
-        abort_unless($request->user()->hasRole('sales_manager')
-            && (int) $contactNote->user_id === (int) $request->user()->id, 403);
+        abort_unless($request->user()->gym_id !== null
+            && (int) ($contactNote->profile?->gym_id ?? $contactNote->user?->gym_id) === (int) $request->user()->gym_id
+            && ($contactNote->profile !== null || $request->user()->hasRole('sales_manager')), 403);
         $data = $request->validate(['note' => ['required', 'string', 'max:10000']]);
-        $this->ownership->create($request->user(), $contactNote->phone_number, trim($data['note']));
+        if ($contactNote->profile) {
+            $this->ownership->addToProfile($request->user(), $contactNote->profile, trim($data['note']));
+        } else {
+            $this->ownership->create($request->user(), $contactNote->phone_number, trim($data['note']));
+        }
         return back();
     }
 

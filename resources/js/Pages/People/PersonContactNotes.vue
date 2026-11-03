@@ -7,13 +7,18 @@ const props = defineProps({
     person: { type: Object, required: true },
     notes: { type: Array, default: () => [] },
     canAdd: { type: Boolean, default: false },
+    requiresSalesManager: { type: Boolean, default: false },
+    salesManagers: { type: Array, default: () => [] },
 })
 
 const page = usePage()
 const locale = computed(() => page.props.lang ?? page.props.locale ?? 'hy')
 const t = key => translate(page.props.translations, `app.contact_notes.${key}`)
 const showingForm = ref(false)
-const form = useForm({ note: '' })
+const form = useForm({
+    note: '',
+    sales_manager_id: props.salesManagers.length === 1 ? props.salesManagers[0].id : '',
+})
 const formatNoteDate = value => value ? new Date(value).toLocaleString(locale.value) : '-'
 const authorName = user => [user?.name, user?.surname].filter(Boolean).join(' ')
 
@@ -42,6 +47,16 @@ const saveNote = () => form.post(route('person.profile.notes.store', {
         </div>
         <div class="card-body">
             <form v-if="canAdd && showingForm" class="mb-4" @submit.prevent="saveNote">
+                <div v-if="requiresSalesManager" class="mb-3">
+                    <label class="form-label" for="person-contact-note-manager">{{ t('sales_manager') }}</label>
+                    <select id="person-contact-note-manager" v-model="form.sales_manager_id" class="form-select" required>
+                        <option value="">—</option>
+                        <option v-for="manager in salesManagers" :key="manager.id" :value="manager.id">
+                            {{ [manager.name, manager.surname].filter(Boolean).join(' ') }}
+                        </option>
+                    </select>
+                    <div v-if="form.errors.sales_manager_id" class="text-danger small mt-1">{{ form.errors.sales_manager_id }}</div>
+                </div>
                 <label class="form-label" for="person-contact-note">{{ t('note') }}</label>
                 <textarea id="person-contact-note" v-model="form.note" class="form-control" rows="3" required></textarea>
                 <div v-if="form.errors.note || form.errors.phone_number" class="text-danger small mt-1">
@@ -55,7 +70,7 @@ const saveNote = () => form.post(route('person.profile.notes.store', {
                 <div v-for="note in notes" :key="note.id" class="border rounded p-3">
                     <div class="small text-muted mb-2">
                         {{ formatNoteDate(note.created_at) }}
-                        <span v-if="authorName(note.user)" class="ms-2">{{ authorName(note.user) }}</span>
+                        <span v-if="authorName(note.writer)" class="ms-2">{{ authorName(note.writer) }}</span>
                     </div>
                     <div class="text-break" style="white-space: pre-wrap">{{ note.note }}</div>
                 </div>

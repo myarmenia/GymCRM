@@ -52,6 +52,7 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             'end_date' => $data['end_date'] ?? null,
             'guest_limit' => $data['guest_limit'] ?? 0,
             'freeze_limit' => $data['freeze_limit'] ?? 0,
+            'freeze_days_limit' => $data['freeze_days_limit'] ?? null,
             'active' => $data['active'] ?? true,
         ]);
     }
@@ -154,6 +155,7 @@ class MembershipPlanRepository extends BaseRepository implements MembershipPlanI
             'end_date' => $membershipPlan->end_date,
             'guest_limit' => $membershipPlan->guest_limit,
             'freeze_limit' => $membershipPlan->freeze_limit,
+            'freeze_days_limit' => $membershipPlan->freeze_days_limit,
             'active' => (bool) $membershipPlan->active,
 
             'schedule_name_id' => $schedule?->id,

@@ -236,7 +236,7 @@ class TrainerPortalController extends Controller
         return function ($query) use ($trainerId): void {
             $query
                 ->where('trainer_id', $trainerId)
-                ->whereIn('status', ['waiting', 'active', 'frozen'])
+                ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
                 ->where(function ($query): void {
                     $query
                         ->whereDate('valid_at', '>=', today())
