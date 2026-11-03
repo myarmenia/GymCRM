@@ -86,6 +86,7 @@ class ManagerMembershipSaleTest extends TestCase
                 ->component('MembershipSales/Create')
                 ->has('membershipPlans', 1)
                 ->where('membershipPlans.0.id', $plan->id)
+                ->where('defaultIsHdm', true)
                 ->where('salesManagerOptional', true)
                 ->where('contactNoteManagerIdsByGym.'.$gym->id, null)
                 ->where('currentSalesManagerId', null)
@@ -142,8 +143,37 @@ class ManagerMembershipSaleTest extends TestCase
             'locale' => 'en', 'person' => $regularCustomer->id,
         ]))->assertInertia(fn (Assert $page) => $page
             ->has('membershipPlans', 3)
+            ->where('defaultIsHdm', false)
             ->etc());
         $this->postJson($route($regularCustomer), [
+            ...$payload, 'membership_plan_id' => $monthly->id, 'sales_manager_id' => $seller->id,
+        ])->assertCreated();
+
+        $manager->assignRole(Role::query()->firstOrCreate([
+            'name' => 'admin', 'guard_name' => 'web', 'g_name' => 'admin',
+        ]));
+        $this->assertFalse($manager->hasOnlyRole('manager'));
+        $dualRoleCustomer = $person('+37499123461');
+        $this->actingAs($manager)->get(route('membership_sale.create', [
+            'locale' => 'en', 'person' => $dualRoleCustomer->id,
+        ]))->assertInertia(fn (Assert $page) => $page
+            ->has('membershipPlans', 3)
+            ->where('defaultIsHdm', false)
+            ->etc());
+        $this->postJson($route($dualRoleCustomer), [
+            ...$payload, 'membership_plan_id' => $monthly->id,
+        ])->assertCreated();
+
+        $seller->assignRole($managerRole);
+        $this->assertFalse($seller->hasOnlyRole('manager'));
+        $managerSellerCustomer = $person('+37499123462');
+        $this->actingAs($seller)->get(route('membership_sale.create', [
+            'locale' => 'en', 'person' => $managerSellerCustomer->id,
+        ]))->assertInertia(fn (Assert $page) => $page
+            ->has('membershipPlans', 3)
+            ->where('defaultIsHdm', false)
+            ->etc());
+        $this->postJson($route($managerSellerCustomer), [
             ...$payload, 'membership_plan_id' => $monthly->id, 'sales_manager_id' => $seller->id,
         ])->assertCreated();
     }

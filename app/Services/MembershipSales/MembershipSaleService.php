@@ -1243,7 +1243,7 @@ class MembershipSaleService
         }
 
         $plan = $query->findOrFail($id);
-        if ($user->hasRole('manager')
+        if ($user->hasOnlyRole('manager')
             && ($plan->duration_type !== 'visit' || (int) $plan->visits_limit !== 1)) {
             throw ValidationException::withMessages([
                 'membership_plan_id' => __('validation.in', ['attribute' => __('backend.attributes.membership_plan')]),
