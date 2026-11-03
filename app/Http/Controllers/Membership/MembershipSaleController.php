@@ -54,7 +54,7 @@ class MembershipSaleController extends Controller
         if ($singleVisitOnly) {
             abort_unless($options['selectedPerson']?->type === 'newcomer', 404);
         }
-        if ($singleVisitOnly || request()->user()->hasRole('manager')) {
+        if ($singleVisitOnly || request()->user()->hasOnlyRole('manager')) {
             $options['membershipPlans'] = $options['membershipPlans']
                 ->filter(fn (MembershipPlan $plan) => $plan->duration_type === 'visit'
                     && (int) $plan->visits_limit === 1)
@@ -64,6 +64,7 @@ class MembershipSaleController extends Controller
         return Inertia::render('MembershipSales/Create', [
             ...$options,
             'singleVisitOnly' => $singleVisitOnly,
+            'defaultIsHdm' => request()->user()->hasOnlyRole('manager'),
             'gateway' => $this->hdmGateway(),
         ]);
     }
