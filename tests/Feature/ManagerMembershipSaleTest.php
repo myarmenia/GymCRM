@@ -39,15 +39,23 @@ class ManagerMembershipSaleTest extends TestCase
         $blocked = User::factory()->create(['gym_id' => $gym->id, 'active' => false]);
         $blocked->assignRole($salesRole);
 
-        $category = MembershipCategory::query()->create(['gym_id' => $gym->id, 'slug' => 'monthly']);
-        $plan = MembershipPlan::query()->create([
+        $category = MembershipCategory::query()->create(['gym_id' => $gym->id, 'slug' => 'visits']);
+        $planData = [
             'membership_category_id' => $category->id,
             'gym_id' => $gym->id,
             'price' => 100,
             'price_value' => 10,
-            'duration_type' => 'month',
             'duration_value' => 1,
             'active' => true,
+        ];
+        $plan = MembershipPlan::query()->create([
+            ...$planData, 'duration_type' => 'visit', 'visits_limit' => 1,
+        ]);
+        $multipleVisits = MembershipPlan::query()->create([
+            ...$planData, 'duration_type' => 'visit', 'visits_limit' => 2,
+        ]);
+        $monthly = MembershipPlan::query()->create([
+            ...$planData, 'duration_type' => 'month', 'visits_limit' => 1,
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
         $payload = [
@@ -76,10 +84,16 @@ class ManagerMembershipSaleTest extends TestCase
         $this->get(route('membership_sale.create', ['locale' => 'en', 'person' => $unclaimed->id]))
             ->assertInertia(fn (Assert $page) => $page
                 ->component('MembershipSales/Create')
+                ->has('membershipPlans', 1)
+                ->where('membershipPlans.0.id', $plan->id)
                 ->where('salesManagerOptional', true)
                 ->where('contactNoteManagerIdsByGym.'.$gym->id, null)
                 ->where('currentSalesManagerId', null)
                 ->etc());
+        $this->postJson($route($unclaimed), [...$payload, 'membership_plan_id' => $multipleVisits->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('membership_plan_id');
+        $this->postJson($route($unclaimed), [...$payload, 'membership_plan_id' => $monthly->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('membership_plan_id');
         $this->postJson($route($unclaimed), $payload)->assertCreated();
         $this->assertSame(0, SalespersonCommission::query()->count());
         $this->assertSame(0, SalaryPayableAssignment::query()->where('source_type', 'salesperson_commission')->count());
@@ -122,6 +136,16 @@ class ManagerMembershipSaleTest extends TestCase
         $this->postJson($route($chosen), [...$payload, 'sales_manager_id' => $seller->id])->assertCreated();
         $this->assertSame(2, SalespersonCommission::query()->count());
         $this->assertSame($seller->id, ContactNote::query()->where('phone_number', $chosen->phone)->sole()->user_id);
+
+        $regularCustomer = $person('+37499123460');
+        $this->actingAs($seller)->get(route('membership_sale.create', [
+            'locale' => 'en', 'person' => $regularCustomer->id,
+        ]))->assertInertia(fn (Assert $page) => $page
+            ->has('membershipPlans', 3)
+            ->etc());
+        $this->postJson($route($regularCustomer), [
+            ...$payload, 'membership_plan_id' => $monthly->id, 'sales_manager_id' => $seller->id,
+        ])->assertCreated();
     }
 }
 
