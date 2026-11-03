@@ -30,6 +30,9 @@ class MobileMembershipResource extends JsonResource
                 'visits_allowed' => $plan->visits_limit,
                 'guests_allowed' => $plan->guest_limit,
                 'freezes_allowed' => $plan->freeze_limit,
+                'freeze_days_allowed' => $this->freeze_days_left === null
+                    ? null
+                    : (int) $this->freeze_days_used + (int) $this->freeze_days_left,
             ] : null,
             'gym' => $this->gym ? ['id' => $this->gym->id, 'name' => $this->gym->name] : null,
             'trainer' => $this->trainer ? ['id' => $this->trainer->id, 'name' => $trainerName ?: null] : null,
@@ -44,6 +47,8 @@ class MobileMembershipResource extends JsonResource
                 'guests_remaining' => $this->guest_left,
                 'freezes_used' => $this->freeze_used,
                 'freezes_remaining' => $this->freeze_left,
+                'freeze_days_used' => $this->freeze_days_used,
+                'freeze_days_remaining' => $this->freeze_days_left,
             ],
         ];
     }

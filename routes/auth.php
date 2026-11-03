@@ -461,6 +461,8 @@ Route::prefix('{locale}')
                 Route::get('/my-salaries', [TrainerPortalController::class, 'mySalaries'])->name('my-salaries');
                 Route::get('/', [TrainerController::class, 'index'])->name('index');
                 Route::get('/{id}/profile', [TrainerController::class, 'profile'])->name('profile');
+                Route::post('/{id}/freeze', [TrainerController::class, 'freeze'])->name('freeze');
+                Route::post('/{id}/freezes/{freezeId}/cancel', [TrainerController::class, 'cancelFreeze'])->name('freeze.cancel');
                 Route::get('/{id}/salary', [TrainerController::class, 'salary'])->name('salary');
                 Route::patch('/{id}/salary/status', [TrainerController::class, 'updateSalaryStatus'])->name('salary.status');
                 Route::patch('/{id}/salary/transfer', [TrainerController::class, 'transferSalary'])->name('salary.transfer');

@@ -18,7 +18,7 @@ class MobileGymRepository implements MobileGymInterface
                     ->orderBy('day_start_time'),
                 'personMemberships' => fn ($query) => $query
                     ->where('person_id', $person->id)
-                    ->whereIn('status', ['waiting', 'active', 'frozen'])
+                    ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
                     ->latest('id'),
             ])
             ->withExists([

@@ -79,7 +79,7 @@ class ScheduleName extends Model
         return $this->trainerSchedules()
             ->whereHas('trainer.trainedPersonMemberships', function ($query) {
                 $query
-                    ->whereIn('status', ['waiting', 'active', 'frozen'])
+                    ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
                     ->whereHas('membershipPlan.schedules', function ($scheduleQuery) {
                         $scheduleQuery->where('schedule_names.id', $this->id);
                     });

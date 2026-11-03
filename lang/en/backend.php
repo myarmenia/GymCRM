@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'trainer_freeze' => [
+        'invalid_dates' => 'The freeze dates are invalid.',
+        'overlap' => 'The trainer is unavailable or already frozen during this period.',
+        'cannot_cancel' => 'This freeze has already been cancelled or ended.',
+    ],
     'contact_notes' => [
         'already_linked' => 'This phone is already linked to the selected main contact.',
         'standalone_required' => 'Only a standalone main contact can be linked here.',
@@ -106,6 +111,9 @@ return [
         'invalid_payment_method' => 'The selected payment method is invalid.',
         'freeze_active_only' => 'Only an active membership can be frozen.',
         'freeze_limit_reached' => 'The allowed number of freezes has been reached.',
+        'freeze_days_limit' => 'Total freeze days',
+        'freeze_days_interval' => 'A freeze must last between 7 and 60 days.',
+        'freeze_days_exceeded' => 'The freeze exceeds the remaining freeze days.',
         'freeze_start_overlaps' => 'The freeze start date cannot fall within an existing freeze period.',
         'freeze_period_outside_membership' => 'The freeze period must be within the membership validity period.',
         'freeze_not_found' => 'The freeze was not found for this membership.',

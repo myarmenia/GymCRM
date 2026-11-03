@@ -160,6 +160,148 @@ class MembershipFreezeCancellationTest extends TestCase
         $this->assertSame('2026-10-22', $membership->fresh()->valid_at->toDateString());
     }
 
+    public function test_new_membership_reserves_days_for_each_freeze(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-02',
+            freezeEnd: '2026-10-05',
+            validAt: '2026-10-22',
+            status: 'active',
+        );
+        $freeze->delete();
+        $membership->update([
+            'freeze_left' => 2,
+            'freeze_used' => 0,
+            'freeze_days_used' => 0,
+            'freeze_days_left' => 20,
+        ]);
+        $service = app(MembershipSaleFreezeService::class);
+
+        $service->storeFreeze($sale->id, ['start_date' => '2026-10-02', 'end_date' => '2026-10-08']);
+        $this->assertSame(7, (int) $membership->fresh()->freeze_days_used);
+        $this->assertSame(13, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame('2026-10-29', $membership->fresh()->valid_at->toDateString());
+
+        $service->storeFreeze($sale->id, ['start_date' => '2026-10-09', 'end_date' => '2026-10-21']);
+        $this->assertSame(20, (int) $membership->fresh()->freeze_days_used);
+        $this->assertSame(0, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame(0, (int) $membership->fresh()->freeze_left);
+        $this->assertSame('2026-11-11', $membership->fresh()->valid_at->toDateString());
+        $this->assertDatabaseHas('person_membership_freezes', [
+            'person_membership_id' => $membership->id,
+            'start_date' => '2026-10-09',
+            'duration_days' => 13,
+            'counted_days' => 13,
+        ]);
+    }
+
+    public function test_new_membership_rejects_intervals_outside_limits_or_remaining_days(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-02',
+            freezeEnd: '2026-10-05',
+            validAt: '2026-10-22',
+            status: 'active',
+        );
+        $freeze->delete();
+        $membership->update([
+            'freeze_left' => 2,
+            'freeze_used' => 0,
+            'freeze_days_used' => 0,
+            'freeze_days_left' => 10,
+        ]);
+
+        foreach ([
+            ['2026-10-02', '2026-10-07'],
+            ['2026-10-02', '2026-12-01'],
+            ['2026-10-02', '2026-10-16'],
+        ] as [$start, $end]) {
+            try {
+                app(MembershipSaleFreezeService::class)->storeFreeze($sale->id, [
+                    'start_date' => $start,
+                    'end_date' => $end,
+                ]);
+                $this->fail("Freeze {$start} to {$end} was accepted.");
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('end_date', $exception->errors());
+            }
+        }
+
+        $this->assertSame(10, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame('2026-10-22', $membership->fresh()->valid_at->toDateString());
+        $this->assertSame(0, $membership->freezes()->count());
+    }
+
+    public function test_future_cancellation_restores_all_reserved_days(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-02',
+            freezeEnd: '2026-10-11',
+            validAt: '2026-11-01',
+            status: 'active',
+        );
+        $freeze->update(['duration_days' => 10, 'counted_days' => 10]);
+        $membership->update(['freeze_days_used' => 10, 'freeze_days_left' => 10]);
+
+        app(MembershipSaleFreezeService::class)->cancelFreeze($sale->id, $freeze->id);
+
+        $this->assertSame(0, (int) $membership->fresh()->freeze_days_used);
+        $this->assertSame(20, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame('2026-10-22', $membership->fresh()->valid_at->toDateString());
+        $this->assertSame(0, (int) $freeze->fresh()->counted_days);
+        $this->assertSame(1, (int) $membership->fresh()->freeze_left);
+    }
+
+    public function test_partial_cancellation_returns_unused_days_and_shortens_validity(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-09-28',
+            freezeEnd: '2026-10-07',
+            validAt: '2026-10-28',
+            status: 'frozen',
+        );
+        $freeze->update(['duration_days' => 10, 'counted_days' => 10]);
+        $membership->update(['freeze_days_used' => 10, 'freeze_days_left' => 10]);
+
+        app(MembershipSaleFreezeService::class)->cancelFreeze($sale->id, $freeze->id);
+
+        $this->assertSame(2, (int) $membership->fresh()->freeze_days_used);
+        $this->assertSame(18, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame('2026-10-20', $membership->fresh()->valid_at->toDateString());
+        $this->assertSame(2, (int) $freeze->fresh()->counted_days);
+        $this->assertSame(1, (int) $membership->fresh()->freeze_used);
+    }
+
+    public function test_extended_validity_allows_freeze_after_original_end_date(): void
+    {
+        $this->travelTo('2026-10-25 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-25',
+            freezeEnd: '2026-10-31',
+            validAt: '2026-11-05',
+            status: 'active',
+        );
+        $freeze->delete();
+        $membership->update([
+            'freeze_left' => 1,
+            'freeze_used' => 0,
+            'freeze_days_used' => 0,
+            'freeze_days_left' => 10,
+        ]);
+
+        app(MembershipSaleFreezeService::class)->storeFreeze($sale->id, [
+            'start_date' => '2026-10-25',
+            'end_date' => '2026-10-31',
+        ]);
+
+        $this->assertSame(3, (int) $membership->fresh()->freeze_days_left);
+        $this->assertSame('2026-11-12', $membership->fresh()->valid_at->toDateString());
+    }
+
     private function fixture(
         string $freezeStart,
         string $freezeEnd,

@@ -109,6 +109,7 @@ const membershipStatusLabel = status => ({
     waiting: t('waiting'),
     active: t('active'),
     frozen: t('frozen'),
+    trainer_frozen: translate(page.props.translations, 'app.trainer_freeze.membership_frozen'),
     expired: t('expired'),
     deleted: t('deleted'),
     cancelled: t('cancelled'),
@@ -117,6 +118,7 @@ const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
     active: 'bg-label-success',
     frozen: 'bg-label-warning',
+    trainer_frozen: 'bg-label-info',
     expired: 'bg-label-secondary',
     deleted: 'bg-label-secondary',
     cancelled: 'bg-label-danger',
@@ -124,6 +126,7 @@ const membershipStatusClass = status => ({
 const membershipStatusOrder = {
     active: 0,
     frozen: 1,
+    trainer_frozen: 1,
     waiting: 2,
     expired: 3,
     cancelled: 4,

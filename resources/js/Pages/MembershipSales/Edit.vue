@@ -153,6 +153,7 @@ const membershipStatusLabel = status => ({
     waiting: t('people.waiting'),
     active: t('membership.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
     expired: t('people.expired'),
     cancelled: t('people.cancelled'),
 }[status] ?? status ?? '-')
@@ -453,6 +454,13 @@ const submit = () => {
                             <span class="text-muted d-block">{{ t('membership.freeze_count') }}</span>
                             <strong>{{ selectedPlan.freeze_limit }}</strong>
                         </div>
+                        <div
+                            v-if="selectedPlan.freeze_days_limit !== null && selectedPlan.freeze_days_limit !== undefined"
+                            class="col-md-4 mb-3"
+                        >
+                            <span class="text-muted d-block">{{ t('sales.allowed_freeze_days') }}</span>
+                            <strong>{{ selectedPlan.freeze_days_limit }}</strong>
+                        </div>
                     </div>
                 </div>
 
@@ -500,6 +508,13 @@ const submit = () => {
                                 <div class="small d-flex justify-content-between">
                                     <span class="text-muted">{{ t('sales.remaining_freezes') }}</span>
                                     <span>{{ membershipItem.freeze_left ?? 0 }}</span>
+                                </div>
+                                <div
+                                    v-if="membershipItem.freeze_days_left !== null"
+                                    class="small d-flex justify-content-between mt-1"
+                                >
+                                    <span class="text-muted">{{ t('sales.remaining_freeze_days') }}</span>
+                                    <span>{{ membershipItem.freeze_days_left }}</span>
                                 </div>
                             </div>
                         </div>
