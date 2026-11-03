@@ -21,7 +21,8 @@ const page = usePage();
 const t = (key, replacements = {}) => translate(page.props.translations, `app.people.${key}`, replacements);
 const contactNoteText = key => translate(page.props.translations, `app.contact_notes.${key}`);
 const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy");
-const { hasRole, hasAnyRole } = useAuth();
+const { hasRole, hasAnyRole, roleNames } = useAuth();
+const isSoleManager = computed(() => roleNames.value.length === 1 && roleNames.value[0] === 'manager');
 const canManagePeople = computed(() =>
     hasAnyRole(["sales_manager", "super_admin","manager","admin"]),
 );
@@ -414,7 +415,7 @@ const submitManualScan = async () => {
                                                 {{ t('view_profile') }}
                                             </Link>
                                             <Link
-                                                v-if="canSalesPersonVisitsForManager && (section !== 'newcomers' || !hasRole('manager'))"
+                                                v-if="canSalesPersonVisitsForManager && (section !== 'newcomers' || !isSoleManager)"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {

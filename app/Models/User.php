@@ -103,6 +103,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function hasOnlyRole(string $role): bool
+    {
+        return $this->hasRole($role) && $this->roles()->count() === 1;
+    }
+
     public function gym()
     {
         return $this->belongsTo(Gym::class, 'gym_id');
