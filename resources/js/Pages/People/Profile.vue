@@ -104,6 +104,7 @@ const membershipStatusLabel = status => ({
     waiting: t('waiting'),
     active: t('active'),
     frozen: t('frozen'),
+    trainer_frozen: translate(page.props.translations, 'app.trainer_freeze.membership_frozen'),
     expired: t('expired'),
     deleted: t('deleted'),
     cancelled: t('cancelled'),
@@ -113,6 +114,7 @@ const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
     active: 'bg-label-success',
     frozen: 'bg-label-warning',
+    trainer_frozen: 'bg-label-info',
     expired: 'bg-label-secondary',
     deleted: 'bg-label-secondary',
     cancelled: 'bg-label-danger',
@@ -182,8 +184,9 @@ const canFreezeMembership = membership => {
     return !isFounder.value
         && Boolean(membershipSaleId(membership))
         && Number(membership?.freeze_left || 0) > 0
-        && ['waiting', 'active', 'frozen'].includes(membership?.status)
-        && isMembershipCurrentlyValid(membership)
+        && (membership?.freeze_days_left == null || Number(membership.freeze_days_left) >= 7)
+        && ['waiting', 'active', 'frozen', 'trainer_frozen'].includes(membership?.status)
+        && (!membership?.valid_at || dateValue(membership.valid_at) >= todayInYerevan())
 }
 const canAddGuest = membership => {
     return !isFounder.value
@@ -671,6 +674,9 @@ const secondaryInfoItems = computed(() => [
                                         <div class="text-muted small">{{ t('freezes') }}</div>
                                         <div class="fw-semibold">
                                             {{ t('items_left_records', { left: membership.freeze_left ?? 0, count: membership.freezes?.length ?? 0 }) }}
+                                        </div>
+                                        <div v-if="membership.freeze_days_left != null" class="text-muted small">
+                                            {{ t('sales.remaining_freeze_days') }}: {{ membership.freeze_days_left }}
                                         </div>
                                     </div>
                                 </div>

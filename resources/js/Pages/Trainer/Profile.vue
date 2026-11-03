@@ -36,14 +36,15 @@ const initials = computed(() => {
     return `${first}${last}`.toUpperCase() || '#'
 })
 
-const trainerStatusLabel = computed(() => props.trainer?.active ? t('status.active') : t('people.inactive'))
-const trainerStatusClass = computed(() => props.trainer?.active ? 'bg-label-success' : 'bg-label-danger')
+const trainerStatusLabel = computed(() => props.trainer?.trainer_status === 'frozen' ? t('trainer_freeze.frozen') : (props.trainer?.active ? t('status.active') : t('people.inactive')))
+const trainerStatusClass = computed(() => props.trainer?.trainer_status === 'frozen' ? 'bg-label-info' : (props.trainer?.active ? 'bg-label-success' : 'bg-label-danger'))
 const roleNames = computed(() => (props.trainer?.roles ?? []).map(role => role.name ?? role.title ?? `#${role.id}`))
 
 const membershipStatusLabel = status => ({
     waiting: t('status.pending'),
     active: t('status.active'),
     frozen: t('people.frozen'),
+    trainer_frozen: t('trainer_freeze.membership_frozen'),
     expired: t('staff_reports.completed'),
     deleted: t('status.deleted'),
     cancelled: t('people.cancelled'),
@@ -52,6 +53,7 @@ const membershipStatusClass = status => ({
     waiting: 'bg-label-info',
     active: 'bg-label-success',
     frozen: 'bg-label-warning',
+    trainer_frozen: 'bg-label-info',
     expired: 'bg-label-secondary',
     deleted: 'bg-label-secondary',
     cancelled: 'bg-label-danger',

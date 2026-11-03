@@ -114,6 +114,7 @@ class MembershipPlanService
             'end_date' => $data['end_date'] ?? null,
             'guest_limit' => $data['guest_limit'] ?? 0,
             'freeze_limit' => $data['freeze_limit'] ?? 0,
+            'freeze_days_limit' => $data['freeze_days_limit'] ?? null,
             'active' => $data['active'] ?? false,
         ];
     }

@@ -30,6 +30,7 @@ class UpdateMembershipPlanRequest extends FormRequest
 
             'guest_limit' => ['nullable', 'integer', 'min:0'],
             'freeze_limit' => ['nullable', 'integer', 'min:0'],
+            'freeze_days_limit' => ['nullable', 'integer', 'min:0'],
 
             'active' => ['boolean'],
 

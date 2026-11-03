@@ -32,8 +32,10 @@ const fullName = user => `${user?.name ?? ''} ${user?.surname ?? ''}`.trim() || 
 const formatDate = value => value ? String(value).slice(0, 10) : '-'
 const formatAmount = value => Number(value || 0).toFixed(2)
 const availableTrainers = computed(() => props.trainers.filter(trainer => Number(trainer.id) !== Number(props.currentTrainer?.id)))
+const trainerUnavailable = trainer => !trainer || !trainer.active || trainer.trainer_status === 'frozen' || !!trainer.frozen_until
 
 const selectTrainer = trainerId => {
+    if (trainerUnavailable(props.trainers.find(trainer => Number(trainer.id) === Number(trainerId)))) return
     form.trainer_id = Number(form.trainer_id) === Number(trainerId) ? '' : trainerId
 }
 
@@ -140,6 +142,7 @@ const submit = () => {
                         :key="trainer.id"
                         type="button"
                         class="trainer-card"
+                        :disabled="trainerUnavailable(trainer)"
                         :class="{ selected: Number(form.trainer_id) === Number(trainer.id) }"
                         @click="selectTrainer(trainer.id)"
                     >
@@ -149,6 +152,9 @@ const submit = () => {
                         <span class="trainer-info">
                             <span class="fw-semibold">{{ fullName(trainer) }}</span>
                             <span class="text-muted small">{{ trainer.phone ?? trainer.email ?? '-' }}</span>
+                            <span v-if="trainerUnavailable(trainer)" class="text-danger small d-block">
+                                {{ trainer.frozen_until ? t('trainer_freeze.unavailable_until', { date: formatDate(trainer.frozen_until) }) : t('trainer_freeze.unavailable') }}
+                            </span>
                         </span>
                         <span
                             v-if="Number(form.trainer_id) === Number(trainer.id)"
@@ -230,6 +236,7 @@ const submit = () => {
     box-shadow: 0 .25rem .75rem rgba(var(--bs-primary-rgb), .08);
     transform: translateY(-1px);
 }
+.trainer-card:disabled { cursor: not-allowed; opacity: .65; }
 
 .trainer-card.selected {
     background: rgba(var(--bs-primary-rgb), .08);

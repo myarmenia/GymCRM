@@ -152,7 +152,7 @@ class Person extends Authenticatable
     public function activeMemberships()
     {
         return $this->hasMany(PersonMembership::class)
-            ->whereIn('status', ['waiting', 'active']);
+            ->whereIn('status', ['waiting', 'active', 'trainer_frozen']);
     }
 
     public function documents()
