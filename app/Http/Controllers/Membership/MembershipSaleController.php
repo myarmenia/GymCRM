@@ -53,6 +53,8 @@ class MembershipSaleController extends Controller
         $options = $this->membershipSaleService->formOptions((int) $person);
         if ($singleVisitOnly) {
             abort_unless($options['selectedPerson']?->type === 'newcomer', 404);
+        }
+        if ($singleVisitOnly || request()->user()->hasRole('manager')) {
             $options['membershipPlans'] = $options['membershipPlans']
                 ->filter(fn (MembershipPlan $plan) => $plan->duration_type === 'visit'
                     && (int) $plan->visits_limit === 1)

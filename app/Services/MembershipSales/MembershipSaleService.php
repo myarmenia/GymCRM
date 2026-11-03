@@ -1176,7 +1176,15 @@ class MembershipSaleService
             $query->where('gym_id', $user->gym_id);
         }
 
-        return $query->findOrFail($id);
+        $plan = $query->findOrFail($id);
+        if ($user->hasRole('manager')
+            && ($plan->duration_type !== 'visit' || (int) $plan->visits_limit !== 1)) {
+            throw ValidationException::withMessages([
+                'membership_plan_id' => __('validation.in', ['attribute' => __('backend.attributes.membership_plan')]),
+            ]);
+        }
+
+        return $plan;
     }
 
     protected function normalizeFilters(array $filters): array

@@ -98,7 +98,7 @@ const form = useForm({
     apply_discount: false,
     discount_type: 'percent',
     discount_value: null,
-    is_hdm: !props.singleVisitOnly || hasRole('manager'),
+    is_hdm: hasRole('manager'),
     hdm_processed_externally: false,
     notes: '',
     trainer_id: '',
