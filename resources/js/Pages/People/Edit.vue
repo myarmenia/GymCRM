@@ -140,6 +140,7 @@ const submit = () => {
                         <select id="type" class="form-select" v-model="form.type">
                             <option value="visitor">{{ t('visitor') }}</option>
                             <option value="guest">{{ t('guest') }}</option>
+                            <option value="newcomer">{{ t('newcomer') }}</option>
                         </select>
                         <InputError :message="form.errors.type" />
                     </div>

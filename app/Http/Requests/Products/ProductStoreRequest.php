@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Products;
 
+use App\Models\Warehouse;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,6 +24,11 @@ class ProductStoreRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isSalesWarehouse = Warehouse::query()
+            ->whereKey($this->input('warehouse_id'))
+            ->where('gym_id', $this->user()?->gym_id)
+            ->where('type', 'cashier')
+            ->exists();
 
         return [
             'category_id' => ['required', 'exists:inventory_categories,id'],
@@ -51,9 +57,10 @@ class ProductStoreRequest extends FormRequest
                 'required',
                 'numeric',
                 'min:0',
-                'lt:default_sale_price',
+                ...($isSalesWarehouse ? ['lt:default_sale_price'] : []),
             ],
             'default_sale_price' => [
+                Rule::excludeIf(! $isSalesWarehouse),
                 'required',
                 'numeric',
                 'min:0',

@@ -49,6 +49,7 @@ class ContactProfileService
             $profile = new ContactProfile([
                 'gym_id' => $manager->gym_id,
                 'user_id' => $manager->id,
+                'created_by' => $manager->id,
                 'is_primary' => true,
                 'phone_number' => trim($phone),
                 'phone_normalized' => $normalized,
@@ -59,6 +60,9 @@ class ContactProfileService
             $profile->save();
         } elseif ($details !== []) {
             $profile->fill(array_filter($this->details($details), fn ($value) => $value !== null && $value !== ''));
+            if ($profile->isDirty()) {
+                $profile->updated_by = $manager->id;
+            }
             $profile->save();
         }
         return $profile;
@@ -67,8 +71,11 @@ class ContactProfileService
     public function addRelated(User $manager, ContactProfile $primary, array $data): ContactProfile
     {
         return DB::transaction(function () use ($manager, $primary, $data): ContactProfile {
-            $this->assertOwner($manager, $primary);
+            $this->assertSameGymManager($manager, $primary);
             Gym::query()->whereKey($primary->gym_id)->lockForUpdate()->firstOrFail();
+            $primary = ContactProfile::query()->where('gym_id', $manager->gym_id)
+                ->lockForUpdate()->findOrFail($primary->id);
+            abort_unless($primary->is_primary, 404);
             $normalized = ContactNotePhone::canonical((string) $data['phone_number']);
             if ($normalized === '') {
                 throw ValidationException::withMessages(['phone_number' => __('validation.required', ['attribute' => 'phone_number'])]);
@@ -79,6 +86,7 @@ class ContactProfileService
             $profile = ContactProfile::query()->create([
                 'gym_id' => $primary->gym_id,
                 'user_id' => $primary->user_id,
+                'created_by' => $manager->id,
                 'group_uuid' => $primary->group_uuid,
                 'is_primary' => false,
                 'phone_number' => trim($data['phone_number']),
@@ -87,7 +95,8 @@ class ContactProfileService
             ]);
             if (filled($data['note'] ?? null)) {
                 ContactNote::query()->create([
-                    'user_id' => $manager->id,
+                    'user_id' => $primary->user_id,
+                    'writer_id' => $manager->id,
                     'contact_profile_id' => $profile->id,
                     'phone_number' => $profile->phone_number,
                     'note' => trim($data['note']),
@@ -133,15 +142,24 @@ class ContactProfileService
 
     public function update(User $manager, ContactProfile $profile, array $data): void
     {
-        $this->assertOwner($manager, $profile);
+        $this->assertSameGymManager($manager, $profile);
         $profile->fill($this->details($data));
+        if ($profile->isDirty()) {
+            $profile->updated_by = $manager->id;
+        }
         $profile->save();
     }
 
     private function assertOwner(User $manager, ContactProfile $profile): void
     {
+        $this->assertSameGymManager($manager, $profile);
+        abort_unless((int) $profile->user_id === (int) $manager->id, 403);
+    }
+
+    private function assertSameGymManager(User $manager, ContactProfile $profile): void
+    {
         abort_unless($manager->hasRole('sales_manager')
-            && (int) $profile->user_id === (int) $manager->id
+            && $manager->gym_id !== null
             && (int) $profile->gym_id === (int) $manager->gym_id, 403);
     }
 

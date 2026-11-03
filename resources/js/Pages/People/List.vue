@@ -13,6 +13,7 @@ import { useConfirm } from '@/composables/useConfirm';
 
 const props = defineProps({
     people: Object,
+    section: { type: String, default: 'clients' },
     entryCodeType: String,
 });
 
@@ -57,12 +58,14 @@ const peopleList = ref(props.people.data);
 const pagination = ref(props.people);
 const filters = ref({
     date_field: "created_at",
-    ...Object.fromEntries(new URLSearchParams(window.location.search)),
+    ...Object.fromEntries([...new URLSearchParams(window.location.search)]
+        .filter(([key]) => !['type', 'section', 'page'].includes(key))),
 });
-const peopleTypes = computed(() => [
-    { value: "visitor", label: t('visitor') },
-    { value: "guest", label: t('guest') },
-]);
+const sectionHref = section => route('person.list', {
+    locale: currentLocale.value,
+    ...Object.fromEntries(Object.entries(filters.value).filter(([, value]) => value !== '')),
+    section,
+});
 const peopleFilterTextFields = computed(() => [
     { name: "name", label: t('name'), col: "col-md-3" },
     { name: "surname", label: t('surname'), col: "col-md-3" },
@@ -71,12 +74,6 @@ const peopleFilterTextFields = computed(() => [
     { name: "entry_code", label: t('entry_code'), col: "col-md-3" },
 ]);
 const peopleFilterSelectFields = computed(() => [
-    {
-        name: "type",
-        label: t('type'),
-        placeholder: t('all'),
-        options: peopleTypes.value,
-    },
     {
         name: "has_membership",
         label: t('membership'),
@@ -94,11 +91,13 @@ const peopleFilterDateFields = computed(() => [
 const personTypeLabel = type => ({
     visitor: t('visitor'),
     guest: t('guest'),
+    newcomer: t('newcomer'),
 }[type] ?? type ?? "-");
 
 const personTypeClass = type => ({
     visitor: "bg-label-secondary",
     guest: "bg-label-info",
+    newcomer: "bg-label-primary",
 }[type] ?? "bg-label-secondary");
 const planName = plan => {
     return plan?.translations?.find(item => item.locale === currentLocale.value)?.name
@@ -150,7 +149,7 @@ watch(
 const applyFilters = (payload) => {
     router.get(
         route("person.list", { locale: currentLocale.value }),
-        payload,
+        { ...payload, section: props.section },
         {
             preserveState: true,
             preserveScroll: true,
@@ -166,7 +165,7 @@ const resetFilters = () => {
 
     router.get(
         route("person.list", { locale: currentLocale.value }),
-        {},
+        { section: props.section },
         {
             preserveState: true,
             preserveScroll: true,
@@ -264,12 +263,27 @@ const submitManualScan = async () => {
             @reset="resetFilters"
         />
 
+        <ul class="nav nav-tabs mb-4" role="tablist">
+            <li class="nav-item" role="presentation">
+                <Link class="nav-link" :class="{ active: section === 'clients' }"
+                    :href="sectionHref('clients')" :aria-current="section === 'clients' ? 'page' : undefined">
+                    {{ t('visitors_and_guests') }}
+                </Link>
+            </li>
+            <li class="nav-item" role="presentation">
+                <Link class="nav-link" :class="{ active: section === 'newcomers' }"
+                    :href="sectionHref('newcomers')" :aria-current="section === 'newcomers' ? 'page' : undefined">
+                    {{ t('newcomers') }}
+                </Link>
+            </li>
+        </ul>
+
         <div class="card">
             <div
                 class="card-header d-flex justify-content-between align-items-center"
             >
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                <h5 class="mb-0">{{ t('clients') }}</h5>
+                <h5 class="mb-0">{{ t(section === 'newcomers' ? 'newcomers' : 'visitors_and_guests') }}</h5>
                     <form
                         v-if="canManualScan"
                         class="d-flex align-items-center gap-2"
@@ -400,7 +414,7 @@ const submitManualScan = async () => {
                                                 {{ t('view_profile') }}
                                             </Link>
                                             <Link
-                                                v-if="canSalesPersonVisitsForManager"
+                                                v-if="canSalesPersonVisitsForManager && (section !== 'newcomers' || !hasRole('manager'))"
                                                 class="dropdown-item waves-effect"
                                                 :href="
                                                     route('membership_sale.create', {
@@ -411,6 +425,20 @@ const submitManualScan = async () => {
                                             >
                                                 <i class="icon-base ti tabler-credit-card-pay me-1"></i>
                                                 {{ t('sell_membership') }}
+                                            </Link>
+                                            <Link
+                                                v-if="canSalesPersonVisitsForManager && section === 'newcomers'"
+                                                class="dropdown-item waves-effect"
+                                                :href="
+                                                    route('membership_sale.create', {
+                                                        locale: currentLocale,
+                                                        person: person.id,
+                                                        single_visit: 1,
+                                                    })
+                                                "
+                                            >
+                                                <i class="icon-base ti tabler-ticket me-1"></i>
+                                                {{ contactNoteText('single_visit_sale') }}
                                             </Link>
                                             <Link
                                                 v-if="canManagePersonVisits"

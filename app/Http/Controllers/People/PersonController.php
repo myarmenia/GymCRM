@@ -8,6 +8,7 @@ use App\Http\Requests\People\StorePersonVisitRequest;
 use App\Http\Requests\People\StorePersonRequest;
 use App\Http\Requests\People\UpdatePersonRequest;
 use App\Models\Gym;
+use App\Models\ContactProfile;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\Gyms\GymService;
 use App\Services\MembershipSales\ContactProfileService;
@@ -68,10 +69,12 @@ class PersonController extends Controller
     public function list(Request $request)
     {
         $people = $this->personService->getAllPaginated($request->query());
+        $section = $request->query('section') === 'newcomers' ? 'newcomers' : 'clients';
         $this->personContactNoteService->loadLatestForPeople($people->getCollection(), $request->user());
 
         return Inertia::render('People/List', [
             'people' => $people,
+            'section' => $section,
             'entryCodeType' => Gym::query()
                 ->whereKey($request->user()?->gym_id)
                 ->value('entry_code_type'),
@@ -116,6 +119,43 @@ class PersonController extends Controller
         return redirect()
             ->route('person.list', ['locale' => app()->getLocale()])
             ->with('success', 'Person created successfully');
+    }
+
+    public function createNewcomer(Request $request, string $locale, ContactProfile $contactProfile)
+    {
+        $this->authorizePersonCreation();
+        abort_unless((int) $contactProfile->gym_id === (int) $request->user()->gym_id, 403);
+
+        $user = $request->user();
+
+        return Inertia::render('People/NewcomerCreate', [
+            'contactProfileId' => $contactProfile->id,
+            'initialGymId' => $user->gym_id,
+            'entryCodes' => $this->entryCodeService->getByGymId($user->gym_id),
+            'entryCodeType' => Gym::resolveEntryCodeType($user->gym?->entry_code_type),
+            'initialPhone' => $contactProfile->phone_number,
+            'initialContact' => [
+                ...$contactProfile->only(['name', 'surname', 'email', 'gender']),
+                'birth_date' => $contactProfile->birth_date?->format('Y-m-d'),
+            ],
+        ]);
+    }
+
+    public function storeNewcomer(StorePersonRequest $request, string $locale, ContactProfile $contactProfile)
+    {
+        $this->authorizePersonCreation();
+        abort_unless((int) $contactProfile->gym_id === (int) $request->user()->gym_id, 403);
+
+        $person = $this->personService->store(PersonDTO::fromArray([
+            ...$request->validated(),
+            'image' => $request->file('image'),
+        ]));
+
+        return redirect()->route('membership_sale.create', [
+            'locale' => app()->getLocale(),
+            'person' => $person->id,
+            'single_visit' => 1,
+        ])->with('success', 'Newcomer created successfully');
     }
 
     public function edit($locale, $id)
@@ -167,8 +207,16 @@ class PersonController extends Controller
     public function storeProfileNote(Request $request, $locale, $id)
     {
         $person = $this->personService->profileData((int) $id)['person'];
-        $data = $request->validate(['note' => ['required', 'string', 'max:10000']]);
-        $this->personContactNoteService->create($person, $request->user(), $data['note']);
+        $data = $request->validate([
+            'note' => ['required', 'string', 'max:10000'],
+            'sales_manager_id' => ['nullable', 'integer'],
+        ]);
+        $this->personContactNoteService->create(
+            $person,
+            $request->user(),
+            $data['note'],
+            $data['sales_manager_id'] ?? null,
+        );
 
         return back();
     }

@@ -829,6 +829,10 @@ class MembershipSaleService
             $person = $this->getPerson((int) $data['person_id'], $user, $membershipPlan);
             $promoteLinkedGuest = $person->type === 'guest'
                 && Guest::query()->where('guest_id', $person->id)->exists();
+            $singleVisitForNewcomer = $person->type === 'newcomer'
+                && $membershipPlan->duration_type === 'visit'
+                && (int) $membershipPlan->visits_limit === 1;
+            $promoteNewcomer = $person->type === 'newcomer' && ! $singleVisitForNewcomer;
             $gymId = $this->resolveGymId($user, $person, $membershipPlan);
             $contactNoteManager = $this->contactNoteOwnerResolver->forPerson($person, $gymId);
             $salesManagerOptional = $user->hasRole('manager') && ! $user->hasRole('sales_manager');
@@ -855,7 +859,9 @@ class MembershipSaleService
                 : null;
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
-            $previousMatchingMembership = $this->previousMatchingMembershipForSale($person, $membershipPlan);
+            $previousMatchingMembership = $singleVisitForNewcomer
+                ? null
+                : $this->previousMatchingMembershipForSale($person, $membershipPlan);
             $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
             $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
 
@@ -1051,7 +1057,7 @@ class MembershipSaleService
                 );
             }
 
-            if ($promoteLinkedGuest) {
+            if ($promoteLinkedGuest || $promoteNewcomer) {
                 $oldPersonSnapshot = $this->personAuditService->snapshot($person);
                 $person->update(['type' => 'visitor']);
                 $this->personAuditService->afterChanged($person, $oldPersonSnapshot);
