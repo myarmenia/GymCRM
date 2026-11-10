@@ -64,7 +64,7 @@ class MembershipSaleController extends Controller
         return Inertia::render('MembershipSales/Create', [
             ...$options,
             'singleVisitOnly' => $singleVisitOnly,
-            'defaultIsHdm' => request()->user()->hasOnlyRole('manager'),
+            'defaultIsHdm' => true,
             'gateway' => $this->hdmGateway(),
         ]);
     }

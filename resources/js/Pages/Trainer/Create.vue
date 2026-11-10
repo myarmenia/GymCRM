@@ -40,7 +40,7 @@ const form = useForm({
 
 const selectedScheduleNames = computed(() => {
     return props.scheduleNames.filter((schedule) =>
-        form.schedule_names.includes(schedule.id),
+        form.schedule_names.includes(schedule.schedule_name_id),
     );
 });
 
@@ -75,7 +75,7 @@ const removeSessionDuration = (index) => {
 
 const getScheduleDetails = (scheduleNameId) => {
     const schedule = props.scheduleNames.find(
-        (item) => item.id === scheduleNameId,
+        (item) => item.schedule_name_id === scheduleNameId,
     );
 
     return (
@@ -172,8 +172,8 @@ const submit = () => {
 
                             <option
                                 v-for="schedule in scheduleNames"
-                                :key="schedule.id"
-                                :value="schedule.id"
+                                :key="schedule.schedule_name_id"
+                                :value="schedule.schedule_name_id"
                             >
                                 {{
                                     schedule.name ??
@@ -258,8 +258,8 @@ const submit = () => {
 
                                 <option
                                     v-for="schedule in selectedScheduleNames"
-                                    :key="schedule.id"
-                                    :value="schedule.id"
+                                    :key="schedule.schedule_name_id"
+                                    :value="schedule.schedule_name_id"
                                 >
                                     {{
                                         schedule.name ??
