@@ -23,7 +23,7 @@ const alert = useAlert()
 
 const props = defineProps({
     singleVisitOnly: { type: Boolean, default: false },
-    defaultIsHdm: { type: Boolean, default: false },
+    defaultIsHdm: { type: Boolean, default: true },
     membershipPlans: {
         type: Array,
         default: () => [],
@@ -1027,6 +1027,7 @@ const submitDebt = () => {
                                         v-model="form.is_hdm"
                                         type="checkbox"
                                         class="form-check-input"
+                                        disabled
                                     />
                                     <span class="form-check-label">
                                         {{ t('sales.fiscal_receipt_3') }}

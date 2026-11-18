@@ -68,6 +68,59 @@ class MembershipSaleHdmModeTest extends TestCase
         ];
     }
 
+    public function test_create_page_requires_hdm_for_owner_and_sales_manager(): void
+    {
+        $url = route('membership_sale.create', ['locale' => 'hy', 'person' => $this->ids['personId']]);
+        $this->get($url)->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('MembershipSales/Create')
+            ->where('defaultIsHdm', true));
+
+        $user = User::findOrFail($this->ids['userId']);
+        $user->removeRole('owner');
+        DB::table('gym_person')->insert([
+            'gym_id' => $this->ids['gymId'],
+            'person_id' => $this->ids['personId'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAs($user->fresh());
+        $this->get($url)->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('MembershipSales/Create')
+            ->where('defaultIsHdm', true));
+    }
+
+    public function test_new_sale_rejects_unchecked_or_missing_hdm_mode(): void
+    {
+        $user = User::findOrFail($this->ids['userId']);
+        $user->removeRole('owner');
+        DB::table('gym_person')->insert([
+            'gym_id' => $this->ids['gymId'],
+            'person_id' => $this->ids['personId'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->actingAs($user->fresh());
+
+        $url = route('membership_sale.store', ['locale' => 'hy', 'person' => $this->ids['personId']]);
+        $before = DB::table('membership_sales')->count();
+
+        $this->postJson($url, $this->payload(false))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_hdm');
+
+        $payload = $this->payload();
+        unset($payload['is_hdm']);
+        $this->postJson($url, $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('is_hdm');
+
+        $this->assertSame($before, DB::table('membership_sales')->count());
+
+        $response = $this->postJson($url, $this->payload(true))->assertCreated();
+        $this->assertTrue($response->json('membership_sale.is_hdm'));
+        $this->assertSame($before + 1, DB::table('membership_sales')->count());
+    }
+
     public function test_sale_copies_freeze_days_allowance_to_person_membership(): void
     {
         DB::table('membership_plans')
@@ -98,7 +151,7 @@ class MembershipSaleHdmModeTest extends TestCase
 
         $response = $this->postJson(route('membership_sale.store', [
             'locale' => 'hy', 'person' => $this->ids['personId'],
-        ]), [...$this->payload(false),
+        ]), [...$this->payload(true),
             'is_partial_payment' => false,
             'is_full_payment' => true,
             'reminder_scheduled_at' => null,
@@ -116,7 +169,7 @@ class MembershipSaleHdmModeTest extends TestCase
     {
         $response = $this->postJson(route('membership_sale.store', [
             'locale' => 'hy', 'person' => $this->ids['personId'],
-        ]), [...$this->payload(false),
+        ]), [...$this->payload(true),
             'is_partial_payment' => false,
             'is_full_payment' => true,
             'reminder_scheduled_at' => null,
