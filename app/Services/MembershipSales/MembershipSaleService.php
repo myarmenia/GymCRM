@@ -1059,7 +1059,7 @@ class MembershipSaleService
 
             if ($promoteLinkedGuest || $promoteNewcomer) {
                 $oldPersonSnapshot = $this->personAuditService->snapshot($person);
-                $person->update(['type' => 'visitor']);
+                $person->promoteForGym((int) $gymId);
                 $this->personAuditService->afterChanged($person, $oldPersonSnapshot);
             }
 

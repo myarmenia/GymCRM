@@ -223,6 +223,12 @@
         "delete_password_help": "Enter your password to confirm permanent account deletion."
     },
     "people": {
+        "find_person": "Find person",
+        "phone_lookup_failed": "Could not search. Please try again.",
+        "phone_lookup_no_person": "No account found. Complete the details to create a new person.",
+        "attach_existing_person": "Customer found. Registration will link their existing account to this gym.",
+        "blocked_at": "Blocked at",
+        "blocked_by": "Blocked by",
         "contact_profile_loaded": "Contact details loaded from this phone number. Please review them.",
         "person_with_this_phone_number_already_exists": "A customer with this phone number already exists.",
         "clients": "Clients",

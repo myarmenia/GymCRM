@@ -3,8 +3,9 @@ import { computed, nextTick, ref } from 'vue'
 import Index from '@/Layouts/Index.vue'
 import PaymentReminderModal from '@/Components/PaymentReminderModal.vue'
 import PersonContactNotes from './PersonContactNotes.vue'
+import DocumentsUploader from '@/Components/DocumentsUploader.vue'
 import { translate } from '/resources/js/trans'
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { formatDateTimeInYerevan, todayInYerevan } from '@/utils/yerevanDate'
 
 const page = usePage()
@@ -16,6 +17,9 @@ const isFounder = computed(() =>
 
 const props = defineProps({
     person: Object,
+    profileGyms: { type: Array, default: () => [] },
+    selectedGymId: Number,
+    blockInfo: { type: Object, default: () => ({}) },
     contactNotes: { type: Array, default: () => [] },
     canAddContactNote: { type: Boolean, default: false },
     contactNoteRequiresSalesManager: { type: Boolean, default: false },
@@ -38,6 +42,8 @@ const props = defineProps({
     },
 })
 
+const selectGym = event => router.get(route('person.profile', { locale: currentLocale.value, id: props.person.id }),
+    { gym_id: Number(event.target.value) }, { preserveScroll: true })
 const activeTab = ref('memberships')
 const membershipsSection = ref(null)
 const scrollToMemberships = async event => {
@@ -87,7 +93,7 @@ const personStatusKey = computed(() => {
         return 'blocked'
     }
 
-    return props.person?.deleted_at || props.person?.mobile_deleted ? 'inactive' : 'active'
+    return props.person?.deleted_at ? 'inactive' : 'active'
 })
 const personStatusLabel = computed(() => t(personStatusKey.value))
 const personStatusClass = computed(() => ({
@@ -369,6 +375,17 @@ const secondaryInfoItems = computed(() => [
             </div>
         </template>
 
+        <div v-if="profileGyms.length" class="card mb-4 p-3">
+            <label class="form-label">{{ t('gym') }}</label>
+            <select class="form-select" :value="selectedGymId" @change="selectGym">
+                <option v-for="gym in profileGyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option>
+            </select>
+        </div>
+        <div v-if="person.is_blocked && blockInfo.blocked_at" class="alert alert-secondary">
+            {{ t('blocked_at') }}: {{ formatDateTimeInYerevan(blockInfo.blocked_at) }}
+            <span v-if="blockInfo.blocked_by"> · {{ t('blocked_by') }}: {{ fullName(blockInfo.blocked_by) }}</span>
+        </div>
+        <DocumentsUploader owner-type="person" :owner-id="person.id" :gym-id="selectedGymId" :gyms="profileGyms" :can-manage="true" />
         <div class="card mb-4 overflow-hidden">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center gap-4 flex-wrap">

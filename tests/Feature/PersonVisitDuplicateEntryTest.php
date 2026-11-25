@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Events\TurnstileEntryDetected;
+use App\Interfaces\AttendanceSheets\AttendanceSheetInterface;
+use App\Interfaces\Turnstile\CheckEntryCodeInterface;
+use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Models\AttendanceSheet;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
@@ -11,10 +15,6 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\People\PersonVisitService;
 use App\Services\Turnstile\EntryExitSystemService;
-use App\Events\TurnstileEntryDetected;
-use App\Interfaces\AttendanceSheets\AttendanceSheetInterface;
-use App\Interfaces\Turnstile\CheckEntryCodeInterface;
-use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -125,7 +125,7 @@ class PersonVisitDuplicateEntryTest extends TestCase
             $entryCodeChecker,
             app(AttendanceSheetInterface::class),
         ))->ees((object) [
-            'mac' => [],
+            'mac' => 'test-device',
             'entry_code' => 'CARD-1',
             'entry_code_type' => 'standart',
         ]);
@@ -136,7 +136,7 @@ class PersonVisitDuplicateEntryTest extends TestCase
         Event::assertDispatched(TurnstileEntryDetected::class, function (TurnstileEntryDetected $event) use ($person): bool {
             return $event->payload['reason'] === 'subscription_expired'
                 && $event->payload['person']['id'] === $person->id
-                && !isset($event->payload['membership_activation_context']);
+                && ! isset($event->payload['membership_activation_context']);
         });
     }
 }

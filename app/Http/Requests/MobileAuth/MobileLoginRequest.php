@@ -2,20 +2,13 @@
 
 namespace App\Http\Requests\MobileAuth;
 
-use Illuminate\Foundation\Http\FormRequest;
-
-class MobileLoginRequest extends FormRequest
+class MobileLoginRequest extends MobilePhoneRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:255'],
-            'password' => ['required', 'string'],
+            'phone' => $this->phoneRules(),
+            'password' => ['required', 'string', 'max:4096'],
             'fcm_token' => ['nullable', 'string', 'max:255'],
             'device_name' => ['nullable', 'string', 'max:255'],
         ];

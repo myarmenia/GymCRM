@@ -25,7 +25,7 @@ class GuestMembershipSaleTypeTest extends TestCase
         Bus::fake();
         $gym = Gym::query()->create(['name' => 'Central']);
         $role = Role::query()->firstOrCreate([
-            'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
+            'name' => 'sales_manager', 'guard_name' => 'web', 'g_name' => 'sales_manager',
         ]);
         $manager = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
         $manager->assignRole($role);
@@ -41,11 +41,12 @@ class GuestMembershipSaleTypeTest extends TestCase
         ]);
         $paymentMethod = PaymentMethod::query()->create(['slug' => 'cash']);
         $payload = [
+            'sales_manager_id' => $manager->id,
             'membership_plan_id' => $plan->id,
             'start_date' => now()->toDateString(),
             'is_full_payment' => true,
             'amount' => 100,
-            'payment_method_id' => $paymentMethod->id,
+            'is_hdm' => true, 'payment_method_id' => $paymentMethod->id,
         ];
         $person = function (string $phone, string $type) use ($gym): Person {
             $person = Person::query()->create([
@@ -56,6 +57,7 @@ class GuestMembershipSaleTypeTest extends TestCase
                 'type' => $type,
             ]);
             $person->gyms()->attach($gym->id);
+
             return $person;
         };
         $route = fn (Person $customer) => route('membership_sale.store', [
@@ -73,7 +75,7 @@ class GuestMembershipSaleTypeTest extends TestCase
             'person_id' => $owner->id,
             'guest_id' => $guest->id,
         ]);
-        $this->postJson($route($guest), [...$payload, 'sales_manager_id' => $manager->id])
+        $this->postJson($route($guest), [...$payload, 'sales_manager_id' => $manager->id + 999])
             ->assertUnprocessable()->assertJsonValidationErrors('sales_manager_id');
         $this->assertSame('guest', $guest->fresh()->type);
 
@@ -87,7 +89,7 @@ class GuestMembershipSaleTypeTest extends TestCase
 
         $existingMember = $person('+37499123459', 'visitor');
         $this->postJson($route($existingMember), $payload)->assertCreated();
-        $existingMember->update(['type' => 'guest']);
+        $existingMember->gymLink($gym->id)->update(['type' => 'guest']);
         Guest::query()->create([
             'person_membership_id' => $ownerMembership->id,
             'person_id' => $owner->id,
@@ -99,4 +101,3 @@ class GuestMembershipSaleTypeTest extends TestCase
         $this->assertSame('visitor', $existingMember->fresh()->type);
     }
 }
-

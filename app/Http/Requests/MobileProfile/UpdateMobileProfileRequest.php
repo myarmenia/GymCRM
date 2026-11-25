@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests\MobileProfile;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\MobileAuth\MobilePhoneRequest;
+use App\Rules\PersonPhone;
 use Illuminate\Validation\Rule;
 
-class UpdateMobileProfileRequest extends FormRequest
+class UpdateMobileProfileRequest extends MobilePhoneRequest
 {
     public function authorize(): bool
     {
@@ -22,9 +23,10 @@ class UpdateMobileProfileRequest extends FormRequest
                 'required',
                 'string',
                 'max:50',
+                new PersonPhone,
                 Rule::unique('people', 'phone')->ignore($this->user()->id),
             ],
-            'birth_date' => ['nullable', 'date'],
+            'birth_date' => ['sometimes', 'required', 'date', 'before_or_equal:today'],
             'gender' => ['nullable', Rule::in(['male', 'female'])],
         ];
     }

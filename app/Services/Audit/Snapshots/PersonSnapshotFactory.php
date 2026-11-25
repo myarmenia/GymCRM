@@ -17,6 +17,7 @@ class PersonSnapshotFactory
             'email' => $person->email,
             'phone' => $person->phone,
             'type' => $person->type,
+            'is_blocked' => $person->is_blocked,
             'birth_date' => $person->birth_date,
             'gender' => $person->gender,
             'mobile_deleted' => (bool) $person->mobile_deleted,
@@ -24,7 +25,7 @@ class PersonSnapshotFactory
                 ->map(fn ($gym) => ['id' => $gym->id, 'name' => $gym->name])
                 ->values()
                 ->all(),
-            'entry_code_id' => $person->entryPermissions->first()?->entry_code_id,
+            'entry_code_id' => $person->entryPermissions()->whereHas('entryCode', fn ($query) => $query->where('gym_id', auth()->user()?->gym_id))->first()?->entry_code_id,
         ];
     }
 }

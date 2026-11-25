@@ -6,6 +6,7 @@ use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Guest;
+use App\Models\GymPerson;
 use App\Models\MembershipSale;
 use App\Models\Person;
 use Illuminate\Support\Facades\Auth;
@@ -99,7 +100,7 @@ class MembershipSaleGuestService
         $membershipSale = $this->getById($id);
 
         $person = Person::query()
-            ->where('phone', $phone)
+            ->where('phone', ContactNotePhone::canonical($phone))
             ->first();
 
         if (! $person) {
@@ -191,7 +192,7 @@ class MembershipSaleGuestService
     protected function findOrCreateGuestPerson(array $data, MembershipSale $membershipSale): Person
     {
         $guest = Person::query()
-            ->where('phone', $data['phone'])
+            ->where('phone', ContactNotePhone::canonical($data['phone']))
             ->lockForUpdate()
             ->first();
 
@@ -202,42 +203,15 @@ class MembershipSaleGuestService
                 ]);
             }
 
-            if (! empty($data['email'])) {
-                $emailExists = Person::query()
-                    ->where('email', $data['email'])
-                    ->where('id', '!=', $guest->id)
-                    ->exists();
-
-                if ($emailExists) {
-                    throw ValidationException::withMessages([
-                        'email' => $this->duplicatePersonEmailMessage(),
-                    ]);
-                }
+            $link = GymPerson::withTrashed()->firstOrNew(['person_id' => $guest->id, 'gym_id' => $membershipSale->gym_id]);
+            $link->deleted_at = null;
+            if (! $link->exists) {
+                $link->type = 'guest';
             }
-
-            $startingVersion = (int) $guest->version;
-            $guest->fill([
-                'name' => $data['name'],
-                'surname' => $data['surname'] ?? null,
-                'email' => $data['email'] ?? $guest->email,
-                'birth_date' => $data['birth_date'] ?? null,
-                'gender' => $data['gender'] ?? null,
-            ]);
-            $aggregateChanged = $guest->isDirty();
-            $aggregateChanged = $this->syncGuestEntryCode(
-                $guest,
-                (int) $data['entry_code_id'],
-                $membershipSale->gym_id,
-            ) || $aggregateChanged;
-            if ($membershipSale->gym_id) {
-                $gymChanges = $guest->gyms()->syncWithoutDetaching([$membershipSale->gym_id]);
-                $aggregateChanged = $gymChanges['attached'] !== []
-                    || $gymChanges['updated'] !== []
-                    || $aggregateChanged;
-            }
+            $link->save();
+            $aggregateChanged = $this->syncGuestEntryCode($guest, (int) $data['entry_code_id'], $membershipSale->gym_id);
             if ($aggregateChanged) {
-                $guest->version = $startingVersion + 1;
-                $guest->save();
+                $link->increment('version');
             }
         } else {
             if (! empty($data['email']) && Person::query()->where('email', $data['email'])->exists()) {
@@ -264,21 +238,26 @@ class MembershipSaleGuestService
 
         if ($guest->wasRecentlyCreated && $membershipSale->gym_id) {
             $guest->gyms()->syncWithoutDetaching([$membershipSale->gym_id]);
+            $guest->gymLink((int) $membershipSale->gym_id)?->increment('version');
         }
 
         return $guest;
     }
 
-    protected function currentPersonEntryPermission(Person $person): ?EntryPermission
+    protected function currentPersonEntryPermission(Person $person, ?int $gymId = null): ?EntryPermission
     {
+        $gymId ??= Auth::user()?->gym_id;
+
         return $person
             ->entryPermissions()
+            ->whereHas('entryCode', fn ($code) => $code->where('gym_id', $gymId))
             ->with('entryCode.gym:id,name')
             ->where('status', true)
             ->latest('id')
             ->first()
             ?? $person
                 ->entryPermissions()
+                ->whereHas('entryCode', fn ($code) => $code->where('gym_id', $gymId))
                 ->with('entryCode.gym:id,name')
                 ->latest('id')
                 ->first();
@@ -307,7 +286,7 @@ class MembershipSaleGuestService
 
     protected function syncGuestEntryCode(Person $guest, int $entryCodeId, ?int $gymId): bool
     {
-        $currentEntryPermission = $this->currentPersonEntryPermission($guest);
+        $currentEntryPermission = $this->currentPersonEntryPermission($guest, $gymId);
         $currentEntryCodeId = $currentEntryPermission?->entry_code_id;
 
         if ((int) $currentEntryCodeId === $entryCodeId) {
@@ -316,7 +295,7 @@ class MembershipSaleGuestService
 
         $entryCode = $this->availableEntryCode($entryCodeId, $gymId);
 
-        $guest->entryPermissions()->delete();
+        $guest->entryPermissions()->whereHas('entryCode', fn ($code) => $code->where('gym_id', $gymId))->delete();
 
         EntryPermission::query()->create([
             'entry_code_id' => $entryCode->id,

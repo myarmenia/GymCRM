@@ -21,18 +21,19 @@ class PersonContactNoteService
 
     public function pageData(Person $person, User $viewer): array
     {
+        $gymId = $viewer->hasRole('owner') ? (int) request()->query('gym_id', $person->gyms->first()?->id) : $viewer->gym_id;
         $variants = ContactNotePhone::variants((string) $person->phone);
-        $canAccessGym = $viewer->gym_id !== null
-            && $person->gyms->contains('id', $viewer->gym_id);
-        $gymIds = $canAccessGym ? [(int) $viewer->gym_id] : [];
+        $canAccessGym = $gymId !== null
+            && $person->gyms->contains('id', $gymId);
+        $gymIds = $canAccessGym ? [(int) $gymId] : [];
         $profile = $canAccessGym && $variants !== [] ? ContactProfile::query()
             ->with('user')
-            ->where('gym_id', $viewer->gym_id)
+            ->where('gym_id', $gymId)
             ->where('phone_normalized', ContactNotePhone::canonical((string) $person->phone))
             ->first() : null;
         $requiresSalesManager = $profile === null && ! $viewer->hasRole('sales_manager');
         $salesManagers = $canAccessGym && $variants !== [] && $requiresSalesManager
-            ? User::query()->role('sales_manager')->where('gym_id', $viewer->gym_id)
+            ? User::query()->role('sales_manager')->where('gym_id', $gymId)
                 ->where('active', true)->orderBy('name')->orderBy('surname')
                 ->get(['id', 'name', 'surname'])
             : collect();
@@ -45,10 +46,10 @@ class PersonContactNoteService
 
         return [
             'contactNotes' => $notes,
-            'canAddContactNote' => $canAccessGym && $variants !== []
+            'canAddContactNote' => (int) $viewer->gym_id === (int) $gymId && $canAccessGym && $variants !== []
                 && ($profile !== null
                     ? $profile->user?->hasRole('sales_manager')
-                        && (int) $profile->user->gym_id === (int) $viewer->gym_id
+                        && (int) $profile->user->gym_id === (int) $gymId
                     : ($viewer->hasRole('sales_manager') || $salesManagers->isNotEmpty())),
             'contactNoteRequiresSalesManager' => $requiresSalesManager,
             'contactNoteSalesManagers' => $salesManagers,

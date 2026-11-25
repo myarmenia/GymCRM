@@ -2,8 +2,8 @@
 
 namespace App\Services\People;
 
-use App\Models\Guest;
 use App\Models\AttendanceSheet;
+use App\Models\Guest;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use Carbon\Carbon;
@@ -54,12 +54,11 @@ class GuestEntryService
         $date = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
 
         return $this->linkedMemberships($guest, $gymId)
-            ->filter(fn (PersonMembership $membership) =>
-                $membership->person !== null
-                && !$membership->person->is_blocked
+            ->filter(fn (PersonMembership $membership) => $membership->person !== null
+                && ! $membership->person->forGym((int) $membership->gym_id)->is_blocked
                 && $this->isWithinGuestLimit($guest, $membership, $date)
-                && (!$membership->start_date || $membership->start_date->toDateString() <= $date)
-                && (!$membership->valid_at || $membership->valid_at->toDateString() >= $date)
+                && (! $membership->start_date || $membership->start_date->toDateString() <= $date)
+                && (! $membership->valid_at || $membership->valid_at->toDateString() >= $date)
                 && ($membership->visits_left === null
                     || (int) $membership->visits_left > 0
                     || $this->alreadyEnteredOnDate($guest, $membership, $date)))
@@ -102,7 +101,7 @@ class GuestEntryService
 
     public function hasExhaustedGuestEntryLimit(Person $guest, int $gymId, Carbon $entryAt): bool
     {
-        if ($guest->type !== 'guest') {
+        if ($guest->forGym($gymId)->type !== 'guest') {
             return false;
         }
 
@@ -110,7 +109,7 @@ class GuestEntryService
 
         return $this->linkedMemberships($guest, $gymId)->contains(
             fn (PersonMembership $membership) => $membership->person !== null
-                && ! $membership->person->is_blocked
+                && ! $membership->person->forGym((int) $membership->gym_id)->is_blocked
                 && (! $membership->start_date || $membership->start_date->toDateString() <= $date)
                 && (! $membership->valid_at || $membership->valid_at->toDateString() >= $date)
                 && $membership->guest_left !== null
@@ -124,18 +123,17 @@ class GuestEntryService
         PersonMembership $selected,
         Carbon $entryAt,
         bool $consumeGuestEntry = false,
-    ): PersonMembership
-    {
+    ): PersonMembership {
         $membership = PersonMembership::query()
             ->with('person:id,is_blocked')
             ->lockForUpdate()
             ->findOrFail($selected->id);
         $date = $entryAt->copy()->timezone(self::LOCAL_TIMEZONE)->toDateString();
 
-        if (!$this->isLinked($guest, $membership)
-            || !in_array($membership->status, ['waiting', 'active', 'expired'], true)
-            || !$membership->person
-            || $membership->person->is_blocked
+        if (! $this->isLinked($guest, $membership)
+            || ! in_array($membership->status, ['waiting', 'active', 'expired'], true)
+            || ! $membership->person
+            || $membership->person->forGym((int) $membership->gym_id)->is_blocked
             || ($membership->start_date && $membership->start_date->toDateString() > $date)
             || ($membership->valid_at && $membership->valid_at->toDateString() < $date)) {
             throw ValidationException::withMessages([

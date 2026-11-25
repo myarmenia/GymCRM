@@ -38,8 +38,8 @@ use App\Http\Controllers\Reports\MembershipSalesReportController;
 use App\Http\Controllers\Reports\SalespersonCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerCommissionsReportController;
 use App\Http\Controllers\Reports\TrainerMonthlySalariesReportController;
-use App\Http\Controllers\SaleContracts\SaleContractController;
 use App\Http\Controllers\SalaryPayoutController;
+use App\Http\Controllers\SaleContracts\SaleContractController;
 use App\Http\Controllers\Schedule\ScheduleController;
 use App\Http\Controllers\TableDeleteController;
 use App\Http\Controllers\TableToggleController;
@@ -47,6 +47,7 @@ use App\Http\Controllers\Trainer\TrainerController;
 use App\Http\Controllers\Trainer\TrainerPortalController;
 use App\Http\Controllers\Users\UserController;
 use App\Http\Controllers\Warehouses\WarehouseController;
+use App\Http\Middleware\RestrictOwnerMembershipSales;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('{locale}')
@@ -348,7 +349,7 @@ Route::prefix('{locale}')
                 });
             });
 
-            Route::prefix('membership-sale')->name('membership_sale.')->group(function () {
+            Route::prefix('membership-sale')->name('membership_sale.')->middleware(RestrictOwnerMembershipSales::class)->group(function () {
                 Route::get('/list', [MembershipSaleController::class, 'list'])->name('list');
                 Route::get('/create/{person}', [MembershipSaleController::class, 'create'])->name('create');
                 Route::post('/single-visit/store/{person}', [MembershipSaleController::class, 'storeSingleVisit'])->name('single-visit.store');
@@ -379,7 +380,7 @@ Route::prefix('{locale}')
                 });
             });
 
-            Route::prefix('sale-contract')->name('sale_contract.')->group(function () {
+            Route::prefix('sale-contract')->name('sale_contract.')->middleware(RestrictOwnerMembershipSales::class)->group(function () {
                 Route::get('/sale/{sale}', [SaleContractController::class, 'show'])->name('show');
                 Route::get('/sale/{sale}/pdf/{contract}', [SaleContractController::class, 'download'])->name('download');
                 Route::post('/sale/{sale}/reissue', [SaleContractController::class, 'reissue'])->name('reissue');

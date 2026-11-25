@@ -54,7 +54,7 @@ const handleImageUpload = (event) => {
 };
 
 const submit = () => {
-    form.post(route('person.update', {
+    form.transform(() => ({ _method: 'patch', type: form.type, entry_code_id: form.entry_code_id })).post(route('person.update', {
         locale: currentLocale.value,
         id: props.person.id,
     }), {
@@ -78,6 +78,7 @@ const submit = () => {
                         <InputLabel for="image" class="form-label" :value="t('image')" />
                         <input
                             id="image"
+                            disabled
                             type="file"
                             class="form-control"
                             accept="image/*"
@@ -107,31 +108,31 @@ const submit = () => {
 
                     <div class="col-md-6">
                         <InputLabel for="name" class="form-label" :value="t('name')" />
-                        <TextInput id="name" type="text" class="form-control" v-model="form.name" autofocus :placeholder="t('enter_name')" />
+                        <TextInput id="name" type="text" class="form-control" v-model="form.name" disabled autofocus :placeholder="t('enter_name')" />
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
                     <div class="col-md-6">
                         <InputLabel for="surname" class="form-label" :value="t('surname')" />
-                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" :placeholder="t('enter_surname')" />
+                        <TextInput id="surname" type="text" class="form-control" v-model="form.surname" disabled :placeholder="t('enter_surname')" />
                         <InputError class="mt-2" :message="form.errors.surname" />
                     </div>
 
                     <div class="col-md-6">
                         <InputLabel for="email" class="form-label" :value="t('email')" />
-                        <TextInput id="email" type="email" class="form-control" v-model="form.email" :placeholder="t('enter_email')" />
+                        <TextInput id="email" type="email" class="form-control" v-model="form.email" disabled :placeholder="t('enter_email')" />
                         <InputError :message="form.errors.email" />
                     </div>
 
                     <div class="col-md-6">
                         <InputLabel for="password" class="form-label" :value="t('password')" />
-                        <TextInput id="password" type="password" class="form-control" v-model="form.password" :placeholder="t('leave_password_empty')" />
+                        <TextInput id="password" type="password" class="form-control" v-model="form.password" disabled :placeholder="t('leave_password_empty')" />
                         <InputError :message="form.errors.password" />
                     </div>
 
                     <div class="col-md-6">
                         <InputLabel for="phone" class="form-label" :value="t('phone_number')" />
-                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" placeholder="+374 58 79 98 94" />
+                        <TextInput id="phone" type="text" class="form-control" v-model="form.phone" disabled placeholder="+374 58 79 98 94" />
                         <InputError :message="form.errors.phone" />
                     </div>
 
@@ -147,13 +148,13 @@ const submit = () => {
 
                     <div class="col-md-6">
                         <InputLabel for="birth_date" class="form-label" :value="t('birth_date')" />
-                        <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" />
+                        <TextInput id="birth_date" type="date" class="form-control" v-model="form.birth_date" disabled />
                         <InputError :message="form.errors.birth_date" />
                     </div>
 
                     <div class="col-md-6">
                         <InputLabel for="gender" class="form-label" :value="t('gender')" />
-                        <select id="gender" class="form-select" v-model="form.gender">
+                        <select id="gender" class="form-select" v-model="form.gender" disabled>
                             <option value="" disabled>{{ t('select') }}</option>
                             <option value="male">{{ t('male') }}</option>
                             <option value="female">{{ t('female') }}</option>
@@ -162,22 +163,22 @@ const submit = () => {
                     </div>
                     <div class="col-md-6">
                         <InputLabel for="passport_series" class="form-label" :value="t('passport_series')" />
-                        <TextInput id="passport_series" type="text" class="form-control" v-model="form.passport_series" />
+                        <TextInput id="passport_series" type="text" class="form-control" v-model="form.passport_series" disabled />
                         <InputError :message="form.errors.passport_series" />
                     </div>
                     <div class="col-md-6">
                         <InputLabel for="passport_issued_by" class="form-label" :value="t('passport_issued_by')" />
-                        <TextInput id="passport_issued_by" type="text" class="form-control" v-model="form.passport_issued_by" />
+                        <TextInput id="passport_issued_by" type="text" class="form-control" v-model="form.passport_issued_by" disabled />
                         <InputError :message="form.errors.passport_issued_by" />
                     </div>
                     <div class="col-md-6">
                         <InputLabel for="passport_issued_at" class="form-label" :value="t('passport_issued_at')" />
-                        <TextInput id="passport_issued_at" type="date" class="form-control" v-model="form.passport_issued_at" />
+                        <TextInput id="passport_issued_at" type="date" class="form-control" v-model="form.passport_issued_at" disabled />
                         <InputError :message="form.errors.passport_issued_at" />
                     </div>
                     <div class="col-md-6">
                         <InputLabel for="address" class="form-label" :value="t('address')" />
-                        <TextInput id="address" type="text" class="form-control" v-model="form.address" />
+                        <TextInput id="address" type="text" class="form-control" v-model="form.address" disabled />
                         <InputError :message="form.errors.address" />
                     </div>
                 </div>

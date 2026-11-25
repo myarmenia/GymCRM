@@ -24,7 +24,7 @@ const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? "hy
 const { hasRole, hasAnyRole, roleNames } = useAuth();
 const isSoleManager = computed(() => roleNames.value.length === 1 && roleNames.value[0] === 'manager');
 const canManagePeople = computed(() =>
-    hasAnyRole(["sales_manager", "super_admin","manager","admin"]),
+    !hasRole("owner") && hasAnyRole(["sales_manager", "super_admin","manager","admin"]),
 );
 const canManagePeopleAction = computed(() =>
     hasAnyRole(["sales_manager", "super_admin","admin"]),
@@ -46,7 +46,7 @@ const canSalesPersonVisits = computed(() =>
 );
 
 const canSalesPersonVisitsForManager = computed(() =>
-    hasAnyRole(["manager", "sales_manager"]),
+    !hasRole("owner") && hasAnyRole(["manager", "sales_manager"]),
 );
 const toast = useToast();
 const { confirm } = useConfirm();

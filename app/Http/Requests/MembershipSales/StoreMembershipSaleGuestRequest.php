@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\MembershipSales;
 
+use App\Rules\PersonPhone;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreMembershipSaleGuestRequest extends FormRequest
@@ -28,7 +29,7 @@ class StoreMembershipSaleGuestRequest extends FormRequest
             }
         }
 
-        if (!empty($data)) {
+        if (! empty($data)) {
             $this->merge($data);
         }
     }
@@ -39,7 +40,7 @@ class StoreMembershipSaleGuestRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'surname' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['required', 'string', 'max:50'],
+            'phone' => ['required', 'string', 'max:50', new PersonPhone],
             'entry_code_id' => ['required', 'integer', 'exists:entry_codes,id'],
             'birth_date' => ['nullable', 'date'],
             'gender' => ['nullable', 'in:male,female'],

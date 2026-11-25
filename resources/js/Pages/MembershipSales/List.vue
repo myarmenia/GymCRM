@@ -14,7 +14,7 @@ const currentLocale = computed(() => page.props.lang ?? page.props.locale ?? 'hy
 const { hasAnyRole, hasRole } = useAuth()
 const isFounder = computed(() => hasRole('founder'))
 const canManageSales = computed(() =>
-    hasAnyRole(['owner', 'admin', 'super_admin', 'sales_manager']),
+    !hasRole('owner') && hasAnyRole(['admin', 'super_admin', 'sales_manager']),
 )
 
 const props = defineProps({

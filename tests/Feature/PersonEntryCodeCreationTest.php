@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\DTO\People\PersonDTO;
+use App\Http\Middleware\EnsureGymSubscriptionIsActive;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Gym;
@@ -126,36 +127,20 @@ class PersonEntryCodeCreationTest extends TestCase
         $this->assertTrue($person->gyms()->whereKey($gym->id)->exists());
     }
 
-    public function test_person_can_be_created_without_email_password_or_phone(): void
+    public function test_new_person_requires_a_phone(): void
     {
-        $gym = Gym::query()->create([
-            'name' => 'Main gym',
-            'entry_code_type' => 'rfId',
-        ]);
-        $user = $this->userWithRole($gym);
-
-        $response = $this->actingAs($user)->post(
-            route('person.store', ['locale' => 'hy']),
-            $this->personPayload([
-                'email' => null,
-                'password' => null,
-                'phone' => null,
-                'entry_code_mode' => 'new',
-                'entry_code_token' => 'NULLABLE-1001',
-            ]),
-        );
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('person.list', ['locale' => 'hy']));
-
-        $person = Person::query()->sole();
-        $this->assertNull($person->email);
-        $this->assertNull($person->password);
-        $this->assertNull($person->phone);
+        $gym = Gym::query()->create(['name' => 'Required phone']);
+        $user = User::factory()->create(['gym_id' => $gym->id, 'active' => true]);
+        $user->assignRole(Role::firstOrCreate(['name' => 'sales_manager', 'guard_name' => 'web'], ['g_name' => 'sales_manager']));
+        $this->withoutMiddleware(EnsureGymSubscriptionIsActive::class);
+        $this->actingAs($user)->post(route('person.store', ['locale' => 'hy']), [
+            'name' => 'Customer', 'type' => 'visitor', 'birth_date' => '1990-01-01',
+            'entry_code_mode' => 'new', 'entry_code_token' => 'NO-PHONE',
+        ])->assertSessionHasErrors('phone');
+        $this->assertDatabaseCount('people', 0);
     }
 
-    public function test_person_email_and_phone_can_be_cleared_during_edit(): void
+    public function test_person_email_and_phone_are_immutable_during_admin_edit(): void
     {
         $gym = Gym::query()->create([
             'name' => 'Main gym',
@@ -203,57 +188,21 @@ class PersonEntryCodeCreationTest extends TestCase
         )->assertSessionHasNoErrors();
 
         $person->refresh();
-        $this->assertNull($person->email);
-        $this->assertNull($person->phone);
+        $this->assertSame('john@example.com', $person->email);
+        $this->assertSame('37499123456', $person->phone);
         $this->assertSame($password, $person->password);
     }
 
-    public function test_manager_can_edit_a_person_from_another_gym(): void
+    public function test_manager_cannot_edit_a_person_from_another_gym(): void
     {
-        $managerGym = Gym::query()->create(['name' => 'Manager gym']);
-        $personGym = Gym::query()->create(['name' => 'Person gym']);
-        $manager = $this->userWithRole($managerGym, 'manager');
-        $person = Person::query()->create([
-            'name' => 'John',
-            'surname' => 'Doe',
-            'email' => 'john@example.com',
-            'phone' => '+37499123456',
-            'type' => 'visitor',
-            'birth_date' => '1990-01-01',
-        ]);
-        $person->gyms()->attach($personGym->id);
-        $entryCode = EntryCode::query()->create([
-            'gym_id' => $personGym->id,
-            'token' => 'MANAGER-EDIT-1001',
-            'status' => true,
-            'activation' => true,
-            'type' => 'rfId',
-        ]);
-        EntryPermission::query()->create([
-            'entry_code_id' => $entryCode->id,
-            'relation_type' => Person::class,
-            'relation_id' => $person->id,
-            'status' => true,
-        ]);
-
-        $this->actingAs($manager)->patch(
-            route('person.update', ['locale' => 'hy', 'id' => $person->id]),
-            [
-                'name' => 'Updated John',
-                'surname' => $person->surname,
-                'email' => $person->email,
-                'phone' => $person->phone,
-                'type' => $person->type,
-                'entry_code_id' => $entryCode->id,
-                'birth_date' => $person->birth_date,
-                'gender' => null,
-            ],
-        )->assertRedirect(route('person.list', ['locale' => 'hy']));
-
-        $person->refresh();
-        $this->assertSame('Updated John', $person->name);
-        $this->assertTrue($person->gyms()->whereKey($personGym->id)->exists());
-        $this->assertFalse($person->gyms()->whereKey($managerGym->id)->exists());
+        $a = Gym::query()->create(['name' => 'A']);
+        $b = Gym::query()->create(['name' => 'B']);
+        $user = User::factory()->create(['gym_id' => $b->id, 'active' => true]);
+        $user->assignRole(Role::firstOrCreate(['name' => 'manager', 'guard_name' => 'web'], ['g_name' => 'manager']));
+        $person = Person::create(['name' => 'Other gym', 'phone' => '37499123456']);
+        $person->gyms()->attach($a->id);
+        $this->withoutMiddleware(EnsureGymSubscriptionIsActive::class);
+        $this->actingAs($user)->get(route('person.edit', ['locale' => 'hy', 'id' => $person->id]))->assertForbidden();
     }
 
     public function test_missing_or_invalid_gym_entry_code_type_falls_back_to_rfid(): void

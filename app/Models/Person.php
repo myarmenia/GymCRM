@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\MembershipSales\ContactNotePhone;
 use App\Traits\FilterTrait;
 use App\Traits\HasUuidAndVersion;
 use App\Traits\ReleasesEntryCodesOnDelete;
@@ -22,6 +23,67 @@ class Person extends Authenticatable
     protected $guarded = [];
 
     protected $table = 'people';
+
+    protected ?int $gymContextId = null;
+
+    public function setPhoneAttribute(?string $value): void
+    {
+        $this->attributes['phone'] = $value === null || trim($value) === ''
+            ? null : ContactNotePhone::canonical($value);
+    }
+
+    public function forGym(int $gymId): static
+    {
+        $this->gymContextId = $gymId;
+
+        return $this;
+    }
+
+    public function gymLink(int $gymId): ?GymPerson
+    {
+        return GymPerson::on($this->getConnectionName())->where('person_id', $this->id)->where('gym_id', $gymId)->first();
+    }
+
+    private function contextLink(): ?GymPerson
+    {
+        $gymId = $this->gymContextId ?? (auth()->user() instanceof User ? auth()->user()->gym_id : null);
+        if (! $gymId) {
+            return null;
+        }
+        if ($this->relationLoaded('gyms')) {
+            $gym = $this->getRelation('gyms')->firstWhere('id', $gymId);
+            if ($gym) {
+                return $gym->pivot;
+            }
+        }
+
+        return $this->gymLink((int) $gymId);
+    }
+
+    public function getGymRegisteredAtAttribute(): mixed
+    {
+        return $this->contextLink()?->created_at ?? $this->created_at;
+    }
+
+    protected $appends = ['gym_registered_at'];
+
+    public function getTypeAttribute($value): ?string
+    {
+        return $this->contextLink()?->type ?? $value;
+    }
+
+    public function getIsBlockedAttribute($value): bool
+    {
+        return $this->contextLink()?->is_blocked ?? (bool) $value;
+    }
+
+    public function promoteForGym(int $gymId): void
+    {
+        $link = $this->gymLink($gymId);
+        abort_unless($link, 422);
+        $link->update(['type' => 'visitor']);
+        $this->unsetRelation('gyms');
+    }
 
     protected function casts(): array
     {
@@ -162,7 +224,10 @@ class Person extends Authenticatable
 
     public function gyms()
     {
-        return $this->belongsToMany(Gym::class, 'gym_person');
+        return $this->belongsToMany(Gym::class, 'gym_person')
+            ->using(GymPerson::class)->withTimestamps()
+            ->withPivot(['id', 'uuid', 'version', 'type', 'is_blocked', 'blocked_by', 'blocked_at', 'deleted_at', 'created_at', 'updated_at'])
+            ->wherePivotNull('deleted_at');
 
     }
 

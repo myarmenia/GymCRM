@@ -3,9 +3,9 @@
 namespace App\Http\Requests\People;
 
 use App\Models\Person;
+use App\Rules\PersonPhone;
 use App\Services\MembershipSales\ContactNotePhone;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StorePersonRequest extends FormRequest
@@ -25,17 +25,17 @@ class StorePersonRequest extends FormRequest
 
     public function rules(): array
     {
+        $existing = Person::query()->where('phone', ContactNotePhone::canonical((string) $this->input('phone')))->first();
+
         return [
-            'name' => 'required|string|max:255',
+            'name' => $existing ? ['exclude'] : 'required|string|max:255',
             'surname' => 'nullable|string|max:255',
             'image' => 'nullable|image|max:2048',
-            'email' => 'nullable|email|max:255|unique:people,email',
+            'email' => $existing ? ['exclude'] : 'nullable|email|max:255|unique:people,email',
             'password' => 'nullable|string|min:6',
-            'phone' => ['nullable', 'string', 'max:50', Rule::unique('people', 'phone'),
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    $variants = ContactNotePhone::variants((string) $value);
-                    if ($variants !== [] && Person::query()
-                        ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone')), $variants)->exists()) {
+            'phone' => ['required', 'string', 'max:50', new PersonPhone,
+                function (string $attribute, mixed $value, \Closure $fail) use ($existing): void {
+                    if ($existing?->gyms()->where('gyms.id', $this->user()?->gym_id)->exists()) {
                         $fail(__('backend_messages.person_with_this_phone_number_already_exists'));
                     }
                 },
@@ -63,7 +63,7 @@ class StorePersonRequest extends FormRequest
                     fn ($query) => $query->where('gym_id', $this->user()?->gym_id),
                 ),
             ],
-            'birth_date' => 'required|date',
+            'birth_date' => $existing ? ['exclude'] : 'required|date',
             'gender' => 'nullable|string|in:male,female',
             'passport_series' => 'nullable|string|max:100',
             'passport_issued_by' => 'nullable|string|max:255',

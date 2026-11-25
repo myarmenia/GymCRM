@@ -10,6 +10,7 @@ use App\Models\PaymentMethod;
 use App\Models\Person;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\MembershipSales\ContactNotePhone;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -49,7 +50,7 @@ class NewcomerSingleVisitSaleTest extends TestCase
                 'sales_manager_id' => $seller->id,
                 'start_date' => now()->toDateString(),
                 'is_full_payment' => true, 'amount' => 100,
-                'payment_method_id' => $payment->id,
+                'is_hdm' => true, 'payment_method_id' => $payment->id,
             ])->assertCreated();
             $this->assertSame('visitor', $person->fresh()->type);
         }
@@ -86,7 +87,7 @@ class NewcomerSingleVisitSaleTest extends TestCase
             'locale' => 'en', 'person' => $person->id, 'single_visit' => 1,
         ]));
         $this->assertSame('newcomer', $person->type);
-        $this->assertSame($contact->phone_number, $person->phone);
+        $this->assertSame(ContactNotePhone::canonical($contact->phone_number), $person->phone);
         $this->assertSame('NEW-1001', $person->entryPermissions()->first()?->entryCode?->token);
         $this->assertTrue($person->gyms()->whereKey($gym->id)->exists());
         $this->get(route('person.list', ['locale' => 'en', 'section' => 'newcomers']))
@@ -124,7 +125,7 @@ class NewcomerSingleVisitSaleTest extends TestCase
         $url = route('membership_sale.single-visit.store', ['locale' => 'en', 'person' => $person->id]);
         $payload = [
             'sales_manager_id' => $seller->id, 'start_date' => now()->toDateString(),
-            'is_full_payment' => true, 'amount' => 100, 'payment_method_id' => $payment->id,
+            'is_full_payment' => true, 'amount' => 100, 'is_hdm' => true, 'payment_method_id' => $payment->id,
         ];
         $this->postJson($url, [...$payload, 'membership_plan_id' => $multiple->id])
             ->assertUnprocessable()->assertJsonValidationErrors('membership_plan_id');
@@ -153,13 +154,13 @@ class NewcomerSingleVisitSaleTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('people.data.0.id', $person->id)
                 ->etc());
-        $versionBeforeRegularSale = (int) $person->fresh()->version;
+        $versionBeforeRegularSale = (int) $person->gymLink($gym->id)->version;
 
         $this->postJson(route('membership_sale.store', ['locale' => 'en', 'person' => $person->id]), [
             ...$payload, 'membership_plan_id' => $regular->id,
         ])->assertCreated();
         $this->assertSame('visitor', $person->fresh()->type);
-        $this->assertGreaterThan($versionBeforeRegularSale, (int) $person->fresh()->version);
+        $this->assertGreaterThan($versionBeforeRegularSale, (int) $person->gymLink($gym->id)->version);
         $this->get(route('person.list', ['locale' => 'en', 'section' => 'newcomers']))
             ->assertInertia(fn (Assert $page) => $page->where('people.total', 0)->etc());
         $this->get(route('person.list', ['locale' => 'en', 'section' => 'clients']))

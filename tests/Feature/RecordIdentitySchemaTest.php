@@ -16,7 +16,7 @@ class RecordIdentitySchemaTest extends TestCase
     private const RECORD_TABLES = [
         'gyms', 'users', 'langs', 'countries', 'country_translations', 'companies',
         'company_translations', 'payment_methods', 'payment_method_translations',
-        'card_types', 'measurement_units', 'person_positions', 'people', 'documents',
+        'card_types', 'measurement_units', 'person_positions', 'people', 'gym_person', 'documents',
         'partners', 'person_biometrics', 'entry_codes', 'entry_permissions',
         'attendance_sheets', 'turnstiles', 'gym_working_day_times', 'gym_languages',
         'notifications', 'inventory_categories', 'inventory_category_translations',
@@ -38,7 +38,7 @@ class RecordIdentitySchemaTest extends TestCase
     ];
 
     private const IDENTITY_FREE_TABLES = [
-        'card_type_payment_method', 'discount_membership_plan', 'gym_person',
+        'card_type_payment_method', 'discount_membership_plan',
         'gym_schedule', 'membership_plan_schedules', 'model_has_permissions',
         'model_has_roles', 'role_has_permissions', 'permissions', 'roles',
         'cache', 'cache_locks', 'jobs', 'job_batches', 'failed_jobs',

@@ -21,7 +21,7 @@ class PersonAuditService
             action: 'person.created',
             snapshot: $this->snapshotFactory->make($person),
             message: "Person #{$person->id} created",
-            gymId: $person->gyms->first()?->id ?? auth()->user()?->gym_id,
+            gymId: auth()->user()?->gym_id,
         );
     }
 
@@ -38,7 +38,15 @@ class PersonAuditService
             oldSnapshot: $oldSnapshot,
             newSnapshot: $this->snapshotFactory->make($person),
             message: "Person #{$person->id} updated",
-            gymId: $person->gyms->first()?->id ?? auth()->user()?->gym_id,
+            gymId: auth()->user()?->gym_id,
+        );
+    }
+
+    public function afterDeleted(Person $person, array $oldSnapshot): void
+    {
+        $this->auditManager->deleted(
+            entity: $person, action: 'person.deleted', oldSnapshot: $oldSnapshot,
+            message: "Person #{$person->id} removed from gym", gymId: auth()->user()?->gym_id,
         );
     }
 }

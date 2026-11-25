@@ -6,7 +6,7 @@ use App\Models\Person;
 
 interface MobilePersonAuthInterface
 {
-    public function findActiveVisitorByEmail(string $email): ?Person;
+    public function findByPhone(string $phone, bool $lock = false): ?Person;
 
     public function updateFcmToken(Person $person, string $fcmToken): Person;
 }

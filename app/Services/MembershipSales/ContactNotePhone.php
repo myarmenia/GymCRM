@@ -16,7 +16,14 @@ class ContactNotePhone
         if (strlen($digits) === 8) {
             return '374'.$digits;
         }
+
         return $digits;
+    }
+
+    public static function isValidPersonPhone(string $phone): bool
+    {
+        return (bool) preg_match('/^[+0-9 ().-]+$/D', $phone)
+            && (bool) preg_match('/^374[0-9]{8}$/D', self::canonical($phone));
     }
 
     /** @return list<string> */

@@ -6,6 +6,7 @@ use App\Models\ContactNote;
 use App\Models\ContactProfile;
 use App\Models\Person;
 use App\Models\User;
+use App\Rules\PersonPhone;
 use App\Services\MembershipSales\ContactNoteOwnershipService;
 use App\Services\MembershipSales\ContactNotePhone;
 use App\Services\MembershipSales\ContactProfileService;
@@ -63,12 +64,12 @@ class ContactNoteController extends Controller
         }
 
         $contacts = $query->orderByDesc(ContactNote::query()->selectRaw('MAX(contact_notes.created_at)')
-                ->join('contact_profiles as member_profiles', 'member_profiles.id', '=', 'contact_notes.contact_profile_id')
-                ->whereColumn('member_profiles.group_uuid', 'contact_profiles.group_uuid')
-                ->whereColumn('member_profiles.gym_id', 'contact_profiles.gym_id')
-                ->whereColumn('member_profiles.user_id', 'contact_profiles.user_id'))
-                ->orderByDesc('contact_profiles.created_at')->orderByDesc('contact_profiles.id')
-                ->paginate(15)->withQueryString();
+            ->join('contact_profiles as member_profiles', 'member_profiles.id', '=', 'contact_notes.contact_profile_id')
+            ->whereColumn('member_profiles.group_uuid', 'contact_profiles.group_uuid')
+            ->whereColumn('member_profiles.gym_id', 'contact_profiles.gym_id')
+            ->whereColumn('member_profiles.user_id', 'contact_profiles.user_id'))
+            ->orderByDesc('contact_profiles.created_at')->orderByDesc('contact_profiles.id')
+            ->paginate(15)->withQueryString();
         $members = $contacts->getCollection()->flatMap(fn (ContactProfile $group) => $group->members);
         $phoneVariants = $members->flatMap(fn (ContactProfile $member) => ContactNotePhone::variants($member->phone_number))
             ->unique()->values()->all();
@@ -109,6 +110,7 @@ class ContactNoteController extends Controller
             ...$this->detailRules(),
         ]);
         $this->ownership->create($request->user(), $data['phone_number'], trim($data['note']), $data);
+
         return redirect()->route('contact-notes.index', ['locale' => app()->getLocale()]);
     }
 
@@ -121,6 +123,7 @@ class ContactNoteController extends Controller
             ...$this->detailRules(),
         ]);
         $this->profiles->addRelated($request->user(), $contactProfile, $data);
+
         return back();
     }
 
@@ -132,12 +135,14 @@ class ContactNoteController extends Controller
             'relationship' => ['nullable', 'string', 'max:255'],
         ]);
         $this->profiles->linkExisting($request->user(), $contactProfile, $data);
+
         return back();
     }
 
     public function updateProfile(Request $request, string $locale, ContactProfile $contactProfile)
     {
         $this->profiles->update($request->user(), $contactProfile, $request->validate($this->detailRules()));
+
         return back();
     }
 
@@ -147,6 +152,7 @@ class ContactNoteController extends Controller
             && (int) $contactProfile->gym_id === (int) $request->user()->gym_id, 403);
         $data = $request->validate(['note' => ['required', 'string', 'max:10000']]);
         $this->ownership->addToProfile($request->user(), $contactProfile, trim($data['note']));
+
         return back();
     }
 
@@ -161,21 +167,21 @@ class ContactNoteController extends Controller
         } else {
             $this->ownership->create($request->user(), $contactNote->phone_number, trim($data['note']));
         }
+
         return back();
     }
 
     public function lookup(Request $request): JsonResponse
     {
         abort_unless($request->user()->hasAnyRole(['manager', 'sales_manager', 'super_admin', 'admin']), 403);
-        $data = $request->validate(['phone' => ['required', 'string', 'max:50']]);
+        $data = $request->validate(['phone' => ['required', 'string', 'max:50', new PersonPhone]]);
         $gymId = (int) $request->user()->gym_id;
         $phone = $data['phone'];
         $profile = $this->profiles->forPhone($gymId, $phone);
         $variants = ContactNotePhone::variants($phone);
         $person = $variants === [] ? null : Person::query()
-            ->whereHas('gyms', fn ($query) => $query->where('gyms.id', $gymId))
             ->whereIn(DB::raw(ContactNotePhone::normalizedSql('phone')), $variants)
-            ->first(['id', 'phone']);
+            ->first();
 
         return response()->json([
             'profile' => $profile ? [
@@ -183,6 +189,8 @@ class ContactNoteController extends Controller
                 'birth_date' => $profile->birth_date?->format('Y-m-d'),
             ] : null,
             'existing_person_id' => $person?->id,
+            'already_linked' => $person?->gyms()->where('gyms.id', $gymId)->exists() ?? false,
+            'person' => $person?->only(['name', 'surname', 'phone', 'email', 'birth_date', 'gender', 'passport_series', 'passport_issued_by', 'passport_issued_at', 'address']),
         ]);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Services\People;
 
 use App\Models\AttendanceSheet;
+use App\Models\GymPerson;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\TrainerCommission;
@@ -19,8 +20,7 @@ class PersonVisitService
 
     public function __construct(
         private readonly TrainerMonthlySalaryService $trainerMonthlySalaryService,
-    ) {
-    }
+    ) {}
 
     public function pageData(int $personId): array
     {
@@ -37,7 +37,7 @@ class PersonVisitService
             ])
             ->where('person_id', $person->id)
             ->whereIn('status', ['waiting', 'active', 'expired'])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->orderByDesc('id')
@@ -54,7 +54,7 @@ class PersonVisitService
             ->with('personMemberships.membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
@@ -66,7 +66,7 @@ class PersonVisitService
             ->with('personMemberships.membershipPlan.translations')
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
@@ -86,8 +86,7 @@ class PersonVisitService
         string $action,
         ?int $membershipId,
         string $manualDateTime,
-    ): AttendanceSheet
-    {
+    ): AttendanceSheet {
         $user = Auth::user();
         $person = $this->personQueryForUser($user)->findOrFail($personId);
 
@@ -112,6 +111,11 @@ class PersonVisitService
                 }
 
                 $membership = $this->entryMembership($person, $user, $membershipId, $now);
+                $gymLink = GymPerson::where('person_id', $person->id)->where('gym_id', $membership->gym_id)->lockForUpdate()->first();
+                if (! $gymLink || $gymLink->is_blocked) {
+                    throw ValidationException::withMessages(['membership_id' => 'This customer cannot enter this gym.']);
+                }
+                $person->forGym((int) $membership->gym_id);
 
                 if ($this->personAlreadyEnteredOnSelectedDate($person, $membership, $now)) {
                     throw ValidationException::withMessages([
@@ -145,7 +149,7 @@ class PersonVisitService
         $lastAttendanceBeforeOrAt = $this->lastAttendanceBeforeOrAt($person, $now);
         $lastEntry = $this->lastEntryAttendance($person, $now);
 
-        if (!$lastEntry) {
+        if (! $lastEntry) {
             throw ValidationException::withMessages([
                 'action' => 'Exit cannot be added because no previous entry was found.',
             ]);
@@ -176,7 +180,7 @@ class PersonVisitService
 
     protected function personQueryForUser(User $user)
     {
-        return Person::query()->when(!$user->hasRole('owner'), function ($query) use ($user) {
+        return Person::query()->when(! $user->hasRole('owner'), function ($query) use ($user) {
             $query->whereHas('gyms', function ($gymQuery) use ($user) {
                 $gymQuery->where('gyms.id', $user->gym_id);
             });
@@ -185,7 +189,7 @@ class PersonVisitService
 
     protected function entryMembership(Person $person, User $user, ?int $membershipId, Carbon $now): PersonMembership
     {
-        if (!$membershipId) {
+        if (! $membershipId) {
             throw ValidationException::withMessages([
                 'membership_id' => 'Membership selection is required for manual entry.',
             ]);
@@ -208,20 +212,20 @@ class PersonVisitService
                 fn ($query) => $query->where('person_id', $person->id),
             )
             ->whereIn('status', ['waiting', 'active', 'expired'])
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->lockForUpdate()
             ->first();
 
-        if (!$membership) {
+        if (! $membership) {
             throw ValidationException::withMessages([
                 'membership_id' => 'Selected membership is not available for this person.',
             ]);
         }
 
         if ($membership->person_id !== $person->id
-            && !app(GuestEntryService::class)->isLinked($person, $membership)) {
+            && ! app(GuestEntryService::class)->isLinked($person, $membership)) {
             throw ValidationException::withMessages([
                 'membership_id' => 'This guest is not linked to the selected membership.',
             ]);
@@ -247,7 +251,7 @@ class PersonVisitService
 
     protected function activateWaitingMembership(PersonMembership $membership, Carbon $now): PersonMembership
     {
-        if (!in_array($membership->status, ['waiting', 'expired'], true)) {
+        if (! in_array($membership->status, ['waiting', 'expired'], true)) {
             return $membership;
         }
 
@@ -308,8 +312,7 @@ class PersonVisitService
         Person $person,
         PersonMembership $membership,
         Carbon $selectedEntryAt,
-    ): bool
-    {
+    ): bool {
         $dayStart = $selectedEntryAt->copy()->timezone(self::LOCAL_TIMEZONE)->startOfDay();
         $dayEnd = $dayStart->copy()->addDay();
 
@@ -330,7 +333,7 @@ class PersonVisitService
         return AttendanceSheet::query()
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
@@ -361,7 +364,7 @@ class PersonVisitService
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->where('date', '<=', $beforeOrAt)
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
@@ -382,12 +385,11 @@ class PersonVisitService
             ->when($beforeOrAt, function ($query) use ($beforeOrAt) {
                 $query->where('date', '<=', $beforeOrAt);
             })
-            ->when(!$user->hasRole('owner'), function ($query) use ($user) {
+            ->when(! $user->hasRole('owner'), function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->latest('date')
             ->latest('id')
             ->first();
     }
-
 }

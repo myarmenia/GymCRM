@@ -68,7 +68,9 @@ class Gym extends Model
 
     public function people()
     {
-        return $this->belongsToMany(Person::class, 'gym_person');
+        return $this->belongsToMany(Person::class, 'gym_person')->using(GymPerson::class)->withTimestamps()
+            ->withPivot(['id', 'uuid', 'version', 'type', 'is_blocked', 'blocked_by', 'blocked_at', 'deleted_at'])
+            ->wherePivotNull('deleted_at');
     }
 
     public function membershipSales()

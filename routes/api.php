@@ -1,20 +1,18 @@
 <?php
 
-use App\Http\Controllers\Api\Turnstile\EntryExitSystemController;
 use App\Http\Controllers\Api\Mobile\MobileAuthController;
-use App\Http\Controllers\Api\Mobile\MobileProfileController;
 use App\Http\Controllers\Api\Mobile\MobileGymController;
-use App\Http\Controllers\Api\Mobile\MobileScheduleController;
 use App\Http\Controllers\Api\Mobile\MobileMembershipController;
 use App\Http\Controllers\Api\Mobile\MobileNotificationController;
+use App\Http\Controllers\Api\Mobile\MobileProfileController;
+use App\Http\Controllers\Api\Mobile\MobileScheduleController;
+use App\Http\Controllers\Api\Turnstile\EntryExitSystemController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
-
-
 
 // ======================== turnstile Турникет ======================================
 Route::group(['prefix' => 'turnstile'], function ($router) {
@@ -27,7 +25,10 @@ Route::prefix('mobile/v1')->group(function () {
     Route::post('auth/login', [MobileAuthController::class, 'login'])
         ->middleware('throttle:6,1');
 
+    Route::post('auth/register', [MobileAuthController::class, 'register'])->middleware('throttle:6,1');
+
     Route::middleware(['auth:sanctum', 'mobile.person'])->group(function () {
+        Route::put('me/password', [MobileAuthController::class, 'changePassword'])->middleware('throttle:6,1');
         Route::post('auth/logout', [MobileAuthController::class, 'logout']);
         Route::get('me', [MobileAuthController::class, 'me']);
         Route::put('me', [MobileProfileController::class, 'update']);

@@ -78,7 +78,7 @@ class PersonBlockTest extends TestCase
             'birth_date' => '1990-01-01',
             'is_blocked' => true,
         ]);
-        $person->gyms()->attach($gym->id);
+        $person->gyms()->attach($gym->id, ['is_blocked' => true]);
         $entryCode = EntryCode::query()->create([
             'gym_id' => $gym->id,
             'token' => 'INACTIVE-1001',

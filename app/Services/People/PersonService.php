@@ -6,10 +6,12 @@ use App\Interfaces\People\PersonInterface;
 use App\Models\AttendanceSheet;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
+use App\Models\GymPerson;
 use App\Models\Person;
 use App\Services\Audit\PersonAuditService;
 use App\Services\EntryCodes\EntryCodeService;
 use App\Services\FileUploadService;
+use App\Services\MembershipSales\ContactNotePhone;
 use App\Services\Reminders\ReminderService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
@@ -36,19 +38,36 @@ class PersonService
 
     public function getById($id)
     {
-        return $this->personRepository->findOrFail((int) $id, ['gyms']);
+        $person = $this->personRepository->findOrFail((int) $id, ['gyms']);
+        $user = Auth::user();
+        if ($user && ! $user->hasRole('owner')) {
+            abort_unless($person->gyms->contains('id', $user->gym_id), 403);
+            $person->setRelation('gyms', $person->gyms->where('id', $user->gym_id)->values());
+            $person->forGym((int) $user->gym_id);
+        }
+
+        return $person;
     }
 
     public function profileData(int $id): array
     {
         $user = Auth::user();
 
+        $profilePerson = Person::with('gyms')->when(! $user->hasRole('owner'), fn ($query) => $query->whereHas('gyms', fn ($gyms) => $gyms->where('gyms.id', $user->gym_id)))->findOrFail($id);
+        $gymId = $user->hasRole('owner')
+            ? (int) request()->query('gym_id', $profilePerson->gyms->first()?->id)
+            : (int) $user->gym_id;
+        abort_unless($profilePerson->gyms->contains('id', $gymId), 403);
+        if (! $user->hasRole('owner') && request()->filled('gym_id')) {
+            abort_unless((int) request()->query('gym_id') === $gymId, 403);
+        }
         $person = Person::query()
             ->with([
-                'gyms',
+                'gyms' => fn ($query) => $query->where('gyms.id', $gymId),
+                'entryPermissions' => fn ($query) => $query->whereHas('entryCode', fn ($code) => $code->where('gym_id', $gymId)),
                 'entryPermissions.entryCode.gym:id,name',
-                'memberships' => function ($query) {
-                    $query->latest('id');
+                'memberships' => function ($query) use ($gymId) {
+                    $query->where('gym_id', $gymId)->latest('id');
                 },
                 'memberships.membershipPlan.translations',
                 'memberships.trainer',
@@ -58,8 +77,8 @@ class PersonService
                 'memberships.membershipSale.payments.paymentMethod.translations',
                 'memberships.membershipSale.payments.cardType',
                 'memberships.membershipSale.discounts.discount.translations',
-                'membershipSales' => function ($query) {
-                    $query->latest('sold_at')->latest('id');
+                'membershipSales' => function ($query) use ($gymId) {
+                    $query->where('gym_id', $gymId)->latest('sold_at')->latest('id');
                 },
                 'membershipSales.membershipPlan.translations',
                 'membershipSales.payments.paymentMethod.translations',
@@ -71,7 +90,7 @@ class PersonService
                     $q->where('gyms.id', $user->gym_id);
                 });
             })
-            ->findOrFail($id);
+            ->findOrFail($id)->forGym($gymId);
 
         $entryPermission = $person->entryPermissions
             ->sortByDesc('id')
@@ -82,12 +101,18 @@ class PersonService
             ->where('relation_type', Person::class)
             ->where('relation_id', $person->id)
             ->where('direction', 'entry')
-            ->when(! $user->hasRole('owner'), fn ($query) => $query->where('gym_id', $user->gym_id));
+            ->where('gym_id', $gymId);
         $monthStart = now('Asia/Yerevan')->startOfMonth();
         $lastEntry = (clone $entries)->orderByDesc('date')->orderByDesc('id')->first(['date']);
 
         return [
             'person' => $person,
+            'profileGyms' => $user->hasRole('owner') ? $profilePerson->gyms->map->only(['id', 'name'])->values() : [],
+            'selectedGymId' => $gymId,
+            'blockInfo' => [
+                'blocked_at' => $person->gymLink($gymId)?->blocked_at?->toIso8601String(),
+                'blocked_by' => $person->gymLink($gymId)?->blockedBy?->only(['id', 'name', 'surname']),
+            ],
             'entryCode' => $entryPermission?->entryCode,
             'visitStats' => [
                 'total' => (clone $entries)->count(),
@@ -104,31 +129,42 @@ class PersonService
 
     public function store($data)
     {
-        $dataStore = $this->dataToArray($data);
-        $uploadedImage = $data->image instanceof UploadedFile
-            ? ($dataStore['image'] ?? null)
-            : null;
-
+        $phone = ContactNotePhone::canonical((string) $data->phone);
+        if (! ContactNotePhone::isValidPersonPhone((string) $data->phone)) {
+            throw ValidationException::withMessages(['phone' => __('validation.regex', ['attribute' => 'phone'])]);
+        }
+        $gymId = (int) Auth::user()?->gym_id;
+        abort_unless($gymId, 403);
+        $uploadedImage = null;
         try {
-            return DB::transaction(function () use ($data, $dataStore) {
+            return DB::transaction(function () use ($data, $phone, $gymId, &$uploadedImage) {
+                $person = Person::query()->where('phone', $phone)->lockForUpdate()->first();
+                if ($person?->gyms()->where('gyms.id', $gymId)->exists()) {
+                    throw ValidationException::withMessages(['phone' => __('backend_messages.person_with_this_phone_number_already_exists')]);
+                }
                 $entryCode = $this->resolveEntryCode($data);
-                $person = $this->personRepository->create($dataStore);
-
-                $this->syncGyms($person, assignManagerGym: true);
+                if (! $person) {
+                    $attributes = $this->dataToArray($data);
+                    $uploadedImage = $data->image instanceof UploadedFile ? ($attributes['image'] ?? null) : null;
+                    $attributes['phone'] = $phone;
+                    $person = $this->personRepository->create($attributes);
+                }
+                $link = GymPerson::withTrashed()->firstOrNew(['person_id' => $person->id, 'gym_id' => $gymId]);
+                $link->fill(['type' => $data->type, 'deleted_at' => null]);
+                $link->save();
                 EntryPermission::query()->create([
-                    'entry_code_id' => $entryCode->id,
-                    'relation_type' => Person::class,
-                    'relation_id' => $person->id,
-                    'status' => true,
+                    'entry_code_id' => $entryCode->id, 'relation_type' => Person::class,
+                    'relation_id' => $person->id, 'status' => true,
                 ]);
                 $entryCode->update(['activation' => true]);
-                $this->personAuditService->afterCreated($person);
+                // A permission belongs to this link's aggregate, not to the shared identity.
+                $link->increment('version');
+                $this->personAuditService->afterCreated($person->forGym($gymId));
 
                 return $person;
             });
         } catch (Throwable $exception) {
             $this->deleteUploadedImage($uploadedImage);
-
             throw $exception;
         }
     }
@@ -162,54 +198,36 @@ class PersonService
 
     public function update($id, $data)
     {
-        $existing = $this->personRepository->findOrFail((int) $id, ['gyms']);
-        $dataUpdate = $this->dataToArray($data, $existing);
-        $uploadedImage = $data->image instanceof UploadedFile
-            ? ($dataUpdate['image'] ?? null)
-            : null;
+        $gymId = (int) Auth::user()?->gym_id;
+        abort_unless($gymId, 403);
 
-        try {
-            [$person, $oldImage] = DB::transaction(function () use ($id, $data, $dataUpdate) {
-                /** @var Person $person */
-                $person = Person::query()
-                    ->with('gyms')
-                    ->lockForUpdate()
-                    ->findOrFail((int) $id);
-                $startingVersion = (int) $person->version;
-                $oldImage = $person->image;
+        return DB::transaction(function () use ($id, $data, $gymId) {
+            $person = Person::query()->findOrFail((int) $id)->forGym($gymId);
+            $link = GymPerson::query()->where('person_id', $person->id)->where('gym_id', $gymId)->lockForUpdate()->firstOrFail();
+            $oldSnapshot = $this->personAuditService->snapshot($person);
+            $link->type = $data->type;
+            $permissionChanged = $this->syncEntryPermission($person, $data->entry_code_id === null ? null : (int) $data->entry_code_id);
+            if ($link->isDirty() || $permissionChanged) {
+                $link->version = (int) $link->version + 1;
+                $link->save();
+            }
+            $person->unsetRelation('gyms');
+            $this->personAuditService->afterChanged($person, $oldSnapshot);
 
-                $person->fill($dataUpdate);
-                $sharedRootChanged = array_diff(
-                    array_keys($person->getDirty()),
-                    ['image', 'mobile_deleted', 'fcm_token', 'version', 'updated_at'],
-                ) !== [];
-                $gymChanged = $this->syncGyms($person);
-                $permissionChanged = $this->syncEntryPermission(
-                    $person,
-                    $data->entry_code_id === null ? null : (int) $data->entry_code_id,
-                );
+            return $person;
+        });
+    }
 
-                if ($sharedRootChanged || $gymChanged || $permissionChanged) {
-                    $person->version = $startingVersion + 1;
-                }
-
-                if ($person->isDirty()) {
-                    $person->save();
-                }
-
-                return [$person, $oldImage];
-            });
-        } catch (Throwable $exception) {
-            $this->deleteUploadedImage($uploadedImage);
-
-            throw $exception;
-        }
-
-        if ($uploadedImage !== null && $oldImage !== $uploadedImage) {
-            $this->deleteUploadedImage($oldImage);
-        }
-
-        return $person;
+    public function block(int $id): void
+    {
+        $gymId = (int) Auth::user()?->gym_id;
+        abort_unless($gymId, 403);
+        DB::transaction(function () use ($id, $gymId): void {
+            $link = GymPerson::query()->where('person_id', $id)->where('gym_id', $gymId)->lockForUpdate()->firstOrFail();
+            if (! $link->is_blocked) {
+                $link->update(['is_blocked' => true, 'blocked_by' => Auth::id(), 'blocked_at' => now()]);
+            }
+        });
     }
 
     protected function dataToArray($data, ?Person $person = null)
@@ -239,7 +257,7 @@ class PersonService
         $entryCode = EntryCode::query()
             ->where('id', $entryCodeId)
             ->where('status', true)
-            ->when($user->gym_id && ! $user->hasRole('manager'), function ($query) use ($user) {
+            ->when($user->gym_id, function ($query) use ($user) {
                 $query->where('gym_id', $user->gym_id);
             })
             ->lockForUpdate()
@@ -277,32 +295,10 @@ class PersonService
         return $entryCode;
     }
 
-    /**
-     * Automatically assign gym(s) based on the authenticated user's role.
-     * - sales_manager, super_admin, and admin: force person to belong to their own gym (user->gym_id)
-     * - manager: assign their gym only when creating a new person
-     * - other roles: do nothing (leave current gyms unchanged)
-     */
-    protected function syncGyms(Person $person, bool $assignManagerGym = false): bool
-    {
-        $user = Auth::user();
-
-        if (
-            ($assignManagerGym && $user->hasRole('manager')
-                || $user->hasAnyRole(['sales_manager', 'super_admin', 'admin']))
-            && $user->gym_id
-        ) {
-            $changes = $person->gyms()->syncWithoutDetaching([(int) $user->gym_id]);
-
-            return $changes['attached'] !== [] || $changes['updated'] !== [];
-        }
-
-        return false;
-    }
-
     protected function syncEntryPermission(Person $person, ?int $entryCodeId): bool
     {
         $permissions = $person->entryPermissions()
+            ->whereHas('entryCode', fn ($query) => $query->where('gym_id', Auth::user()->gym_id))
             ->whereNull('deleted_at')
             ->get();
         if (
@@ -322,7 +318,7 @@ class PersonService
             ->map(fn (mixed $id): int => (int) $id)
             ->all();
 
-        $person->entryPermissions()->delete();
+        $person->entryPermissions()->whereHas('entryCode', fn ($query) => $query->where('gym_id', Auth::user()->gym_id))->delete();
         if ($entryCode !== null) {
             EntryPermission::query()->create([
                 'entry_code_id' => $entryCode->id,

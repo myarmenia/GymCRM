@@ -18,9 +18,9 @@ use App\Models\PersonMembership;
 use App\Models\Role;
 use App\Models\User;
 use App\Repositories\Turnstile\TurnstileRepository;
-use App\Services\People\PersonVisitService;
-use App\Services\People\GuestEntryService;
 use App\Services\MembershipSales\MembershipSaleGuestService;
+use App\Services\People\GuestEntryService;
+use App\Services\People\PersonVisitService;
 use App\Services\Turnstile\EntryExitSystemService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,6 +31,18 @@ use Tests\TestCase;
 class GuestEntryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Carbon::setTestNow(Carbon::parse('2026-09-28 12:00:00', 'Asia/Yerevan'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     public function test_ees_guest_uses_hosts_visits_once_per_day_even_if_host_entered(): void
     {
@@ -110,7 +122,7 @@ class GuestEntryTest extends TestCase
     public function test_promoted_visitor_uses_owned_membership_instead_of_old_guest_link(): void
     {
         [$gym, $host, $guest, $membership] = $this->fixture(2);
-        $guest->update(['type' => 'visitor']);
+        $guest->gymLink($gym->id)->update(['type' => 'visitor']);
         $unlinkedHostMembership = $membership->replicate(['uuid']);
         $unlinkedHostMembership->save();
         $guestOwnedMembership = $membership->replicate(['uuid']);
@@ -143,7 +155,7 @@ class GuestEntryTest extends TestCase
     public function test_promoted_visitor_turnstile_does_not_fall_back_to_old_guest_link(): void
     {
         [$gym, $host, $guest, $membership, $code] = $this->fixture(1);
-        $guest->update(['type' => 'visitor']);
+        $guest->gymLink($gym->id)->update(['type' => 'visitor']);
         $ownedMembership = $membership->replicate(['uuid']);
         $ownedMembership->person_id = $guest->id;
         $ownedMembership->save();
@@ -164,7 +176,7 @@ class GuestEntryTest extends TestCase
     public function test_manual_entry_allows_each_membership_once_on_the_same_day(): void
     {
         [$gym, $host, $person, $hostMembership] = $this->fixture(2);
-        $person->update(['type' => 'visitor']);
+        $person->gymLink($gym->id)->update(['type' => 'visitor']);
         $firstMembership = $hostMembership->replicate(['uuid']);
         $firstMembership->person_id = $person->id;
         $firstMembership->save();
@@ -295,7 +307,7 @@ class GuestEntryTest extends TestCase
             'entry_code_id' => $code->id,
         ]);
 
-        $this->assertNull(Person::query()->where('phone', '+37499333333')->sole()->email);
+        $this->assertNull(Person::query()->where('phone', '37499333333')->sole()->email);
     }
 
     public function test_adding_guest_does_not_update_guest_entry_counters(): void

@@ -85,7 +85,7 @@ class PersonProfileContactNotesTest extends TestCase
         $note = ContactNote::query()->sole();
         $this->assertSame($seller->id, $note->user_id);
         $this->assertSame($manager->id, $note->writer_id);
-        $this->assertSame('+37499123456', $note->phone_number);
+        $this->assertSame('37499123456', $note->phone_number);
         $this->assertSame('Client', $note->profile->name);
         $this->get(route('contact-notes.index', ['locale' => 'en']))
             ->assertInertia(fn (Assert $page) => $page
