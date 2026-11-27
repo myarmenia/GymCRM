@@ -25,6 +25,7 @@ class StoreHdmConfigRequest extends FormRequest
             ],
             'ip' => ['required', 'ip'],
             'port' => ['required', 'integer', 'between:1,65535'],
+            'dep' => ['required', 'integer', 'between:1,4294967295'],
             'password' => ['required', 'string', 'max:255'],
             'status' => ['required', 'boolean'],
         ];

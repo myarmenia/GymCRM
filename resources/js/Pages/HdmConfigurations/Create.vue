@@ -20,6 +20,7 @@ const form = useForm({
     name: '',
     ip: '',
     port: 6000,
+    dep: 1,
     password: '',
     status: true,
 });
@@ -63,6 +64,11 @@ const submit = () => {
                         <label class="form-label" for="port">{{ trans('page.fields.port') }} *</label>
                         <input id="port" v-model="form.port" type="number" min="1" max="65535" class="form-control" />
                         <InputError class="mt-1" :message="form.errors.port" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="dep">{{ trans('page.fields.dep') }} *</label>
+                        <input id="dep" v-model="form.dep" type="number" min="1" max="4294967295" step="1" required class="form-control" />
+                        <InputError class="mt-1" :message="form.errors.dep" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="ip">{{ trans('page.fields.ip') }} *</label>

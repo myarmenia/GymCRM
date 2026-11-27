@@ -15,6 +15,10 @@ class HdmConfig extends Model
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'dep' => 1,
+    ];
+
     protected $hidden = [
         'password',
     ];
@@ -24,6 +28,7 @@ class HdmConfig extends Model
         return [
             'status' => 'boolean',
             'port' => 'integer',
+            'dep' => 'integer',
             'version' => 'integer',
         ];
     }

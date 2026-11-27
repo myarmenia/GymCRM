@@ -8,7 +8,7 @@
     "cashiers_hint": "Այս սարքի հետ աշխատող գանձապահների ցանկը",
     "add_cashier_title": "Ավելացնել գանձապահ",
     "edit_cashier_title": "Խմբագրել գանձապահին",
-    "fields": { "id": "ID", "gym": "Մարզադահլիճ", "name": "Անվանում", "ip": "IP հասցե", "port": "Port", "password": "Սարքի գաղտնաբառ", "status": "Կարգավիճակ", "active": "Ակտիվ", "cashiers": "Գանձապահներ", "cashier_name": "Գանձապահի անուն", "login": "Login", "pin": "PIN", "user": "Օգտատեր", "last_login": "Վերջին մուտք", "actions": "Գործողություններ" },
+    "fields": { "id": "ID", "gym": "Մարզադահլիճ", "name": "Անվանում", "ip": "IP հասցե", "port": "Port", "dep": "Բաժնի համարը (dep)", "password": "Սարքի գաղտնաբառ", "status": "Կարգավիճակ", "active": "Ակտիվ", "cashiers": "Գանձապահներ", "cashier_name": "Գանձապահի անուն", "login": "Login", "pin": "PIN", "user": "Օգտատեր", "last_login": "Վերջին մուտք", "actions": "Գործողություններ" },
     "placeholders": { "select_gym": "Ընտրեք մարզադահլիճը", "select_user": "Ընտրեք օգտատիրոջը", "name": "Օրինակ՝ Reception կամ Bar", "keep_password": "Դատարկ թողեք՝ ընթացիկ գաղտնաբառը պահպանելու համար", "keep_pin": "Դատարկ թողեք՝ ընթացիկ PIN-ը պահպանելու համար" },
     "actions": { "add_config": "Ավելացնել կոնֆիգուրացիա", "add_cashier": "Ավելացնել գանձապահ", "save": "Պահպանել", "save_changes": "Պահպանել փոփոխությունները", "cancel": "Չեղարկել", "activate": "Ակտիվացնել", "deactivate": "Պասիվացնել", "edit": "Խմբագրել", "delete": "Ջնջել" },
     "status": { "active": "Ակտիվ", "inactive": "Պասիվ" },
