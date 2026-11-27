@@ -190,7 +190,8 @@ class MembershipPlanService
             }
         }
 
-        $removed = $existing->except(array_values(array_unique($desiredTrainerIds)));
+        // Eloquent's except() uses pivot primary keys, but these keys are trainer IDs.
+        $removed = $existing->toBase()->except(array_values(array_unique($desiredTrainerIds)));
         if ($removed->isNotEmpty()) {
             $removed->each->delete();
             $changed = true;

@@ -1,4 +1,22 @@
 {
+    "daily_cashbox": {
+        "title": "Իմ օրվա դրամարկղը",
+        "description": "Իմ այսօրվա վաճառքներն ու ընդունած վճարումները",
+        "timezone": "Երևանի ժամով",
+        "received_total": "Այսօր ստացված ընդհանուր գումար",
+        "payments_count": "Ընդունած վճարումներ",
+        "today_sales_count": "Իմ այսօրվա վաճառքները",
+        "entries": "Այսօրվա գործարքները",
+        "time": "Ժամ",
+        "customer": "Հաճախորդ",
+        "membership": "Աբոնեմենտ",
+        "sale": "Վաճառք",
+        "payment_method": "Վճարման ձև",
+        "received_amount": "Ստացված գումար",
+        "previous_sale": "Նախկինում վաճառված",
+        "today_sale": "Այսօր վաճառված",
+        "empty": "Այսօր դեռ վաճառք կամ ընդունած վճարում չկա։"
+    },
     "trainer_freeze": {
         "freeze_trainer": "Սառեցնել մարզչին",
         "start_date": "Սառեցման սկիզբ",
