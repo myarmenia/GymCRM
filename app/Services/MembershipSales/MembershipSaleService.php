@@ -17,6 +17,7 @@ use App\Interfaces\TrainerCommissions\TrainerCommissionInterface;
 use App\Models\Discount;
 use App\Models\Guest;
 use App\Models\Gym;
+use App\Models\GymSetting;
 use App\Models\MembershipPlan;
 use App\Models\MembershipPlanPayment;
 use App\Models\MembershipSale;
@@ -76,6 +77,7 @@ class MembershipSaleService
             ->with([
                 'person',
                 'gym',
+                'gym.setting',
                 'membershipPlan.translations',
                 'membershipPlan.trainers',
                 'personMemberships.trainer',
@@ -859,11 +861,19 @@ class MembershipSaleService
                 : null;
 
             $startDate = Carbon::parse($data['start_date'])->startOfDay();
+            $activationStartMode = GymSetting::query()->where('gym_id', $gymId)
+                ->value('membership_start_mode') === GymSetting::FIRST_ENTRY
+                && in_array($membershipPlan->duration_type, ['day', 'month', 'year', 'visit'], true)
+                && (int) $membershipPlan->duration_value > 0
+                    ? GymSetting::FIRST_ENTRY : GymSetting::SALE_DATE;
             $previousMatchingMembership = $singleVisitForNewcomer
                 ? null
                 : $this->previousMatchingMembershipForSale($person, $membershipPlan);
-            $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
-            $endDate = $this->resolveEndDate($membershipPlan, $startDate, null);
+            if ($activationStartMode === GymSetting::SALE_DATE) {
+                $this->ensureMembershipStartDateIsAllowed($previousMatchingMembership, $startDate);
+            }
+            $endDate = $activationStartMode === GymSetting::FIRST_ENTRY
+                ? null : $this->resolveEndDate($membershipPlan, $startDate, null);
 
             $discounts = $this->getMembershipAttachedDiscounts($membershipPlan, $data['membership_discount_ids'] ?? []);
             $totalPrice = (float) $membershipPlan->price;
@@ -907,7 +917,7 @@ class MembershipSaleService
                     'membership_plan_id' => $membershipPlan->id,
                     'trainer_id' => $data['trainer_id'] ?? null,
                     'status' => 'waiting',
-                    'start_date' => $startDate->toDateString(),
+                    'start_date' => $activationStartMode === GymSetting::FIRST_ENTRY ? null : $startDate->toDateString(),
                     'end_date' => $endDate?->toDateString(),
                     'valid_at' => $endDate?->toDateString(),
                     'visits_used' => 0,
@@ -918,6 +928,7 @@ class MembershipSaleService
                     'guest_left' => $guestLeft,
                     'next_membership_id' => null,
                     'activated_at' => null,
+                    'activation_start_mode' => $activationStartMode,
                     'expired_at' => null,
                 ])
             );
@@ -1341,20 +1352,7 @@ class MembershipSaleService
             return Carbon::parse($requestEndDate)->startOfDay();
         }
 
-        if ($plan->duration_type === 'period') {
-            return $plan->end_date ? Carbon::parse($plan->end_date)->startOfDay() : null;
-        }
-
-        if (! $plan->duration_value) {
-            return null;
-        }
-
-        return match ($plan->duration_type) {
-            'day' => $startDate->copy()->addDays((int) $plan->duration_value)->subDay(),
-            'month', 'visit' => $startDate->copy()->addMonthsNoOverflow((int) $plan->duration_value)->subDay(),
-            'year' => $startDate->copy()->addYearsNoOverflow((int) $plan->duration_value)->subDay(),
-            default => null,
-        };
+        return app(MembershipDateService::class)->endDate($plan, $startDate);
     }
 
     protected function getMembershipAttachedDiscounts(MembershipPlan $membershipPlan, array $discountIds)

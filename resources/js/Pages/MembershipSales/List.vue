@@ -224,6 +224,10 @@ const isActiveGuestMembership = sale => {
 const isFreezableMembership = sale => {
     const membership = sale.person_memberships?.[0]
 
+    if (sale.gym?.setting?.membership_start_mode === 'first_entry' && membership?.status !== 'active') {
+        return false
+    }
+
     if (!membership || !['waiting', 'active', 'frozen', 'trainer_frozen'].includes(membership.status)) {
         return false
     }

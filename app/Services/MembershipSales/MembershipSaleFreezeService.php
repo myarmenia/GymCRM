@@ -4,6 +4,7 @@ namespace App\Services\MembershipSales;
 
 use App\Interfaces\MembershipSales\MembershipSaleInterface;
 use App\Models\MembershipSale;
+use App\Models\GymSetting;
 use App\Models\PersonMembership;
 use App\Models\PersonMembershipFreeze;
 use App\Services\Audit\MembershipSaleAuditService;
@@ -44,6 +45,7 @@ class MembershipSaleFreezeService
         return [
             'membershipSale' => $membershipSale,
             'personMembership' => $personMembership,
+            'membershipStartMode' => $this->membershipStartModeForGym((int) $personMembership->gym_id),
             'freezes' => $personMembership->freezes
                 ->map(fn (PersonMembershipFreeze $freeze): array => [
                     ...$freeze->toArray(),
@@ -282,7 +284,7 @@ class MembershipSaleFreezeService
     {
         return $membershipSale
             ->personMemberships()
-            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
+            ->whereIn('status', $this->freezeEligibleStatusesForGym((int) $membershipSale->gym_id))
             ->where(function ($query) {
                 $query->whereNull('valid_at')
                     ->orWhereDate('valid_at', '>=', today());
@@ -294,7 +296,7 @@ class MembershipSaleFreezeService
     {
         return $membershipSale
             ->personMemberships()
-            ->whereIn('status', ['waiting', 'active', 'frozen', 'trainer_frozen'])
+            ->whereIn('status', $this->freezeEligibleStatusesForGym((int) $membershipSale->gym_id))
             ->where(function ($query) {
                 $query->whereNull('valid_at')
                     ->orWhereDate('valid_at', '>=', today());
@@ -306,7 +308,7 @@ class MembershipSaleFreezeService
     {
         $today = today();
 
-        if (! in_array($personMembership->status, ['waiting', 'active', 'frozen', 'trainer_frozen'], true)) {
+        if (! in_array($personMembership->status, $this->freezeEligibleStatusesForGym((int) $personMembership->gym_id), true)) {
             return false;
         }
 
@@ -315,6 +317,19 @@ class MembershipSaleFreezeService
         }
 
         return true;
+    }
+
+    protected function freezeEligibleStatusesForGym(int $gymId): array
+    {
+        return $this->membershipStartModeForGym($gymId) === GymSetting::FIRST_ENTRY
+            ? ['active']
+            : ['waiting', 'active', 'frozen', 'trainer_frozen'];
+    }
+
+    protected function membershipStartModeForGym(int $gymId): string
+    {
+        return GymSetting::query()->where('gym_id', $gymId)->value('membership_start_mode')
+            ?? GymSetting::SALE_DATE;
     }
 
     protected function freezePeriodOverlaps(

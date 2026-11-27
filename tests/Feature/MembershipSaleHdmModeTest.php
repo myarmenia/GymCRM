@@ -6,6 +6,7 @@ use App\Models\HdmCashier;
 use App\Models\HdmConfig;
 use App\Models\HdmOperation;
 use App\Models\Gym;
+use App\Models\GymSetting;
 use App\Models\SaleContract;
 use App\Models\MembershipPlanPayment;
 use App\Models\SalespersonCommission;
@@ -134,6 +135,33 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(2, (int) $membership->freeze_left);
         $this->assertSame(0, (int) $membership->freeze_days_used);
         $this->assertSame(20, (int) $membership->freeze_days_left);
+    }
+
+    public function test_first_entry_setting_leaves_new_sale_dates_pending(): void
+    {
+        GymSetting::query()->create([
+            'gym_id' => $this->ids['gymId'],
+            'membership_selection_mode' => GymSetting::AUTO_UP_TO_TWO,
+            'membership_start_mode' => GymSetting::FIRST_ENTRY,
+        ]);
+
+        $sale = $this->service->store($this->payload(true));
+        $membership = $sale->personMemberships()->firstOrFail();
+        $this->assertSame(GymSetting::FIRST_ENTRY, $membership->activation_start_mode);
+        $this->assertNull($membership->start_date);
+        $this->assertNull($membership->valid_at);
+        $this->assertNull($membership->end_date);
+    }
+
+    public function test_existing_gym_keeps_sale_date_validity_by_default(): void
+    {
+        $sale = $this->service->store($this->payload(true));
+        $membership = $sale->personMemberships()->firstOrFail();
+
+        $this->assertSame(GymSetting::SALE_DATE, $membership->activation_start_mode);
+        $this->assertNotNull($membership->start_date);
+        $this->assertNotNull($membership->end_date);
+        $this->assertSame($membership->end_date->toDateString(), $membership->valid_at->toDateString());
     }
 
     public function test_sale_preserves_legacy_plan_without_freeze_days_allowance(): void

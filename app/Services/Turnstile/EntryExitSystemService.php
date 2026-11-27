@@ -9,6 +9,7 @@ use App\Interfaces\Turnstile\CheckEntryCodeInterface;
 use App\Interfaces\Turnstile\ClientIdFromTurnstileInterface;
 use App\Models\AttendanceSheet;
 use App\Models\Gym;
+use App\Models\GymSetting;
 use App\Models\Person;
 use App\Models\PersonMembership;
 use App\Models\User;
@@ -802,10 +803,7 @@ class EntryExitSystemService
             }
 
             $selected->whereIn('status', ['waiting', 'expired'])
-                ->each(fn(PersonMembership $membership) => $membership->update([
-                    'status' => 'active',
-                    'activated_at' => now(self::LOCAL_TIMEZONE),
-                ]));
+                ->each(fn(PersonMembership $membership) => $this->activateWaitingMembership($membership, $detectedAt));
 
             $selected = $selected
                 ->map(fn(PersonMembership $membership) => $guestId > 0
@@ -1099,7 +1097,7 @@ class EntryExitSystemService
         $guestEntry = $this->isGuestEntryPerson($person);
 
         return [
-            'requires_manager_selection' => $selectionMemberships->count() > ($guestEntry ? 1 : 2),
+            'requires_manager_selection' => $selectionMemberships->count() > $this->automaticMembershipLimit($clientId, $guestEntry),
             'guest_entry' => $guestEntry,
             'has_multiple_plans' => $distinctPlanIds->count() > 1,
             'has_multiple_categories' => $distinctCategoryIds->count() > 1,
@@ -1124,20 +1122,16 @@ class EntryExitSystemService
         $memberships = $this->validMembershipsForTurnstile($person, $clientId, $referenceTime);
         $selectionMemberships = $memberships->values();
 
-        // One or two valid memberships are registered automatically together.
-        // With three or more, the manager must choose the memberships to use.
+        // The gym setting determines when a manager must choose memberships.
         $guestEntry = $this->isGuestEntryPerson($person);
-        if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > ($guestEntry ? 1 : 2)) {
+        if ($selectionMemberships->isEmpty() || $selectionMemberships->count() > $this->automaticMembershipLimit($clientId, $guestEntry)) {
             return collect();
         }
 
         return $selectionMemberships
-            ->map(function (PersonMembership $membership) {
+            ->map(function (PersonMembership $membership) use ($referenceTime) {
                 if (in_array($membership->status, ['waiting', 'expired'], true)) {
-                    $membership->update([
-                        'status' => 'active',
-                        'activated_at' => now(self::LOCAL_TIMEZONE),
-                    ]);
+                    $this->activateWaitingMembership($membership, $referenceTime);
                 }
 
                 return $membership->fresh([
@@ -1146,6 +1140,12 @@ class EntryExitSystemService
                 ]);
             })
             ->values();
+    }
+
+    private function activateWaitingMembership(PersonMembership $membership, Carbon $entryAt): void
+    {
+        $membership->update(app(\App\Services\MembershipSales\MembershipDateService::class)
+            ->activationChanges($membership, $entryAt));
     }
 
     private function resolveMembershipsForExit(Person $person, int $clientId)
@@ -1179,7 +1179,12 @@ class EntryExitSystemService
 
         $guestEntry = $this->isGuestEntryPerson($person);
 
-        return $memberships->count() > ($guestEntry ? 1 : 2);
+        return $memberships->count() > $this->automaticMembershipLimit($clientId, $guestEntry);
+    }
+
+    private function automaticMembershipLimit(int $clientId, bool $guestEntry): int
+    {
+        return $guestEntry ? 1 : GymSetting::automaticMembershipLimitForGym($clientId);
     }
 
     private function consumeMembershipVisit(PersonMembership $membership, Carbon $entryAt): PersonMembership

@@ -15,6 +15,7 @@ const t = (key, replacements = {}) => translate(translationPage.props.translatio
 
 const props = defineProps({
     gyms: Object,
+    canManageSettings: Boolean,
 });
 
 const page = usePage();
@@ -100,6 +101,14 @@ const pagination = ref(props.gyms?.links ? props.gyms : null);
                                             <i class="icon-base ti tabler-dots-vertical"></i>
                                         </button>
                                         <div class="dropdown-menu">
+                                            <Link
+                                                v-if="canManageSettings"
+                                                class="dropdown-item waves-effect"
+                                                :href="route('gym.settings.edit', { locale: currentLocale, gym: gym.id })"
+                                            >
+                                                <i class="icon-base ti tabler-settings me-1"></i>
+                                                {{ t('ui.gym_settings') }}
+                                            </Link>
                                             <Link
                                                 class="dropdown-item waves-effect"
                                                 :href="route('gym.edit', { locale: currentLocale, id: gym.id })"

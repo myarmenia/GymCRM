@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Gyms;
 
 use App\Http\Controllers\Controller;
+use App\Models\Gym;
 use App\Services\Gyms\GymService;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -16,8 +17,24 @@ class GymController extends Controller
     {
         $this->authorizeOwner();
 
+        if (Auth::user()->hasRole('owner')) {
+            $pendingGymId = request()->session()->get('pending_gym_settings_id');
+            $pendingGym = $pendingGymId ? Gym::query()->find($pendingGymId) : null;
+            if ($pendingGym !== null && ! $pendingGym->setting()->exists()) {
+                return redirect()->route('gym.settings.create', [
+                    'locale' => request()->route('locale'),
+                    'gym' => $pendingGym->id,
+                ]);
+            }
+            request()->session()->forget('pending_gym_settings_id');
+        }
+
         $gyms = $this->gymService->getAll();
-        return Inertia::render('Gyms/List', ['gyms' => $gyms]);
+        $gyms->load('setting');
+        return Inertia::render('Gyms/List', [
+            'gyms' => $gyms,
+            'canManageSettings' => Auth::user()->hasRole('owner'),
+        ]);
     }
 
     public function create()
@@ -37,10 +54,11 @@ class GymController extends Controller
         $this->authorizeOwner();
 
         $validated = $request->validated();
-        $this->gymService->create($validated);
+        $gym = $this->gymService->create($validated);
+        $request->session()->put('pending_gym_settings_id', $gym->id);
 
         return redirect()
-            ->route('gym.list', ['locale' => app()->getLocale()])
+            ->route('gym.settings.create', ['locale' => $request->route('locale'), 'gym' => $gym->id])
             ->with('success', 'Gym created successfully!');
     }
 

@@ -51,6 +51,7 @@ class PersonService
                     $query->latest('id');
                 },
                 'memberships.membershipPlan.translations',
+                'memberships.gym.setting',
                 'memberships.trainer',
                 'memberships.freezes',
                 'memberships.guests.guest',
