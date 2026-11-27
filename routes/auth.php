@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\ContactNoteController;
+use App\Http\Controllers\DailyCashboxController;
 use App\Http\Controllers\Discount\DiscountController;
 use App\Http\Controllers\Documents\DocumentController;
 use App\Http\Controllers\EntryCode\EntryCodeController;
@@ -84,6 +85,10 @@ Route::prefix('{locale}')
     ->group(function () {
 
         Route::middleware('auth')->group(function () {
+            Route::get('my-daily-cashbox', [DailyCashboxController::class, 'index'])
+                ->middleware('role:sales_manager|manager')
+                ->name('daily-cashbox.index');
+
             Route::get('verify-email', EmailVerificationPromptController::class)
                 ->name('verification.notice');
 

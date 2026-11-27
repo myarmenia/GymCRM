@@ -37,6 +37,12 @@ const getTrainerId = (trainer) => {
     return Number(trainer.pivot?.user_id ?? trainer.id);
 };
 
+const savedTrainerOptions = (props.membershipPlan.trainers ?? []).map((trainer) => ({
+    id: Number(trainer.trainer_id),
+    name: trainer.name,
+    surname: trainer.surname,
+}));
+
 const isPlanLocked = computed(() => Boolean(props.membershipPlan.is_locked));
 const initialPrice = Number(props.membershipPlan.price ?? 0);
 const initialSalaryPercentage = existingSalaryPercentage(
@@ -101,6 +107,8 @@ const form = useForm({
         }) ?? [],
 });
 
+const initialScheduleId = Number(form.schedule_name_id);
+
 const salaryFixedAmount = ref(
     salaryAmountFromPercentage(initialPrice, initialSalaryPercentage),
 );
@@ -132,7 +140,21 @@ const selectedSchedule = computed(() => {
 });
 
 const scheduleTrainers = computed(() => {
-    return selectedSchedule.value?.trainers ?? [];
+    const trainers = selectedSchedule.value?.trainers ?? [];
+
+    if (Number(form.schedule_name_id) !== initialScheduleId) {
+        return trainers;
+    }
+
+    // Keep saved trainers visible on the original schedule, including inactive ones.
+    const options = new Map(trainers.map((trainer) => [getTrainerId(trainer), trainer]));
+    savedTrainerOptions.forEach((trainer) => {
+        if (!options.has(trainer.id)) {
+            options.set(trainer.id, trainer);
+        }
+    });
+
+    return [...options.values()];
 });
 
 const selectedTrainerIds = computed(() => {

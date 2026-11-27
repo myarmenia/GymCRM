@@ -42,6 +42,15 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
         <div class="menu-inner-shadow"></div>
         <ul class="menu-inner py-1">
             <li
+                v-if="hasAnyRole(['sales_manager', 'manager']) && page.props.auth?.user?.gym_id != null"
+                :class="['menu-item', route().current('daily-cashbox.index') ? 'active' : '']"
+            >
+                <Link :href="route('daily-cashbox.index', { locale: currentLocale })" class="menu-link">
+                    <i class="menu-icon icon-base ti tabler-cash-register"></i>
+                    <div>{{ useTrans('app.daily_cashbox.title') }}</div>
+                </Link>
+            </li>
+            <li
                 v-if="
                     hasAnyRole([
                         'owner',
@@ -198,53 +207,6 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
             </li>
 
             <li
-                v-if="
-                    hasAnyRole([
-                        'owner',
-                        'admin',
-                        'founder',
-                        'super_admin',
-                        'sales_manager',
-                    ])
-                "
-                :class="[
-                    'menu-item',
-                    route().current('warehouse.list') ? 'active' : '',
-                ]"
-            >
-                <Link
-                    :href="route('warehouse.list', { locale: currentLocale })"
-                    class="menu-link"
-                >
-                    <i class="menu-icon icon-base ti tabler-packages"></i>
-                    <div>{{ useTrans("app.sidebar.warehouses") }}</div>
-                </Link>
-            </li>
-
-            <li
-                v-if="
-                    hasAnyRole([
-                        'owner',
-                        'admin',
-                        'founder',
-                        'super_admin',
-                        'sales_manager',
-                    ])
-                "
-                :class="[
-                    'menu-item',
-                    route().current('categories.index') ? 'active' : '',
-                ]"
-            >
-                <Link
-                    :href="route('categories.index', { locale: currentLocale })"
-                    class="menu-link"
-                >
-                    <i class="menu-icon icon-base ti tabler-list"></i>
-                    <div>{{ useTrans("app.sidebar.categories") }}</div>
-                </Link>
-            </li>
-            <li
                 v-if="hasRole('trainer')"
                 :class="[
                     'menu-item',
@@ -295,62 +257,6 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
                 >
                     <i class="menu-icon icon-base ti tabler-address-book"></i>
                     <div>{{ useTrans("app.sidebar.my_customers") }}</div>
-                </Link>
-            </li>
-
-            <li
-                v-if="
-                    hasAnyRole([
-                        'owner',
-                        'admin',
-                        'founder',
-                        'super_admin',
-                        'sales_manager',
-                        // 'manager',
-                        'trainer',
-                    ])
-                "
-                :class="[
-                    'menu-item',
-                    route().current('products.index') ? 'active' : '',
-                ]"
-            >
-                <Link
-                    :href="route('products.index', { locale: currentLocale })"
-                    class="menu-link"
-                >
-                    <i class="menu-icon icon-base ti tabler-list-details"></i>
-                    <div>{{ useTrans("app.sidebar.products") }}</div>
-                </Link>
-            </li>
-
-            <li
-                v-if="
-                    hasAnyRole([
-                        'owner',
-                        'admin',
-                        'founder',
-                        'super_admin',
-                        'sales_manager',
-                    ])
-                "
-                :class="[
-                    'menu-item',
-                    route().current('product-consumptions.index')
-                        ? 'active'
-                        : '',
-                ]"
-            >
-                <Link
-                    :href="
-                        route('product-consumptions.index', {
-                            locale: currentLocale,
-                        })
-                    "
-                    class="menu-link"
-                >
-                    <i class="menu-icon icon-base ti tabler-package-export"></i>
-                    <div>{{ useTrans("app.sidebar.product_consumption") }}</div>
                 </Link>
             </li>
 
@@ -564,7 +470,6 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
             <li
                 v-if="
                     hasAnyRole([
-                        'sales_manager',
                         'admin',
                         'founder',
                         'super_admin',
@@ -858,6 +763,110 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
                         </Link>
                     </li>
                 </ul>
+            </li>
+
+            <li
+                v-if="
+                    hasAnyRole([
+                        'owner',
+                        'admin',
+                        'founder',
+                        'super_admin',
+                        'sales_manager',
+                    ])
+                "
+                :class="[
+                    'menu-item',
+                    route().current('warehouse.list') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('warehouse.list', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-packages"></i>
+                    <div>{{ useTrans("app.sidebar.warehouses") }}</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="
+                    hasAnyRole([
+                        'owner',
+                        'admin',
+                        'founder',
+                        'super_admin',
+                        'sales_manager',
+                    ])
+                "
+                :class="[
+                    'menu-item',
+                    route().current('categories.index') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('categories.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-list"></i>
+                    <div>{{ useTrans("app.sidebar.categories") }}</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="
+                    hasAnyRole([
+                        'owner',
+                        'admin',
+                        'founder',
+                        'super_admin',
+                        'sales_manager',
+                        // 'manager',
+                        'trainer',
+                    ])
+                "
+                :class="[
+                    'menu-item',
+                    route().current('products.index') ? 'active' : '',
+                ]"
+            >
+                <Link
+                    :href="route('products.index', { locale: currentLocale })"
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-list-details"></i>
+                    <div>{{ useTrans("app.sidebar.products") }}</div>
+                </Link>
+            </li>
+
+            <li
+                v-if="
+                    hasAnyRole([
+                        'owner',
+                        'admin',
+                        'founder',
+                        'super_admin',
+                        'sales_manager',
+                    ])
+                "
+                :class="[
+                    'menu-item',
+                    route().current('product-consumptions.index')
+                        ? 'active'
+                        : '',
+                ]"
+            >
+                <Link
+                    :href="
+                        route('product-consumptions.index', {
+                            locale: currentLocale,
+                        })
+                    "
+                    class="menu-link"
+                >
+                    <i class="menu-icon icon-base ti tabler-package-export"></i>
+                    <div>{{ useTrans("app.sidebar.product_consumption") }}</div>
+                </Link>
             </li>
         </ul>
     </aside>

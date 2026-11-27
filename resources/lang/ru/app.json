@@ -1,4 +1,22 @@
 {
+    "daily_cashbox": {
+        "title": "Моя касса за сегодня",
+        "description": "Мои продажи и принятые платежи за сегодня",
+        "timezone": "Время Еревана",
+        "received_total": "Всего получено сегодня",
+        "payments_count": "Принятые платежи",
+        "today_sales_count": "Мои продажи за сегодня",
+        "entries": "Операции за сегодня",
+        "time": "Время",
+        "customer": "Клиент",
+        "membership": "Абонемент",
+        "sale": "Продажа",
+        "payment_method": "Способ оплаты",
+        "received_amount": "Полученная сумма",
+        "previous_sale": "Продан ранее",
+        "today_sale": "Продан сегодня",
+        "empty": "Сегодня пока нет продаж или принятых платежей."
+    },
     "trainer_freeze": {
         "freeze_trainer": "Заморозить тренера",
         "start_date": "Начало заморозки",

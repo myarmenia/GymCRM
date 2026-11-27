@@ -2,6 +2,7 @@
 
 namespace App\Services\Hdm;
 
+use App\Models\HdmConfig;
 use App\Models\MembershipPlanPayment;
 use Illuminate\Support\Facades\Log;
 
@@ -84,7 +85,7 @@ class HdmPrintService extends HdmBaseService
 
             $receiptData = $isFinalPayment
                 ? $this->buildReceiptData(
-                    items: [$this->buildMembershipPlanItem($entity)],
+                    items: [$this->buildMembershipPlanItem($entity, $device)],
                     totalAmount: $amount,
                     paymentMethodId: $entity->payment_method_id,
                     mode: 2,
@@ -260,7 +261,7 @@ class HdmPrintService extends HdmBaseService
         }
     }
 
-    private function buildMembershipPlanItem(MembershipPlanPayment $payment): array
+    private function buildMembershipPlanItem(MembershipPlanPayment $payment, ?HdmConfig $device): array
     {
         $sale = $payment->membershipSale;
         $plan = $sale->membershipPlan;
@@ -276,7 +277,7 @@ class HdmPrintService extends HdmBaseService
             'price' => round($totalPrice, 2),
             'productCode' => str_pad((string) ($plan?->id ?? 0), 3, '0', STR_PAD_LEFT),
             'productName' => $name,
-            'dep' => 1,
+            'dep' => $this->deviceDepartment($device),
             'adgCode' => $plan?->adg_code ?? '93.13',
             'unit' => $plan?->armenian_unit ?? __('backend_messages.pcs'),
         ];

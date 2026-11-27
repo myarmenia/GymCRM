@@ -408,7 +408,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
                 'partialAmount' => 0,
                 'prePaymentAmount' => round($serviceAmount, 2),
                 'mode' => 2,
-                'items' => [$this->serviceItem($sale, $serviceAmount)],
+                'items' => [$this->serviceItem($sale, $serviceAmount, $this->deviceDepartment($device))],
             ],
         ], []);
     }
@@ -514,7 +514,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
         ];
     }
 
-    private function serviceItem(MembershipSale $sale, float $serviceAmount): array
+    private function serviceItem(MembershipSale $sale, float $serviceAmount, int $department): array
     {
         $plan = $sale->membershipPlan;
         $name = $plan?->translations
@@ -527,7 +527,7 @@ class HdmPrepaymentTerminationService extends HdmBaseService
             'price' => round($serviceAmount, 2),
             'productCode' => str_pad((string) ($plan?->id ?? 0), 3, '0', STR_PAD_LEFT),
             'productName' => mb_substr($name.__('backend_messages.used_portion'), 0, 50),
-            'dep' => 1,
+            'dep' => $department,
             'adgCode' => $plan?->adg_code ?? '93.13',
             'unit' => $plan?->armenian_unit ?? __('backend_messages.pcs'),
         ];

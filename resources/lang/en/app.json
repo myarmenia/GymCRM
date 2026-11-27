@@ -1,4 +1,22 @@
 {
+    "daily_cashbox": {
+        "title": "My daily cashbox",
+        "description": "My sales and payments received today",
+        "timezone": "Yerevan time",
+        "received_total": "Total received today",
+        "payments_count": "Payments received",
+        "today_sales_count": "My sales today",
+        "entries": "Today's transactions",
+        "time": "Time",
+        "customer": "Customer",
+        "membership": "Membership",
+        "sale": "Sale",
+        "payment_method": "Payment method",
+        "received_amount": "Amount received",
+        "previous_sale": "Previously sold",
+        "today_sale": "Sold today",
+        "empty": "No sales or payments received today yet."
+    },
     "trainer_freeze": {
         "freeze_trainer": "Freeze trainer",
         "start_date": "Freeze start",
