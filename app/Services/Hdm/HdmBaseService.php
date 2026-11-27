@@ -203,13 +203,13 @@ abstract class HdmBaseService
     /**
      * Построить пустой элемент
      */
-    protected function buildEmptyItem(): array
+    protected function buildEmptyItem(HdmConfig $device): array
     {
         return [
             'qty' => 1,
             'price' => 0,
             'productName' => 'Пустой чек',
-            'dep' => 1,
+            'dep' => $this->deviceDepartment($device),
             'adgCode' => '00.00',
             'unit' => __('backend_messages.pcs'),
             'additionalDiscount' => 0,
@@ -222,14 +222,14 @@ abstract class HdmBaseService
     /**
      * Построить элемент сервисного сбора
      */
-    protected function buildServiceChargeItem(float $amount): array
+    protected function buildServiceChargeItem(float $amount, HdmConfig $device): array
     {
         return [
             'qty' => 1,
             'price' => round($amount, 2),
             'productCode' => '999',
             'productName' => __('backend_messages.service_charge_10'),
-            'dep' => 1,
+            'dep' => $this->deviceDepartment($device),
             'adgCode' => '55.10',
             'unit' => __('backend_messages.service'),
             'additionalDiscount' => 0,
@@ -237,6 +237,12 @@ abstract class HdmBaseService
             'discount' => 0,
             'discountType' => 0,
         ];
+    }
+
+    protected function deviceDepartment(?HdmConfig $device): int
+    {
+        // External processing has no CRM device and never sends this payload to a gateway.
+        return $device === null ? 1 : (int) $device->dep;
     }
 
     /**

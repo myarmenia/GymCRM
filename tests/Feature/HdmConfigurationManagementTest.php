@@ -34,6 +34,7 @@ class HdmConfigurationManagementTest extends TestCase
                 'name' => 'Reception',
                 'ip' => '192.168.1.10',
                 'port' => 6000,
+                'dep' => 3,
                 'password' => 'device-secret',
                 'status' => true,
             ])
@@ -41,6 +42,7 @@ class HdmConfigurationManagementTest extends TestCase
 
         $config = HdmConfig::query()->firstOrFail();
         $this->assertNotNull($config->uuid);
+        $this->assertSame(3, $config->dep);
 
         $this->actingAs($owner)
             ->post(route('hdm-configurations.cashiers.store', [
@@ -67,6 +69,7 @@ class HdmConfigurationManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('HdmConfigurations/Edit')
                 ->where('config.id', $config->id)
+                ->where('config.dep', 3)
                 ->missing('config.password')
                 ->missing('config.cashiers.0.pin')
                 ->missing('config.cashiers.0.session_key'));
@@ -79,6 +82,7 @@ class HdmConfigurationManagementTest extends TestCase
                 'name' => 'Updated reception',
                 'ip' => '192.168.1.11',
                 'port' => 6001,
+                'dep' => 7,
                 'password' => '',
                 'status' => true,
             ])
@@ -99,6 +103,7 @@ class HdmConfigurationManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('device-secret', $config->refresh()->password);
+        $this->assertSame(7, $config->dep);
         $this->assertSame('1234', $cashier->refresh()->pin);
         $this->assertGreaterThan($versionAfterCashierCreation, (int) $config->refresh()->version);
     }
@@ -154,6 +159,48 @@ class HdmConfigurationManagementTest extends TestCase
             ->assertSessionHas('error', __('backend_messages.hdm_config_has_operations'));
 
         $this->assertNotSoftDeleted('hdm_configs', ['id' => $config->id]);
+    }
+
+    public function test_changing_only_the_department_versions_the_configuration(): void
+    {
+        $config = HdmConfig::query()->create([
+            'gym_id' => $this->gym()->id,
+            'name' => 'Reception',
+            'ip' => '127.0.0.1',
+            'port' => 6000,
+            'password' => 'secret',
+            'status' => true,
+        ]);
+        $this->assertSame(1, $config->refresh()->dep);
+        $version = $config->version;
+
+        $config->update(['dep' => 5]);
+
+        $this->assertSame($version + 1, $config->refresh()->version);
+    }
+
+    public function test_department_is_required_and_must_be_a_positive_unsigned_integer(): void
+    {
+        $gym = $this->gym();
+        $config = HdmConfig::query()->create([
+            'gym_id' => $gym->id, 'name' => 'Reception', 'ip' => '127.0.0.1',
+            'port' => 6000, 'password' => 'secret', 'status' => true, 'dep' => 3,
+        ]);
+        $this->actingAs($this->owner());
+
+        foreach ([null, 0, -1, 1.5, 'abc', 4294967296] as $department) {
+            $payload = [
+                'gym_id' => $gym->id, 'name' => 'Other', 'ip' => '127.0.0.2',
+                'port' => 6000, 'password' => 'secret', 'status' => true, 'dep' => $department,
+            ];
+            $this->post(route('hdm-configurations.store', ['locale' => 'hy']), $payload)
+                ->assertSessionHasErrors('dep');
+            $this->put(route('hdm-configurations.update', ['locale' => 'hy', 'hdmConfig' => $config->id]), $payload)
+                ->assertSessionHasErrors('dep');
+        }
+
+        $this->assertSame(1, HdmConfig::query()->count());
+        $this->assertSame(3, $config->refresh()->dep);
     }
 
     private function owner(): User
