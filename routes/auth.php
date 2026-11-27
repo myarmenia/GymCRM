@@ -19,6 +19,7 @@ use App\Http\Controllers\EntryCode\EntryCodeController;
 use App\Http\Controllers\EntryReportController;
 use App\Http\Controllers\FinancialTransactionController;
 use App\Http\Controllers\Gyms\GymController;
+use App\Http\Controllers\Gyms\GymSettingController;
 use App\Http\Controllers\Hdm\HdmConfigurationController;
 use App\Http\Controllers\Hdm\HdmOperationController;
 use App\Http\Controllers\Membership\MembershipCategoryController;
@@ -243,6 +244,10 @@ Route::prefix('{locale}')
                 Route::get('/list', [GymController::class, 'list'])->name('list');
                 Route::get('/create', [GymController::class, 'create'])->name('create');
                 Route::post('/store', [GymController::class, 'store'])->name('store');
+                Route::get('/{gym}/settings/create', [GymSettingController::class, 'create'])->name('settings.create');
+                Route::post('/{gym}/settings', [GymSettingController::class, 'store'])->name('settings.store');
+                Route::get('/{gym}/settings/edit', [GymSettingController::class, 'edit'])->name('settings.edit');
+                Route::patch('/{gym}/settings', [GymSettingController::class, 'update'])->name('settings.update');
 
                 Route::middleware('check.gym:User,id')->group(function () {
                     Route::get('/edit/{id}', [GymController::class, 'edit'])->name('edit');

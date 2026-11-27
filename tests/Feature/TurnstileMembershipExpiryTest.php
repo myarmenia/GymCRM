@@ -9,11 +9,13 @@ use App\Models\AttendanceSheet;
 use App\Models\EntryCode;
 use App\Models\EntryPermission;
 use App\Models\Gym;
+use App\Models\GymSetting;
 use App\Models\MembershipCategory;
 use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
 use App\Models\Person;
 use App\Models\PersonMembership;
+use App\Models\Role;
 use App\Models\User;
 use App\Repositories\Turnstile\TurnstileRepository;
 use App\Services\Turnstile\EntryExitSystemService;
@@ -47,6 +49,55 @@ class TurnstileMembershipExpiryTest extends TestCase
         $this->assertSame(4, $memberships[2]->fresh()->visits_left);
     }
 
+    public function test_first_entry_sets_the_start_and_expiry_dates_once(): void
+    {
+        [$service, $memberships, $timestamp] = $this->makeScan(['2027-09-24']);
+        $membership = $memberships[0];
+        $membership->update([
+            'status' => 'waiting',
+            'start_date' => null,
+            'end_date' => null,
+            'valid_at' => null,
+            'activation_start_mode' => GymSetting::FIRST_ENTRY,
+        ]);
+
+        $response = $service->ees((object) [
+            'mac' => 'TEST-MAC',
+            'entry_code' => 'CARD-1#'.$timestamp,
+            'entry_code_type' => 'standart',
+        ]);
+
+        $this->assertTrue($response->result['access_allowed']);
+        $membership->refresh();
+        $this->assertSame('active', $membership->status);
+        $this->assertSame('2026-09-28', $membership->start_date->toDateString());
+        $this->assertSame('2026-10-27', $membership->end_date->toDateString());
+        $this->assertSame('2026-10-27', $membership->valid_at->toDateString());
+    }
+
+    public function test_existing_membership_keeps_sold_dates_after_gym_mode_changes(): void
+    {
+        [$service, $memberships, $timestamp] = $this->makeScan(['2027-09-24']);
+        $membership = $memberships[0];
+        $membership->update(['status' => 'waiting', 'end_date' => '2027-09-24']);
+        GymSetting::query()->create([
+            'gym_id' => $membership->gym_id,
+            'membership_selection_mode' => GymSetting::AUTO_UP_TO_TWO,
+            'membership_start_mode' => GymSetting::FIRST_ENTRY,
+        ]);
+
+        $service->ees((object) [
+            'mac' => 'TEST-MAC',
+            'entry_code' => 'CARD-1#'.$timestamp,
+            'entry_code_type' => 'standart',
+        ]);
+
+        $membership->refresh();
+        $this->assertSame('2026-09-25', $membership->start_date->toDateString());
+        $this->assertSame('2027-09-24', $membership->end_date->toDateString());
+        $this->assertSame('2027-09-24', $membership->valid_at->toDateString());
+    }
+
     public function test_manager_context_excludes_expired_membership(): void
     {
         [$service, $memberships, $timestamp] = $this->makeScan([
@@ -72,7 +123,72 @@ class TurnstileMembershipExpiryTest extends TestCase
         });
     }
 
-    private function makeScan(array $validUntilDates): array
+    public function test_manager_selection_mode_waits_for_manager_with_two_valid_memberships(): void
+    {
+        [$service, $memberships, $timestamp] = $this->makeScan(['2027-09-24', '2027-10-24']);
+        GymSetting::query()->create([
+            'gym_id' => $memberships[0]->gym_id,
+            'membership_selection_mode' => GymSetting::MANAGER_SELECT_MULTIPLE,
+        ]);
+
+        $response = $service->ees((object) [
+            'mac' => 'TEST-MAC',
+            'entry_code' => 'CARD-1#'.$timestamp,
+            'entry_code_type' => 'standart',
+        ]);
+
+        $this->assertTrue($response->result['access_allowed']);
+        $this->assertDatabaseCount('attendance_sheets', 0);
+        Event::assertDispatched(TurnstileEntryDetected::class, fn (TurnstileEntryDetected $event): bool =>
+            ($event->payload['pending_attendance_selection'] ?? false)
+            && count($event->payload['membership_activation_context']['selectable_memberships'] ?? []) === 2
+        );
+        $this->assertSame(5, $memberships[0]->fresh()->visits_left);
+        $this->assertSame(5, $memberships[1]->fresh()->visits_left);
+    }
+
+    public function test_manager_selection_mode_still_records_one_membership_automatically(): void
+    {
+        [$service, $memberships, $timestamp] = $this->makeScan(['2027-09-24']);
+        GymSetting::query()->create([
+            'gym_id' => $memberships[0]->gym_id,
+            'membership_selection_mode' => GymSetting::MANAGER_SELECT_MULTIPLE,
+        ]);
+
+        $response = $service->ees((object) [
+            'mac' => 'TEST-MAC',
+            'entry_code' => 'CARD-1#'.$timestamp,
+            'entry_code_type' => 'standart',
+        ]);
+
+        $this->assertTrue($response->result['access_allowed']);
+        $this->assertDatabaseCount('attendance_sheets', 1);
+        $this->assertSame([$memberships[0]->id], AttendanceSheet::query()->firstOrFail()->personMemberships->modelKeys());
+        $this->assertSame(4, $memberships[0]->fresh()->visits_left);
+    }
+
+    public function test_manual_rfid_scan_uses_the_same_manager_selection_threshold(): void
+    {
+        [$service, $memberships, $timestamp, $manager] = $this->makeScan(['2027-09-24', '2027-10-24'], true);
+        $manager->assignRole(Role::query()->firstOrCreate([
+            'name' => 'manager', 'guard_name' => 'web', 'g_name' => 'manager',
+        ]));
+        GymSetting::query()->create([
+            'gym_id' => $memberships[0]->gym_id,
+            'membership_selection_mode' => GymSetting::MANAGER_SELECT_MULTIPLE,
+        ]);
+
+        $result = $service->manualScan($manager, 'CARD-1#'.$timestamp, 'enter');
+
+        $this->assertTrue($result->result['access_allowed']);
+        $this->assertDatabaseCount('attendance_sheets', 0);
+        Event::assertDispatched(TurnstileEntryDetected::class, fn (TurnstileEntryDetected $event): bool =>
+            ($event->payload['pending_attendance_selection'] ?? false)
+            && count($event->payload['membership_activation_context']['selectable_memberships'] ?? []) === 2
+        );
+    }
+
+    private function makeScan(array $validUntilDates, bool $manual = false): array
     {
         $gym = Gym::query()->create(['name' => 'Test gym']);
         $user = User::query()->create([
@@ -139,7 +255,9 @@ class TurnstileMembershipExpiryTest extends TestCase
             'status' => true,
         ]);
         $turnstile = \Mockery::mock(TurnstileRepository::class);
-        $turnstile->shouldReceive('getClientId')->once()->andReturn($gym->id);
+        if (! $manual) {
+            $turnstile->shouldReceive('getClientId')->once()->andReturn($gym->id);
+        }
         $checker = \Mockery::mock(CheckEntryCodeInterface::class);
         $checker->shouldReceive('checkEntryCode')->once()->andReturn((object) ['result' => $entryCode]);
         Event::fake([TurnstileEntryDetected::class]);
@@ -152,6 +270,7 @@ class TurnstileMembershipExpiryTest extends TestCase
             ),
             $memberships,
             Carbon::create(2026, 9, 28, 10, 0, 0, 'Asia/Yerevan')->timestamp,
+            $user,
         ];
     }
 }

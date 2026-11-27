@@ -28,6 +28,7 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    membershipStartModes: { type: Object, default: () => ({}) },
     people: {
         type: Array,
         default: () => [],
@@ -124,6 +125,10 @@ const planName = plan => {
 }
 
 const selectedPlan = computed(() => props.membershipPlans.find(item => Number(item.id) === Number(form.membership_plan_id)))
+const startsOnFirstEntry = computed(() => selectedPlan.value
+    && props.membershipStartModes[selectedPlan.value.gym_id] === 'first_entry'
+    && ['day', 'month', 'year', 'visit'].includes(selectedPlan.value.duration_type)
+    && Number(selectedPlan.value.duration_value) > 0)
 const availableSalesManagers = computed(() => selectedPlan.value
     ? props.salesManagers.filter(manager =>
         Number(manager.gym_id) === Number(selectedPlan.value.gym_id)
@@ -164,6 +169,7 @@ const latestMatchingMembershipValidAt = computed(() => {
         .at(-1) ?? ''
 })
 const startDateRestrictionMessage = computed(() => {
+    if (startsOnFirstEntry.value) return ''
     if (!latestMatchingMembershipValidAt.value || !form.start_date || form.start_date >= latestMatchingMembershipValidAt.value) {
         return ''
     }
@@ -639,7 +645,7 @@ const submitDebt = () => {
                         />
                     </div>
 
-                    <div class="col-md-4 mb-4">
+                    <div v-if="!startsOnFirstEntry" class="col-md-4 mb-4">
                         <InputLabel :value="t('membership.start')" />
                         <input
                             v-model="form.start_date"
@@ -656,7 +662,7 @@ const submitDebt = () => {
                         <InputError :message="form.errors.start_date" />
                     </div>
 
-                    <div class="col-md-4 mb-4">
+                    <div v-if="!startsOnFirstEntry" class="col-md-4 mb-4">
                         <InputLabel :value="t('membership.end')" />
                         <input
                             v-model="form.end_date"
@@ -666,6 +672,9 @@ const submitDebt = () => {
                             disabled
                         />
                         <InputError :message="form.errors.end_date" />
+                    </div>
+                    <div v-if="startsOnFirstEntry" class="col-md-8 mb-4">
+                        <div class="alert alert-info mb-0">{{ t('ui.first_entry_start_help') }}</div>
                     </div>
                 </div>
 

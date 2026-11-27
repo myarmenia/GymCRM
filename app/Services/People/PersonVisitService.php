@@ -251,10 +251,8 @@ class PersonVisitService
             return $membership;
         }
 
-        $membership->update([
-            'status' => 'active',
-            'activated_at' => $now,
-        ]);
+        $membership->update(app(\App\Services\MembershipSales\MembershipDateService::class)
+            ->activationChanges($membership, $now));
 
         return $membership->fresh([
             'membershipPlan.translations',

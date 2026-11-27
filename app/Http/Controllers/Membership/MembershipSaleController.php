@@ -14,6 +14,7 @@ use App\Http\Requests\MembershipSales\StoreMembershipSaleTerminationRequest;
 use App\Http\Requests\MembershipSales\UpdateMembershipSaleRequest;
 use App\Models\SaleContract;
 use App\Models\MembershipPlan;
+use App\Models\GymSetting;
 use App\Models\Person;
 use App\Models\SaleContractSetting;
 use App\Services\Hdm\HdmPrepaymentTerminationService;
@@ -63,6 +64,9 @@ class MembershipSaleController extends Controller
 
         return Inertia::render('MembershipSales/Create', [
             ...$options,
+            'membershipStartModes' => GymSetting::query()
+                ->whereIn('gym_id', $options['membershipPlans']->pluck('gym_id')->unique())
+                ->pluck('membership_start_mode', 'gym_id'),
             'singleVisitOnly' => $singleVisitOnly,
             'defaultIsHdm' => true,
             'gateway' => $this->hdmGateway(),
