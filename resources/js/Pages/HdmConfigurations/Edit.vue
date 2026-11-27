@@ -19,6 +19,7 @@ const configForm = useForm({
     name: props.config.name,
     ip: props.config.ip,
     port: props.config.port,
+    dep: props.config.dep,
     password: '',
     status: Boolean(props.config.status),
 });
@@ -141,6 +142,11 @@ const formatDate = (value) => value
                         <label class="form-label" for="port">{{ trans('page.fields.port') }} *</label>
                         <input id="port" v-model="configForm.port" type="number" min="1" max="65535" class="form-control" />
                         <InputError class="mt-1" :message="configForm.errors.port" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="dep">{{ trans('page.fields.dep') }} *</label>
+                        <input id="dep" v-model="configForm.dep" type="number" min="1" max="4294967295" step="1" required class="form-control" />
+                        <InputError class="mt-1" :message="configForm.errors.dep" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="ip">{{ trans('page.fields.ip') }} *</label>

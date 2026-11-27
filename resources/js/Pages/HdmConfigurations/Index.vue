@@ -81,6 +81,7 @@ const toggleStatus = (config) => {
                                 <th>{{ trans('page.fields.name') }}</th>
                                 <th>{{ trans('page.fields.ip') }}</th>
                                 <th>{{ trans('page.fields.port') }}</th>
+                                <th>{{ trans('page.fields.dep') }}</th>
                                 <th>{{ trans('page.fields.cashiers') }}</th>
                                 <th>{{ trans('page.fields.status') }}</th>
                                 <th class="text-end">{{ trans('page.fields.actions') }}</th>
@@ -93,6 +94,7 @@ const toggleStatus = (config) => {
                                 <td class="fw-semibold">{{ config.name }}</td>
                                 <td class="font-monospace">{{ config.ip }}</td>
                                 <td>{{ config.port }}</td>
+                                <td>{{ config.dep }}</td>
                                 <td><span class="badge bg-label-info">{{ config.cashiers_count }}</span></td>
                                 <td>
                                     <span class="badge" :class="config.status ? 'bg-label-success' : 'bg-label-danger'">
@@ -125,7 +127,7 @@ const toggleStatus = (config) => {
                                 </td>
                             </tr>
                             <tr v-if="!configs.data?.length">
-                                <td colspan="8" class="text-center text-muted py-5">
+                                <td colspan="9" class="text-center text-muted py-5">
                                     <i class="ti tabler-device-desktop-off fs-2 d-block mb-2"></i>
                                     {{ trans('page.messages.no_configs') }}
                                 </td>

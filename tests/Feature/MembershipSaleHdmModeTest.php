@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia;
+use PHPUnit\Framework\Attributes\TestWith;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -392,9 +393,10 @@ class MembershipSaleHdmModeTest extends TestCase
 
     public function test_final_hdm_payment_closes_debt_and_prints_the_remainder(): void
     {
-        $this->createHdmDevice();
+        $device = $this->createHdmDevice(3);
         $sale = $this->service->store($this->payload());
         $this->markPrintedPrepaymentSuccessful($sale->payments->first(), 'PREPAYMENT', 10);
+        $device->update(['dep' => 7]);
 
         $finalPayment = $this->service->storePayment($sale->id, [
             'is_full_payment' => true,
@@ -415,13 +417,14 @@ class MembershipSaleHdmModeTest extends TestCase
         $printResult = app(HdmPrintService::class)->preparePrintData($finalPayment);
         $this->assertTrue($printResult['success'], $printResult['message'] ?? '');
         $this->assertSame(2, $printResult['data']['receipt']['mode']);
+        $this->assertSame(7, $printResult['data']['receipt']['items'][0]['dep']);
         $this->assertSame(40.0, (float) $printResult['data']['receipt']['paidAmount']);
         $this->assertSame(40.0, (float) $printResult['data']['receipt']['prePaymentAmount']);
     }
 
     public function test_full_final_hdm_refund_returns_the_public_amount(): void
     {
-        $this->createHdmDevice();
+        $device = $this->createHdmDevice(3);
         $sale = $this->service->store($this->payload());
         $this->markPrintedPrepaymentSuccessful($sale->payments->first(), 'PREPAYMENT', 10);
         $finalPayment = $this->service->storePayment($sale->id, [
@@ -431,6 +434,7 @@ class MembershipSaleHdmModeTest extends TestCase
         ]);
         $finalPrint = app(HdmPrintService::class)->preparePrintData($finalPayment);
         $this->markPreparedStepSuccessful($finalPrint, 'FINAL', 11);
+        $device->update(['dep' => 9]);
 
         $refund = $this->service->storeRefund($sale->id, [
             'parent_payment_id' => $finalPayment->id,
@@ -441,6 +445,8 @@ class MembershipSaleHdmModeTest extends TestCase
         $this->assertSame(80.0, (float) $refund->amount);
         $returnPrint = app(HdmReturnService::class)->prepareReturnData($refund);
         $this->assertTrue($returnPrint['success'], $returnPrint['message'] ?? '');
+        $this->assertSame(['crn' => 'FINAL', 'returnTicketId' => 11], $returnPrint['data']['receipt']);
+        $this->assertSame(3, data_get(HdmOperation::findOrFail($finalPrint['data']['operation_id'])->request, 'items.0.dep'));
         $this->assertSame(80.0, (float) $returnPrint['data']['entity']['total']);
         $this->markPreparedStepSuccessful($returnPrint, 'FINAL', 12);
 
@@ -1047,13 +1053,71 @@ class MembershipSaleHdmModeTest extends TestCase
             ->count());
     }
 
-    private function createHdmDevice(): void
+    #[TestWith([1])]
+    #[TestWith([4])]
+    public function test_final_receipt_retry_preserves_the_saved_department_after_device_settings_change(int $department): void
+    {
+        $device = $this->createHdmDevice($department);
+        $sale = $this->service->store([
+            ...$this->payload(), 'is_full_payment' => true, 'is_partial_payment' => false, 'amount' => 80,
+        ]);
+        $payment = $sale->payments->first();
+        $prepared = app(HdmPrintService::class)->preparePrintData($payment);
+        $this->assertTrue($prepared['success'], $prepared['message'] ?? '');
+        $this->assertSame($department, $prepared['data']['receipt']['items'][0]['dep']);
+        $operationId = $prepared['data']['operation_id'];
+        app(HdmOperationService::class)->updateStatus([
+            'operation_id' => $operationId, 'status' => 'failed', 'response' => ['error' => 'DEVICE_OFFLINE'],
+        ]);
+        $device->update(['dep' => 9]);
+
+        $retried = app(HdmPrintService::class)->prepareRetryData($payment->fresh());
+
+        $this->assertTrue($retried['success'], $retried['message'] ?? '');
+        $this->assertSame($operationId, $retried['data']['operation_id']);
+        $this->assertEquals($prepared['data']['receipt'], $retried['data']['receipt']);
+        $this->assertSame($department, $retried['data']['receipt']['items'][0]['dep']);
+        $this->assertSame($department, data_get(HdmOperation::findOrFail($operationId)->request, 'items.0.dep'));
+        $this->assertSame(1, $payment->hdmOperations()->count());
+    }
+
+    public function test_termination_uses_the_original_device_department_and_resume_preserves_its_request(): void
+    {
+        $device = $this->createHdmDevice(3);
+        $sale = $this->service->store($this->payload());
+        $this->markPrintedPrepaymentSuccessful($sale->payments->first(), 'ORIGINAL', 401);
+        $device->update(['name' => 'Original reception', 'dep' => 7]);
+        $this->createHdmDevice(9);
+
+        $service = app(HdmPrepaymentTerminationService::class);
+        $result = $service->start($sale->fresh(), ['refund_amount' => 25]);
+        $this->assertTrue($result['success']);
+        $step = $result['print_steps'][0];
+        $this->assertSame($device->id, $step['data']['device']['id']);
+        $this->assertSame(7, $step['data']['receipt']['items'][0]['dep']);
+        $this->assertSame('ORIGINAL', $result['print_steps'][1]['data']['receipt']['crn']);
+        $this->assertArrayNotHasKey('dep', $result['print_steps'][1]['data']['receipt']);
+        app(HdmOperationService::class)->updateStatus([
+            'operation_id' => $step['data']['operation_id'], 'status' => 'failed', 'response' => ['error' => 'DEVICE_OFFLINE'],
+        ]);
+        $device->update(['dep' => 11]);
+
+        $resumed = $service->resume($sale->fresh());
+
+        $this->assertSame($step['data']['operation_id'], $resumed['print_steps'][0]['data']['operation_id']);
+        $this->assertEquals($step['data']['receipt'], $resumed['print_steps'][0]['data']['receipt']);
+        $this->assertSame(7, $resumed['print_steps'][0]['data']['receipt']['items'][0]['dep']);
+        $this->assertSame(4, HdmOperation::query()->count()); // Prepayment, service, return and workflow.
+    }
+
+    private function createHdmDevice(int $department = 1): HdmConfig
     {
         $device = HdmConfig::create([
             'gym_id' => $this->ids['gymId'],
             'name' => 'Reception',
             'ip' => '127.0.0.1',
             'port' => 8080,
+            'dep' => $department,
             'password' => 'test',
             'status' => true,
         ]);
@@ -1066,6 +1130,8 @@ class MembershipSaleHdmModeTest extends TestCase
             'pin' => '1234',
             'status' => true,
         ]);
+
+        return $device;
     }
 
     private function markPrintedPrepaymentSuccessful(
@@ -1076,6 +1142,7 @@ class MembershipSaleHdmModeTest extends TestCase
         $result = app(HdmPrintService::class)->preparePrintData($payment);
         $this->assertTrue($result['success'], $result['message'] ?? '');
         $this->assertSame(3, $result['data']['receipt']['mode']);
+        $this->assertNull($result['data']['receipt']['items']);
         $this->markPreparedStepSuccessful(['data' => $result['data']], $crn, $rseq);
     }
 
