@@ -182,6 +182,7 @@ const isMembershipCurrentlyValid = membership => {
 }
 const canFreezeMembership = membership => {
     return !isFounder.value
+        && (membership?.gym?.setting?.membership_start_mode !== 'first_entry' || membership?.status === 'active')
         && Boolean(membershipSaleId(membership))
         && Number(membership?.freeze_left || 0) > 0
         && (membership?.freeze_days_left == null || Number(membership.freeze_days_left) >= 7)

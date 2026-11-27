@@ -26,6 +26,7 @@ class PersonMembershipDTO
         public ?int $next_membership_id,
         public ?string $activated_at,
         public ?string $expired_at,
+        public string $activation_start_mode = 'sale_date',
     ) {}
 
     public static function fromArray(array $data): self
@@ -52,6 +53,7 @@ class PersonMembershipDTO
             next_membership_id: isset($data['next_membership_id']) ? (int) $data['next_membership_id'] : null,
             activated_at: $data['activated_at'] ?? null,
             expired_at: $data['expired_at'] ?? null,
+            activation_start_mode: $data['activation_start_mode'] ?? 'sale_date',
         );
     }
 
@@ -77,6 +79,7 @@ class PersonMembershipDTO
             'next_membership_id' => $this->next_membership_id,
             'activated_at' => $this->activated_at,
             'expired_at' => $this->expired_at,
+            'activation_start_mode' => $this->activation_start_mode,
         ];
 
         if ($this->freeze_used !== null) {

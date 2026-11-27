@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ActivityLog;
 use App\Models\Gym;
+use App\Models\GymSetting;
 use App\Models\MembershipCategory;
 use App\Models\MembershipPlan;
 use App\Models\MembershipSale;
@@ -24,6 +25,62 @@ use Tests\TestCase;
 class MembershipFreezeCancellationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_first_entry_membership_can_be_frozen_only_after_it_is_active(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-02', freezeEnd: '2026-10-05',
+            validAt: '2026-10-22', status: 'waiting',
+        );
+        $freeze->delete();
+        $membership->update(['freeze_left' => 1, 'freeze_used' => 0]);
+        GymSetting::query()->create([
+            'gym_id' => $sale->gym_id,
+            'membership_start_mode' => GymSetting::FIRST_ENTRY,
+        ]);
+        $url = "/hy/membership-sale/freezes/{$sale->id}";
+        $dates = ['start_date' => '2026-10-02', 'end_date' => '2026-10-05'];
+
+        $this->get($url)->assertRedirect()->assertSessionHasErrors('person_membership_id');
+        $this->post($url, $dates)->assertSessionHasErrors('person_membership_id');
+        $this->assertDatabaseCount('person_membership_freezes', 0);
+
+        $membership->update(['status' => 'frozen']);
+        $this->post($url, $dates)->assertSessionHasErrors('person_membership_id');
+        $this->assertDatabaseCount('person_membership_freezes', 0);
+
+        $membership->update(['status' => 'active']);
+        $this->get($url)->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('MembershipSales/Freezes')
+                ->where('membershipStartMode', GymSetting::FIRST_ENTRY));
+        $this->post($url, $dates)->assertRedirect($url);
+        $this->assertDatabaseHas('person_membership_freezes', [
+            'person_membership_id' => $membership->id,
+            'start_date' => '2026-10-02',
+        ]);
+    }
+
+    public function test_sale_date_gym_keeps_waiting_memberships_freezable(): void
+    {
+        $this->travelTo('2026-09-30 10:00:00');
+        [$sale, $membership, $freeze] = $this->fixture(
+            freezeStart: '2026-10-02', freezeEnd: '2026-10-05',
+            validAt: '2026-10-22', status: 'waiting',
+        );
+        $freeze->delete();
+        $membership->update(['freeze_left' => 1, 'freeze_used' => 0]);
+        GymSetting::query()->create([
+            'gym_id' => $sale->gym_id,
+            'membership_start_mode' => GymSetting::SALE_DATE,
+        ]);
+        $url = "/hy/membership-sale/freezes/{$sale->id}";
+
+        $this->get($url)->assertOk();
+        $this->post($url, ['start_date' => '2026-10-02', 'end_date' => '2026-10-05'])
+            ->assertRedirect($url);
+        $this->assertDatabaseHas('person_membership_freezes', ['person_membership_id' => $membership->id]);
+    }
 
     public function test_future_freeze_cancellation_rolls_back_all_days_and_restores_the_freeze_limit(): void
     {

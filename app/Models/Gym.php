@@ -91,6 +91,11 @@ class Gym extends Model
         return $this->hasMany(PersonMembership::class);
     }
 
+    public function setting()
+    {
+        return $this->hasOne(GymSetting::class);
+    }
+
     public function salaryPayouts()
     {
         return $this->hasMany(SalaryPayout::class);
@@ -111,6 +116,10 @@ class Gym extends Model
             if ($gym->logo && Storage::disk('public')->exists($gym->logo)) {
                 Storage::disk('public')->delete($gym->logo);
             }
+        });
+
+        static::deleted(function (Gym $gym): void {
+            $gym->setting()->delete();
         });
 
         static::created(function (Gym $gym) {

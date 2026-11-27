@@ -17,6 +17,7 @@ const { confirm } = useConfirm()
 const props = defineProps({
     membershipSale: Object,
     personMembership: Object,
+    membershipStartMode: { type: String, default: 'sale_date' },
     freezes: {
         type: Array,
         default: () => [],
@@ -56,7 +57,9 @@ const form = useForm({
 const remaining = computed(() => Number(props.remainingFreezeCount || 0))
 const hasDayBudget = computed(() => props.remainingFreezeDays !== null)
 const remainingDays = computed(() => Number(props.remainingFreezeDays || 0))
-const hasFreezableStatus = computed(() => ['waiting', 'active', 'frozen', 'trainer_frozen'].includes(props.personMembership?.status))
+const hasFreezableStatus = computed(() => props.membershipStartMode === 'first_entry'
+    ? props.personMembership?.status === 'active'
+    : ['waiting', 'active', 'frozen', 'trainer_frozen'].includes(props.personMembership?.status))
 const canAddFreeze = computed(() => remaining.value > 0 && hasFreezableStatus.value && (!hasDayBudget.value || remainingDays.value >= 7))
 const freezeOverlapMessage = t('sales.freeze_cannot_start_during_an_existing_freeze_period')
 const cancelForm = useForm({

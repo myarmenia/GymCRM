@@ -47,7 +47,10 @@ class GymLanguageManagementTest extends TestCase
                 'name' => 'Database languages gym',
                 'language_codes' => ['hy', 'de'],
             ])
-            ->assertRedirect(route('gym.list', ['locale' => 'en']));
+            ->assertRedirect(route('gym.settings.create', [
+                'locale' => 'en',
+                'gym' => Gym::query()->where('name', 'Database languages gym')->value('id'),
+            ]));
 
         $gym = Gym::query()->where('name', 'Database languages gym')->firstOrFail();
 
@@ -102,7 +105,10 @@ class GymLanguageManagementTest extends TestCase
                 'name' => 'Russian only gym',
                 'language_codes' => ['ru'],
             ])
-            ->assertRedirect(route('gym.list', ['locale' => 'ru']));
+            ->assertRedirect(route('gym.settings.create', [
+                'locale' => 'ru',
+                'gym' => Gym::query()->where('name', 'Russian only gym')->value('id'),
+            ]));
 
         $gym = Gym::query()->where('name', 'Russian only gym')->firstOrFail();
         $assignedUser = User::factory()->create(['gym_id' => $gym->id]);
