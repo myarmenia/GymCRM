@@ -603,6 +603,7 @@ const hasAnyRole = (roles) => hasAnyRoleBase(roles);
             <li
                 v-if="
                     hasAnyRole([
+                        'sales_manager',
                         'admin',
                         'founder',
                         'super_admin',
